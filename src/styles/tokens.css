@@ -1,0 +1,49 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-ink: #fbf8f2;
+  --color-ink-2: #f1ece2;
+  --color-paper: #1b1815;
+  --color-muted: #635c52;
+  --color-line: #d8d1c4;
+  --color-garder: #0f6b45;
+  --color-echanger: #1f4fb8;
+  --color-vendre: #8a5a00;
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-ink: #13110f;
+    --color-ink-2: #1c1916;
+    --color-paper: #ede8df;
+    --color-muted: #a39c91;
+    --color-line: #3a352f;
+    --color-garder: #52d69a;
+    --color-echanger: #7ba4ff;
+    --color-vendre: #f4c356;
+  }
+}
+
+body {
+  background: var(--color-ink);
+  color: var(--color-paper);
+  /* Chrome réduit le texte des pages d'extension à 75 % : on rétablit la taille normale. */
+  font-family: var(--font-sans);
+  font-size: 1rem;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-paper);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

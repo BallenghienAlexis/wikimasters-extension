@@ -1,0 +1,26 @@
+# dépendances et build
+/node_modules
+/dist
+*.tsbuildinfo
+
+# tests
+/coverage
+/test-results/
+/playwright-report/
+
+# secrets
+.env*
+
+# Pages réelles du compte WikiMasters, pour écrire le lecteur (ne jamais committer)
+/captures-site/
+
+# Workflow SDD : worktrees des agents et réglages Claude Code locaux
+/.worktrees/
+/.claude/settings.local.json
+/.claude/worktrees/
+
+# Divers
+.DS_Store
+npm-debug.log*
+/.idea/
+/.mcp.json

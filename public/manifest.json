@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "WM Collection",
+  "version": "0.1.0",
+  "description": "Préparer le tri, l'échange et la vente d'une collection WikiMasters. Extension personnelle non affiliée au jeu.",
+  "permissions": ["storage"],
+  "action": {
+    "default_title": "Ouvrir WM Collection"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "cartes": [
+    { "id": "fictive-1", "titre": "Écureuil de démonstration", "rarete": "Commune", "quantite": 3, "url": "https://exemple.test/ecureuil" },
+    { "id": "fictive-2", "titre": "Loutre de démonstration", "rarete": "Rare", "quantite": 1 },
+    { "id": "fictive-3", "titre": "=Carte au titre piégé", "quantite": 2 },
+    { "id": "fictive-4", "titre": "<img src=x onerror=alert(1)>", "quantite": 1 }
+  ]
+}

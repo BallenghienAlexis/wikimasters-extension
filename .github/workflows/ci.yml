@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Types
+        run: npm run typecheck
+      - name: Tests unitaires
+        run: npm test
+      - name: Garde-fous
+        run: node .claude/hooks/garde-fous.test.mjs
+      - name: Navigateur Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Build et tests e2e
+        run: npm run test:e2e
+        env:
+          CI: true
+      - name: Captures responsive
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: captures
+          path: test-results/captures/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Rapport Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
