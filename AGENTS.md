@@ -10,6 +10,10 @@ WM Collection est une extension Chrome personnelle pour préparer le tri, l'éch
 
 **« Édition » désigne donc l'édition locale** : statut, prix cible et note de chaque carte, stockés dans l'extension. Rien n'est modifié sur le site.
 
+**Verrou réseau** : aucun accès au site, aucune requête. Il repose sur le manifeste (pas de `host_permissions` ni de content script, CSP `connect-src 'none'`), le lint (`fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `sendBeacon`, `chrome.cookies`, `chrome.scripting` interdits dans `src/`) et les tests e2e. C'est la vraie protection du compte : l'extension ne produit aucune activité que le site puisse voir.
+
+Aucun code ne cherche à masquer une automatisation : pas de délais aléatoires, de simulation de comportement humain ni de contournement de détection.
+
 Tout code qui clique, envoie un formulaire ou appelle l'API interne du site à la place du joueur exige une décision explicite d'Alexis, écrite dans la spec de la feature, avec le risque de bannissement rappelé. Si WikiMasters ouvre une API ou donne un accord écrit, ce cadre est à mettre à jour ici.
 
 ## Stack
