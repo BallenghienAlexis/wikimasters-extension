@@ -170,7 +170,7 @@ describe('rendu en texte brut (AC1)', () => {
     const html = renderToStaticMarkup(
       React.createElement(Journal, { ...props, registre: registre(['Ami · Léa']), entrees: [entree()] }),
     );
-    expect(html).toContain('aria-label="Retirer l’étiquette « Ami · Léa » de [R] Carte fictive"');
+    expect(html).toContain('aria-label="Retirer l’étiquette « Ami · Léa » de [C] Carte fictive"');
     expect(html).toContain('Aucun onglet WikiMasters ouvert.');
   });
 });
