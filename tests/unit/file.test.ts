@@ -1,0 +1,417 @@
+import { describe, expect, it } from 'vitest';
+import type { Action, ResultatAction } from '../../src/lib/actions';
+import { creerFile, type DependancesFile, type Horloge } from '../../src/lib/file';
+
+const OK: ResultatAction = { classe: 'reussie', codeHttp: 200, cause: 'ok' };
+const echec = (codeHttp = 500): ResultatAction => ({ classe: 'echec', codeHttp, cause: 'échec' });
+const arret = (codeHttp: number | null, cause = 'arrêt'): ResultatAction => ({ classe: 'arret', codeHttp, cause });
+const INCONNU: ResultatAction = { classe: 'inconnu', codeHttp: null, cause: 'délai dépassé' };
+
+const lecture = (n: number): Action => ({ type: 'lecture', idCarte: `Rare|Carte ${n}` });
+const pose = (n: number): Action => ({
+  type: 'pose-etiquette',
+  idCarte: `Rare|Carte ${n}`,
+  idExemplaire: `ex-${n}`,
+  nomEtiquette: 'Garder',
+});
+const defausse = (n: number): Action => ({
+  type: 'defausse',
+  idCarte: `Rare|Carte ${n}`,
+  idExemplaire: `ex-${n}`,
+});
+const lot = (n: number): Action[] => Array.from({ length: n }, (_, i) => lecture(i + 1));
+
+/** Horloge simulée : attendre avance le temps virtuel instantanément. */
+function horlogeSimulee(): Horloge & { t: number } {
+  const h = {
+    t: 1_000_000,
+    now: () => h.t,
+    attendreJusqua: (echeance: number) => {
+      if (echeance > h.t) h.t = echeance;
+      return Promise.resolve();
+    },
+  };
+  return h;
+}
+
+interface Banc {
+  deps: DependancesFile;
+  horloge: Horloge & { t: number };
+  departs: number[];
+  requetes: Action[];
+  appliquees: Array<[Action, ResultatAction]>;
+  journal: string[];
+}
+
+function banc(
+  surcharge: Partial<DependancesFile> = {},
+  reponses: (n: number, action: Action) => ResultatAction = () => OK,
+  latence = 0,
+): Banc {
+  const horloge = horlogeSimulee();
+  const departs: number[] = [];
+  const requetes: Action[] = [];
+  const appliquees: Array<[Action, ResultatAction]> = [];
+  const journal: string[] = [];
+  let compteur = 0;
+  const deps: DependancesFile = {
+    horloge,
+    transport: async (action) => {
+      departs.push(horloge.t);
+      requetes.push(action);
+      const r = reponses(requetes.length, action);
+      horloge.t += latence;
+      return r;
+    },
+    confirmer: () => 'defausser',
+    reverifier: () => 'ok',
+    appliquer: (action, resultat) => {
+      appliquees.push([action, resultat]);
+    },
+    journal: {
+      ouvrir: (action) => {
+        const id = `e${++compteur}`;
+        journal.push(`ouvrir:${id}:${action.type}`);
+        return id;
+      },
+      completer: (id, resultat) => {
+        journal.push(`completer:${id}:${resultat.classe}`);
+      },
+      passer: (id) => {
+        journal.push(`passer:${id}`);
+      },
+    },
+    ...surcharge,
+  };
+  return { deps, horloge, departs, requetes, appliquees, journal };
+}
+
+describe('cadence fixe (AC2)', () => {
+  it('espace les débuts de requête de 6 000 ms quand tout répond vite', async () => {
+    const b = banc();
+    const file = creerFile(b.deps);
+    await file.demarrer(lot(5), 'lot-1');
+    expect(b.requetes).toHaveLength(5);
+    for (let i = 1; i < b.departs.length; i++) {
+      const ecart = b.departs[i]! - b.departs[i - 1]!;
+      expect(ecart).toBeGreaterThanOrEqual(5950);
+      expect(ecart).toBeLessThanOrEqual(6050);
+    }
+  });
+
+  it('attend la réponse précédente quand elle dépasse 6 000 ms', async () => {
+    const b = banc({}, () => OK, 9000);
+    const file = creerFile(b.deps);
+    await file.demarrer(lot(3), 'lot-1');
+    expect(b.departs[1]! - b.departs[0]!).toBe(9000);
+    expect(b.departs[2]! - b.departs[1]!).toBe(9000);
+  });
+
+  it('attend la confirmation (défausse) avant de partir', async () => {
+    const b = banc();
+    b.deps.confirmer = async (): Promise<'defausser'> => {
+      b.horloge.t += 20_000;
+      return 'defausser';
+    };
+    const file = creerFile(b.deps);
+    await file.demarrer([lecture(1), defausse(2)], 'lot-1');
+    expect(b.departs[1]! - b.departs[0]!).toBeGreaterThanOrEqual(20_000);
+  });
+
+  it('émet au plus 10 requêtes dans toute fenêtre de 60 s', async () => {
+    const b = banc();
+    const file = creerFile(b.deps);
+    await file.demarrer(lot(30), 'lot-1');
+    expect(b.requetes).toHaveLength(30);
+    for (let i = 0; i + 10 < b.departs.length; i++) {
+      expect(b.departs[i + 10]! - b.departs[i]!).toBeGreaterThanOrEqual(60_000);
+    }
+  });
+
+  it('une action passée n’avance pas la date de cadence', async () => {
+    const b = banc({ reverifier: (a) => (a.idCarte === 'Rare|Carte 2' ? 'passee' : 'ok') });
+    const file = creerFile(b.deps);
+    await file.demarrer(lot(3), 'lot-1');
+    expect(b.requetes.map((a) => a.idCarte)).toEqual(['Rare|Carte 1', 'Rare|Carte 3']);
+    expect(b.departs[1]! - b.departs[0]!).toBe(6000);
+  });
+
+  it('une action arrêtée faute de jeton n’est pas comptée et la file s’arrête', async () => {
+    const b = banc({}, (n) => (n === 2 ? arret(null, 'jeton-absent') : OK));
+    const file = creerFile(b.deps);
+    const etat = await file.demarrer(lot(4), 'lot-1');
+    expect(b.requetes).toHaveLength(2);
+    expect(etat.etat).toBe('arretee');
+  });
+
+  it('n’utilise aucun aléa : deux exécutions identiques donnent les mêmes écarts', async () => {
+    const a = banc();
+    const c = banc();
+    await creerFile(a.deps).demarrer(lot(4), 'lot-1');
+    await creerFile(c.deps).demarrer(lot(4), 'lot-1');
+    const ecarts = (d: number[]) => d.map((x, i) => (i === 0 ? 0 : x - d[i - 1]!));
+    expect(ecarts(a.departs)).toEqual(ecarts(c.departs));
+  });
+});
+
+describe('une seule exécution, une seule requête en vol (AC3)', () => {
+  it('refuse un second demarrer tant qu’une exécution est en cours', async () => {
+    const b = banc();
+    const file = creerFile(b.deps);
+    const premiere = file.demarrer(lot(2), 'lot-1');
+    expect(() => file.demarrer(lot(1), 'lot-2')).toThrow();
+    await premiere;
+    await expect(file.demarrer(lot(1), 'lot-3')).resolves.toBeDefined();
+  });
+
+  it('n’a jamais deux requêtes en vol', async () => {
+    const b = banc();
+    let enVol = 0;
+    let maxEnVol = 0;
+    b.deps.transport = async () => {
+      enVol++;
+      maxEnVol = Math.max(maxEnVol, enVol);
+      await Promise.resolve();
+      enVol--;
+      return OK;
+    };
+    await creerFile(b.deps).demarrer(lot(4), 'lot-1');
+    expect(maxEnVol).toBe(1);
+  });
+});
+
+describe('arrêts (AC4)', () => {
+  it('s’arrête au 3e échec cumulé (non consécutif)', async () => {
+    const reps = [echec(), OK, echec(), OK, echec(), OK];
+    const b = banc({}, (n) => reps[n - 1]!);
+    const etat = await creerFile(b.deps).demarrer(lot(6), 'lot-1');
+    expect(b.requetes).toHaveLength(5);
+    expect(etat.etat).toBe('arretee');
+  });
+
+  it('deux échecs ne suffisent pas', async () => {
+    const reps = [echec(), echec(), OK, OK];
+    const b = banc({}, (n) => reps[n - 1]!);
+    const etat = await creerFile(b.deps).demarrer(lot(4), 'lot-1');
+    expect(b.requetes).toHaveLength(4);
+    expect(etat.etat).toBe('terminee');
+  });
+
+  it('les actions passées ne comptent pas comme échecs', async () => {
+    const b = banc({ reverifier: (a) => (a.idCarte !== 'Rare|Carte 1' ? 'passee' : 'ok') });
+    const etat = await creerFile(b.deps).demarrer(lot(6), 'lot-1');
+    expect(etat.etat).toBe('terminee');
+  });
+
+  it.each([
+    ['401', echec(401)],
+    ['403', echec(403)],
+    ['429', echec(429)],
+    ['forme hors contrat', arret(200, 'forme hors contrat')],
+    ['redirection', arret(302, 'redirection')],
+    ['erreur réseau', arret(null, 'erreur réseau')],
+    ['délai de 30 s', INCONNU],
+  ])('s’arrête à la première occurrence : %s', async (_nom, resultat) => {
+    const b = banc({}, (n) => (n === 2 ? resultat : OK));
+    const etat = await creerFile(b.deps).demarrer(lot(5), 'lot-1');
+    expect(b.requetes).toHaveLength(2);
+    expect(etat.etat).toBe('arretee');
+  });
+
+  it('s’arrête quand l’écriture locale échoue (appliquer)', async () => {
+    const b = banc({
+      appliquer: () => {
+        throw new Error('quota');
+      },
+    });
+    const etat = await creerFile(b.deps).demarrer(lot(5), 'lot-1');
+    expect(b.requetes).toHaveLength(1);
+    expect(etat.etat).toBe('arretee');
+  });
+
+  it('s’arrête quand l’écriture du journal échoue', async () => {
+    const b = banc();
+    b.deps.journal.ouvrir = () => {
+      throw new Error('quota');
+    };
+    const etat = await creerFile(b.deps).demarrer(lot(3), 'lot-1');
+    expect(b.requetes).toHaveLength(0);
+    expect(etat.etat).toBe('arretee');
+  });
+
+  it('s’arrête quand le transport lève une exception', async () => {
+    const b = banc();
+    b.deps.transport = () => Promise.reject(new Error('boom'));
+    const etat = await creerFile(b.deps).demarrer(lot(3), 'lot-1');
+    expect(etat.etat).toBe('arretee');
+  });
+
+  it('un résultat inconnu ne modifie pas l’état local', async () => {
+    const b = banc({}, () => INCONNU);
+    await creerFile(b.deps).demarrer(lot(3), 'lot-1');
+    expect(b.appliquees).toHaveLength(0);
+    expect(b.journal).toContain('completer:e1:inconnu');
+  });
+
+  it('applique l’état local seulement pour une réussite', async () => {
+    const b = banc({}, (n) => (n === 2 ? echec() : OK));
+    await creerFile(b.deps).demarrer(lot(3), 'lot-1');
+    expect(b.appliquees).toHaveLength(2);
+  });
+
+  it('n’émet jamais de relance après un délai dépassé', async () => {
+    const b = banc({}, () => INCONNU);
+    await creerFile(b.deps).demarrer([lecture(1)], 'lot-1');
+    expect(b.requetes).toHaveLength(1);
+  });
+
+  it('arrêt manuel : aucune requête après arreter(), même pendant l’attente', async () => {
+    const b = banc();
+    let liberer: () => void = () => {};
+    // L’attente d’échéance ne se termine jamais d’elle-même.
+    b.horloge.attendreJusqua = () => new Promise<void>((r) => (liberer = r));
+    const file = creerFile(b.deps);
+    const fin = file.demarrer(lot(3), 'lot-1');
+    // La 1re requête part sans attente (aucun départ précédent) ; la 2e attend.
+    await new Promise((r) => setTimeout(r, 10));
+    expect(b.requetes).toHaveLength(1);
+    const avant = Date.now();
+    file.arreter();
+    const etat = await fin;
+    expect(Date.now() - avant).toBeLessThan(100);
+    liberer();
+    expect(b.requetes).toHaveLength(1);
+    expect(etat.etat).toBe('arretee');
+  });
+
+  it('arrêt manuel pendant une requête en vol : la réponse est journalisée, aucune suivante', async () => {
+    const b = banc();
+    let repondre: (r: ResultatAction) => void = () => {};
+    b.deps.transport = (action) => {
+      b.requetes.push(action);
+      return new Promise<ResultatAction>((r) => (repondre = r));
+    };
+    const file = creerFile(b.deps);
+    const fin = file.demarrer(lot(3), 'lot-1');
+    await new Promise((r) => setTimeout(r, 10));
+    file.arreter();
+    repondre(OK);
+    const etat = await fin;
+    expect(b.requetes).toHaveLength(1);
+    expect(b.journal).toContain('completer:e1:reussie');
+    expect(etat.etat).toBe('arretee');
+  });
+});
+
+describe('ajout en fin de file (AC5)', () => {
+  it('traite les actions ajoutées pendant l’exécution', async () => {
+    const b = banc();
+    const transportInitial = b.deps.transport;
+    let ajoute = false;
+    b.deps.transport = async (a) => {
+      if (!ajoute) {
+        ajoute = true;
+        expect(file.ajouter([lecture(9)])).toBe(true);
+      }
+      return transportInitial(a);
+    };
+    const file = creerFile(b.deps);
+    const etat = await file.demarrer(lot(2), 'lot-1');
+    expect(b.requetes.map((a) => a.idCarte)).toEqual(['Rare|Carte 1', 'Rare|Carte 2', 'Rare|Carte 9']);
+    expect(etat.total).toBe(3);
+    expect(etat.traitees).toBe(3);
+  });
+
+  it('refuse un ajout quand aucune exécution n’est en cours', () => {
+    const file = creerFile(banc().deps);
+    expect(file.ajouter([lecture(1)])).toBe(false);
+  });
+});
+
+describe('revérification (AC6)', () => {
+  it('appelle reverifier avant chaque requête', async () => {
+    const b = banc();
+    const vues: string[] = [];
+    b.deps.reverifier = (a) => {
+      vues.push(`${a.idCarte}@${b.requetes.length}`);
+      return 'ok';
+    };
+    await creerFile(b.deps).demarrer(lot(3), 'lot-1');
+    expect(vues).toEqual(['Rare|Carte 1@0', 'Rare|Carte 2@1', 'Rare|Carte 3@2']);
+  });
+
+  it('action passée : aucune requête, journal « passée »', async () => {
+    const b = banc({ reverifier: () => 'passee' });
+    const etat = await creerFile(b.deps).demarrer([pose(1)], 'lot-1');
+    expect(b.requetes).toHaveLength(0);
+    expect(b.journal).toEqual(['ouvrir:e1:pose-etiquette', 'passer:e1']);
+    expect(etat.etat).toBe('terminee');
+    expect(etat.traitees).toBe(1);
+  });
+});
+
+describe('défausse (AC7)', () => {
+  it('appelle confirmer avant toute requête de défausse', async () => {
+    const b = banc();
+    const ordre: string[] = [];
+    b.deps.confirmer = () => {
+      ordre.push('confirmer');
+      return 'defausser';
+    };
+    const t = b.deps.transport;
+    b.deps.transport = (a) => {
+      ordre.push('transport');
+      return t(a);
+    };
+    await creerFile(b.deps).demarrer([defausse(1)], 'lot-1');
+    expect(ordre).toEqual(['confirmer', 'transport']);
+  });
+
+  it('ne demande pas de confirmation pour une autre action', async () => {
+    let appels = 0;
+    const b = banc({
+      confirmer: () => {
+        appels++;
+        return 'defausser';
+      },
+    });
+    await creerFile(b.deps).demarrer([lecture(1), pose(2)], 'lot-1');
+    expect(appels).toBe(0);
+  });
+
+  it('« passer » : aucune requête, journal « passée »', async () => {
+    const b = banc({ confirmer: () => 'passer' });
+    const etat = await creerFile(b.deps).demarrer([defausse(1), lecture(2)], 'lot-1');
+    expect(b.requetes.map((a) => a.type)).toEqual(['lecture']);
+    expect(b.journal[0]).toBe('ouvrir:e1:defausse');
+    expect(b.journal[1]).toBe('passer:e1');
+    expect(etat.etat).toBe('terminee');
+  });
+
+  it('« arreter » : fin comme un arrêt manuel, rien d’autre n’est émis', async () => {
+    const b = banc({ confirmer: () => 'arreter' });
+    const etat = await creerFile(b.deps).demarrer([lecture(1), defausse(2), lecture(3)], 'lot-1');
+    expect(b.requetes.map((a) => a.idCarte)).toEqual(['Rare|Carte 1']);
+    expect(etat.etat).toBe('arretee');
+  });
+});
+
+describe('état observable', () => {
+  it('compte les actions traitées et se termine', async () => {
+    const b = banc();
+    const file = creerFile(b.deps);
+    expect(file.etat()).toBeNull();
+    const etat = await file.demarrer(lot(3), 'lot-7');
+    expect(etat).toMatchObject({ idLot: 'lot-7', etat: 'terminee', traitees: 3, total: 3 });
+    expect(file.etat()).toEqual(etat);
+  });
+
+  it('notifie les abonnés à chaque changement', async () => {
+    const b = banc();
+    const file = creerFile(b.deps);
+    const vus: number[] = [];
+    file.abonner((e) => vus.push(e.traitees));
+    await file.demarrer(lot(2), 'lot-1');
+    expect(vus).toEqual([0, 1, 2, 2]);
+  });
+});
