@@ -64,13 +64,15 @@ export type RaisonArret =
   | 'ecriture'
   | 'transport'
   | 'confirmation'
+  | 'verification'
+  | 'confirmation-indisponible'
 
 export interface EtatFile extends EtatExecution {
   raison: RaisonArret | null
 }
 
 export interface File {
-  /** Lance l’exécution ; refusé (exception) tant qu’une exécution est en cours. */
+  /** Lance l’exécution ; la promesse est rejetée tant qu’une exécution est en cours. */
   demarrer: (actions: readonly Action[], idLot: string) => Promise<EtatFile>
   /** Ajoute en fin de file ; `false` si aucune exécution n’est en cours. */
   ajouter: (actions: readonly Action[]) => boolean
@@ -117,10 +119,25 @@ export function creerFile(deps: DependancesFile): File {
 
   /** Attend l’échéance, ou l’arrêt manuel s’il survient avant. */
   async function attendre(echeance: number): Promise<void> {
-    if (horloge.now() < echeance) {
+    // Une attente qui rend la main trop tôt (minuteur imprécis) est reprise.
+    while (!arretDemande && horloge.now() < echeance) {
       await Promise.race([horloge.attendreJusqua(echeance), signalArret])
     }
     if (arretDemande) throw new Arret('manuel')
+  }
+
+  /** Revérification dont l’exception est classée à part (ni écriture, ni transport). */
+  async function verifier(action: Action): Promise<Verification> {
+    try {
+      return await reverifier(action)
+    } catch {
+      throw new Arret('verification')
+    }
+  }
+
+  async function inscrirePassee(action: Action): Promise<void> {
+    const id = await journal.ouvrir(action)
+    await journal.passer(id)
   }
 
   /** Date de début autorisée : cadence de 6 s, réponse précédente, confirmation, fenêtre de 60 s. */
@@ -134,26 +151,26 @@ export function creerFile(deps: DependancesFile): File {
   }
 
   async function traiter(action: Action, echecs: { n: number }): Promise<void> {
-    if ((await reverifier(action)) === 'passee') {
-      const id = await journal.ouvrir(action)
-      await journal.passer(id)
-      return
-    }
+    if ((await verifier(action)) === 'passee') return inscrirePassee(action)
 
     let plancher = Number.NEGATIVE_INFINITY
     if (action.type === 'defausse') {
-      const decision = await confirmer(action)
+      let decision: Decision
+      try {
+        decision = await confirmer(action)
+      } catch {
+        throw new Arret('confirmation-indisponible')
+      }
       if (arretDemande) throw new Arret('manuel')
       if (decision === 'arreter') throw new Arret('confirmation')
-      if (decision === 'passer') {
-        const id = await journal.ouvrir(action)
-        await journal.passer(id)
-        return
-      }
+      if (decision === 'passer') return inscrirePassee(action)
       plancher = horloge.now()
     }
 
     await attendre(debutAutorise(plancher))
+
+    // La carte a pu changer pendant la confirmation ou l’attente : dernière revérification avant l’envoi.
+    if ((await verifier(action)) === 'passee') return inscrirePassee(action)
 
     const id = await journal.ouvrir(action)
     if (arretDemande) {
@@ -164,20 +181,22 @@ export function creerFile(deps: DependancesFile): File {
 
     const debut = horloge.now()
     let resultat: ResultatAction
+    let exception = false
     try {
       resultat = await transport(action)
     } catch {
+      exception = true
       resultat = { classe: 'inconnu', codeHttp: null, cause: 'erreur de transport' }
-      await journal.completer(id, resultat)
-      throw new Arret('transport')
     }
-    if (!(resultat.classe === 'arret' && resultat.cause === CAUSE_JETON_ABSENT)) {
+    // Seul l’arrêt « jeton absent » (aucune requête émise) laisse la cadence intacte.
+    if (exception || !(resultat.classe === 'arret' && resultat.cause === CAUSE_JETON_ABSENT)) {
       dernierDebut = debut
       derniereReponse = horloge.now()
       debuts.push(debut)
       if (debuts.length > MAX_PAR_FENETRE * 2) debuts.splice(0, debuts.length - MAX_PAR_FENETRE * 2)
     }
     await journal.completer(id, resultat)
+    if (exception) throw new Arret('transport')
 
     switch (resultat.classe) {
       case 'reussie':
@@ -214,7 +233,7 @@ export function creerFile(deps: DependancesFile): File {
 
   return {
     demarrer(actions, idLot) {
-      if (enCours) throw new Error('Une exécution est déjà en cours.')
+      if (enCours) return Promise.reject(new Error('Une exécution est déjà en cours.'))
       enCours = true
       arretDemande = false
       signalArret = new Promise<void>((r) => (reveil = r))
@@ -231,7 +250,7 @@ export function creerFile(deps: DependancesFile): File {
       return boucle().then(() => etat!)
     },
     ajouter(actions) {
-      if (!enCours || etat === null) return false
+      if (!enCours || arretDemande || etat === null) return false
       file.push(...actions)
       changer({ total: etat.total + actions.length })
       return true
