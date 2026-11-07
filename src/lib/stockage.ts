@@ -1,4 +1,4 @@
-import { analyserImport, appliquerEdition, collectionVide, fusionnerImport, type CarteImportee, type Collection } from './collection';
+import { analyserStockage,appliquerEdition, collectionVide, fusionnerImport, type CarteImportee, type Collection } from './collection';
 import { lireSynchro, noterPage, type Pagination, type Synchro } from './synchro';
 import { lirePreferences, proposerTri, type Preferences } from './tri';
 
@@ -9,10 +9,10 @@ const CLE_PREFERENCES = 'preferences';
 function lireContenu(brut: unknown): Collection {
   if (brut === undefined) return collectionVide();
 
-  const resultat = analyserImport(brut);
+  const resultat = analyserStockage(brut);
   // On échoue sans écraser : les données restent récupérables.
   if (!resultat.ok) throw new Error(`Données stockées illisibles. ${resultat.erreur}`);
-  return fusionnerImport(collectionVide(), resultat.cartes);
+  return resultat.collection;
 }
 
 export async function chargerCollection(): Promise<Collection> {

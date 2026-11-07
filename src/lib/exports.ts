@@ -1,11 +1,12 @@
-import type { Carte, Collection } from './collection';
+import { VERSION_ECHANGE, type Carte, type Collection } from './collection';
 import { LIBELLES_THEMES, themesDeCarte } from './themes';
 
-const COLONNES: (keyof Carte)[] = ['id', 'titre', 'rarete', 'quantite', 'statut', 'prixCible', 'note', 'url', 'favori', 'description', 'ami', 'valeurMarchande'];
+type ColonneCarte = Exclude<keyof Carte, 'idsSite'>;
+const COLONNES: ColonneCarte[] = ['id', 'titre', 'rarete', 'quantite', 'statut', 'prixCible', 'note', 'url', 'favori', 'description', 'ami', 'valeurMarchande'];
 const SEPARATEUR = ';';
 const BOM = String.fromCharCode(0xfeff);
 
-function celluleCsv(valeur: Carte[keyof Carte]): string {
+function celluleCsv(valeur: Carte[ColonneCarte]): string {
   let texte = valeur === null ? '' : String(valeur);
   // Un tableur exécuterait une cellule commençant par l'un de ces caractères comme une formule.
   if (typeof valeur === 'string' && /^[=+\-@\t\r]/.test(texte)) texte = `'${texte}`;
@@ -20,4 +21,12 @@ export function versCsv(cartes: Carte[]): string {
   return `${BOM}${[[...COLONNES, 'themes'].join(SEPARATEUR), ...lignes].join('\r\n')}\r\n`;
 }
 
-export const versJson = (collection: Collection): string => `${JSON.stringify(collection, null, 2)}\n`;
+// Fichier d’échange : version 1, sans les identifiants du site.
+export const versJson = (collection: Collection): string => {
+  const cartes = collection.cartes.map((carte) => {
+    const reste: Partial<Carte> = { ...carte };
+    delete reste.idsSite;
+    return reste;
+  });
+  return `${JSON.stringify({ version: VERSION_ECHANGE, cartes }, null, 2)}\n`;
+};
