@@ -3,6 +3,7 @@
 import { LIBELLES_STATUT, type Carte, type Collection } from '../lib/collection';
 import { identifiantCarte, lireFenetreEnchere, lirePositionPage, regrouperCartes, trouverCartes } from '../lib/lecteur';
 import { chargerCollection, ecouterCollection, enregistrerPage, enregistrerValeur, fusionnerDansStockage } from '../lib/stockage';
+import { demarrerExecutant } from './executant';
 import { progression, texteProgression, type Synchro } from '../lib/synchro';
 
 const CLASSE_REPERE = 'wm-repere';
@@ -74,3 +75,5 @@ new MutationObserver((mutations) => {
 ecouterCollection(afficherReperes);
 void chargerCollection().then(afficherReperes);
 planifierLecture();
+// Pilotage depuis la page de gestion : aucune requête tant qu'aucune action n'est branchée.
+demarrerExecutant();
