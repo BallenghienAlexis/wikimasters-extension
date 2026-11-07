@@ -20,6 +20,34 @@ test.describe('extension chargée', () => {
   });
 });
 
+test.describe('verrou réseau', () => {
+  test('la CSP bloque tout appel réseau depuis la page', async ({ pageCollection }) => {
+    const bloque = await pageCollection.evaluate(() =>
+      fetch('https://exemple.test/').then(
+        () => false,
+        () => true,
+      ),
+    );
+    expect(bloque).toBe(true);
+  });
+
+  test('un parcours complet n’émet aucune requête http(s)', async ({ context, pageCollection }) => {
+    const requetes: string[] = [];
+    context.on('request', (r) => {
+      if (/^https?:/.test(r.url())) requetes.push(r.url());
+    });
+    await pageCollection.setInputFiles(champFichier, COLLECTION_FICTIVE);
+    await expect(pageCollection.getByRole('status')).toHaveText('4 cartes importées.');
+    await pageCollection.getByLabel('Statut de Loutre de démonstration').selectOption('vendre');
+    const telechargement = pageCollection.waitForEvent('download');
+    await pageCollection.getByRole('button', { name: 'Exporter en JSON' }).click();
+    await telechargement;
+    await pageCollection.reload();
+    await expect(pageCollection.getByLabel('Statut de Loutre de démonstration')).toHaveValue('vendre');
+    expect(requetes).toEqual([]);
+  });
+});
+
 test.describe('page de collection', () => {
   test('affiche l’état vide', async ({ pageCollection }) => {
     await expect(pageCollection.getByText('Votre collection est vide')).toBeVisible();
