@@ -99,7 +99,7 @@ Repris de LifeLog. Artefacts par feature dans `specs/<feature>/` : `spec.md` →
 - Agir sur le site à la place du joueur hors du cadre ci-dessus.
 - Lire, stocker ou journaliser un mot de passe, un cookie ou un jeton de session du site, sauf la lecture en mémoire du jeton de session, dans un seul module désigné (à nommer dans le plan), au moment d'émettre une requête vers l'origine du site, dans le content script, sans code injecté dans la page, en n’extrayant que la valeur du jeton (jamais de jeton de rafraîchissement ni d’autre cookie), sans jamais le stocker, le journaliser, l'afficher, le copier dans `chrome.storage` ni l'envoyer ailleurs qu'à l'origine du site. Envoyer des données à un serveur tiers.
 - Charger du code distant, utiliser `eval` ou assouplir la CSP du manifeste. Ajouter une permission sans la justifier dans la PR.
-- Committer `.env*` ou `captures-site/` (pages réelles du compte). Utiliser des données fictives dans les tests et fixtures.
+- Committer `.env*` ou `captures-site/` (pages réelles du compte). Utiliser des données réelles du compte dans les tests et fixtures : elles doivent toujours être fictives.
 - Afficher une donnée importée ou lue sur le site avec `dangerouslySetInnerHTML` ou `innerHTML`.
 - Désactiver, sauter ou mettre en quarantaine un test pour obtenir une CI verte.
 - Faire le travail d'un autre agent (un dev ne modifie pas la spec, un reviewer ne corrige pas le code).
