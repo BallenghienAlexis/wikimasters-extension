@@ -14,6 +14,8 @@ WM Collection est une extension Chrome personnelle pour préparer le tri, l'éch
 
 **Verrou réseau** : aucune requête. Il repose sur le manifeste (pas de `host_permissions`, CSP `connect-src 'none'`), le lint (`fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `sendBeacon`, `chrome.cookies`, `chrome.scripting` interdits dans `src/` ; `click`, `submit`, `dispatchEvent`, `focus` interdits dans le code exécuté sur le site) et les tests e2e.
 
+Aucun code ne cherche à masquer une automatisation : pas de délais aléatoires, de simulation de comportement humain ni de contournement de détection.
+
 Tout code qui clique, envoie un formulaire ou appelle l'API interne du site à la place du joueur exige une décision explicite d'Alexis, écrite dans la spec de la feature.
 
 ## Stack
