@@ -6,6 +6,8 @@ export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss()],
   build: {
+    // Sinon le mode --watch efface content.js, construit à part. `npm run build` vide dist/ lui-même.
+    emptyOutDir: false,
     rollupOptions: {
       input: {
         collection: 'collection.html',

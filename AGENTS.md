@@ -6,15 +6,15 @@ WM Collection est une extension Chrome personnelle pour préparer le tri, l'éch
 
 ## Cadre d'usage WikiMasters
 
-État relevé le 2026-11-06 : pas d'API publique, et `Disallow: /api/` dans le `robots.txt`. Les règles de la communauté (section 3) interdisent les bots, scripts, macros, tout outil qui joue, ouvre des paquets, échange ou interagit à la place du joueur, ainsi que la rétro-ingénierie et l'interception du trafic pour obtenir un avantage. Les conditions d'utilisation (section 6) prévoient un bannissement pour automatisation.
+État relevé le 2026-11-06 : pas d'API publique, et `Disallow: /api/` dans le `robots.txt`.
 
 **« Édition » désigne donc l'édition locale** : statut, prix cible et note de chaque carte, stockés dans l'extension. Rien n'est modifié sur le site.
 
-**Verrou réseau** : aucun accès au site, aucune requête. Il repose sur le manifeste (pas de `host_permissions` ni de content script, CSP `connect-src 'none'`), le lint (`fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `sendBeacon`, `chrome.cookies`, `chrome.scripting` interdits dans `src/`) et les tests e2e. C'est la vraie protection du compte : l'extension ne produit aucune activité que le site puisse voir.
+**Lecture du site** : quand le joueur ouvre `/collection`, le content script lit les cartes affichées et y pose un repère avec sa décision. Il ne clique pas, ne change pas de page et ne fait aucune requête : le joueur tourne les pages et agit lui-même. Les règles ne parlent pas explicitement du scraping : c'est une zone grise, assumée par Alexis, avec un risque non nul.
 
-Aucun code ne cherche à masquer une automatisation : pas de délais aléatoires, de simulation de comportement humain ni de contournement de détection.
+**Verrou réseau** : aucune requête. Il repose sur le manifeste (pas de `host_permissions`, CSP `connect-src 'none'`), le lint (`fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `sendBeacon`, `chrome.cookies`, `chrome.scripting` interdits dans `src/` ; `click`, `submit`, `dispatchEvent`, `focus` interdits dans le code exécuté sur le site) et les tests e2e.
 
-Tout code qui clique, envoie un formulaire ou appelle l'API interne du site à la place du joueur exige une décision explicite d'Alexis, écrite dans la spec de la feature, avec le risque de bannissement rappelé. Si WikiMasters ouvre une API ou donne un accord écrit, ce cadre est à mettre à jour ici.
+Tout code qui clique, envoie un formulaire ou appelle l'API interne du site à la place du joueur exige une décision explicite d'Alexis, écrite dans la spec de la feature.
 
 ## Stack
 
@@ -41,13 +41,21 @@ Charger l'extension : `chrome://extensions` › mode développeur › « Charger
 
 ## Architecture
 
-- `public/manifest.json` : manifeste. Permission `storage` seulement ; aucun `host_permissions` tant qu'aucune feature ne lit le site.
+- `public/manifest.json` : manifeste. Permission `storage` seulement, aucun `host_permissions` ; content script limité à WikiMasters.
+- `src/content/index.ts` : content script, construit à part (`vite.content.config.ts`). `public/repere.css` : style des repères.
+- `src/lib/lecteur.ts` : lecture du texte des cartes affichées. Toute carte de forme inattendue est ignorée.
+- `src/lib/synchro.ts` : suivi des pages lues et de la prochaine à ouvrir.
 - `src/background.ts` : service worker. Le clic sur l'icône ouvre `collection.html` dans un onglet. Il est éphémère : aucun état en mémoire.
 - `collection.html` + `src/app/` : page de gestion (React). Composants `React.FC` + export par défaut, un par fichier.
 - `src/lib/collection.ts` : modèle et logique pure (validation, édition, filtres, doublons). Sans `chrome.*`.
 - `src/lib/exports.ts` : export CSV et JSON. Logique pure.
+- `src/lib/themes.ts` : thèmes déduits du titre et de la description par mots-clés, recalculés sans être stockés.
+- `src/lib/tri.ts` et `src/app/AssistantTri.tsx` : assistant de tri (mes thèmes, thèmes des amis, aperçu). Règles dans l'ordre : favori ou thème à moi → garder ; thème d'un ami → échanger ; valeur inconnue → à trier ; valeur sous le seuil → défausser ; sinon → vendre au prix de la matrice. Propositions locales uniquement, sans jamais remplacer une décision manuelle (`decidePar: 'moi'`).
+- `src/app/FileVente.tsx` : ventes à lancer selon les places libres, de la plus chère à la moins chère. Le joueur indique lui-même ce qu'il a mis aux enchères.
+- `src/config/prix.ts` : **réglages à renseigner par Alexis** : seuil de défausse, limite d'enchères simultanées, valeur de repli par rareté, matrice valeur marchande → prix de départ.
+- **Valeur marchande** : moyenne affichée dans la fenêtre « Mettre aux enchères », propre à chaque carte. Relevée quand le joueur ouvre cette fenêtre, ou saisie à la main.
 - `src/lib/stockage.ts` : **seul** module de `src/lib` qui touche à `chrome.storage.local`.
-- **Données** : aujourd'hui, elles entrent par import d'un fichier JSON (`{ "version": 1, "cartes": [...] }`). La lecture de la collection depuis le site n'est pas écrite : elle exige de connaître les vraies pages du jeu, connecté.
+- **Données** : elles entrent par la lecture de `/collection` (identifiant `rareté|titre`, le site n'en expose pas d'autre) ou par import d'un fichier JSON (`{ "version": 1, "cartes": [...] }`). La quantité ne compte que les exemplaires présents sur la même page.
 - Le schéma de stockage porte un numéro de version : tout changement fournit une migration.
 
 ## Design

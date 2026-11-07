@@ -30,7 +30,21 @@ export default tseslint.config(
     },
   },
   {
-    files: ['.claude/hooks/**/*.mjs'],
+    // Le code exécuté sur le site lit et affiche, mais n'agit jamais à la place du joueur.
+    files: ['src/content/**/*.ts', 'src/lib/lecteur.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        { selector: "AssignmentExpression[left.property.name='innerHTML']", message: 'Interdit par AGENTS.md : rendre les données en texte.' },
+        ...['click', 'submit', 'requestSubmit', 'dispatchEvent', 'focus'].map((nom) => ({
+          selector: `CallExpression[callee.property.name='${nom}']`,
+          message: 'Interdit par AGENTS.md : aucune action sur le site à la place du joueur.',
+        })),
+      ],
+    },
+  },
+  {
+    files: ['.claude/hooks/**/*.mjs', 'scripts/**/*.mjs'],
     languageOptions: { globals: { process: 'readonly', console: 'readonly', URL: 'readonly' } },
   },
 );

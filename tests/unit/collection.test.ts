@@ -17,6 +17,11 @@ const carte = (surcharge: Partial<Carte> = {}): Carte => ({
   rarete: null,
   quantite: 1,
   url: null,
+  favori: false,
+  description: '',
+  ami: null,
+  valeurMarchande: null,
+  decidePar: null,
   statut: 'a-trier',
   prixCible: null,
   note: '',
@@ -133,6 +138,6 @@ describe('doublons et résumé', () => {
     const r = resumer([carte({ quantite: 3, statut: 'vendre' }), carte({ id: 'c2', statut: 'vendre' }), carte({ id: 'c3' })]);
     expect(r.exemplaires).toBe(5);
     expect(r.doublons).toBe(2);
-    expect(r.parStatut).toEqual({ 'a-trier': 1, garder: 0, echanger: 0, vendre: 2 });
+    expect(r.parStatut).toEqual({ 'a-trier': 1, garder: 0, echanger: 0, vendre: 2, 'en-vente': 0, defausser: 0 });
   });
 });

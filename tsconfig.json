@@ -12,5 +12,5 @@
     "isolatedModules": true,
     "types": ["chrome", "node", "vite/client"]
   },
-  "include": ["src", "tests", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"]
+  "include": ["src", "tests", "vite.config.ts", "vite.content.config.ts","vitest.config.ts", "playwright.config.ts"]
 }
