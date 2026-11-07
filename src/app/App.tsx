@@ -25,6 +25,12 @@ import Synchronisation from './Synchronisation';
 import FileVente from './FileVente';
 import CarteLigne from './CarteLigne';
 
+interface EtatStockageSynchro {
+  registre: Registre | null;
+  executionEnCours: boolean;
+  executionIllisible: boolean;
+}
+
 const TAILLE_PAGE = 200;
 const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded border border-line bg-ink-2 px-4';
 const CLASSE_CHAMP = 'min-h-11 rounded border border-line bg-ink px-3';
@@ -52,15 +58,41 @@ const App: React.FC = () => {
   const [synchro, setSynchro] = useState<Synchro | null>(null);
   const [registre, setRegistre] = useState<Registre>(registreVide);
   const [executionEnCours, setExecutionEnCours] = useState(false);
+  const [registreIllisible, setRegistreIllisible] = useState(false);
+  const [executionIllisible, setExecutionIllisible] = useState(false);
   const champFichier = useRef<HTMLInputElement>(null);
+
+  // Lit le registre et l’état d’exécution ; un échec est signalé à l’aperçu, jamais avalé.
+  const lireStockageSynchro = async (): Promise<EtatStockageSynchro> => {
+    const etat: EtatStockageSynchro = { registre: null, executionEnCours: false, executionIllisible: false };
+    try {
+      etat.registre = await chargerRegistre();
+    } catch {
+      etat.registre = null;
+    }
+    try {
+      etat.executionEnCours = (await chargerExecution())?.etat === 'en-cours';
+    } catch {
+      etat.executionIllisible = true;
+    }
+    return etat;
+  };
+  const appliquerStockageSynchro = (etat: EtatStockageSynchro): void => {
+    if (etat.registre) setRegistre(etat.registre);
+    setRegistreIllisible(etat.registre === null);
+    setExecutionEnCours(etat.executionEnCours);
+    setExecutionIllisible(etat.executionIllisible);
+  };
+  const relireStockageSynchro = async (): Promise<Registre | null> => {
+    const etat = await lireStockageSynchro();
+    appliquerStockageSynchro(etat);
+    return etat.registre;
+  };
 
   useEffect(() => {
     void chargerPreferences().then(setPreferences);
     void chargerSynchro().then(setSynchro);
-    void chargerRegistre().then(setRegistre).catch(() => undefined);
-    void chargerExecution()
-      .then((e) => setExecutionEnCours(e?.etat === 'en-cours'))
-      .catch(() => undefined);
+    void lireStockageSynchro().then(appliquerStockageSynchro);
     return ecouterSynchro(setSynchro);
   }, []);
 
@@ -192,7 +224,15 @@ const App: React.FC = () => {
             onTerminee={(id) => appliquer(terminerEnchere(collection, id))}
           />
 
-          <Synchronisation collection={collection} registre={registre} nbOnglets={0} executionEnCours={executionEnCours} />
+          <Synchronisation
+            collection={collection}
+            registre={registre}
+            registreIllisible={registreIllisible}
+            executionIllisible={executionIllisible}
+            nbOnglets={0}
+            executionEnCours={executionEnCours}
+            onReessayer={relireStockageSynchro}
+          />
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <input
