@@ -1,0 +1,193 @@
+import { describe, expect, it } from 'vitest'
+import type { Action, Registre, ResultatAction } from '../../src/lib/actions'
+import type { Carte, Collection } from '../../src/lib/collection'
+import type { Config } from '../../src/lib/lot'
+import { appliquerResultat, reverifierAction } from '../../src/lib/revision'
+
+const config: Config = { maxVentesSimultanees: 5, longueurMaxEtiquette: null, nomsExistants: [] }
+
+const carte = (extra: Partial<Carte> = {}): Carte => ({
+  id: 'commune|Chat',
+  titre: 'Chat',
+  rarete: 'commune',
+  description: '',
+  quantite: 2,
+  url: null,
+  favori: false,
+  idsSite: ['ex-1', 'ex-2'],
+  statut: 'vendre',
+  prixCible: 30,
+  note: '',
+  ami: null,
+  valeurMarchande: 100,
+  decidePar: null,
+  ...extra,
+})
+
+const coll = (...cartes: Carte[]): Collection => ({ version: 2, cartes })
+const reg = (couples: Registre['couples'] = [], etiquettes: Registre['etiquettes'] = {}): Registre => ({
+  version: 1,
+  etiquettes,
+  couples,
+})
+const ok: ResultatAction = { classe: 'reussie', codeHttp: 200, cause: 'ok' }
+
+const enchere: Action = { type: 'enchere', idCarte: 'commune|Chat', idExemplaire: 'ex-1', prix: 30 }
+const defausse: Action = { type: 'defausse', idCarte: 'commune|Chat', idExemplaire: 'ex-1' }
+
+describe('reverifierAction (AC1)', () => {
+  it('enchère inchangée : ok', () => {
+    expect(reverifierAction(enchere, coll(carte()), reg(), config)).toBe('ok')
+  })
+
+  it('enchère : carte disparue, favori, statut, prix, exemplaire absent → passée', () => {
+    expect(reverifierAction(enchere, coll(), reg(), config)).toBe('passee')
+    expect(reverifierAction(enchere, coll(carte({ favori: true })), reg(), config)).toBe('passee')
+    expect(reverifierAction(enchere, coll(carte({ statut: 'garder' })), reg(), config)).toBe('passee')
+    expect(reverifierAction(enchere, coll(carte({ prixCible: 40 })), reg(), config)).toBe('passee')
+    expect(reverifierAction(enchere, coll(carte({ idsSite: ['ex-2'] })), reg(), config)).toBe('passee')
+    expect(reverifierAction(enchere, coll(carte({ idsSite: null })), reg(), config)).toBe('passee')
+  })
+
+  it('enchère : sans prixCible, le prix de la matrice fait foi', () => {
+    const sansCible = carte({ prixCible: null, valeurMarchande: 1_000_000 })
+    expect(reverifierAction({ ...enchere, prix: 1 }, coll(sansCible), reg(), config)).toBe('passee')
+  })
+
+  it('défausse', () => {
+    const c = carte({ statut: 'defausser' })
+    expect(reverifierAction(defausse, coll(c), reg(), config)).toBe('ok')
+    expect(reverifierAction(defausse, coll(carte({ statut: 'vendre' })), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll({ ...c, favori: true }), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll({ ...c, idsSite: ['ex-2'] }), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll(), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll({ ...c, quantite: 0 }), reg(), config)).toBe('passee')
+  })
+
+  it('pose : étiquette de statut et d’ami', () => {
+    const pose: Action = { type: 'pose-etiquette', idCarte: 'commune|Chat', idExemplaire: 'ex-1', nomEtiquette: 'Statut · Vendre' }
+    expect(reverifierAction(pose, coll(carte()), reg(), config)).toBe('ok')
+    expect(reverifierAction(pose, coll(carte({ statut: 'garder' })), reg(), config)).toBe('passee')
+    expect(reverifierAction(pose, coll(carte({ favori: true })), reg(), config)).toBe('passee')
+    expect(reverifierAction(pose, coll(carte({ idsSite: ['ex-2'] })), reg(), config)).toBe('passee')
+    const ami: Action = { ...pose, nomEtiquette: 'Ami · Zoé' }
+    expect(reverifierAction(ami, coll(carte({ statut: 'echanger', ami: 'Zoé' })), reg(), config)).toBe('ok')
+    expect(reverifierAction(ami, coll(carte({ statut: 'echanger', ami: 'Léa' })), reg(), config)).toBe('passee')
+  })
+
+  it('création : l’étiquette est-elle toujours nécessaire ?', () => {
+    const cr: Action = { type: 'creation-etiquette', idCarte: 'commune|Chat', nomEtiquette: 'Statut · Vendre' }
+    expect(reverifierAction(cr, coll(carte()), reg(), config)).toBe('ok')
+    expect(reverifierAction(cr, coll(carte({ statut: 'garder' })), reg(), config)).toBe('passee')
+    expect(reverifierAction(cr, coll(), reg(), config)).toBe('passee')
+  })
+
+  it('retrait : couple encore au registre et étiquette plus attendue', () => {
+    const r: Action = { type: 'retrait-etiquette', idCarte: 'commune|Chat', idExemplaire: 'ex-1', nomEtiquette: 'Statut · Garder' }
+    const registre = reg([{ ex: 'ex-1', nom: 'Statut · Garder' }])
+    expect(reverifierAction(r, coll(carte()), registre, config)).toBe('ok')
+    expect(reverifierAction(r, coll(carte()), reg(), config)).toBe('passee')
+    expect(reverifierAction(r, coll(carte({ statut: 'garder' })), registre, config)).toBe('passee')
+    expect(reverifierAction(r, coll(carte({ favori: true })), registre, config)).toBe('passee')
+    expect(reverifierAction(r, coll(carte({ statut: 'a-trier' })), registre, config)).toBe('passee')
+  })
+
+  it('lecture : ok', () => {
+    expect(reverifierAction({ type: 'lecture', idCarte: 'x' }, coll(), reg(), config)).toBe('ok')
+  })
+})
+
+describe('appliquerResultat (AC2)', () => {
+  it('enchère réussie : statut en-vente, quantité et idsSite inchangés', () => {
+    const { collection } = appliquerResultat(coll(carte()), reg(), enchere, ok)
+    const c = collection.cartes[0]
+    expect(c.statut).toBe('en-vente')
+    expect(c.quantite).toBe(2)
+    expect(c.idsSite).toEqual(['ex-1', 'ex-2'])
+  })
+
+  it('défausse réussie : identifiant retiré, couples purgés, quantité −1', () => {
+    const registre = reg([
+      { ex: 'ex-1', nom: 'A' },
+      { ex: 'ex-2', nom: 'A' },
+    ])
+    const r = appliquerResultat(coll(carte({ statut: 'defausser' })), registre, defausse, ok)
+    expect(r.collection.cartes[0].idsSite).toEqual(['ex-2'])
+    expect(r.collection.cartes[0].quantite).toBe(1)
+    expect(r.registre.couples).toEqual([{ ex: 'ex-2', nom: 'A' }])
+  })
+
+  it('dernière défausse : carte retirée et registre purgé', () => {
+    const c = carte({ statut: 'defausser', quantite: 1, idsSite: ['ex-1'] })
+    const registre = reg([
+      { ex: 'ex-1', nom: 'A' },
+      { ex: 'ex-9', nom: 'B' },
+    ])
+    const r = appliquerResultat(coll(c), registre, defausse, ok)
+    expect(r.collection.cartes).toEqual([])
+    expect(r.registre.couples).toEqual([{ ex: 'ex-9', nom: 'B' }])
+  })
+
+  it('quantité 0 atteinte avec des identifiants restants : tout le registre de la carte purgé', () => {
+    const c = carte({ statut: 'defausser', quantite: 1, idsSite: ['ex-1', 'ex-2'] })
+    const registre = reg([{ ex: 'ex-2', nom: 'A' }])
+    const r = appliquerResultat(coll(c), registre, defausse, ok)
+    expect(r.collection.cartes).toEqual([])
+    expect(r.registre.couples).toEqual([])
+  })
+
+  it('la quantité ne descend jamais sous 0', () => {
+    const c = carte({ statut: 'defausser', quantite: 0, idsSite: ['ex-1', 'ex-2'] })
+    const r = appliquerResultat(coll(c), reg(), defausse, ok)
+    expect(r.collection.cartes.every((x) => x.quantite >= 0)).toBe(true)
+  })
+
+  it('création réussie : identifiant au registre', () => {
+    const a: Action = { type: 'creation-etiquette', idCarte: 'commune|Chat', nomEtiquette: 'Statut · Vendre' }
+    const r = appliquerResultat(coll(carte()), reg(), a, { ...ok, idEtiquette: 'et-7' })
+    expect(r.registre.etiquettes).toEqual({ 'Statut · Vendre': 'et-7' })
+  })
+
+  it('création réussie sans identifiant : registre inchangé', () => {
+    const a: Action = { type: 'creation-etiquette', idCarte: 'commune|Chat', nomEtiquette: 'N' }
+    const registre = reg()
+    expect(appliquerResultat(coll(carte()), registre, a, ok).registre).toBe(registre)
+  })
+
+  it('pose et retrait : couple ajouté puis retiré', () => {
+    const pose: Action = { type: 'pose-etiquette', idCarte: 'commune|Chat', idExemplaire: 'ex-1', nomEtiquette: 'N' }
+    const retrait: Action = { type: 'retrait-etiquette', idCarte: 'commune|Chat', idExemplaire: 'ex-1', nomEtiquette: 'N' }
+    const p = appliquerResultat(coll(carte()), reg(), pose, ok)
+    expect(p.registre.couples).toEqual([{ ex: 'ex-1', nom: 'N' }])
+    const r = appliquerResultat(p.collection, p.registre, retrait, ok)
+    expect(r.registre.couples).toEqual([])
+  })
+})
+
+describe('appliquerResultat : état inchangé (AC3)', () => {
+  const actions: Action[] = [
+    enchere,
+    defausse,
+    { type: 'pose-etiquette', idCarte: 'commune|Chat', idExemplaire: 'ex-1', nomEtiquette: 'N' },
+    { type: 'creation-etiquette', idCarte: 'commune|Chat', nomEtiquette: 'N' },
+  ]
+  for (const classe of ['echec', 'inconnu', 'arret'] as const) {
+    it(`classe ${classe} : mêmes références`, () => {
+      const c = coll(carte())
+      const r = reg()
+      for (const a of actions) {
+        const res = appliquerResultat(c, r, a, { classe, codeHttp: null, cause: 'x' })
+        expect(res.collection).toBe(c)
+        expect(res.registre).toBe(r)
+      }
+    })
+  }
+
+  it('succès sur une carte inconnue : mêmes références', () => {
+    const c = coll()
+    const r = reg()
+    const res = appliquerResultat(c, r, enchere, ok)
+    expect(res.collection).toBe(c)
+    expect(res.registre).toBe(r)
+  })
+})
