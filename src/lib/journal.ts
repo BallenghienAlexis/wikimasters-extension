@@ -21,9 +21,8 @@ const MAX_PARAMETRE = 300
 const MAX_ID_CARTE = 400
 const MAX_ID = 64
 
-/** Libellés fixes affichés par l’interface. */
+/** Libellé fixe affiché par l’interface. */
 export const LIBELLE_INTERROMPUE = 'interrompue, résultat inconnu, à vérifier sur le site'
-export const LIBELLE_JETON_ABSENT = 'jeton de session absent : reconnectez-vous sur le site'
 
 /** Champs fournis à l’ouverture d’une entrée (liste fermée). */
 export interface ChampsEntree {
@@ -42,12 +41,18 @@ const CLES: readonly (keyof EntreeJournal)[] = [
   'id', 'horodatage', 'idCarte', 'titre', 'type', 'parametre', 'resultat', 'codeHttp', 'idLot',
 ]
 
-const RESULTAT_PAR_CLASSE: Record<ResultatAction['classe'], Resultat> = {
+const RESULTAT_PAR_CLASSE: Readonly<Record<ResultatAction['classe'], Resultat>> = Object.freeze({
+  __proto__: null,
   reussie: 'reussie',
   echec: 'echouee',
   arret: 'interrompue',
   inconnu: 'inconnu',
-}
+} as Record<ResultatAction['classe'], Resultat>)
+
+const resultatDeClasse = (classe: unknown): Resultat =>
+  typeof classe === 'string' && Object.hasOwn(RESULTAT_PAR_CLASSE, classe)
+    ? RESULTAT_PAR_CLASSE[classe as ResultatAction['classe']]
+    : 'inconnu'
 
 const tronquer = (s: string, max: number): string => Array.from(s).slice(0, max).join('')
 
@@ -69,21 +74,22 @@ function copier(e: EntreeJournal): EntreeJournal {
   }
 }
 
-const octets = (j: Journal): number => new TextEncoder().encode(JSON.stringify(j)).length
+const encodeur = new TextEncoder()
 
-/** Applique la limite d’entrées puis, par sécurité, celle du poids (≤ 1 Mo). */
+/** Poids exact, en octets UTF-8, de la sérialisation JSON d’un journal. */
+const octets = (j: Journal): number => encodeur.encode(JSON.stringify(j)).length
+
+/**
+ * Double borne : au plus 1 000 entrées ET au plus 1 Mo sérialisé ; la plus stricte
+ * l’emporte. On retire les plus anciennes entrées jusqu’à ce que les deux tiennent.
+ */
 function borner(j: Journal): Journal {
-  let sortie = j.length > MAX_ENTREES ? j.slice(j.length - MAX_ENTREES) : j
-  // Le contrôle du poids n’est utile que si les entrées sont longues : on l’évite en dessous de 700 entrées
-  // (700 entrées de longueur maximale pèsent moins de 1 Mo).
-  if (sortie.length >= 700) {
-    while (sortie.length > 1 && octets(sortie) > MAX_OCTETS) {
-      const trop = octets(sortie) - MAX_OCTETS
-      // Au plus ~1,2 Ko par entrée : on retire d’un coup de quoi couvrir l’excédent.
-      sortie = sortie.slice(Math.max(1, Math.ceil(trop / 1200)))
-    }
-  }
-  return sortie
+  let debut = Math.max(0, j.length - MAX_ENTREES)
+  // Poids de chaque entrée, virgules comprises ; crochets : 2 octets.
+  const poids = j.map((e) => encodeur.encode(JSON.stringify(e)).length + 1)
+  let total = 1 + poids.slice(debut).reduce((a, b) => a + b, 0)
+  while (debut < j.length - 1 && total > MAX_OCTETS) total -= poids[debut++]!
+  return j.slice(debut)
 }
 
 function prochainCompteur(j: Journal): number {
@@ -125,17 +131,27 @@ export function completerEntree(journal: Journal, id: string, resultat: Resultat
   return journal.map((e) => {
     const c = copier(e)
     if (e.id !== id || e.resultat !== 'en-cours') return c
-    c.resultat = RESULTAT_PAR_CLASSE[resultat.classe] ?? 'inconnu'
+    c.resultat = resultatDeClasse(resultat.classe)
     c.codeHttp = codeValide(resultat.codeHttp) ? resultat.codeHttp : null
+    return c
+  })
+}
+
+/** Inscrit une entrée « en cours » en « passée » (action non envoyée) ; sans effet sinon. */
+export function passerEntree(journal: Journal, id: string): Journal {
+  return journal.map((e) => {
+    const c = copier(e)
+    if (e.id === id && e.resultat === 'en-cours') c.resultat = 'passee'
     return c
   })
 }
 
 /** Clôt les entrées « en cours » d’un lot en « interrompue » (résultat inconnu, à vérifier sur le site). */
 export function cloreInterrompues(journal: Journal, idLot: string): Journal {
+  const lot = tronquer(String(idLot), MAX_ID)
   return journal.map((e) => {
     const c = copier(e)
-    if (e.idLot === idLot && e.resultat === 'en-cours') c.resultat = 'interrompue'
+    if (e.idLot === lot && e.resultat === 'en-cours') c.resultat = 'interrompue'
     return c
   })
 }
@@ -146,7 +162,7 @@ function entreeValide(brut: unknown): EntreeJournal | null {
   const cles = Object.keys(o)
   if (cles.length !== CLES.length || !CLES.every((k) => Object.hasOwn(o, k))) return null
   const { id, horodatage, idCarte, titre, type, parametre, resultat, codeHttp, idLot } = o
-  if (typeof id !== 'string' || id.length === 0 || id.length > MAX_ID) return null
+  if (typeof id !== 'string' || id.length === 0 || Array.from(id).length > MAX_ID) return null
   if (
     typeof horodatage !== 'string' ||
     !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(horodatage) ||
@@ -158,7 +174,7 @@ function entreeValide(brut: unknown): EntreeJournal | null {
   if (parametre !== null && (typeof parametre !== 'string' || Array.from(parametre).length > MAX_PARAMETRE)) return null
   if (typeof resultat !== 'string' || !(RESULTATS as readonly string[]).includes(resultat)) return null
   if (!codeValide(codeHttp)) return null
-  if (typeof idLot !== 'string' || idLot.length > MAX_ID) return null
+  if (typeof idLot !== 'string' || Array.from(idLot).length > MAX_ID) return null
   return {
     id,
     horodatage,
@@ -181,7 +197,7 @@ export function validerJournal(brut: unknown): Journal | null {
     if (e === null) return null
     sortie.push(e)
   }
-  return sortie
+  return octets(sortie) > MAX_OCTETS ? null : sortie
 }
 
 /** Clé d’un couple (carte, étiquette), sans ambiguïté même si les noms contiennent `|`. */
