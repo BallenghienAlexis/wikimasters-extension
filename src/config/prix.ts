@@ -33,15 +33,15 @@ export const CONFIG_PRIX: ConfigPrix = {
 
   // Matrice valeur marchande → prix de départ. La tranche la plus haute atteinte s'applique.
   // Lecture : une carte vendue au marché entre 15 et 25 se met aux enchères à 1, etc.
-  // Au-delà de 200 : suite extrapolée (prix ×2 ou ×5 en alternance, tranches doublées). À ajuster.
+  // Au-delà de 200 : suite extrapolée (tranches doublées, prix toujours inférieur à la valeur du marché). À ajuster.
   matricePrixDepart: [
     { valeurMin: 15, prixDepart: 1 }, // 15 à 25
     { valeurMin: 26, prixDepart: 5 }, // 26 à 50
     { valeurMin: 51, prixDepart: 10 }, // 51 à 100
     { valeurMin: 101, prixDepart: 50 }, // 101 à 200
     { valeurMin: 201, prixDepart: 100 }, // 201 à 400
-    { valeurMin: 401, prixDepart: 500 }, // 401 à 800
-    { valeurMin: 801, prixDepart: 1000 }, // 801 à 1 600
-    { valeurMin: 1601, prixDepart: 5000 }, // 1 601 à 3 200
+    { valeurMin: 401, prixDepart: 200 }, // 401 à 800
+    { valeurMin: 801, prixDepart: 500 }, // 801 à 1 600
+    { valeurMin: 1601, prixDepart: 1000 }, // 1 601 à 3 200
   ],
 };

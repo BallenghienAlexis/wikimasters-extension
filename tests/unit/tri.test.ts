@@ -178,3 +178,11 @@ describe('lirePreferences', () => {
     expect(lirePreferences(JSON.parse(JSON.stringify(p)))).toEqual(p);
   });
 });
+
+describe('matrice des prix réelle', () => {
+  it('ne met jamais une carte en vente au-dessus de sa valeur du marché', () => {
+    for (const tranche of CONFIG_PRIX.matricePrixDepart) {
+      expect(tranche.prixDepart).toBeLessThan(tranche.valeurMin);
+    }
+  });
+});
