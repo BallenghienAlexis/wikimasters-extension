@@ -16,7 +16,12 @@ const MSG_JETON = 'Interdit : seul src/lib/reseau.ts peut importer jeton.';
 const regle = (selector, message) => ({ selector, message });
 
 // Accès à la propriété `nom` : `a.nom` ou `a['nom']`.
-const membre = (nom) => `MemberExpression[property.name='${nom}'], MemberExpression[property.value='${nom}']`;
+// Clés en gabarit sans expression (`localStorage`) comprises.
+const membre = (nom) =>
+  `MemberExpression[property.name='${nom}'], MemberExpression[property.value='${nom}'], MemberExpression[property.type='TemplateLiteral'][property.expressions.length=0][property.quasis.0.value.cooked='${nom}']`;
+// Déstructuration : `const { nom } = …`, `const { nom: autre } = …`, `const { 'nom': x } = …`.
+const destructure = (noms) =>
+  `ObjectPattern > Property[key.name=/^(${noms})$/], ObjectPattern > Property[key.value=/^(${noms})$/]`;
 const HTML = [
   regle("JSXAttribute[name.name='dangerouslySetInnerHTML']", MSG_HTML),
   regle("AssignmentExpression[left.property.name='innerHTML']", MSG_HTML),
@@ -25,16 +30,28 @@ const HTML = [
   regle("CallExpression[callee.property.name='write'][callee.object.name='document']", MSG_HTML),
 ];
 
-const ACTIONS = ['click', 'submit', 'requestSubmit', 'dispatchEvent', 'focus'].map((nom) =>
-  regle(`CallExpression[callee.property.name='${nom}'], CallExpression[callee.property.value='${nom}']`, MSG_ACTION),
-);
+const NOMS_ACTIONS = ['click', 'submit', 'requestSubmit', 'dispatchEvent', 'focus'];
+const ACTIONS = [
+  ...NOMS_ACTIONS.map((nom) =>
+    regle(`CallExpression[callee.property.name='${nom}'], CallExpression[callee.property.value='${nom}']`, MSG_ACTION),
+  ),
+  // `el.click.call(el)`, `.apply`, `.bind`.
+  ...NOMS_ACTIONS.map((nom) =>
+    regle(
+      `CallExpression[callee.property.name=/^(call|apply|bind)$/]:matches([callee.object.property.name='${nom}'], [callee.object.property.value='${nom}'])`,
+      MSG_ACTION,
+    ),
+  ),
+];
 
 const GLOBALES_RESEAU = ['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource'];
-const RESEAU = [...GLOBALES_RESEAU, 'sendBeacon'].map((nom) => regle(membre(nom), MSG_RESEAU));
+const NOMS_RESEAU = [...GLOBALES_RESEAU, 'sendBeacon'];
+const RESEAU = [...NOMS_RESEAU.map((nom) => regle(membre(nom), MSG_RESEAU)), regle(destructure(NOMS_RESEAU.join('|')), MSG_RESEAU)];
 
 const GLOBALES_STOCKAGE = ['cookieStore', 'localStorage', 'sessionStorage', 'indexedDB'];
 // Lecture : tout accès aux cookies et au stockage (`document.cookie`, `window['localStorage']`…).
-const STOCKAGE = ['cookie', ...GLOBALES_STOCKAGE].map((nom) => regle(membre(nom), MSG_STOCKAGE));
+const NOMS_STOCKAGE = ['cookie', ...GLOBALES_STOCKAGE];
+const STOCKAGE = [...NOMS_STOCKAGE.map((nom) => regle(membre(nom), MSG_STOCKAGE)), regle(destructure(NOMS_STOCKAGE.join('|')), MSG_STOCKAGE)];
 
 const STOCKAGES_WEB = ['localStorage', 'sessionStorage'];
 const ecrireSur = (nom) =>
@@ -46,7 +63,7 @@ const appelerSur = (nom, methodes) =>
 
 // Écritures : interdites partout, jeton.ts compris.
 const ECRITURES = [
-  regle("AssignmentExpression[left.property.name='cookie'], AssignmentExpression[left.property.value='cookie']", MSG_ECRITURE),
+  regle("AssignmentExpression:matches([left.property.name='cookie'], [left.property.value='cookie'], [left.property.type='TemplateLiteral'][left.property.quasis.0.value.cooked='cookie'])", MSG_ECRITURE),
   regle("UpdateExpression[argument.property.name='cookie']", MSG_ECRITURE),
   regle(appelerSur('cookieStore', 'set|delete'), MSG_ECRITURE),
   ...STOCKAGES_WEB.flatMap((nom) => [
@@ -57,16 +74,20 @@ const ECRITURES = [
 ];
 
 // Méthodes d'écriture génériques (indexedDB, Storage) : bannies seulement dans jeton.ts (Set.add, Map.clear ailleurs).
+const METHODES_ECRITURE = 'setItem|removeItem|clear|deleteDatabase|createObjectStore|deleteObjectStore|createIndex|deleteIndex|put|add|delete|update';
 const ECRITURES_JETON = [
-  regle(
-    "CallExpression:matches([callee.property.name=/^(setItem|removeItem|clear|deleteDatabase|createObjectStore|deleteObjectStore|put|add)$/], [callee.property.value=/^(setItem|removeItem|clear|deleteDatabase|createObjectStore|deleteObjectStore|put|add)$/])",
-    MSG_ECRITURE,
-  ),
+  regle(`CallExpression:matches([callee.property.name=/^(${METHODES_ECRITURE})$/], [callee.property.value=/^(${METHODES_ECRITURE})$/])`, MSG_ECRITURE),
+  // `const { setItem } = localStorage` : méthode d'écriture détachée.
+  regle(destructure(METHODES_ECRITURE), MSG_ECRITURE),
+  // Transactions en écriture et montée de version d'une base.
+  regle("Literal[value=/^(readwrite|versionchange)$/]", MSG_ECRITURE),
+  regle(appelerSur('indexedDB', 'open') + '[arguments.length>1]', MSG_ECRITURE),
 ];
 
 const ALEA = [
   regle("MemberExpression:matches([object.name='Math'], [object.property.name='Math']):matches([property.name='random'], [property.value='random'])", MSG_ALEA),
   regle("MemberExpression:matches([property.name=/^(getRandomValues|randomUUID)$/], [property.value=/^(getRandomValues|randomUUID)$/])", MSG_ALEA),
+  regle(destructure('random|getRandomValues|randomUUID'), MSG_ALEA),
 ];
 
 const IMPORT_JETON = [
@@ -74,10 +95,10 @@ const IMPORT_JETON = [
   regle("CallExpression[callee.name='require'][arguments.0.value=/(^|\\/)jeton(\\.[jt]s)?$/]", MSG_JETON),
 ];
 
-const globales = (noms) => noms.map((name) => ({ name, message: noms === GLOBALES_RESEAU ? MSG_RESEAU : MSG_STOCKAGE }));
+const globales = (noms, message) => noms.map((name) => ({ name, message }));
 const GLOBALES = (reseau, stockage) => [
-  ...(reseau ? globales(GLOBALES_RESEAU) : []),
-  ...(stockage ? globales(GLOBALES_STOCKAGE) : []),
+  ...(reseau ? globales(GLOBALES_RESEAU, MSG_RESEAU) : []),
+  ...(stockage ? globales(GLOBALES_STOCKAGE, MSG_STOCKAGE) : []),
 ];
 
 const PATTERNS_JETON = { patterns: [{ regex: '(^|/)jeton(\\.[jt]s)?$', message: MSG_JETON }] };
