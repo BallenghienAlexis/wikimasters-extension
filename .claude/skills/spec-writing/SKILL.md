@@ -19,6 +19,7 @@ VISUELS: specs/<feature>/wireframes/variante-1.html, variante-2.html (+ Mermaid 
 - **Alternatives** : solution plus simple ? existante dans le code ?
 - **Impact utilisateur** : qui voit quoi, que perd-on (rétrocompatibilité des données stockées et des exports).
 - **Vie privée** : la feature lit-elle ou stocke-t-elle plus que le strict nécessaire ?
+- **Cadre WikiMasters** : la feature agit-elle sur le site à la place d'Alexis ? Si oui, le risque de bannissement est écrit dans la spec et validé au gate.
 
 ## Visuels
 - Wireframe ASCII dans la spec pour la structure ; HTML autonome (sans dépendance externe) pour comparer 2-3 variantes de design, avec les couleurs réelles de `src/styles/tokens.css`.

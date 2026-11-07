@@ -135,6 +135,8 @@ export function fusionnerImport(collection: Collection, importees: CarteImportee
       prixCible: existante?.prixCible ?? null,
       note: existante?.note ?? '',
       ...importee,
+      // Une lecture du site ne connaît pas l'URL : elle n'efface pas celle d'un import.
+      url: importee.url ?? existante?.url ?? null,
     });
   }
   return { version: VERSION_SCHEMA, cartes: [...parId.values()] };
@@ -152,7 +154,19 @@ export function retirerCarte(collection: Collection, id: string): Collection {
   return { ...collection, cartes: collection.cartes.filter((c) => c.id !== id) };
 }
 
-export const excedent =(carte: Pick<Carte, 'quantite'>): number => Math.max(0, carte.quantite - 1);
+// Une enchère terminée retire un exemplaire. S'il en reste, la carte garde son édition (note, ami, valeur)
+// et repasse « À trier » pour que l'assistant la reclasse ; sinon elle disparaît.
+export function terminerEnchere(collection: Collection, id: string): Collection {
+  const carte = collection.cartes.find((c) => c.id === id);
+  if (!carte || carte.quantite <= 1) return retirerCarte(collection, id);
+  return appliquerEdition(
+    { ...collection, cartes: collection.cartes.map((c) => (c.id === id ? { ...c, quantite: c.quantite - 1 } : c)) },
+    id,
+    { statut: 'a-trier', prixCible: null, decidePar: null },
+  );
+}
+
+export const excedent = (carte: Pick<Carte, 'quantite'>): number => Math.max(0, carte.quantite - 1);
 
 export const normaliser = (texte: string): string =>
   texte

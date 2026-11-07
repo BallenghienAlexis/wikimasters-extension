@@ -8,7 +8,7 @@ import {
   filtrerCartes,
   fusionnerImport,
   resumer,
-  retirerCarte,
+  terminerEnchere,
   type Collection,
   type EditionCarte,
   type Filtres,
@@ -180,7 +180,7 @@ const App: React.FC = () => {
           <FileVente
             cartes={collection.cartes}
             onMiseEnVente={(id) => editer(id, { statut: 'en-vente', decidePar: 'moi' })}
-            onTerminee={(id) => appliquer(retirerCarte(collection, id))}
+            onTerminee={(id) => appliquer(terminerEnchere(collection, id))}
           />
 
           <div className="mt-4 flex flex-wrap items-center gap-3">

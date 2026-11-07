@@ -42,7 +42,7 @@ export function progression({ pages, total }: Synchro): Progression {
 export const texteProgression = ({ lues, total, prochaine }: Progression): string =>
   prochaine === null
     ? `Collection entière lue : ${total} pages sur ${total}.`
-    : `${lues} pages lues sur ${total}. Prochaine page à ouvrir : ${prochaine}.`;
+    : `${lues} ${lues > 1 ? 'pages lues' : 'page lue'} sur ${total}. Prochaine page à ouvrir : ${prochaine}.`;
 
 export function lireSynchro(brut: unknown): Synchro | null {
   if (typeof brut !== 'object' || brut === null) return null;

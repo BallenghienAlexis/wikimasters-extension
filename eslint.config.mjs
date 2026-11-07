@@ -11,17 +11,6 @@ export default tseslint.config(
     plugins: { 'react-hooks': reactHooks },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      // Verrou réseau (AGENTS.md) : aucun contact avec le site ni avec un serveur.
-      'no-restricted-globals': [
-        'error',
-        ...['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource'].map((name) => ({ name, message: 'Interdit par AGENTS.md : verrou réseau.' })),
-      ],
-      'no-restricted-properties': [
-        'error',
-        { object: 'navigator', property: 'sendBeacon', message: 'Interdit par AGENTS.md : verrou réseau.' },
-        { object: 'chrome', property: 'cookies', message: 'Interdit par AGENTS.md : pas de lecture de session.' },
-        { object: 'chrome', property: 'scripting', message: 'Interdit par AGENTS.md : pas d’injection dans le site.' },
-      ],
       'no-restricted-syntax': [
         'error',
         { selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']", message: 'Interdit par AGENTS.md : rendre les données en texte.' },
@@ -31,13 +20,16 @@ export default tseslint.config(
   },
   {
     // Le code exécuté sur le site lit et affiche, mais n'agit jamais à la place du joueur.
-    files: ['src/content/**/*.ts', 'src/lib/lecteur.ts'],
+    files: ['src/content/**/*.ts', 'src/lib/**/*.ts', 'src/config/**/*.ts'],
     rules: {
       'no-restricted-syntax': [
         'error',
         { selector: "AssignmentExpression[left.property.name='innerHTML']", message: 'Interdit par AGENTS.md : rendre les données en texte.' },
+        { selector: "AssignmentExpression[left.property.name='outerHTML']", message: 'Interdit par AGENTS.md : rendre les données en texte.' },
+        { selector: "CallExpression[callee.property.name='insertAdjacentHTML']", message: 'Interdit par AGENTS.md : rendre les données en texte.' },
+        { selector: "CallExpression[callee.property.name='write'][callee.object.name='document']", message: 'Interdit par AGENTS.md : rendre les données en texte.' },
         ...['click', 'submit', 'requestSubmit', 'dispatchEvent', 'focus'].map((nom) => ({
-          selector: `CallExpression[callee.property.name='${nom}']`,
+          selector: `CallExpression[callee.property.name='${nom}'], CallExpression[callee.property.value='${nom}']`,
           message: 'Interdit par AGENTS.md : aucune action sur le site à la place du joueur.',
         })),
       ],

@@ -60,11 +60,11 @@ test('la file de vente suit les places libres', async ({ pageCollection: page })
   await page.getByRole('button', { name: 'Appliquer ce tri' }).click();
 
   const file = page.getByTestId('file-vente');
-  await expect(file).toContainText('0 en cours sur 5, 5 place(s) libre(s)');
+  await expect(file).toContainText('0 en cours sur 5, 5 places libres');
   await expect(file).toContainText('Athlète fictif · valeur 100');
 
   await file.getByRole('button', { name: 'Je l’ai mise aux enchères' }).click();
-  await expect(file).toContainText('1 en cours sur 5, 4 place(s) libre(s)');
+  await expect(file).toContainText('1 en cours sur 5, 4 places libres');
 
   await file.getByRole('button', { name: 'Enchère terminée' }).click();
   await expect(page.getByLabel('Statut de Athlète fictif')).toHaveCount(0);

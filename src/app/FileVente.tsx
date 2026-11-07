@@ -18,7 +18,7 @@ const FileVente: React.FC<Props> = ({ cartes, onMiseEnVente, onTerminee }) => {
   return (
     <section aria-labelledby="titre-file-vente" className="mt-4 rounded border border-line bg-ink-2 p-4" data-testid="file-vente">
       <h2 id="titre-file-vente" className="font-semibold">
-        Ventes : {enCours.length} en cours sur {CONFIG_PRIX.maxVentesSimultanees}, {placesLibres} place(s) libre(s)
+        Ventes : {enCours.length} en cours sur {CONFIG_PRIX.maxVentesSimultanees}, {placesLibres} {placesLibres > 1 ? 'places libres' : 'place libre'}
       </h2>
 
       {enCours.length > 0 && (
@@ -52,7 +52,7 @@ const FileVente: React.FC<Props> = ({ cartes, onMiseEnVente, onTerminee }) => {
         </>
       )}
 
-      {enAttente > 0 && <p className="mt-3 text-sm text-muted">{enAttente} carte(s) en attente d’une place libre.</p>}
+      {enAttente > 0 && <p className="mt-3 text-sm text-muted">{enAttente} {enAttente > 1 ? 'cartes en attente' : 'carte en attente'} d’une place libre.</p>}
     </section>
   );
 };

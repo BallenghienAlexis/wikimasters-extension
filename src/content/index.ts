@@ -42,7 +42,7 @@ function afficherSynchro(synchro: Synchro): void {
 }
 
 async function lirePage(): Promise<void> {
-  if (!location.pathname.startsWith('/collection')) return;
+  if (location.pathname !== '/collection' && !location.pathname.startsWith('/collection/')) return;
   const cartes = trouverCartes(document).map(({ carte }) => carte);
   if (cartes.length > 0) {
     afficherReperes(await fusionnerDansStockage(regrouperCartes(cartes)));
@@ -60,7 +60,7 @@ const estRepere = (noeud: Node): boolean =>
 let minuteur: ReturnType<typeof setTimeout> | undefined;
 const planifierLecture = (): void => {
   clearTimeout(minuteur);
-  minuteur = setTimeout(() => void lirePage(), DELAI_MS);
+  minuteur = setTimeout(() => void lirePage().catch(() => undefined), DELAI_MS);
 };
 
 // Nos propres repères ne doivent pas relancer une lecture.

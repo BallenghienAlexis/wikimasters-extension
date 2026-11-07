@@ -17,6 +17,11 @@ interface CarteStockee {
 
 async function ouvrirSite(context: BrowserContext, chemin = '/collection'): Promise<{ page: Page; requetes: string[] }> {
   const requetes: string[] = [];
+  // Toute autre requête externe fait échouer le test : la CI ne contacte jamais le vrai site.
+  await context.route(
+    (url) => url.protocol.startsWith('http') && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1',
+    (route) => route.abort(),
+  );
   await context.route('https://www.wiki-masters.com/**', (route) => {
     requetes.push(route.request().method());
     return route.fulfill({ path: PAGE_FICTIVE, contentType: 'text/html' });
@@ -115,7 +120,7 @@ test.describe('suivi de la synchronisation', () => {
   test('indique sur le site et dans l’extension les pages lues et la suivante', async ({ context, pageCollection }) => {
     const { page } = await ouvrirSite(context);
     const indicateur = page.locator('.wm-synchro');
-    await expect(indicateur).toHaveAttribute('data-wm-texte', /1 pages lues sur 3\. Prochaine page à ouvrir : 2/);
+    await expect(indicateur).toHaveAttribute('data-wm-texte', /1 page lue sur 3\. Prochaine page à ouvrir : 2/);
 
     await tournerPage(page, 3);
     await expect(indicateur).toHaveAttribute('data-wm-texte', /2 pages lues sur 3\. Prochaine page à ouvrir : 2/);

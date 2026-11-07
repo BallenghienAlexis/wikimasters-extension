@@ -43,7 +43,7 @@ describe('progression', () => {
 
 describe('texteProgression', () => {
   it('annonce la page suivante, puis la fin', () => {
-    expect(texteProgression({ lues: 1, total: 3, prochaine: 2 })).toBe('1 pages lues sur 3. Prochaine page à ouvrir : 2.');
+    expect(texteProgression({ lues: 1, total: 3, prochaine: 2 })).toBe('1 page lue sur 3. Prochaine page à ouvrir : 2.');
     expect(texteProgression({ lues: 3, total: 3, prochaine: null })).toBe('Collection entière lue : 3 pages sur 3.');
   });
 });

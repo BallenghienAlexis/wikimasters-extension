@@ -73,6 +73,12 @@ export function lireFenetreEnchere(racine: ParentNode): ValeurLue | null {
   return boite ? analyserFenetreEnchere(boite.innerText) : null;
 }
 
+export function empreinte(texte: string): string {
+  let h = 5381;
+  for (const c of texte) h = ((h * 33) ^ c.codePointAt(0)!) >>> 0;
+  return texte === '' ? '' : h.toString(36);
+}
+
 // La clé change avec le tri et les filtres, qui changent le contenu des pages.
 export function lirePositionPage(racine: ParentNode): { cle: string; pagination: Pagination } | null {
   const libelle = [...racine.querySelectorAll<HTMLElement>('main *')].find(
@@ -81,7 +87,8 @@ export function lirePositionPage(racine: ParentNode): { cle: string; pagination:
   const pagination = analyserPagination(libelle?.textContent ?? '');
   if (!pagination) return null;
   const texteBouton = (nom: string): string => racine.querySelector<HTMLElement>(`button[aria-label="${nom}"]`)?.innerText.trim() ?? '';
-  const recherche = racine.querySelector<HTMLInputElement>('main input[type="text"]')?.value ?? '';
+  // Seule une empreinte de la recherche est gardée, jamais le texte tapé sur le site.
+  const recherche = empreinte(racine.querySelector<HTMLInputElement>('main input[type="text"]')?.value ?? '');
   return { cle: [texteBouton('Trier la collection'), texteBouton('Filtrer par étiquette'), recherche].join('|'), pagination };
 }
 

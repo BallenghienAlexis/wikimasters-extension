@@ -6,17 +6,17 @@ WM Collection est une extension Chrome personnelle pour préparer le tri, l'éch
 
 ## Cadre d'usage WikiMasters
 
-État relevé le 2026-11-06 : pas d'API publique, et `Disallow: /api/` dans le `robots.txt`.
+État relevé le 2026-11-06 : pas d'API publique, et `Disallow: /api/` dans le `robots.txt`. Les règles de la communauté (section 3) interdisent les bots, scripts, macros, tout outil qui joue, ouvre des paquets, échange ou interagit à la place du joueur, ainsi que la rétro-ingénierie et l'interception du trafic pour obtenir un avantage. Les conditions d'utilisation (section 6) prévoient un bannissement pour automatisation.
 
 **« Édition » désigne donc l'édition locale** : statut, prix cible et note de chaque carte, stockés dans l'extension. Rien n'est modifié sur le site.
 
 **Lecture du site** : quand le joueur ouvre `/collection`, le content script lit les cartes affichées et y pose un repère avec sa décision. Il ne clique pas, ne change pas de page et ne fait aucune requête : le joueur tourne les pages et agit lui-même. Les règles ne parlent pas explicitement du scraping : c'est une zone grise, assumée par Alexis, avec un risque non nul.
 
-**Verrou réseau** : aucune requête. Il repose sur le manifeste (pas de `host_permissions`, CSP `connect-src 'none'`), le lint (`fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `sendBeacon`, `chrome.cookies`, `chrome.scripting` interdits dans `src/` ; `click`, `submit`, `dispatchEvent`, `focus` interdits dans le code exécuté sur le site) et les tests e2e.
+**Pas de verrou réseau** (levé par Alexis le 2026-11-07, il limitait trop les fonctionnalités) : la CSP n'interdit plus `connect-src`, le lint n'interdit plus `fetch`. Le risque de bannissement est assumé. Restent en place : permission `storage` seule, pas d'`eval` ni de code distant, et `click`, `submit`, `dispatchEvent`, `focus` interdits dans le code exécuté sur le site tant qu'une spec n'a pas décidé explicitement d'agir à la place du joueur. Les repères insérés dans la page laissent une empreinte (`wm-*`) que le site pourrait détecter : choix assumé par Alexis.
 
 Aucun code ne cherche à masquer une automatisation : pas de délais aléatoires, de simulation de comportement humain ni de contournement de détection.
 
-Tout code qui clique, envoie un formulaire ou appelle l'API interne du site à la place du joueur exige une décision explicite d'Alexis, écrite dans la spec de la feature.
+Tout code qui clique, envoie un formulaire ou appelle l'API interne du site à la place du joueur exige une décision explicite d'Alexis, écrite dans la spec de la feature, avec le risque de bannissement rappelé. Si WikiMasters ouvre une API ou donne un accord écrit, ce cadre est à mettre à jour ici.
 
 ## Stack
 
