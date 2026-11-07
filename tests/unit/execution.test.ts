@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EtatExecution, ResultatAction } from '../../src/lib/actions';
-import { creerExecution, ORIGINE_SITE } from '../../src/app/execution';
+import { creerExecution, creerHorloge, NOM_PORT, ORIGINE_SITE } from '../../src/app/execution';
 import { ouvrirEntree, type Journal } from '../../src/lib/journal';
 
 type Ecouteur<T> = (valeur: T) => void;
@@ -11,12 +11,13 @@ interface Sender {
   tab?: { id?: number };
 }
 
-function fauxPort(sender: Sender | undefined) {
+function fauxPort(sender: Sender | undefined, name: string = NOM_PORT) {
   const surMessage: Ecouteur<unknown>[] = [];
   const surDeconnexion: Ecouteur<void>[] = [];
   const envoyes: unknown[] = [];
   const port = {
     sender,
+    name,
     envoyes,
     deconnecte: false,
     postMessage: (m: unknown) => void envoyes.push(m),
@@ -119,6 +120,14 @@ describe('ports (AC2)', () => {
   ] as Array<[string, Sender | undefined]>)('refuse et ne compte pas : %s', (_n, sender) => {
     const e = creer();
     const p = fauxPort(sender);
+    connecter(p);
+    expect(p.deconnecte).toBe(true);
+    expect(e.nbOngletsWikiMasters()).toBe(0);
+  });
+
+  it('refuse et ne compte pas : nom de port étranger', () => {
+    const e = creer();
+    const p = fauxPort(bon(1), 'autre-port');
     connecter(p);
     expect(p.deconnecte).toBe(true);
     expect(e.nbOngletsWikiMasters()).toBe(0);
@@ -266,5 +275,46 @@ describe('exécution et verrou (AC3, AC5)', () => {
     stockage.execution = { version: 1, idLot: 'lot-1', etat: 'terminee', traitees: 3, total: 3 };
     await e.cloreInterrompues();
     expect(stockage.execution.etat).toBe('terminee');
+  });
+});
+
+describe('fin d’exécution (revue)', () => {
+  it('rejette l’ordre en attente quand l’exécution se termine', async () => {
+    const e = creer();
+    connecter(fauxPort(bon(1)));
+    let transport!: Promise<ResultatAction>;
+    await e.demarrer(async () => {
+      transport = e.transport({ type: 'lecture', idCarte: 'Rare|C' });
+    });
+    await expect(transport).rejects.toThrow(/terminée/);
+  });
+});
+
+describe('horloge réelle (monotone)', () => {
+  it('now suit performance.now, pas Date.now', () => {
+    const perf = { t: 5 , now: () => perf.t };
+    expect(creerHorloge(perf, vi.fn() as never).now()).toBe(5);
+  });
+
+  it('attendreJusqua respecte l’échéance absolue : pas de retour anticipé, délai fixe', async () => {
+    const perf = { t: 0, now: () => perf.t };
+    const delais: number[] = [];
+    // Minuteur imprécis : le premier réveil arrive 10 ms trop tôt.
+    const minuteur = ((rappel: () => void, delai: number) => {
+      delais.push(delai);
+      perf.t += delais.length === 1 ? delai - 10 : delai;
+      rappel();
+    }) as unknown as typeof setTimeout;
+    const h = creerHorloge(perf, minuteur);
+    await h.attendreJusqua(100);
+    expect(perf.t).toBeGreaterThanOrEqual(100);
+    expect(delais).toEqual([100, 10]);
+  });
+
+  it('échéance déjà passée : aucun minuteur', async () => {
+    const perf = { t: 200, now: () => perf.t };
+    const minuteur = vi.fn();
+    await creerHorloge(perf, minuteur as never).attendreJusqua(100);
+    expect(minuteur).not.toHaveBeenCalled();
   });
 });
