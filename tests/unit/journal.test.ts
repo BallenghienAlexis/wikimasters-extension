@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   MAX_ENTREES,
+  MAX_OCTETS,
   cleCouple,
   cloreInterrompues,
   completerEntree,
   dernierePoseParCouple,
   ouvrirEntree,
+  passerEntree,
   validerJournal,
   type ChampsEntree,
   type Journal,
@@ -240,24 +242,89 @@ describe('dernierePoseParCouple', () => {
   });
 });
 
-describe('taille', () => {
-  it('1 000 entrées aux longueurs maximales pèsent au plus 1 Mo sérialisées', () => {
+describe('passerEntree', () => {
+  it('inscrit une entrée « en cours » en « passée », sans toucher aux autres', () => {
+    const h = horloge();
+    const a = ouvrirEntree([], champs(), h);
+    const b = ouvrirEntree(a.journal, champs({ idCarte: 'Rare|Autre' }), h);
+    const fin = passerEntree(b.journal, a.id);
+    expect(fin.map((e) => e.resultat)).toEqual(['passee', 'en-cours']);
+    expect(fin[0]?.codeHttp).toBeNull();
+    expect(b.journal[0]?.resultat).toBe('en-cours');
+  });
+
+  it('ignore un identifiant inconnu et une entrée déjà complétée', () => {
+    const { journal, id } = ouvrirEntree([], champs(), horloge());
+    expect(passerEntree(journal, 'absent')).toEqual(journal);
+    const fin = completerEntree(journal, id, OK);
+    expect(passerEntree(fin, id)[0]?.resultat).toBe('reussie');
+  });
+});
+
+describe('idLot', () => {
+  it('est tronqué de la même façon à l’ouverture et à la clôture', () => {
+    const long = `lot-${'x'.repeat(100)}`;
+    const { journal } = ouvrirEntree([], champs({ idLot: long }), horloge());
+    expect(Array.from(journal[0]!.idLot)).toHaveLength(64);
+    const fin = cloreInterrompues(journal, long);
+    expect(fin[0]?.resultat).toBe('interrompue');
+    expect(validerJournal(fin)).not.toBeNull();
+  });
+});
+
+describe('classe de résultat inattendue', () => {
+  it('ne cherche pas dans le prototype', () => {
+    const { journal, id } = ouvrirEntree([], champs(), horloge());
+    for (const classe of ['constructor', 'toString', '__proto__']) {
+      const fin = completerEntree(journal, id, { classe, codeHttp: 200, cause: 'x' } as never);
+      expect(fin[0]?.resultat).toBe('inconnu');
+    }
+  });
+});
+
+const octets = (j: unknown): number => new TextEncoder().encode(JSON.stringify(j)).length;
+
+describe('double borne : au plus 1 000 entrées ET au plus 1 Mo', () => {
+  const remplir = (texte: string, n = MAX_ENTREES): Journal => {
     const h = horloge();
     let j: Journal = [];
-    for (let i = 0; i < MAX_ENTREES; i++) {
+    for (let i = 0; i < n; i++) {
       const r = ouvrirEntree(
         j,
-        champs({
-          idCarte: `Légendaire|${'t'.repeat(300)}`,
-          titre: 't'.repeat(300),
-          parametre: 'a'.repeat(300),
-        }),
+        champs({ idCarte: `Légendaire|${texte}`, titre: texte, parametre: texte }),
         h,
       );
       j = completerEntree(r.journal, r.id, OK);
     }
-    const octets = new TextEncoder().encode(JSON.stringify(j)).length;
-    expect(octets).toBeLessThanOrEqual(1024 * 1024);
-    expect(j.length).toBeGreaterThan(900);
+    return j;
+  };
+
+  it.each([
+    ['ASCII', 't'.repeat(300)],
+    ['émojis (4 octets UTF-8)', '😀'.repeat(300)],
+  ])('%s : poids exact ≤ 1 Mo et le plus grand suffixe qui tient est conservé', (_nom, texte) => {
+    const j = remplir(texte);
+    const poids = octets(j);
+    expect(poids).toBeLessThanOrEqual(MAX_OCTETS);
+    expect(j.length).toBeLessThanOrEqual(MAX_ENTREES);
+    // Maximalité : réintégrer l’entrée la plus ancienne écartée ferait dépasser 1 Mo
+    // (une entrée pèse au moins autant que la première conservée, au chiffre de l’identifiant près).
+    expect(poids + octets(j[0]) - 10).toBeGreaterThan(MAX_OCTETS);
+  }, 60_000);
+
+  it('le plafond en octets est exact avec des entrées courtes : 1 000 entrées conservées', () => {
+    const j = remplir('t', MAX_ENTREES);
+    expect(j).toHaveLength(MAX_ENTREES);
+    expect(octets(j)).toBeLessThanOrEqual(MAX_OCTETS);
+  });
+
+  it('validerJournal rejette un journal valide en forme mais de plus de 1 Mo', () => {
+    const e = ouvrirEntree([], champs({ titre: '😀'.repeat(300), parametre: '😀'.repeat(300) }), horloge())
+      .journal[0]!;
+    const gros = Array.from({ length: MAX_ENTREES }, () => e);
+    expect(octets(gros)).toBeGreaterThan(MAX_OCTETS);
+    expect(validerJournal(gros)).toBeNull();
+    const ok = gros.slice(0, 100);
+    expect(validerJournal(ok)).toHaveLength(100);
   });
 });
