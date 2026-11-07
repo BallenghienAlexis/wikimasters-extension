@@ -122,7 +122,7 @@ describe('étiquettes (SC-007 a à e, H16)', () => {
     const lot = construireLot(coll(carte('a', { statut: 'garder' })), r, config(), TOUS)
     expect(de(lot.actions, 'retrait-etiquette')).toEqual([
       { type: 'retrait-etiquette', idCarte: 'a', idExemplaire: 'ex-a', nomEtiquette: 'Statut · Vendre' },
-      { type: 'retrait-etiquette', idCarte: 'a', idExemplaire: 'ex-a', nomEtiquette: 'Statut · Garder' }.type === 'x' ? ({} as Action) : { type: 'retrait-etiquette', idCarte: 'a', idExemplaire: 'ex-a', nomEtiquette: 'Ami · Léa' },
+      { type: 'retrait-etiquette', idCarte: 'a', idExemplaire: 'ex-a', nomEtiquette: 'Ami · Léa' },
     ])
   })
 
@@ -242,11 +242,12 @@ describe('ordre H9', () => {
       'pose-etiquette',
       'pose-etiquette',
       'pose-etiquette',
+      'pose-etiquette',
       'defausse',
       'defausse',
     ])
     const poses = de(lot.actions, 'pose-etiquette').map((a) => (a as { idExemplaire: string }).idExemplaire)
-    expect(poses).toEqual(['a2', 'a1', 'ex-b', 'ex-c'].filter((x) => x !== 'ex-b' && x !== 'ex-c').concat(['ex-b', 'ex-c']))
+    expect(poses).toEqual(['a2', 'a1', 'ex-b', 'ex-c'])
     expect(de(lot.actions, 'defausse').map((a) => (a as { idExemplaire: string }).idExemplaire)).toEqual(['d2', 'd1'])
   })
 })
