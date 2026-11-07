@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import type { Action, CarteEcartee, TypeAction } from '../../src/lib/actions'
-import type { Carte } from '../../src/lib/collection'
+import type { Action, CarteEcartee, Registre, TypeAction } from '../../src/lib/actions'
+import type { Carte, Collection } from '../../src/lib/collection'
 import {
   CADENCE_TEXTE,
   detailsDuLot,
   dureeMinutes,
   libelleRaison,
   libelleType,
+  lignesNonIncluses,
+  preparerLot,
+  texteLotVide,
   pageActions,
   raisonDesactivation,
   regrouperEcartees,
@@ -16,6 +19,8 @@ import {
   titreApercu,
   totauxParType,
 } from '../../src/app/Synchronisation'
+
+const NB = ' '
 
 const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
   id,
@@ -57,13 +62,13 @@ describe('libellés', () => {
   })
 
   it('titre l’aperçu', () => {
-    expect(titreApercu(12)).toBe('Lot prêt : 12 actions')
-    expect(titreApercu(1)).toBe('Lot prêt : 1 action')
+    expect(titreApercu(12)).toBe(`Lot prêt${NB}: 12 actions`)
+    expect(titreApercu(1)).toBe(`Lot prêt${NB}: 1 action`)
     expect(titreApercu(0)).toBe('Aucune action à envoyer')
   })
 
   it('rappelle la cadence fixe', () => {
-    expect(CADENCE_TEXTE).toBe('Cadence fixe : 10 actions par minute · arrêt après 3 erreurs')
+    expect(CADENCE_TEXTE).toBe(`Cadence fixe${NB}: 10 actions par minute · arrêt après 3 erreurs`)
   })
 })
 
@@ -88,8 +93,8 @@ describe('détail des actions', () => {
     ]
     const d = detailsDuLot(actions, cartes)
     expect(d[0]).toBe('Ami · Léa')
-    expect(d[1]).toBe('retrait : Statut · Garder')
-    expect(d[2]).toBe('création : Ami · Léa')
+    expect(d[1]).toBe(`retrait${NB}: Statut · Garder`)
+    expect(d[2]).toBe(`création${NB}: Ami · Léa`)
   })
 
   it('donne le prix de départ et la valeur marchande d’une enchère', () => {
@@ -129,7 +134,7 @@ describe('totaux et durée', () => {
     expect(dureeMinutes(6)).toBe(1)
     expect(dureeMinutes(10)).toBe(1)
     expect(dureeMinutes(11)).toBe(2)
-    expect(texteDuree(11)).toBe('Durée estimée : 2 min')
+    expect(texteDuree(11)).toBe(`Durée estimée${NB}: 2 min`)
   })
 })
 
@@ -143,7 +148,7 @@ describe('disponibilité', () => {
 })
 
 describe('raison de désactivation de « Lancer »', () => {
-  const base = { nbOnglets: 1, executionEnCours: false, nbDisponibles: 3 }
+  const base = { nbOnglets: 1, executionEnCours: false, executionIllisible: false, nbDisponibles: 3 }
   it('est nulle quand tout est prêt', () => {
     expect(raisonDesactivation(base)).toBeNull()
   })
@@ -151,10 +156,13 @@ describe('raison de désactivation de « Lancer »', () => {
     expect(raisonDesactivation({ ...base, nbOnglets: 0 })).toBe('Aucun onglet WikiMasters ouvert.')
   })
   it('signale plusieurs onglets', () => {
-    expect(raisonDesactivation({ ...base, nbOnglets: 2 })).toBe('Plusieurs onglets WikiMasters sont ouverts : gardez-en un seul.')
+    expect(raisonDesactivation({ ...base, nbOnglets: 2 })).toBe(`Plusieurs onglets WikiMasters sont ouverts${NB}: gardez-en un seul.`)
   })
   it('signale une exécution en cours', () => {
     expect(raisonDesactivation({ ...base, executionEnCours: true })).toBe('Une exécution est déjà en cours.')
+  })
+  it('signale un état d’exécution illisible', () => {
+    expect(raisonDesactivation({ ...base, executionIllisible: true })).toBe('L’état de l’exécution est illisible : Lancer est impossible.'.replace(' :', `${NB}:`))
   })
   it('signale l’absence d’action disponible', () => {
     expect(raisonDesactivation({ ...base, nbDisponibles: 0 })).toBe('Aucune action n’est disponible pour le moment.')
@@ -185,5 +193,53 @@ describe('pagination et regroupement', () => {
         { raison: 'homonyme', nombre: 20 },
       ],
     })
+  })
+})
+
+describe('lot figé et erreurs de stockage', () => {
+  const coll = { version: 2, cartes: [carte('R|a')] } as unknown as Collection
+  const registre: Registre = { version: 1, etiquettes: {}, couples: [] }
+
+  it('refuse de préparer le lot si le registre est illisible', () => {
+    const r = preparerLot(coll, null, new Set<TypeAction>())
+    expect(r).toEqual({ erreur: 'le registre des étiquettes est illisible' })
+  })
+
+  it('prépare un lot avec une table vide', () => {
+    const r = preparerLot(coll, registre, new Set<TypeAction>())
+    expect('lot' in r && r.lot.actions).toEqual([])
+  })
+
+  it('convertit une exception en cause fixe', () => {
+    const r = preparerLot({ version: 2 } as unknown as Collection, registre, new Set<TypeAction>())
+    expect(r).toEqual({ erreur: 'calcul impossible' })
+  })
+})
+
+describe('texte du lot vide', () => {
+  it('distingue le lot vraiment vide du lot sans action disponible', () => {
+    expect(texteLotVide(true)).toBe('Aucune action n’est disponible pour le moment.')
+    expect(texteLotVide(false)).toBe('Les favoris, les cartes à trier et les cartes non reliées au site ne produisent aucune action.')
+  })
+})
+
+describe('cartes non incluses', () => {
+  const ecart = (idCarte: string, raison: CarteEcartee['raison']): CarteEcartee => ({ idCarte, titre: idCarte, raison })
+  it('dédoublonne par carte et par raison', () => {
+    const l = lignesNonIncluses([ecart('a', 'action-non-disponible'), ecart('a', 'action-non-disponible'), ecart('a', 'non-reliee')], [])
+    expect(l).toHaveLength(2)
+  })
+  it('inclut les étiquettes obsolètes, une ligne par carte et par nom', () => {
+    const o = (idExemplaire: string, nomEtiquette: string) => ({ idCarte: 'b', titre: 'b', idExemplaire, nomEtiquette })
+    const l = lignesNonIncluses([], [o('1', 'Statut · Garder'), o('2', 'Statut · Garder'), o('1', 'Ami · Léa')])
+    expect(l.map((x) => [x.raison, x.nomEtiquette])).toEqual([
+      ['etiquette-obsolete', 'Statut · Garder'],
+      ['etiquette-obsolete', 'Ami · Léa'],
+    ])
+  })
+  it('regroupe aussi les obsolètes au-delà de 50', () => {
+    const obs = Array.from({ length: 60 }, (_, i) => ({ idCarte: `c${i}`, titre: 't', idExemplaire: 'x', nomEtiquette: 'n' }))
+    const g = regrouperEcartees(lignesNonIncluses([], obs))
+    expect(g).toEqual({ type: 'groupes', groupes: [{ raison: 'etiquette-obsolete', nombre: 60 }] })
   })
 })
