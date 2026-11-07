@@ -144,6 +144,31 @@ describe('cadence fixe (AC2)', () => {
     expect(etat.etat).toBe('arretee');
   });
 
+  it('après un arrêt faute de jeton, l’écart se calcule depuis la dernière requête réellement émise', async () => {
+    const b = banc({}, (n) => (n === 2 ? arret(null, 'jeton-absent') : OK));
+    const file = creerFile(b.deps);
+    await file.demarrer(lot(2), 'lot-1');
+    await file.demarrer(lot(1), 'lot-2');
+    expect(b.departs).toHaveLength(3);
+    expect(b.departs[2]! - b.departs[0]!).toBe(6000);
+  });
+
+  it('une requête dont le transport lève une exception compte pour la cadence', async () => {
+    const b = banc();
+    let appels = 0;
+    b.deps.transport = async (action) => {
+      b.departs.push(b.horloge.t);
+      b.requetes.push(action);
+      if (++appels === 1) throw new Error('boom');
+      return OK;
+    };
+    const file = creerFile(b.deps);
+    const etat = await file.demarrer(lot(2), 'lot-1');
+    expect(etat.etat).toBe('arretee');
+    await file.demarrer(lot(1), 'lot-2');
+    expect(b.departs[1]! - b.departs[0]!).toBeGreaterThanOrEqual(6000);
+  });
+
   it('n’utilise aucun aléa : deux exécutions identiques donnent les mêmes écarts', async () => {
     const a = banc();
     const c = banc();
@@ -159,7 +184,11 @@ describe('une seule exécution, une seule requête en vol (AC3)', () => {
     const b = banc();
     const file = creerFile(b.deps);
     const premiere = file.demarrer(lot(2), 'lot-1');
-    expect(() => file.demarrer(lot(1), 'lot-2')).toThrow();
+    let refus: Promise<unknown> | undefined;
+    expect(() => {
+      refus = file.demarrer(lot(1), 'lot-2');
+    }).not.toThrow();
+    await expect(refus).rejects.toThrow();
     await premiere;
     await expect(file.demarrer(lot(1), 'lot-3')).resolves.toBeDefined();
   });
@@ -337,7 +366,11 @@ describe('revérification (AC6)', () => {
       return 'ok';
     };
     await creerFile(b.deps).demarrer(lot(3), 'lot-1');
-    expect(vues).toEqual(['Rare|Carte 1@0', 'Rare|Carte 2@1', 'Rare|Carte 3@2']);
+    expect(vues).toEqual([
+      'Rare|Carte 1@0', 'Rare|Carte 1@0',
+      'Rare|Carte 2@1', 'Rare|Carte 2@1',
+      'Rare|Carte 3@2', 'Rare|Carte 3@2',
+    ]);
   });
 
   it('action passée : aucune requête, journal « passée »', async () => {
@@ -347,6 +380,108 @@ describe('revérification (AC6)', () => {
     expect(b.journal).toEqual(['ouvrir:e1:pose-etiquette', 'passer:e1']);
     expect(etat.etat).toBe('terminee');
     expect(etat.traitees).toBe(1);
+  });
+});
+
+describe('revérification tardive', () => {
+  it('carte modifiée pendant l’attente de cadence : aucune requête pour elle', async () => {
+    const b = banc();
+    let modifiee = false;
+    b.deps.reverifier = () => (modifiee ? 'passee' : 'ok');
+    const attendre = b.horloge.attendreJusqua;
+    b.horloge.attendreJusqua = (e) => {
+      modifiee = true;
+      return attendre(e);
+    };
+    const etat = await creerFile(b.deps).demarrer(lot(2), 'lot-1');
+    expect(b.requetes.map((a) => a.idCarte)).toEqual(['Rare|Carte 1']);
+    expect(b.journal.slice(-2)).toEqual(['ouvrir:e2:lecture', 'passer:e2']);
+    expect(etat.etat).toBe('terminee');
+  });
+
+  it('carte modifiée pendant la confirmation de défausse : aucune requête', async () => {
+    const b = banc();
+    let modifiee = false;
+    b.deps.reverifier = () => (modifiee ? 'passee' : 'ok');
+    b.deps.confirmer = () => {
+      modifiee = true;
+      return 'defausser';
+    };
+    await creerFile(b.deps).demarrer([defausse(1)], 'lot-1');
+    expect(b.requetes).toHaveLength(0);
+    expect(b.journal).toEqual(['ouvrir:e1:defausse', 'passer:e1']);
+  });
+});
+
+describe('robustesse', () => {
+  it('reboucle tant que l’échéance n’est pas atteinte', async () => {
+    const b = banc();
+    b.horloge.attendreJusqua = (e) => {
+      b.horloge.t = Math.min(e, b.horloge.t + 1000);
+      return Promise.resolve();
+    };
+    await creerFile(b.deps).demarrer(lot(2), 'lot-1');
+    expect(b.departs[1]! - b.departs[0]!).toBeGreaterThanOrEqual(6000);
+  });
+
+  it('ajouter renvoie false après arreter()', async () => {
+    const b = banc();
+    const t = b.deps.transport;
+    let resultat: boolean | undefined;
+    b.deps.transport = async (a) => {
+      file.arreter();
+      resultat = file.ajouter([lecture(9)]);
+      return t(a);
+    };
+    const file = creerFile(b.deps);
+    await file.demarrer(lot(2), 'lot-1');
+    expect(resultat).toBe(false);
+  });
+
+  it('une exception de reverifier n’est pas classée comme échec d’écriture', async () => {
+    const b = banc({
+      reverifier: () => {
+        throw new Error('lecture');
+      },
+    });
+    const etat = await creerFile(b.deps).demarrer(lot(2), 'lot-1');
+    expect(etat.etat).toBe('arretee');
+    expect(etat.raison).toBe('verification');
+    expect(b.requetes).toHaveLength(0);
+  });
+
+  it('une exception de confirmer n’est pas classée comme échec d’écriture', async () => {
+    const b = banc({
+      confirmer: () => {
+        throw new Error('fenêtre');
+      },
+    });
+    const etat = await creerFile(b.deps).demarrer([defausse(1)], 'lot-1');
+    expect(etat.etat).toBe('arretee');
+    expect(etat.raison).toBe('confirmation-indisponible');
+    expect(b.requetes).toHaveLength(0);
+  });
+
+  it('s’arrête quand journal.completer échoue', async () => {
+    const b = banc();
+    b.deps.journal.completer = () => {
+      throw new Error('quota');
+    };
+    const etat = await creerFile(b.deps).demarrer(lot(3), 'lot-1');
+    expect(b.requetes).toHaveLength(1);
+    expect(etat.etat).toBe('arretee');
+    expect(etat.raison).toBe('ecriture');
+  });
+
+  it('s’arrête quand journal.passer échoue', async () => {
+    const b = banc({ reverifier: () => 'passee' });
+    b.deps.journal.passer = () => {
+      throw new Error('quota');
+    };
+    const etat = await creerFile(b.deps).demarrer(lot(3), 'lot-1');
+    expect(b.requetes).toHaveLength(0);
+    expect(etat.etat).toBe('arretee');
+    expect(etat.raison).toBe('ecriture');
   });
 });
 
