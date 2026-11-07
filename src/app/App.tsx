@@ -14,11 +14,14 @@ import {
   type Filtres,
 } from '../lib/collection';
 import { versCsv, versJson } from '../lib/exports';
-import { chargerCollection, chargerPreferences, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences } from '../lib/stockage';
+import { chargerCollection, chargerExecution, chargerPreferences, chargerRegistre, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences } from '../lib/stockage';
 import { progression, texteProgression, type Synchro } from '../lib/synchro';
 import { LIBELLES_THEMES, IDS_THEMES, themesDeCarte } from '../lib/themes';
 import { appliquerTri, preferencesParDefaut, type Preferences } from '../lib/tri';
+import type { Registre } from '../lib/actions';
+import { registreVide } from '../lib/registre';
 import AssistantTri from './AssistantTri';
+import Synchronisation from './Synchronisation';
 import FileVente from './FileVente';
 import CarteLigne from './CarteLigne';
 
@@ -47,11 +50,17 @@ const App: React.FC = () => {
   const [preferences, setPreferences] = useState<Preferences>(preferencesParDefaut);
   const [assistantOuvert, setAssistantOuvert] = useState(false);
   const [synchro, setSynchro] = useState<Synchro | null>(null);
+  const [registre, setRegistre] = useState<Registre>(registreVide);
+  const [executionEnCours, setExecutionEnCours] = useState(false);
   const champFichier = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void chargerPreferences().then(setPreferences);
     void chargerSynchro().then(setSynchro);
+    void chargerRegistre().then(setRegistre).catch(() => undefined);
+    void chargerExecution()
+      .then((e) => setExecutionEnCours(e?.etat === 'en-cours'))
+      .catch(() => undefined);
     return ecouterSynchro(setSynchro);
   }, []);
 
@@ -182,6 +191,8 @@ const App: React.FC = () => {
             onMiseEnVente={(id) => editer(id, { statut: 'en-vente', decidePar: 'moi' })}
             onTerminee={(id) => appliquer(terminerEnchere(collection, id))}
           />
+
+          <Synchronisation collection={collection} registre={registre} nbOnglets={0} executionEnCours={executionEnCours} />
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <input
