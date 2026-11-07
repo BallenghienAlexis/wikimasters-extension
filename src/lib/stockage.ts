@@ -13,6 +13,9 @@ const CLE_JOURNAL = 'journal';
 const CLE_EXECUTION = 'execution';
 const CLE_SIGNAL = 'signalSynchro';
 
+/** Version de l’enveloppe du journal stocké. */
+export const VERSION_JOURNAL = 1;
+
 /** Toutes les clés locales de l’extension. */
 export const CLES_STOCKAGE = {
   collection: CLE,
@@ -45,13 +48,18 @@ export async function chargerJournal(): Promise<Journal> {
   const contenu = await chrome.storage.local.get(CLE_JOURNAL);
   const brut = contenu[CLE_JOURNAL];
   if (brut === undefined) return [];
-  const journal = validerJournal(brut);
+  if (typeof brut !== 'object' || brut === null || Array.isArray(brut)) {
+    throw illisible('Le journal est invalide.');
+  }
+  const enveloppe = brut as Record<string, unknown>;
+  if (enveloppe.version !== VERSION_JOURNAL) throw illisible('La version du journal est inconnue.');
+  const journal = validerJournal(enveloppe.entrees);
   if (journal === null) throw illisible('Le journal est invalide.');
   return journal;
 }
 
 export async function enregistrerJournal(journal: Journal): Promise<void> {
-  await chrome.storage.local.set({ [CLE_JOURNAL]: journal });
+  await chrome.storage.local.set({ [CLE_JOURNAL]: { version: VERSION_JOURNAL, entrees: journal } });
 }
 
 const ETATS_EXECUTION: readonly string[] = ['en-cours', 'terminee', 'arretee'];
@@ -88,6 +96,7 @@ export async function effacerExecution(): Promise<void> {
 export async function chargerSignalSynchro(): Promise<number | null> {
   const contenu = await chrome.storage.local.get(CLE_SIGNAL);
   const brut = contenu[CLE_SIGNAL];
+  // Le signal n’est qu’un déclencheur : une valeur illisible vaut « pas de signal », sans erreur.
   return typeof brut === 'number' && Number.isFinite(brut) ? brut : null;
 }
 
