@@ -1,0 +1,125 @@
+/**
+ * Protocole du port page ↔ content script (SC-015, SC-018).
+ *
+ * Quatre messages : `bonjour` (content → page), `ordre` (page → content),
+ * `resultat` (content → page) et `arret`. Validation par liste blanche : tout
+ * champ inconnu fait rejeter le message (`null`). Aucun type exporté n’a de champ
+ * libre : rien ne peut transporter un jeton, un en-tête ou un corps de réponse.
+ *
+ * Logique pure : pas de `chrome.runtime` ici.
+ */
+import { TYPES_ACTION, type Action, type ResultatAction, type TypeAction } from './actions'
+
+const LONGUEUR_MAX = 200
+
+const CLASSES: ReadonlyArray<ResultatAction['classe']> = ['reussie', 'echec', 'arret', 'inconnu']
+
+export interface MessageBonjour {
+  message: 'bonjour'
+}
+export interface MessageOrdre {
+  message: 'ordre'
+  ordre: Action
+}
+export interface MessageResultat {
+  message: 'resultat'
+  resultat: ResultatAction
+}
+export interface MessageArret {
+  message: 'arret'
+}
+
+/** Tout message admis sur le port. */
+export type MessagePort = MessageBonjour | MessageOrdre | MessageResultat | MessageArret
+
+export function messageBonjour(): MessageBonjour {
+  return { message: 'bonjour' }
+}
+
+export function messageOrdre(ordre: Action): MessageOrdre {
+  return { message: 'ordre', ordre }
+}
+
+export function messageResultat(resultat: ResultatAction): MessageResultat {
+  return { message: 'resultat', resultat }
+}
+
+export function messageArret(): MessageArret {
+  return { message: 'arret' }
+}
+
+type Brut = Record<string, unknown>
+
+function enObjet(valeur: unknown): Brut | null {
+  if (typeof valeur !== 'object' || valeur === null || Array.isArray(valeur)) return null
+  return valeur as Brut
+}
+
+/** Vrai si l’objet n’a que des clés de la liste (la liste doit être exacte, aucun champ optionnel). */
+function cles(objet: Brut, attendues: readonly string[]): boolean {
+  const presentes = Object.keys(objet)
+  return presentes.length === attendues.length && attendues.every((c) => presentes.includes(c))
+}
+
+function texte(valeur: unknown): string | null {
+  if (typeof valeur !== 'string' || valeur.length === 0 || valeur.length > LONGUEUR_MAX) return null
+  return valeur
+}
+
+/** Valide un ordre : enveloppe `{ message: 'ordre', ordre }`. Renvoie l’action ou `null`. */
+export function validerOrdre(brut: unknown): Action | null {
+  const enveloppe = enObjet(brut)
+  if (!enveloppe || !cles(enveloppe, ['message', 'ordre']) || enveloppe.message !== 'ordre') return null
+  const ordre = enObjet(enveloppe.ordre)
+  if (!ordre) return null
+  const type = ordre.type
+  if (typeof type !== 'string' || !(TYPES_ACTION as readonly string[]).includes(type)) return null
+  const idCarte = texte(ordre.idCarte)
+  if (idCarte === null) return null
+
+  switch (type as TypeAction) {
+    case 'lecture':
+      return cles(ordre, ['type', 'idCarte']) ? { type: 'lecture', idCarte } : null
+    case 'creation-etiquette': {
+      const nomEtiquette = texte(ordre.nomEtiquette)
+      if (!cles(ordre, ['type', 'idCarte', 'nomEtiquette']) || nomEtiquette === null) return null
+      return { type: 'creation-etiquette', idCarte, nomEtiquette }
+    }
+    case 'retrait-etiquette':
+    case 'pose-etiquette': {
+      const idExemplaire = texte(ordre.idExemplaire)
+      const nomEtiquette = texte(ordre.nomEtiquette)
+      if (!cles(ordre, ['type', 'idCarte', 'idExemplaire', 'nomEtiquette'])) return null
+      if (idExemplaire === null || nomEtiquette === null) return null
+      return { type: type as 'retrait-etiquette' | 'pose-etiquette', idCarte, idExemplaire, nomEtiquette }
+    }
+    case 'enchere': {
+      const idExemplaire = texte(ordre.idExemplaire)
+      const prix = ordre.prix
+      if (!cles(ordre, ['type', 'idCarte', 'idExemplaire', 'prix']) || idExemplaire === null) return null
+      if (typeof prix !== 'number' || !Number.isFinite(prix) || prix < 0) return null
+      return { type: 'enchere', idCarte, idExemplaire, prix }
+    }
+    case 'defausse': {
+      const idExemplaire = texte(ordre.idExemplaire)
+      if (!cles(ordre, ['type', 'idCarte', 'idExemplaire']) || idExemplaire === null) return null
+      return { type: 'defausse', idCarte, idExemplaire }
+    }
+  }
+}
+
+/** Valide un résultat : enveloppe `{ message: 'resultat', resultat }`. Renvoie le résultat ou `null`. */
+export function validerResultat(brut: unknown): ResultatAction | null {
+  const enveloppe = enObjet(brut)
+  if (!enveloppe || !cles(enveloppe, ['message', 'resultat']) || enveloppe.message !== 'resultat') return null
+  const resultat = enObjet(enveloppe.resultat)
+  if (!resultat || !cles(resultat, ['classe', 'codeHttp', 'cause'])) return null
+  const { classe, codeHttp } = resultat
+  if (typeof classe !== 'string' || !(CLASSES as readonly string[]).includes(classe)) return null
+  if (codeHttp !== null) {
+    if (typeof codeHttp !== 'number' || !Number.isInteger(codeHttp) || codeHttp < 100 || codeHttp > 599) return null
+  }
+  const cause = texte(resultat.cause)
+  if (cause === null) return null
+  return { classe: classe as ResultatAction['classe'], codeHttp: codeHttp as number | null, cause }
+}
