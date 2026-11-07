@@ -43,5 +43,9 @@ export const CONFIG_PRIX: ConfigPrix = {
     { valeurMin: 401, prixDepart: 200 }, // 401 à 800
     { valeurMin: 801, prixDepart: 500 }, // 801 à 1 600
     { valeurMin: 1601, prixDepart: 1000 }, // 1 601 à 3 200
+    { valeurMin: 3201, prixDepart: 2000 }, // 3 201 à 6 400
+    { valeurMin: 6401, prixDepart: 5000 }, // 6 401 à 12 800
+    { valeurMin: 12801, prixDepart: 10000 }, // 12 801 à 25 600
+    { valeurMin: 25601, prixDepart: 20000 }, // 25 601 à 51 200
   ],
 };
