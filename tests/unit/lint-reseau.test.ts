@@ -19,7 +19,7 @@ beforeAll(() => {
 
 async function erreurs(code: string, filePath: string): Promise<string[]> {
   const [res] = await eslint.lintText(code, { filePath: resolve(RACINE, filePath) });
-  return res.messages.filter((m) => m.severity === 2).map((m) => `${m.ruleId ?? 'parse'} : ${m.message}`);
+  return (res?.messages ?? []).filter((m) => m.severity === 2).map((m) => `${m.ruleId ?? 'parse'} : ${m.message}`);
 }
 
 async function interdit(code: string, filePath: string) {
@@ -103,7 +103,7 @@ describe('SC-017 (AC2) : écritures interdites partout, jeton.ts compris', () =>
     it(`SC-017 : ${nom} est interdit dans jeton.ts`, () => interdit(code, JETON));
   }
   for (const nom of ['localStorage.setItem', 'localStorage.clear', 'affectation document.cookie', 'cookieStore.set', 'affectation localStorage.cle']) {
-    it(`SC-017 : ${nom} est interdit dans src/lib`, () => interdit(ecritures[nom], AUTRE));
+    it(`SC-017 : ${nom} est interdit dans src/lib`, () => interdit(ecritures[nom] ?? '', AUTRE));
   }
   it('SC-017 : indexedDB hors jeton.ts est interdit même en lecture', () =>
     interdit("export const r = indexedDB.databases();", AUTRE));
