@@ -9,6 +9,7 @@ const carte = (surcharge: Partial<Carte> = {}): Carte => ({
   quantite: 2,
   url: null,
   favori: false,
+  idsSite: null,
   description: '',
   ami: null,
   valeurMarchande: null,
@@ -46,8 +47,26 @@ describe('versCsv', () => {
 });
 
 describe('versJson', () => {
-  it('produit un fichier réimportable sans perte', () => {
-    const collection = { version: 1 as const, cartes: [carte({ note: 'é "ok"' })] };
-    expect(analyserImport(JSON.parse(versJson(collection)))).toEqual({ ok: true, cartes: collection.cartes });
+  const sansIds = (c: Carte): Omit<Carte, 'idsSite'> => {
+    const { idsSite: _ignore, ...reste } = c;
+    return reste;
+  };
+
+  it('SC-019 : écrit version 1 sans idsSite, même si la carte en porte', () => {
+    const collection = { version: 2 as const, cartes: [carte({ idsSite: ['s1', 's2'] }), carte({ id: 'c2' })] };
+    const json = JSON.parse(versJson(collection));
+    expect(json.version).toBe(1);
+    expect(versJson(collection)).not.toContain('idsSite');
+    expect(versJson(collection)).not.toContain('s1');
+  });
+
+  it('SC-019 : produit un fichier réimportable sans perte (hors idsSite)', () => {
+    const collection = { version: 2 as const, cartes: [carte({ note: 'é "ok"', idsSite: ['s1'] })] };
+    expect(analyserImport(JSON.parse(versJson(collection)))).toEqual({ ok: true, cartes: collection.cartes.map(sansIds) });
+  });
+
+  it('SC-019 : le CSV est identique avec ou sans idsSite, colonnes inchangées', () => {
+    expect(versCsv([carte({ idsSite: ['s1'] })])).toBe(versCsv([carte()]));
+    expect(versCsv([]).split('\r\n')[0]).not.toContain('idsSite');
   });
 });
