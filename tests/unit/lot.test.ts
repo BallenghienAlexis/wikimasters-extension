@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { Action, TypeAction, TypesDisponibles } from '../../src/lib/actions'
 import { TYPES_ACTION } from '../../src/lib/actions'
 import type { Carte, Collection } from '../../src/lib/collection'
-import { collectionVide } from '../../src/lib/collection'
+import { STATUTS, collectionVide } from '../../src/lib/collection'
+import { CONFIG_PRIX } from '../../src/config/prix'
+import { preferencesParDefaut, prixDepart, proposerTri } from '../../src/lib/tri'
 import { construireLot, exemplairesAttendus, type Config } from '../../src/lib/lot'
 import type { Registre } from '../../src/lib/actions'
 import { registreVide } from '../../src/lib/registre'
@@ -58,9 +60,32 @@ describe('garde-fous (SC-003, SC-004, SC-005)', () => {
     expect(lot.obsoletes).toHaveLength(1)
   })
 
-  it('le statut stocké décide, quelle que soit la décision (SC-005)', () => {
-    const lot = construireLot(coll(carte('a', { statut: 'garder', decidePar: 'assistant' })), registre(), config(), TOUS)
-    expect(de(lot.actions, 'pose-etiquette')).toHaveLength(1)
+  it('un favori ne produit aucune action pour aucun statut (SC-003)', () => {
+    for (const statut of STATUTS) {
+      const c = carte('a', { favori: true, statut, valeurMarchande: 100, prixCible: 10, idsSite: ['x1', 'x2'], quantite: 2 })
+      const r = registre([{ ex: 'x1', nom: 'Statut · Garder' }], { 'Statut · Garder': 'e1' })
+      const lot = construireLot(coll(c), r, config(), TOUS)
+      expect(lot.actions, statut).toEqual([])
+      expect(lot.obsoletes, statut).toEqual([{ idCarte: 'a', titre: 'Carte a', idExemplaire: 'x1', nomEtiquette: 'Statut · Garder' }])
+    }
+  })
+
+  it('le statut stocké décide, pas la proposition de l’assistant (SC-005)', () => {
+    const prefs = preferencesParDefaut()
+    // Stocké « garder », mais l’assistant défausserait (valeur sous le seuil).
+    const g = carte('a', { statut: 'garder', decidePar: 'moi', valeurMarchande: CONFIG_PRIX.seuilDefausse - 1 })
+    expect(proposerTri(g, prefs).statut).toBe('defausser')
+    // Stocké « défausser », mais l’assistant vendrait.
+    const d = carte('b', { statut: 'defausser', decidePar: 'moi', valeurMarchande: 100 })
+    expect(proposerTri(d, prefs).statut).toBe('vendre')
+    expect(prixDepart(100)).not.toBeNull()
+
+    const lot = construireLot(coll(g, d), registre(), config(), TOUS)
+    expect(lot.actions).toEqual([
+      { type: 'creation-etiquette', idCarte: 'a', nomEtiquette: 'Statut · Garder' },
+      { type: 'pose-etiquette', idCarte: 'a', idExemplaire: 'ex-a', nomEtiquette: 'Statut · Garder' },
+      { type: 'defausse', idCarte: 'b', idExemplaire: 'ex-b' },
+    ])
   })
 
   it('ne modifie pas ses entrées', () => {
@@ -123,6 +148,20 @@ describe('étiquettes (SC-007 a à e, H16)', () => {
     expect(de(lot.actions, 'retrait-etiquette')).toEqual([
       { type: 'retrait-etiquette', idCarte: 'a', idExemplaire: 'ex-a', nomEtiquette: 'Statut · Vendre' },
       { type: 'retrait-etiquette', idCarte: 'a', idExemplaire: 'ex-a', nomEtiquette: 'Ami · Léa' },
+    ])
+  })
+
+  it('H17 : en-vente remplace « Statut · Vendre » par « Statut · En vente » sur chaque exemplaire', () => {
+    const r = registre(
+      [{ ex: 'x1', nom: 'Statut · Vendre' }, { ex: 'x2', nom: 'Statut · Vendre' }],
+      { 'Statut · Vendre': 'e2', 'Statut · En vente': 'e3' },
+    )
+    const lot = construireLot(coll(carte('a', { statut: 'en-vente', idsSite: ['x1', 'x2'] })), r, config(), TOUS)
+    expect(lot.actions).toEqual([
+      { type: 'retrait-etiquette', idCarte: 'a', idExemplaire: 'x1', nomEtiquette: 'Statut · Vendre' },
+      { type: 'retrait-etiquette', idCarte: 'a', idExemplaire: 'x2', nomEtiquette: 'Statut · Vendre' },
+      { type: 'pose-etiquette', idCarte: 'a', idExemplaire: 'x1', nomEtiquette: 'Statut · En vente' },
+      { type: 'pose-etiquette', idCarte: 'a', idExemplaire: 'x2', nomEtiquette: 'Statut · En vente' },
     ])
   })
 
@@ -212,6 +251,13 @@ describe('types non disponibles', () => {
       ['a', 'action-non-disponible'],
       ['b', 'action-non-disponible'],
     ])
+  })
+
+  it('création disponible mais pose non disponible : aucune création', () => {
+    const lot = construireLot(coll(carte('a')), registre(), config(), types('creation-etiquette'))
+    expect(de(lot.actions, 'creation-etiquette')).toEqual([])
+    expect(lot.actions).toEqual([])
+    expect(lot.ecartees).toEqual([{ idCarte: 'a', titre: 'Carte a', raison: 'action-non-disponible' }])
   })
 
   it('génère les types disponibles et signale les autres', () => {
