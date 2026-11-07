@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Variante 2 · Confirmation carte par carte sur le site</title>
+<style>
+  :root { --ink:#fbf8f2; --ink-2:#f1ece2; --paper:#1b1815; --muted:#635c52; --line:#d8d1c4; --garder:#0f6b45; --echanger:#1f4fb8; --vendre:#8a5a00; --defausser:#a8321f; color-scheme: light dark; }
+  @media (prefers-color-scheme: dark) { :root { --ink:#13110f; --ink-2:#1c1916; --paper:#ede8df; --muted:#a39c91; --line:#3a352f; --garder:#52d69a; --echanger:#7ba4ff; --vendre:#f4c356; --defausser:#ff9a8b; } }
+  body { margin:0; background:#777; color:var(--paper); font:16px/1.5 system-ui, sans-serif; min-height:100vh; }
+  .site { padding:16px; display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px; }
+  .carte { background:#ddd; color:#222; height:200px; border-radius:6px; padding:8px; position:relative; font-size:13px; }
+  .carte.cible { outline:3px solid var(--vendre); outline-offset:2px; }
+  .repere { position:absolute; bottom:6px; left:6px; background:var(--ink); color:var(--vendre); border:1px solid var(--line); padding:0 6px; border-radius:3px; font-size:12px; }
+  aside { position:fixed; right:16px; bottom:16px; width:min(360px, calc(100vw - 32px)); background:var(--ink); border:1px solid var(--line); border-radius:6px; padding:16px; box-shadow:0 4px 16px rgba(0,0,0,.3); }
+  h2 { margin:0 0 8px; font-size:16px; }
+  .note { color:var(--muted); font-size:14px; }
+  .vendre { color:var(--vendre); font-weight:600; }
+  button { min-height:44px; padding:0 14px; border:1px solid var(--line); background:var(--ink-2); color:var(--paper); border-radius:4px; cursor:pointer; font:inherit; }
+  button.principal { border-color:var(--paper); font-weight:600; }
+  .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+</style>
+</head>
+<body>
+  <p style="margin:0;padding:8px 16px;background:#555;color:#fff">Wireframe · page <code>/collection</code> de WikiMasters (gris = site), panneau injecté par le content script (couleurs de l’extension).</p>
+  <div class="site">
+    <div class="carte">[C] Carte</div>
+    <div class="carte cible">[R] Carte ciblée<span class="repere">Vendre · 50</span></div>
+    <div class="carte">[SR] Carte</div>
+    <div class="carte">[C] Carte</div>
+  </div>
+
+  <aside role="dialog" aria-labelledby="t-panneau" aria-describedby="d-panneau">
+    <h2 id="t-panneau">WM Collection · action 2 / 7</h2>
+    <p id="d-panneau"><span class="vendre">Mettre aux enchères</span> [R] Carte ciblée, départ 50 (valeur 140).</p>
+    <p class="note">L’extension va cliquer à votre place. Risque de bannissement accepté (règles § 3, CGU § 6).</p>
+    <div class="actions">
+      <button class="principal">Faire cette action</button>
+      <button>Passer</button>
+      <button>Tout arrêter</button>
+    </div>
+    <p class="note">Plafond : 2 / 30 · Échap = tout arrêter.</p>
+  </aside>
+</body>
+</html>

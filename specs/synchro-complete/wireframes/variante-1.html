@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Variante 1 · Aperçu du lot dans collection.html (recommandée)</title>
+<style>
+  :root { --ink:#fbf8f2; --ink-2:#f1ece2; --paper:#1b1815; --muted:#635c52; --line:#d8d1c4; --garder:#0f6b45; --echanger:#1f4fb8; --vendre:#8a5a00; --defausser:#a8321f; color-scheme: light dark; }
+  @media (prefers-color-scheme: dark) { :root { --ink:#13110f; --ink-2:#1c1916; --paper:#ede8df; --muted:#a39c91; --line:#3a352f; --garder:#52d69a; --echanger:#7ba4ff; --vendre:#f4c356; --defausser:#ff9a8b; } }
+  body { margin:0; background:var(--ink); color:var(--paper); font:16px/1.5 system-ui, sans-serif; }
+  main { max-width:960px; margin:0 auto; padding:16px; }
+  .note { color:var(--muted); font-size:14px; }
+  section { border:1px solid var(--line); background:var(--ink-2); border-radius:4px; padding:16px; margin-top:16px; }
+  .alerte { border-left:4px solid var(--defausser); }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .s-vendre { color:var(--vendre); font-weight:600; } .s-defausser { color:var(--defausser); font-weight:600; } .s-echanger { color:var(--echanger); font-weight:600; }
+  button { min-height:44px; padding:0 16px; border:1px solid var(--line); background:var(--ink); color:var(--paper); border-radius:4px; cursor:pointer; font:inherit; }
+  button.principal { border-color:var(--paper); font-weight:600; }
+  .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  @media (max-width:600px) { thead { display:none; } tr, td { display:block; } td { border:0; padding:2px 0; } tr { border-bottom:1px solid var(--line); padding:8px 0; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Variante 1 · Aperçu du lot, puis lancement depuis la page de gestion</h1>
+  <p class="note">Wireframe. L’aperçu vit dans <code>collection.html</code>. Le lot ne porte que sur les cartes de la page <code>/collection</code> ouverte dans l’onglet WikiMasters. Une seule validation pour le lot ; chaque défausse demande sa propre confirmation.</p>
+
+  <section class="alerte" aria-labelledby="t-risque">
+    <h2 id="t-risque">Action sur le site à votre place</h2>
+    <p>Les règles de WikiMasters (section 3) interdisent les outils qui échangent ou interagissent à la place du joueur ; les CGU (section 6) prévoient un bannissement. Vous l’avez accepté le JJ/MM/AAAA.</p>
+  </section>
+
+  <section aria-labelledby="t-lot">
+    <h2 id="t-lot">Lot prêt : 7 actions sur la page 3 / 12</h2>
+    <table>
+      <thead><tr><th>Carte</th><th>Action sur le site</th><th>Détail</th></tr></thead>
+      <tbody>
+        <tr><td>[R] Titre de carte</td><td class="s-vendre">Mettre aux enchères</td><td>départ 50 · valeur 140</td></tr>
+        <tr><td>[SR] Titre de carte</td><td class="s-vendre">Mettre aux enchères</td><td>départ 10 · valeur 72</td></tr>
+        <tr><td>[C] Titre de carte</td><td class="s-echanger">Étiquette « Pour Léa »</td><td>thème d’un ami</td></tr>
+        <tr><td>[C] Titre de carte</td><td class="s-defausser">Défausser</td><td>valeur 8 · confirmation individuelle</td></tr>
+        <tr><td colspan="3" class="note">… 3 autres actions. 2 ventes en attente d’une place libre (5 / 5).</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Plafond de la session : 7 / 30 actions. Arrêt automatique au premier écart entre la page et l’attendu.</p>
+    <div class="actions">
+      <button class="principal">Lancer les 7 actions</button>
+      <button>Retirer les défausses du lot</button>
+      <button>Annuler</button>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-journal" aria-live="polite">
+    <h2 id="t-journal">Journal</h2>
+    <ol class="note">
+      <li>14:02:11 · [R] Titre de carte · mise aux enchères à 50 · réussie</li>
+      <li>14:02:12 · [SR] Titre de carte · mise aux enchères à 10 · réussie</li>
+      <li>14:02:13 · [C] Titre de carte · étiquette « Pour Léa » · réussie · <button>Retirer l’étiquette</button></li>
+      <li>14:02:14 · arrêt : bouton « Défausser » introuvable, structure du site modifiée ?</li>
+    </ol>
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Variante 3 · Assistance sans clic : le joueur valide sur le site</title>
+<style>
+  :root { --ink:#fbf8f2; --ink-2:#f1ece2; --paper:#1b1815; --muted:#635c52; --line:#d8d1c4; --garder:#0f6b45; --echanger:#1f4fb8; --vendre:#8a5a00; --defausser:#a8321f; color-scheme: light dark; }
+  @media (prefers-color-scheme: dark) { :root { --ink:#13110f; --ink-2:#1c1916; --paper:#ede8df; --muted:#a39c91; --line:#3a352f; --garder:#52d69a; --echanger:#7ba4ff; --vendre:#f4c356; --defausser:#ff9a8b; } }
+  body { margin:0; background:#777; color:var(--paper); font:16px/1.5 system-ui, sans-serif; min-height:100vh; }
+  .modale { margin:24px auto; max-width:420px; background:#eee; color:#222; border-radius:8px; padding:16px; }
+  label { display:block; margin-top:8px; font-size:14px; }
+  input { width:100%; box-sizing:border-box; min-height:40px; font:inherit; }
+  .surligne { outline:3px solid var(--vendre); outline-offset:2px; }
+  .bouton-site { margin-top:12px; min-height:44px; padding:0 16px; background:#2a6; color:#fff; border:0; border-radius:4px; font:inherit; }
+  .bulle { margin-top:8px; background:var(--ink); border:1px solid var(--line); border-radius:4px; padding:8px; font-size:14px; color:var(--paper); }
+  .note { color:var(--muted); }
+</style>
+</head>
+<body>
+  <p style="margin:0;padding:8px 16px;background:#555;color:#fff">Wireframe · fenêtre « Mettre aux enchères » du site (gris), ouverte par le joueur. L’extension surligne et indique la valeur, sans cliquer ni remplir.</p>
+  <div class="modale">
+    <strong>Mettre aux enchères · [R] Carte</strong>
+    <p>Valeur du marché : 140</p>
+    <label>Prix de départ <input class="surligne" value=""></label>
+    <div class="bulle">WM Collection : prix de départ conseillé <strong>50</strong>. À saisir puis valider vous-même. <span class="note">Prochaine : [SR] Carte, départ 10.</span></div>
+    <button class="bouton-site">Mettre aux enchères</button>
+  </div>
+  <p style="padding:0 16px;color:#fff;max-width:640px;margin:0 auto">Aucun risque supplémentaire par rapport à l’existant, mais aucun gain de clics : c’est la variante de repli si la portée « clics simulés » est refusée.</p>
+</body>
+</html>
