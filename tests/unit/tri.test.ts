@@ -18,6 +18,7 @@ const carte = (surcharge: Partial<Carte> = {}): Carte => ({
   ami: null,
   valeurMarchande: 100,
   decidePar: null,
+  idsSite: null,
   ...surcharge,
 });
 
@@ -140,17 +141,17 @@ describe('fileDeVente', () => {
 
 describe('appliquerTri', () => {
   it('ne remplace jamais une décision prise à la main', () => {
-    const collection = { version: 1 as const, cartes: [carte({ statut: 'vendre', decidePar: 'moi' })] };
+    const collection = { version: 2 as const, cartes: [carte({ statut: 'vendre', decidePar: 'moi' })] };
     expect(appliquerTri(collection, prefs({ mesThemes: ['gastronomie'] }), CONFIG).cartes[0]?.statut).toBe('vendre');
   });
 
   it('peut revoir une décision de l’assistant et efface le prix devenu inutile', () => {
-    const collection = { version: 1 as const, cartes: [carte({ statut: 'vendre', prixCible: 60, decidePar: 'assistant' })] };
+    const collection = { version: 2 as const, cartes: [carte({ statut: 'vendre', prixCible: 60, decidePar: 'assistant' })] };
     expect(appliquerTri(collection, prefs({ mesThemes: ['gastronomie'] }), CONFIG).cartes[0]).toMatchObject({ statut: 'garder', prixCible: null });
   });
 
   it('ne modifie pas la collection d’origine', () => {
-    const collection = { version: 1 as const, cartes: [carte()] };
+    const collection = { version: 2 as const, cartes: [carte()] };
     appliquerTri(collection, prefs(), CONFIG);
     expect(collection.cartes[0]?.statut).toBe('a-trier');
   });
@@ -159,7 +160,7 @@ describe('appliquerTri', () => {
 describe('apercuTri', () => {
   it('compte par statut et limite les exemples', () => {
     const cartes = Array.from({ length: 7 }, (_, i) => carte({ id: `c${i}`, titre: `T${i}`, valeurMarchande: 1 }));
-    const apercu = apercuTri({ version: 1, cartes }, prefs(), CONFIG, 5);
+    const apercu = apercuTri({ version: 2, cartes }, prefs(), CONFIG, 5);
     expect(apercu.defausser.nombre).toBe(7);
     expect(apercu.defausser.exemples).toHaveLength(5);
   });
