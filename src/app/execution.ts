@@ -2,6 +2,7 @@
 // transport à la file, tient le verrou d'exécution unique et clôt les exécutions orphelines.
 // Aucune requête ici : les ordres passent par le content script.
 import type { Action, EtatExecution, ResultatAction } from '../lib/actions';
+import type { Horloge } from '../lib/file';
 import { cloreInterrompues as cloreJournal, type Journal } from '../lib/journal';
 import { messageOrdre, validerResultat } from '../lib/messages';
 import {
@@ -14,10 +15,35 @@ import {
 
 export const ORIGINE_SITE = 'https://www.wiki-masters.com';
 export const NOM_VERROU = 'wm-collection-execution';
+export const NOM_PORT = 'wm-synchro';
+
+
+interface Chrono {
+  now: () => number;
+}
+
+/**
+ * Horloge monotone : `performance.now()` ne recule pas si l’heure système change.
+ * Délai fixe, sans aléa ; l’échéance est revérifiée après chaque réveil du minuteur.
+ */
+export function creerHorloge(chrono: Chrono, minuteur: (rappel: () => void, delai: number) => unknown): Horloge {
+  const now = (): number => chrono.now();
+  return {
+    now,
+    async attendreJusqua(echeance) {
+      while (now() < echeance) {
+        await new Promise<void>((resoudre) => void minuteur(resoudre, echeance - now()));
+      }
+    },
+  };
+}
+
+export const horlogeReelle: Horloge = creerHorloge(performance, (rappel, delai) => setTimeout(rappel, delai));
 
 export type RaisonDesactivation = 'aucun-onglet' | 'plusieurs-onglets' | 'execution-en-cours';
 
 interface PortPage {
+  name?: string;
   sender?: { id?: string; url?: string; tab?: { id?: number } };
   postMessage: (message: unknown) => void;
   disconnect: () => void;
@@ -86,7 +112,7 @@ export function creerExecution(deps: DependancesExecution): Execution {
   const accepter = (port: PortPage): void => {
     const sender = port.sender;
     const tab = sender?.tab?.id;
-    if (sender?.id !== runtime.id || !origineValide(sender.url) || typeof tab !== 'number') {
+    if (port.name !== NOM_PORT || sender?.id !== runtime.id || !origineValide(sender.url) || typeof tab !== 'number') {
       port.disconnect();
       return;
     }
@@ -161,7 +187,9 @@ export function creerExecution(deps: DependancesExecution): Execution {
       } finally {
         enCours = false;
         interruption = null;
+        const restante = attente;
         attente = null;
+        restante?.rejeter(new Error('Exécution terminée.'));
         notifier();
       }
     },
