@@ -227,7 +227,7 @@ describe('ordre H9', () => {
     const r = registre([{ ex: 'ex-b', nom: 'Statut · Vendre' }], { 'Statut · Vendre': 'e2' })
     const lot = construireLot(
       coll(
-        carte('d', { statut: 'defausser', idsSite: ['d2', 'd1'] }),
+        carte('d', { statut: 'defausser', quantite: 2, idsSite: ['d2', 'd1'] }),
         carte('c'),
         carte('b', { statut: 'garder' }),
         carte('a', { statut: 'garder', idsSite: ['a2', 'a1'] }),
