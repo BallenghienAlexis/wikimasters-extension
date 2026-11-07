@@ -8,6 +8,11 @@ const carte = (surcharge: Partial<Carte> = {}): Carte => ({
   rarete: 'Rare',
   quantite: 2,
   url: null,
+  favori: false,
+  description: '',
+  ami: null,
+  valeurMarchande: null,
+  decidePar: null,
   statut: 'vendre',
   prixCible: 50,
   note: '',
@@ -18,11 +23,11 @@ const ligneDonnees = (c: Carte): string => versCsv([c]).split('\r\n')[1] ?? '';
 
 describe('versCsv', () => {
   it('commence par le BOM et l’en-tête, séparés par des points-virgules', () => {
-    expect(versCsv([]).startsWith('﻿id;titre;rarete;quantite;statut;prixCible;note;url\r\n')).toBe(true);
+    expect(versCsv([]).startsWith('﻿id;titre;rarete;quantite;statut;prixCible;note;url;favori;description;ami;valeurMarchande;themes\r\n')).toBe(true);
   });
 
   it('écrit une valeur nulle comme une cellule vide', () => {
-    expect(ligneDonnees(carte())).toBe('c1;Loutre;Rare;2;vendre;50;;');
+    expect(ligneDonnees(carte())).toBe('c1;Loutre;Rare;2;vendre;50;;;false;;;;#Autres');
   });
 
   it('protège séparateurs, guillemets et sauts de ligne', () => {

@@ -4,12 +4,18 @@ Extension Chrome personnelle pour préparer le tri, l'échange et la vente d'une
 
 ## Ce qu'elle fait aujourd'hui
 
-- Importer une collection depuis un fichier JSON.
-- Éditer localement chaque carte : statut (à trier, garder, échanger, vendre), prix cible, note.
-- Rechercher, filtrer par statut, repérer les doublons.
-- Exporter en CSV ou en JSON.
+- Lire les cartes de chaque page Collection que vous ouvrez sur WikiMasters, et relever la moyenne du marché quand vous ouvrez « Mettre aux enchères ».
+- Déduire les thèmes de chaque carte, et gérer vos thèmes et ceux de vos amis à tout moment.
+- Proposer un tri : garder, échanger avec un ami, vendre, défausser.
+- Lister les ventes à lancer selon vos places libres (5 enchères au plus).
+- Afficher un repère avec votre décision sur les cartes du site.
+- Éditer chaque carte, filtrer, repérer les doublons, importer et exporter en CSV ou JSON.
 
-**Elle ne lit pas encore le site et ne modifie rien dessus.** Le cadre et ses raisons sont dans [AGENTS.md](AGENTS.md).
+**Elle ne clique sur rien sur le site** : vous tournez les pages, défaussez, vendez et échangez vous-même. Le cadre et ses raisons sont dans [AGENTS.md](AGENTS.md).
+
+## Régler les prix
+
+Tout se trouve dans [src/config/prix.ts](src/config/prix.ts) : seuil de défausse, limite d'enchères, valeur de repli par rareté, matrice valeur marchande → prix de départ. Après une modification, lancez `npm run build` puis rechargez l'extension.
 
 ## Démarrer
 

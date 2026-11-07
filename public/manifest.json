@@ -5,8 +5,16 @@
   "description": "Préparer le tri, l'échange et la vente d'une collection WikiMasters. Extension personnelle non affiliée au jeu.",
   "permissions": ["storage"],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'none'"
+    "extension_pages": "script-src 'self'; object-src 'self'"
   },
+  "content_scripts": [
+    {
+      "matches": ["https://www.wiki-masters.com/*", "https://wiki-masters.com/*"],
+      "js": ["content.js"],
+      "css": ["repere.css"],
+      "run_at": "document_idle"
+    }
+  ],
   "action": {
     "default_title": "Ouvrir WM Collection"
   },

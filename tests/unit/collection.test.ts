@@ -7,6 +7,8 @@ import {
   filtrerCartes,
   fusionnerImport,
   resumer,
+  terminerEnchere,
+  type Collection,
   type Carte,
   type Filtres,
 } from '../../src/lib/collection';
@@ -17,6 +19,11 @@ const carte = (surcharge: Partial<Carte> = {}): Carte => ({
   rarete: null,
   quantite: 1,
   url: null,
+  favori: false,
+  description: '',
+  ami: null,
+  valeurMarchande: null,
+  decidePar: null,
   statut: 'a-trier',
   prixCible: null,
   note: '',
@@ -133,6 +140,25 @@ describe('doublons et résumé', () => {
     const r = resumer([carte({ quantite: 3, statut: 'vendre' }), carte({ id: 'c2', statut: 'vendre' }), carte({ id: 'c3' })]);
     expect(r.exemplaires).toBe(5);
     expect(r.doublons).toBe(2);
-    expect(r.parStatut).toEqual({ 'a-trier': 1, garder: 0, echanger: 0, vendre: 2 });
+    expect(r.parStatut).toEqual({ 'a-trier': 1, garder: 0, echanger: 0, vendre: 2, 'en-vente': 0, defausser: 0 });
+  });
+});
+
+describe('terminerEnchere', () => {
+  const base = (quantite: number): Collection => ({
+    version: 1,
+    cartes: [{ id: 'C|x', titre: 'x', rarete: 'C', description: '', quantite, url: null, favori: false, statut: 'en-vente', prixCible: 5, note: 'n', ami: 'a', valeurMarchande: 20, decidePar: 'moi' }],
+  });
+  it('retire la carte quand il n’y a qu’un exemplaire', () => {
+    expect(terminerEnchere(base(1), 'C|x').cartes).toHaveLength(0);
+  });
+  it('garde l’édition des exemplaires restants et les remet à trier', () => {
+    const [carte] = terminerEnchere(base(2), 'C|x').cartes;
+    expect(carte).toMatchObject({ quantite: 1, statut: 'a-trier', note: 'n', ami: 'a', valeurMarchande: 20, decidePar: null });
+  });
+  it('ne perd pas l’URL d’un import lors d’une lecture du site', () => {
+    const avecUrl = { ...base(1), cartes: [{ ...base(1).cartes[0]!, url: 'https://exemple.test/c' }] };
+    const lue = { id: 'C|x', titre: 'x', rarete: 'C', quantite: 1, url: null };
+    expect(fusionnerImport(avecUrl, [lue]).cartes[0]?.url).toBe('https://exemple.test/c');
   });
 });

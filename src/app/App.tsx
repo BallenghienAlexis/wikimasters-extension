@@ -8,12 +8,18 @@ import {
   filtrerCartes,
   fusionnerImport,
   resumer,
+  terminerEnchere,
   type Collection,
   type EditionCarte,
   type Filtres,
 } from '../lib/collection';
 import { versCsv, versJson } from '../lib/exports';
-import { chargerCollection, enregistrerCollection } from '../lib/stockage';
+import { chargerCollection, chargerPreferences, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences } from '../lib/stockage';
+import { progression, texteProgression, type Synchro } from '../lib/synchro';
+import { LIBELLES_THEMES, IDS_THEMES, themesDeCarte } from '../lib/themes';
+import { appliquerTri, preferencesParDefaut, type Preferences } from '../lib/tri';
+import AssistantTri from './AssistantTri';
+import FileVente from './FileVente';
 import CarteLigne from './CarteLigne';
 
 const TAILLE_PAGE = 200;
@@ -37,7 +43,17 @@ const App: React.FC = () => {
   const [revision, setRevision] = useState(0);
   const [limite, setLimite] = useState(TAILLE_PAGE);
   const [filtres, setFiltres] = useState<Filtres>({ recherche: '', statut: 'tous', doublonsSeulement: false });
+  const [theme, setTheme] = useState('tous');
+  const [preferences, setPreferences] = useState<Preferences>(preferencesParDefaut);
+  const [assistantOuvert, setAssistantOuvert] = useState(false);
+  const [synchro, setSynchro] = useState<Synchro | null>(null);
   const champFichier = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    void chargerPreferences().then(setPreferences);
+    void chargerSynchro().then(setSynchro);
+    return ecouterSynchro(setSynchro);
+  }, []);
 
   useEffect(() => {
     chargerCollection()
@@ -46,9 +62,14 @@ const App: React.FC = () => {
         setChargee(true);
       })
       .catch((e: unknown) => setBlocage(e instanceof Error ? e.message : 'Chargement impossible.'));
+    // La lecture du site, dans un autre onglet, met à jour cette page.
+    return ecouterCollection(setCollection);
   }, []);
 
-  const visibles = useMemo(() => filtrerCartes(collection.cartes, filtres), [collection.cartes, filtres]);
+  const visibles = useMemo(
+    () => filtrerCartes(collection.cartes, filtres).filter((c) => theme === 'tous' || themesDeCarte(c).includes(theme)),
+    [collection.cartes, filtres, theme],
+  );
   const resume = useMemo(() => resumer(collection.cartes), [collection.cartes]);
 
   const appliquer = (suivante: Collection): void => {
@@ -57,6 +78,15 @@ const App: React.FC = () => {
   };
 
   const editer = (id: string, edition: EditionCarte): void => appliquer(appliquerEdition(collection, id, edition));
+
+  const appliquerAssistant = (choix: Preferences): void => {
+    setPreferences(choix);
+    enregistrerPreferences(choix).catch(() => setMessage('Enregistrement de vos réponses impossible.'));
+    appliquer(appliquerTri(collection, choix));
+    setRevision((r) => r + 1);
+    setAssistantOuvert(false);
+    setMessage('Tri appliqué. À vous d’agir sur WikiMasters : les repères vous guident sur chaque carte.');
+  };
 
   const importer = async (fichier: File): Promise<void> => {
     let brut: unknown;
@@ -91,6 +121,11 @@ const App: React.FC = () => {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">WM Collection</h1>
         <div className="flex flex-wrap gap-2">
+          {collection.cartes.length > 0 && (
+            <button type="button" className={CLASSE_BOUTON} onClick={() => setAssistantOuvert(true)}>
+              Gérer mes thèmes et mes amis
+            </button>
+          )}
           <button type="button" className={CLASSE_BOUTON} onClick={() => champFichier.current?.click()}>
             Importer un fichier
           </button>
@@ -117,14 +152,23 @@ const App: React.FC = () => {
       </header>
 
       <p className="mt-3 text-sm text-muted">
-        Vos modifications restent dans cette extension : rien n’est changé sur WikiMasters.
+        Vos modifications restent dans cette extension : rien n’est changé sur WikiMasters. Chaque page Collection que vous ouvrez sur le site est ajoutée ici.
       </p>
+
+      {synchro && <p className="mt-2 font-medium" data-testid="synchro">{texteProgression(progression(synchro))}</p>}
 
       <p role="status" className="mt-2 min-h-6">{message}</p>
 
-      {collection.cartes.length === 0 ? (
+      {assistantOuvert ? (
+        <AssistantTri
+          collection={collection}
+          preferencesInitiales={preferences}
+          onAppliquer={appliquerAssistant}
+          onFermer={() => setAssistantOuvert(false)}
+        />
+      ) : collection.cartes.length === 0 ? (
         <p className="mt-6 rounded border border-line bg-ink-2 p-6">
-          Votre collection est vide. Importez un fichier JSON pour commencer.
+          Votre collection est vide. Ouvrez la page Collection de WikiMasters, ou importez un fichier JSON.
         </p>
       ) : (
         <>
@@ -132,6 +176,12 @@ const App: React.FC = () => {
             {resume.exemplaires} exemplaires · {resume.doublons} doublons ·{' '}
             {STATUTS.map((s) => `${LIBELLES_STATUT[s]} : ${resume.parStatut[s]}`).join(' · ')}
           </p>
+
+          <FileVente
+            cartes={collection.cartes}
+            onMiseEnVente={(id) => editer(id, { statut: 'en-vente', decidePar: 'moi' })}
+            onTerminee={(id) => appliquer(terminerEnchere(collection, id))}
+          />
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <input
@@ -151,6 +201,12 @@ const App: React.FC = () => {
               <option value="tous">Tous les statuts</option>
               {STATUTS.map((s) => (
                 <option key={s} value={s}>{LIBELLES_STATUT[s]}</option>
+              ))}
+            </select>
+            <select aria-label="Filtrer par thème" className={CLASSE_CHAMP} value={theme} onChange={(e) => setTheme(e.target.value)}>
+              <option value="tous">Tous les thèmes</option>
+              {IDS_THEMES.map((id) => (
+                <option key={id} value={id}>{LIBELLES_THEMES[id]}</option>
               ))}
             </select>
             <label className="inline-flex min-h-11 items-center gap-2">

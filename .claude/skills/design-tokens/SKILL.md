@@ -14,7 +14,7 @@ description: Système de tokens de WM Collection (Tailwind 4 @theme dans src/sty
 | Fond | `ink` / `ink-2` | #13110f / #1c1916 | #fbf8f2 / #f1ece2 |
 | Texte | `paper` / `muted` | #ede8df / #a39c91 | #1b1815 / #635c52 |
 | Filet | `line` | #3a352f | #d8d1c4 |
-| Statut | `garder` `echanger` `vendre` | #52d69a #7ba4ff #f4c356 | #0f6b45 #1f4fb8 #8a5a00 |
+| Statut | `garder` `echanger` `vendre` `defausser` | #52d69a #7ba4ff #f4c356 #ff9a8b | #0f6b45 #1f4fb8 #8a5a00 #a8321f |
 
 Les noms `ink`/`paper` sont des **rôles** (fond/texte), pas des couleurs : un thème redéfinit leur valeur, les composants ne changent pas de classe.
 

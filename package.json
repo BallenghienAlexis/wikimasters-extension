@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite build --watch",
-    "build": "vite build",
+    "dev": "node scripts/dev.mjs",
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && vite build && vite build --config vite.content.config.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

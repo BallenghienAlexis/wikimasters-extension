@@ -9,6 +9,7 @@
   --color-garder: #0f6b45;
   --color-echanger: #1f4fb8;
   --color-vendre: #8a5a00;
+  --color-defausser: #a8321f;
 }
 
 :root {
@@ -25,6 +26,7 @@
     --color-garder: #52d69a;
     --color-echanger: #7ba4ff;
     --color-vendre: #f4c356;
+    --color-defausser: #ff9a8b;
   }
 }
 
