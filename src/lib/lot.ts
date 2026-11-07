@@ -14,7 +14,7 @@ import type {
   TypeAction,
   TypesDisponibles,
 } from './actions'
-import { LIBELLES_STATUT, type Carte, type Collection } from './collection'
+import { LIBELLES_STATUT, type Carte, type Collection, type Statut } from './collection'
 
 /** Réglages du lot. */
 export interface Config {
@@ -47,7 +47,7 @@ export interface ExemplaireAttendu {
 
 const comparer = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
 
-const STATUTS_ETIQUETES = new Set(['garder', 'echanger', 'vendre', 'en-vente'])
+const STATUTS_ETIQUETES = new Set<Statut>(['garder', 'echanger', 'vendre', 'en-vente'])
 
 /**
  * Exemplaires reliés d’une carte et étiquettes attendues sur chacun.
@@ -167,7 +167,7 @@ export function construireLot(
           continue
         }
         if (!connue) {
-          if (!dispo('creation-etiquette')) {
+          if (!dispo('creation-etiquette') || !dispo('pose-etiquette')) {
             nonDispo = true
             continue
           }
@@ -190,6 +190,7 @@ export function construireLot(
   ecartees.push(...encheres.ecartees)
 
   return {
+    // Les actions `lecture` (SC-024) s'inséreront ici, avant les créations (H9).
     actions: [...creations, ...retraits, ...poses, ...encheres.actions, ...defausses],
     ecartees,
     obsoletes,
