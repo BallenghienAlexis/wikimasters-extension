@@ -170,7 +170,7 @@ describe('rendu en texte brut (AC1)', () => {
     const html = renderToStaticMarkup(
       React.createElement(Journal, { ...props, registre: registre(['Ami · Léa']), entrees: [entree()] }),
     );
-    expect(html).toContain('aria-label="Retirer l’étiquette « Ami · Léa » de Carte fictive"');
+    expect(html).toContain('aria-label="Retirer l’étiquette « Ami · Léa » de [R] Carte fictive"');
     expect(html).toContain('Aucun onglet WikiMasters ouvert.');
   });
 });
@@ -183,5 +183,26 @@ describe('DialogueVider (AC4)', () => {
     expect(html).toContain('Vider le journal ?');
     expect(html).toContain('Cela efface l’historique local. La collection et les étiquettes enregistrées ne sont pas touchées.');
     expect(html.indexOf('Annuler')).toBeLessThan(html.indexOf('>Vider<'));
+  });
+});
+
+describe('DialogueVider, styles des boutons (D-10)', () => {
+  it('« Annuler » et « Vider » en font-semibold, « Annuler » en text-paper', () => {
+    const html = renderToStaticMarkup(React.createElement(DialogueVider, { onAnnuler: () => {}, onConfirmer: () => {} }));
+    const boutons = html.match(/<button[^>]*>[^<]*<\/button>/g) ?? [];
+    expect(boutons).toHaveLength(2);
+    for (const b of boutons) expect(b).toContain('font-semibold');
+    expect(boutons[0]).toContain('text-paper');
+  });
+});
+
+describe('boutons désactivés (rendu)', () => {
+  it('« Vider » désactivé n’a pas cursor-pointer', () => {
+    const html = renderToStaticMarkup(
+      React.createElement(Journal, { entrees: [], registre: registre(), retraitDisponible: true, ongletPret: true, onRetirer: () => {}, onVider: () => {} }),
+    );
+    const bouton = html.match(/<button[^>]*>Vider<\/button>/)?.[0] ?? '';
+    expect(bouton).toContain('cursor-not-allowed');
+    expect(bouton).not.toContain('cursor-pointer');
   });
 });
