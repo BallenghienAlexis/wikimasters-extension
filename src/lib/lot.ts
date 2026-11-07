@@ -15,6 +15,7 @@ import type {
   TypesDisponibles,
 } from './actions'
 import { LIBELLES_STATUT, type Carte, type Collection, type Statut } from './collection'
+import { prixDepart } from './tri'
 
 /** Réglages du lot. */
 export interface Config {
@@ -24,6 +25,11 @@ export interface Config {
   longueurMaxEtiquette: number | null
   /** Noms d’étiquettes déjà connus sur le site (dont ceux du joueur). */
   nomsExistants: readonly string[]
+  /**
+   * Le lien `card_id` ↔ `user_card_id` est relevé : l’enchère peut viser un exemplaire (H45).
+   * Absent ou `false` : le type « enchère » reste non disponible.
+   */
+  lienCardId?: boolean
 }
 
 /** Étiquette de l’extension encore posée sur une carte favori ou à trier (H18). */
@@ -62,11 +68,58 @@ export function exemplairesAttendus(carte: Carte): ExemplaireAttendu[] {
 }
 
 /**
- * Point d’extension des enchères : T-012 l’implémente dans ce fichier.
- * Jusque-là, aucune enchère n’est générée.
+ * Enchères du lot : `candidates` = cartes `vendre` reliées, sans conflit (les autres sont
+ * déjà écartées par `construireLot`). Une enchère par carte, sur le premier exemplaire de
+ * `idsSite`, dans la limite des places libres. Une enchère est définitive côté site.
  */
-export function construireEncheres(): { actions: Action[]; ecartees: CarteEcartee[] } {
-  return { actions: [], ecartees: [] }
+export function construireEncheres(
+  candidates: readonly Carte[],
+  enVente: number,
+  config: Config,
+  disponibles: TypesDisponibles,
+): { actions: Action[]; ecartees: CarteEcartee[] } {
+  const ecartees: CarteEcartee[] = []
+  const valides: Array<{ carte: Carte; prix: number; valeur: number; idExemplaire: string }> = []
+  const autorisee = config.lienCardId === true && disponibles.has('enchere')
+
+  for (const c of candidates) {
+    const ecarter = (raison: RaisonEcart): void => {
+      ecartees.push({ idCarte: c.id, titre: c.titre, raison })
+    }
+    const valeur = c.valeurMarchande
+    if (valeur === null) {
+      ecarter('valeur-absente')
+      continue
+    }
+    const prix = c.prixCible ?? prixDepart(valeur)
+    if (prix === null || !(prix >= 1)) {
+      ecarter('prix-invalide')
+      continue
+    }
+    if (prix >= valeur) {
+      ecarter('prix-superieur-valeur')
+      continue
+    }
+    const idExemplaire = c.idsSite?.[0]
+    if (idExemplaire === undefined) {
+      ecarter('non-reliee')
+      continue
+    }
+    if (!autorisee) {
+      ecarter('action-non-disponible')
+      continue
+    }
+    valides.push({ carte: c, prix, valeur, idExemplaire })
+  }
+
+  valides.sort((a, b) => b.prix - a.prix || b.valeur - a.valeur || comparer(a.carte.id, b.carte.id))
+  const places = Math.max(0, config.maxVentesSimultanees - enVente)
+  const actions: Action[] = []
+  valides.forEach(({ carte, prix, idExemplaire }, rang) => {
+    if (rang < places) actions.push({ type: 'enchere', idCarte: carte.id, idExemplaire, prix })
+    else ecartees.push({ idCarte: carte.id, titre: carte.titre, raison: 'en-attente-place' })
+  })
+  return { actions, ecartees }
 }
 
 /** Construit le lot. Les cartes sont traitées par `id` croissant (H9). */
@@ -98,10 +151,13 @@ export function construireLot(
   const ecartees: CarteEcartee[] = []
   const obsoletes: EtiquetteObsolete[] = []
   const creesCeLot = new Set<string>()
+  const aVendre: Carte[] = []
+  let enVente = 0
 
   const dispo = (t: TypeAction): boolean => disponibles.has(t)
 
   for (const c of cartes) {
+    if (c.statut === 'en-vente') enVente++
     const ecarter = (raison: RaisonEcart): void => {
       ecartees.push({ idCarte: c.id, titre: c.titre, raison })
     }
@@ -138,6 +194,8 @@ export function construireLot(
       if (c.quantite > c.idsSite.length) ecarter('exemplaires-non-relies')
       continue
     }
+
+    if (c.statut === 'vendre') aVendre.push(c)
 
     // Étiquettes (SC-007).
     let nonDispo = false
@@ -186,7 +244,7 @@ export function construireLot(
     if (nonDispo) ecarter('action-non-disponible')
   }
 
-  const encheres = construireEncheres()
+  const encheres = construireEncheres(aVendre, enVente, config, disponibles)
   ecartees.push(...encheres.ecartees)
 
   return {
