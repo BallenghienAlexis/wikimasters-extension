@@ -89,6 +89,38 @@ describe('validerRegistre', () => {
     expect(brut.couples[0]).toHaveProperty('parasite')
   })
 
+  it.each(['__proto__', 'constructor', 'prototype', 'toString'])(
+    'conserve le nom d’étiquette « %s » sans l’hériter ni le perdre',
+    (nom) => {
+      const brut = JSON.parse(`{"version":1,"etiquettes":{"${nom}":"et-9"},"couples":[]}`)
+      const r = validerRegistre(brut)
+      expect(r).not.toBeNull()
+      expect(Object.hasOwn(r!.etiquettes, nom)).toBe(true)
+      expect(r!.etiquettes[nom]).toBe('et-9')
+      expect(Object.getPrototypeOf(r!.etiquettes)).toBeNull()
+    },
+  )
+
+  it.each(['__proto__', 'constructor', 'prototype'])('enregistrerEtiquette garde « %s » comme simple clé', (nom) => {
+    const r = enregistrerEtiquette(registreVide(), nom, 'et-1')
+    expect(Object.hasOwn(r.etiquettes, nom)).toBe(true)
+    expect(r.etiquettes[nom]).toBe('et-1')
+    expect(Object.getPrototypeOf(r.etiquettes)).toBeNull()
+    expect(Object.getPrototypeOf(Object.prototype)).toBeNull()
+  })
+
+  it('rejette un couple { ex, nom } en double', () => {
+    const doublon = {
+      version: 1,
+      etiquettes: {},
+      couples: [
+        { ex: 'e', nom: 'A' },
+        { ex: 'e', nom: 'A' },
+      ],
+    }
+    expect(validerRegistre(doublon)).toBeNull()
+  })
+
   it.each([
     null,
     undefined,
@@ -121,12 +153,33 @@ describe('validerRegistre', () => {
 describe('immuabilité', () => {
   it('ne modifie jamais le registre reçu', () => {
     const r = poserCouple(enregistrerEtiquette(registreVide(), 'A', 'et'), 'ex-1', 'A')
-    const copie = JSON.parse(JSON.stringify(r))
+    const copie = structuredClone(r)
     enregistrerEtiquette(r, 'B', 'et-2')
     poserCouple(r, 'ex-2', 'A')
     retirerCouple(r, 'ex-1', 'A')
     purgerExemplaire(r, 'ex-1')
     purgerCarte(r, ['ex-1'])
     expect(r).toEqual(copie)
+  })
+
+  it('validerRegistre n’altère pas son entrée (cas valide)', () => {
+    const brut = { version: 1, etiquettes: { A: 'et-1' }, couples: [{ ex: 'e', nom: 'A', parasite: 1 }] }
+    const copie = structuredClone(brut)
+    expect(validerRegistre(brut)).not.toBeNull()
+    expect(brut).toEqual(copie)
+  })
+
+  it('validerRegistre n’altère pas son entrée (cas rejeté)', () => {
+    const brut = {
+      version: 1,
+      etiquettes: { A: 'et-1' },
+      couples: [
+        { ex: 'e', nom: 'A' },
+        { ex: 'e', nom: 'A' },
+      ],
+    }
+    const copie = structuredClone(brut)
+    expect(validerRegistre(brut)).toBeNull()
+    expect(brut).toEqual(copie)
   })
 })

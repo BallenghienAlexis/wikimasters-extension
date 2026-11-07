@@ -166,7 +166,7 @@ describe('cadence fixe (AC2)', () => {
     const etat = await file.demarrer(lot(2), 'lot-1');
     expect(etat.etat).toBe('arretee');
     await file.demarrer(lot(1), 'lot-2');
-    expect(b.departs[1]! - b.departs[0]!).toBeGreaterThanOrEqual(6000);
+    expect(b.departs[1]! - b.departs[0]!).toBe(6000);
   });
 
   it('n’utilise aucun aléa : deux exécutions identiques donnent les mêmes écarts', async () => {

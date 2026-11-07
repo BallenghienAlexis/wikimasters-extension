@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   TABLE_CONTRAT,
@@ -10,6 +11,8 @@ import { ENTREES_DEFAUSSE } from '../../src/lib/contrat/defausse'
 import { ENTREES_ENCHERE } from '../../src/lib/contrat/enchere'
 import { ENTREES_ETIQUETTES } from '../../src/lib/contrat/etiquettes'
 import { ENTREES_LECTURE } from '../../src/lib/contrat/lecture'
+
+const lireSource = (relatif: string): string => readFileSync(fileURLToPath(new URL(relatif, import.meta.url)), 'utf8')
 
 const entreeFictive: EntreeContrat = {
   methode: 'POST',
@@ -36,9 +39,33 @@ describe('table du contrat', () => {
     expect(dispo.has('lecture')).toBe(false)
   })
 
-  it('ne contient aucune URL dans contrat.ts', () => {
-    const source = readFileSync('src/lib/contrat.ts', 'utf8')
-    expect(source).not.toContain('/api/')
-    expect(source).not.toContain('/rest/')
+  it('ignore les entrées valant undefined', () => {
+    const table: TableContrat = { defausse: entreeFictive, enchere: undefined }
+    const dispo = typesDisponibles(table)
+    expect([...dispo]).toEqual(['defausse'])
+    expect(dispo.has('enchere')).toBe(false)
+    expect(typesDisponibles({ lecture: undefined }).size).toBe(0)
+  })
+
+  it('retrouve dans TABLE_CONTRAT chaque entrée de chaque famille', () => {
+    for (const famille of [ENTREES_DEFAUSSE, ENTREES_ENCHERE, ENTREES_ETIQUETTES, ENTREES_LECTURE] as TableContrat[]) {
+      for (const [type, entree] of Object.entries(famille)) {
+        expect(TABLE_CONTRAT[type as keyof TableContrat]).toBe(entree)
+      }
+    }
+  })
+
+  it('ne contient ni URL ni nom d’en-tête dans contrat.ts ni dans contrat/ (AC3)', () => {
+    const dossier = fileURLToPath(new URL('../../src/lib/contrat/', import.meta.url))
+    const sources = [
+      lireSource('../../src/lib/contrat.ts'),
+      ...readdirSync(dossier).map((f) => lireSource(`../../src/lib/contrat/${f}`)),
+    ]
+    expect(sources.length).toBeGreaterThan(1)
+    for (const source of sources) {
+      for (const interdit of ['/api/', '/rest/', 'https://', 'http://', 'authorization', 'apikey']) {
+        expect(source.toLowerCase(), interdit).not.toContain(interdit)
+      }
+    }
   })
 })

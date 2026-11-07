@@ -115,6 +115,27 @@ describe('executant (content script)', () => {
     expect(source).not.toMatch(/addEventListener|\.click\(|\.focus\(|dispatchEvent|localStorage|document\.cookie/);
   });
 
+  it('le source n’affecte aucun gestionnaire on… (window.onmessage = …)', () => {
+    const source = readFileSync('src/content/executant.ts', 'utf8');
+    expect(source).not.toMatch(/\bwindow\s*\.\s*on[a-z]+/);
+    expect(source).not.toMatch(/\.on[a-z]+\s*=(?!=)/);
+    expect(source).not.toMatch(/\[\s*['"`]on[a-z]+['"`]\s*\]\s*=(?!=)/);
+  });
+
+  it('le nom du port n’est défini qu’une fois, dans lib/messages.ts', () => {
+    for (const f of ['src/content/executant.ts', 'src/app/execution.ts']) {
+      const source = readFileSync(f, 'utf8');
+      expect(source, f).not.toMatch(/['"]wm-synchro['"]/);
+      expect(source, f).not.toMatch(/export const NOM_PORT/);
+    }
+    expect(readFileSync('src/lib/messages.ts', 'utf8')).toMatch(/export const NOM_PORT = 'wm-synchro'/);
+  });
+
+  it('l’index du content script importe ./executant après les imports ../lib', () => {
+    const source = readFileSync('src/content/index.ts', 'utf8');
+    expect(source.indexOf("from './executant'")).toBeGreaterThan(source.lastIndexOf("from '../lib/"));
+  });
+
   it('un contexte orphelin (connect lève) ne fait pas planter le content script', () => {
     connect.mockImplementation(() => {
       throw new Error('Extension context invalidated.');

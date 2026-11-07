@@ -16,6 +16,12 @@ async function erreurs(code: string, filePath: string): Promise<string[]> {
   return (res?.messages ?? []).filter((m) => m.severity === 2).map((m) => `${m.ruleId ?? 'parse'} : ${m.message}`);
 }
 
+/** Une erreur de règle ESLint (ruleId non nul), jamais une simple erreur d’analyse. */
+function exigerErreurDeRegle(messages: string[]): void {
+  expect(messages).not.toEqual([]);
+  for (const m of messages) expect(m.startsWith('parse :'), m).toBe(false);
+}
+
 describe('SC-018 (AC4) : lecture du stockage du site interdite hors jeton.ts', () => {
   const formes: Record<string, string> = {
     localStorage: "export const v = localStorage.getItem('a');",
@@ -28,7 +34,7 @@ describe('SC-018 (AC4) : lecture du stockage du site interdite hors jeton.ts', (
   for (const [nom, code] of Object.entries(formes)) {
     for (const f of fichiers) {
       it(`${nom} est une erreur dans ${f}`, async () => {
-        expect(await erreurs(code, f)).not.toEqual([]);
+        exigerErreurDeRegle(await erreurs(code, f));
       });
     }
   }
@@ -38,13 +44,13 @@ describe('SC-018 (AC4) : import de jeton.ts', () => {
   const imp = (chemin: string) => `import { enteteAuthentification } from '${chemin}';\nexport const j = enteteAuthentification;`;
 
   it('depuis src/content/executant.ts : erreur', async () => {
-    expect(await erreurs(imp('../lib/jeton'), 'src/content/executant.ts')).not.toEqual([]);
+    exigerErreurDeRegle(await erreurs(imp('../lib/jeton'), 'src/content/executant.ts'));
   });
   it('depuis src/app/x.tsx : erreur', async () => {
-    expect(await erreurs(imp('../lib/jeton'), 'src/app/x.tsx')).not.toEqual([]);
+    exigerErreurDeRegle(await erreurs(imp('../lib/jeton'), 'src/app/x.tsx'));
   });
   it('depuis src/lib/lot.ts : erreur', async () => {
-    expect(await erreurs(imp('./jeton'), 'src/lib/lot.ts')).not.toEqual([]);
+    exigerErreurDeRegle(await erreurs(imp('./jeton'), 'src/lib/lot.ts'));
   });
   it('depuis src/lib/reseau.ts : aucune erreur', async () => {
     expect(await erreurs(imp('./jeton'), 'src/lib/reseau.ts')).toEqual([]);
