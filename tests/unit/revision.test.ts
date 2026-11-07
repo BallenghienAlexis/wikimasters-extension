@@ -100,7 +100,7 @@ describe('reverifierAction (AC1)', () => {
 describe('appliquerResultat (AC2)', () => {
   it('enchère réussie : statut en-vente, quantité et idsSite inchangés', () => {
     const { collection } = appliquerResultat(coll(carte()), reg(), enchere, ok)
-    const c = collection.cartes[0]
+    const c = collection.cartes[0]!
     expect(c.statut).toBe('en-vente')
     expect(c.quantite).toBe(2)
     expect(c.idsSite).toEqual(['ex-1', 'ex-2'])
@@ -112,8 +112,8 @@ describe('appliquerResultat (AC2)', () => {
       { ex: 'ex-2', nom: 'A' },
     ])
     const r = appliquerResultat(coll(carte({ statut: 'defausser' })), registre, defausse, ok)
-    expect(r.collection.cartes[0].idsSite).toEqual(['ex-2'])
-    expect(r.collection.cartes[0].quantite).toBe(1)
+    expect(r.collection.cartes[0]?.idsSite).toEqual(['ex-2'])
+    expect(r.collection.cartes[0]?.quantite).toBe(1)
     expect(r.registre.couples).toEqual([{ ex: 'ex-2', nom: 'A' }])
   })
 
