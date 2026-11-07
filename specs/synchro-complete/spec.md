@@ -3,6 +3,7 @@
 - **Feature** : `synchro-complete` · **Auteur** : agent spec · **Date** : 2026-11-07
 - **Besoin d'origine** : « Synchronisation complète entre WikiMasters et l'extension : étiquettes (tags), mise en vente aux enchères et défausse des cartes, appliquées sur le site à partir des décisions de l'extension. »
 - **Validation** : voir `STATUS.md` (gate humain). Cette spec n'est pas validée tant qu'Alexis ne l'a pas écrit dans `STATUS.md`.
+- **Remplacée sur certains points par `spec.refined.md`** (R-37 à R-48 : jeton de session, en-têtes, `idsSite`, granularité). En cas de contradiction, `spec.refined.md` fait foi.
 
 ## 0. Décision d'Alexis et risque assumé
 

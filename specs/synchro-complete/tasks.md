@@ -17,6 +17,7 @@ Vagues : V1 : T-001 [P], T-002 [P], T-003 [P] · V2 : T-004 [P], T-005 [P], T-00
 - **G4** Cadence fixe 6 000 ms ; aucun `Math.random`, `crypto.getRandomValues`, `crypto.randomUUID`, aucun délai variable ; aucun en-tête falsifié (jamais `User-Agent`, `Referer`, `Origin`, `Cookie`). En-têtes fixés : `Content-Type`, `Accept` et, si la table du contrat l'exige pour ce type, l'en-tête d'authentification dont la valeur vient de `jeton.ts`.
 - **G5** Les inconnues de « Reste à relever » du contrat ne sont jamais devinées : type « non disponible » tant qu'elles ne sont pas relevées.
 - **G6** `click`, `submit`, `requestSubmit`, `dispatchEvent`, `focus` interdits dans le code exécuté sur le site (le piège de focus du dialogue vit dans `src/app/`). Pas de `innerHTML` / `dangerouslySetInnerHTML`. Permission `storage` seule, aucun `host_permissions`. Aucune nouvelle dépendance. `src/styles/tokens.css` et `public/manifest.json` inchangés.
+- **G7** L'exception du jeton (AGENTS.md) vaut dans le content script seulement, sans code injecté dans la page (pas de monde principal, pas de `<script>` inséré), en n'extrayant que la valeur du jeton d'accès (jamais de jeton de rafraîchissement ni d'autre cookie).
 - Code, commentaires, UI, commits en français (apostrophe ’, espace avant `:`). Commits `type(T-xxx): …`.
 
 | ID | Titre | Couche | Agent | Dépend de | SC | [P] |
@@ -114,18 +115,18 @@ Contrôles : aucun fichier n'apparaît dans deux tâches d'une même vague (vér
   - `tests/unit/lint-reseau.test.ts` (créé)
 - **Critères d'acceptation**
   1. `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `navigator.sendBeacon` sont interdits dans tout `src/` **sauf `src/lib/reseau.ts`** (formes `globalThis.fetch`, `window['fetch']` comprises).
-  2. `document.cookie`, `cookieStore`, `localStorage`, `sessionStorage`, `indexedDB` (y compris `window['localStorage']`, `globalThis.document.cookie`) sont interdits dans tout `src/` **sauf `src/lib/jeton.ts`**.
+  2. `document.cookie`, `cookieStore`, `localStorage`, `sessionStorage`, `indexedDB` (y compris `window['localStorage']`, `globalThis.document.cookie`) sont interdits dans tout `src/` **sauf `src/lib/jeton.ts`**, où seule la LECTURE est permise (T-021 l’ajoute). Les ÉCRITURES sont interdites partout, `jeton.ts` compris : `setItem`, `removeItem`, `clear`, affectation `document.cookie =`, `cookieStore.set` / `cookieStore.delete`, écritures `indexedDB`.
   3. `import … from '…/jeton'` est interdit sauf depuis `src/lib/reseau.ts` (`no-restricted-imports`/patterns) ; `no-console` actif dans `src/lib/jeton.ts` et `src/lib/reseau.ts`.
   4. `Math.random`, `crypto.getRandomValues`, `crypto.randomUUID` interdits dans `src/lib/file.ts`, `src/lib/reseau.ts`, `src/lib/jeton.ts`.
   5. `click`, `submit`, `requestSubmit`, `dispatchEvent`, `focus` restent interdits dans le code exécuté sur le site ; `npm run lint` passe sur le code existant.
   6. `git check-ignore captures-site/` renvoie le chemin (vérification, rapportée dans la PR ; si ce n’est pas le cas, escalader : `.gitignore` n’est pas dans la liste).
 - **Tests attendus**
-  - `tests/unit/lint-reseau.test.ts` : lance l’API `ESLint` (dépendance existante) sur des fichiers témoins en mémoire (`lintText` avec `filePath` simulé) : `fetch` dans `src/lib/x.ts` → erreur, dans `src/lib/reseau.ts` → OK (AC1) ; chaque accès cookie/stockage hors `jeton.ts` → erreur, dans `jeton.ts` → OK (AC2) ; import de `jeton` depuis `src/content/x.ts` et `src/app/x.tsx` → erreur, depuis `reseau.ts` → OK ; `console.log` dans `reseau.ts` → erreur (AC3) ; `Math.random` dans `file.ts` → erreur (AC4) ; `.click()` dans `src/content/` → erreur (AC5).
+  - `tests/unit/lint-reseau.test.ts` : lance l’API `ESLint` (dépendance existante) sur des fichiers témoins en mémoire (`lintText` avec `filePath` simulé) : `fetch` dans `src/lib/x.ts` → erreur, dans `src/lib/reseau.ts` → OK (AC1) ; chaque accès cookie/stockage hors `jeton.ts` → erreur, lecture dans `jeton.ts` → OK, écriture (`setItem`, `removeItem`, `clear`, `document.cookie =`, `cookieStore.set`) dans `jeton.ts` → erreur (AC2) ; import de `jeton` depuis `src/content/x.ts` et `src/app/x.tsx` → erreur, depuis `reseau.ts` → OK ; `console.log` dans `reseau.ts` → erreur (AC3) ; `Math.random` dans `file.ts` → erreur (AC4) ; `.click()` dans `src/content/` → erreur (AC5).
 - **Brief de contexte**
   - *Pourquoi* : rétablir, en plus strict, le garde-fou réseau retiré le 2026-11-07, et préparer le confinement du jeton (SC-017, SC-018).
   - *État actuel* : `eslint.config.mjs:14` et `:25` configurent `no-restricted-syntax` ; `:31` interdit `click`, `submit`, `requestSubmit`, `dispatchEvent`, `focus` dans le code du site. Aucune règle réseau ni stockage.
-  - *À faire* : combiner `no-restricted-globals`, `no-restricted-properties`, `no-restricted-syntax` (sélecteurs pour les accès par chaîne/globalThis) et `no-restricted-imports`, avec des blocs `files:`/`ignores:` par chemin. Les exceptions (`reseau.ts`, `jeton.ts`) sont posées dès maintenant, même si ces fichiers n’existent pas encore.
-  - *Contrats* : AGENTS.md (lint). G3, G4, G6. Le test sert de modèle au futur `confinement-jeton.test.ts` (T-008).
+  - *À faire* : combiner `no-restricted-globals`, `no-restricted-properties`, `no-restricted-syntax` (sélecteurs pour les accès par chaîne/globalThis) et `no-restricted-imports`, avec des blocs `files:`/`ignores:` par chemin. Les exceptions (`reseau.ts`, `jeton.ts`) sont posées dès maintenant, même si ces fichiers n’existent pas encore. Dans `jeton.ts`, l’exception ne couvre que la lecture : un bloc `files: ['src/lib/jeton.ts']` réactive l’interdiction des écritures listées en AC2.
+  - *Contrats* : AGENTS.md (lint). G3, G4, G6, G7. Le test sert de modèle au futur `confinement-jeton.test.ts` (T-008).
   - *Pièges* : ne pas casser les tests (`tests/` hors `src/`), ni `src/app/` ; vérifier que le code existant passe. Les règles par sélecteur AST doivent couvrir `window['localStorage']`.
   - *Vérifier* : `npx vitest run tests/unit/lint-reseau.test.ts && npm run check && git check-ignore captures-site/`
 
@@ -232,15 +233,15 @@ Contrôles : aucun fichier n'apparaît dans deux tâches d'une même vague (vér
   2. Refuse (renvoie `null` sans appeler `source`) si l’origine de `url` n’est pas `origineOnglet` ou si `origineOnglet` n’est pas `https://www.wiki-masters.com`.
   3. Aucun cache : `source` est appelée à chaque appel. Aucune variable de module ne garde la valeur. Aucun `console`, aucune écriture, aucun `chrome.*`.
   4. Le test de confinement lance ESLint sur des fichiers témoins hors `jeton.ts` et exige une erreur pour chacun : `localStorage`, `window['sessionStorage']`, `globalThis.document.cookie`, `cookieStore`, `indexedDB`, import de `jeton.ts` depuis `src/content/executant.ts`, depuis `src/app/x.tsx`, depuis `src/lib/lot.ts` ; et aucune erreur pour l’import depuis `src/lib/reseau.ts`.
-  5. Un test lit le source de `jeton.ts` et vérifie l’absence de `localStorage`, `sessionStorage`, `document.cookie`, `console`, `chrome.`.
+  5. Un test lit le source de `jeton.ts` et vérifie l’absence d’ÉCRITURES et de sorties : `setItem`, `removeItem`, `clear`, `document.cookie =`, `cookieStore.set` / `cookieStore.delete`, `fetch`, `chrome.`, `console`. Il n’interdit PAS la LECTURE (`localStorage`, `sessionStorage`, `document.cookie` en lecture), que T-021 ajoute : ce test doit rester vrai après T-021. Le lint (T-003 AC2) interdit de son côté les écritures même dans `jeton.ts`.
 - **Tests attendus**
-  - `tests/unit/jeton.test.ts` : source fictive qui renvoie un jeton témoin : valeur renvoyée seulement pour l’origine exacte (AC2) ; appels répétés → source appelée à chaque fois (AC3) ; défaut → `null` (AC1) ; test de source (AC5).
+  - `tests/unit/jeton.test.ts` : source fictive qui renvoie un jeton témoin : valeur renvoyée seulement pour l’origine exacte (AC2) ; appels répétés → source appelée à chaque fois (AC3) ; défaut → `null` (AC1) ; test de source sans écriture ni sortie (AC5).
   - `tests/unit/confinement-jeton.test.ts` : AC4.
 - **Brief de contexte**
   - *Pourquoi* : isoler d’abord le module et son confinement, avant tout appel au site. La lecture réelle est T-021 (bloquée par le relevé de l’endroit du jeton).
-  - *État actuel* : le lint (T-003) interdit déjà les accès au stockage du site hors de ce fichier et l’import de ce fichier hors de `reseau.ts`.
-  - *À faire* : l’API acceptant une `source` injectée permet les tests avec un jeton témoin fictif (ex. `'jeton-temoin-fictif'`). La valeur renvoyée n’est jamais journalisée ni mise dans un message d’erreur.
-  - *Contrats* : AGENTS.md « Ne jamais faire » (jeton lu en mémoire dans un seul module). G3, G5.
+  - *État actuel* : le lint (T-003) interdit déjà les accès au stockage du site hors de ce fichier, les écritures partout, et l’import de ce fichier hors de `reseau.ts`.
+  - *À faire* : l’API acceptant une `source` injectée permet les tests avec un jeton témoin fictif (ex. `'jeton-temoin-fictif'`). La valeur renvoyée n’est jamais journalisée ni mise dans un message d’erreur. Le test de source (AC5) ne doit contenir aucune assertion qui deviendrait fausse quand T-021 ajoutera la lecture.
+  - *Contrats* : AGENTS.md « Ne jamais faire » (jeton lu en mémoire dans un seul module). G3, G5, G7.
   - *Pièges* : ne pas deviner où vit le jeton (cookie, stockage, mémoire de la page) ; si l’endroit exige du code dans le monde principal de la page, T-021 escalade (SC-002 (a), H41).
   - *Vérifier* : `npx vitest run tests/unit/jeton.test.ts tests/unit/confinement-jeton.test.ts && npm run check`
 
@@ -374,19 +375,19 @@ Contrôles : aucun fichier n'apparaît dans deux tâches d'une même vague (vér
   - `tests/unit/execution.test.ts` (créé)
   - `tests/unit/executant.test.ts` (créé)
 - **Critères d'acceptation**
-  1. Côté content script : `executant.ts` ouvre un port `chrome.runtime.connect` et envoie `bonjour` ; reçoit un `ordre`, le valide (`messages.ts`) puis appelle une fonction `emettre` **injectée dont la valeur par défaut renvoie un résultat `echec` « action non disponible » sans aucune requête** (T-019 branchera `reseau.ts`). `src/content/index.ts` démarre `executant`. Ni `click`, ni `focus`, ni accès au stockage du site.
-  2. Côté page (`execution.ts`) : comptage des ports vivants par `sender.tab.id` → `nbOngletsWikiMasters` ; déconnexion pendant l’exécution = interruption (onglet fermé ou rechargé) ; clé de signal de reconnexion (via `stockage.ts`) pour qu’un onglet déjà ouvert se reconnecte.
+  1. Côté content script : `executant.ts` ouvre un port `chrome.runtime.connect` et envoie `bonjour` ; reçoit un `ordre`, le valide (`messages.ts`) puis appelle une fonction `emettre` **injectée dont la valeur par défaut renvoie un résultat `echec` « action non disponible » sans aucune requête** (T-019 branchera `reseau.ts`). Les ordres ne viennent QUE du port de l’extension : jamais de `window.postMessage` / `addEventListener('message')`, ni d’un événement DOM ou `CustomEvent` de la page (la page du site est hostile). `src/content/index.ts` démarre `executant`. Ni `click`, ni `focus`, ni accès au stockage du site.
+  2. Côté page (`execution.ts`) : un port n’est accepté que si `port.sender?.id === chrome.runtime.id` ET si `port.sender.url` a pour origine exacte `https://www.wiki-masters.com` ; sinon il est refusé (déconnecté) et ne compte pas. Comptage des ports acceptés et vivants par `sender.tab.id` → `nbOngletsWikiMasters` ; déconnexion pendant l’exécution = interruption (onglet fermé ou rechargé) ; clé de signal de reconnexion (via `stockage.ts`) pour qu’un onglet déjà ouvert se reconnecte.
   3. Verrou `navigator.locks` pour une seule exécution entre onglets de `collection.html` ; à l’ouverture, un état « en cours » sans verrou détenu est clos « interrompue » (SC-013) via `cloreInterrompues`.
   4. `execution.ts` fournit à `file.ts` le `transport` (ordre → port → résultat classé) et expose raisons de désactivation de « Lancer » : aucun onglet, plusieurs onglets, exécution en cours.
   5. Fermer ou recharger `collection.html` interrompt l’exécution, qui ne reprend jamais seule.
 - **Tests attendus**
-  - `tests/unit/execution.test.ts` (faux `chrome.runtime`, faux `navigator.locks`, faux stockage) : comptage 0/1/2 onglets, déconnexion → interruption, second `demarrer` refusé, clôture « interrompue » au démarrage (AC2, AC3, AC5).
-  - `tests/unit/executant.test.ts` : ordre invalide rejeté ; ordre valide → `emettre` par défaut → résultat « action non disponible », aucun `fetch` appelé (espion) (AC1).
+  - `tests/unit/execution.test.ts` (faux `chrome.runtime`, faux `navigator.locks`, faux stockage) : comptage 0/1/2 onglets, déconnexion → interruption, second `demarrer` refusé, clôture « interrompue » au démarrage (AC2, AC3, AC5) ; port avec `sender.id` étranger ou absent, `sender.url` d’une autre origine (ex. `https://www.wiki-masters.com.exemple.test`, `http://www.wiki-masters.com`) → refusé et non compté (AC2).
+  - `tests/unit/executant.test.ts` : ordre invalide rejeté ; ordre valide → `emettre` par défaut → résultat « action non disponible », aucun `fetch` appelé (espion) (AC1) ; un `window.postMessage` ou un `CustomEvent` portant un ordre valide est ignoré : `emettre` n’est pas appelé (AC1).
 - **Brief de contexte**
   - *Pourquoi* : pose le pilotage page ↔ content script avant tout appel au site ; ici encore **aucune requête** n’est émise.
   - *État actuel* : `src/content/index.ts` lit les cartes de `/collection` et pose les repères (`lecteur.ts`). `src/background.ts` ne change pas. `file.ts` (T-011) attend un `transport` injecté.
-  - *À faire* : `emettre` est un paramètre de `demarrerExecutant({ emettre })` ; cadrage de compatibilité avec la lecture existante (ne pas casser `index.ts`).
-  - *Contrats* : architecture du plan (page pilote, content script émet, service worker inchangé et éphémère : aucun état en mémoire). Identifiant de lot : horodatage + compteur. G2, G3, G6.
+  - *À faire* : `emettre` est un paramètre de `demarrerExecutant({ emettre })` ; cadrage de compatibilité avec la lecture existante (ne pas casser `index.ts`). Le content script n’écoute que le port ouvert par lui-même (`chrome.runtime`) ; aucun écouteur `message` sur `window`, aucun écouteur d’événement personnalisé.
+  - *Contrats* : architecture du plan (page pilote, content script émet, service worker inchangé et éphémère : aucun état en mémoire). Identifiant de lot : horodatage + compteur. G2, G3, G6, G7.
   - *Pièges* : `chrome.*`, `navigator.locks` absents dans Vitest ; content script « orphelin » après rechargement de l’extension (message invitant à recharger l’onglet) ; pas de `chrome.tabs`.
   - *Vérifier* : `npx vitest run tests/unit/execution.test.ts tests/unit/executant.test.ts && npm run check && npm run build`
 
@@ -557,7 +558,7 @@ Contrôles : aucun fichier n'apparaît dans deux tâches d'une même vague (vér
   - *Pourquoi* : rendre possibles les types qui exigent l’authentification, dans le cadre d’AGENTS.md (« Ne jamais faire »).
   - *État actuel* : T-008 a livré l’API avec source injectée et `SOURCE_NON_RELEVEE`.
   - *À faire* : implémenter seulement ce que le contrat complété décrit ; aucune supposition (G5).
-  - *Contrats* : G3. `security-reviewer` renforcé sur cette PR.
+  - *Contrats* : G3, G7. `security-reviewer` renforcé sur cette PR.
   - *Pièges* : ne jamais journaliser, même sous erreur ; ne pas exposer la valeur dans un message d’exception.
   - *Vérifier* : `npx vitest run tests/unit/jeton.test.ts tests/unit/confinement-jeton.test.ts tests/unit/non-fuite-jeton.test.ts && npm run check`
 
@@ -618,16 +619,16 @@ Contrôles : aucun fichier n'apparaît dans deux tâches d'une même vague (vér
   - `tests/unit/contrat-etiquettes.test.ts` (créé)
 - **Critères d'acceptation**
   1. Entrées `creation-etiquette` (`POST /rest/v1/tags` avec `user_id`, `name`, `color`), `pose-etiquette` (`POST /rest/v1/user_card_tags` avec `user_card_id`, `tag_id`) et `retrait-etiquette` (`DELETE /rest/v1/user_card_tags` avec le filtre relevé en query, encodé, **sans** supprimer l’étiquette).
-  2. `src/config/synchro.ts` : `COULEUR_ETIQUETTE` (champ `color`, réglage d’Alexis), `LONGUEUR_MAX_ETIQUETTE` selon le relevé, source de `user_id` selon le relevé.
+  2. `src/config/synchro.ts` : `COULEUR_ETIQUETTE` (champ `color`, réglage d’Alexis), `LONGUEUR_MAX_ETIQUETTE` selon le relevé, et la **source** de `user_id` selon le relevé (la façon de l’obtenir, jamais sa valeur). **`src/config/synchro.ts` ne contient jamais de valeur de `user_id`** (ni littéral, ni exemple réel) : tout décodage du jeton pour en tirer le `user_id` relève d’une nouvelle décision d’Alexis écrite dans la spec ; sans elle, le type reste « non disponible » (escalade).
   3. Validateurs : l’identifiant d’étiquette renvoyé par la création est validé (non vide ≤ 200) avant d’aller au registre ; forme inconnue → `hors-contrat`.
   4. `typesDisponibles()` contient les types dont tous les points sont relevés, et seulement eux.
 - **Tests attendus**
-  - `tests/unit/contrat-etiquettes.test.ts` : corps, chemins, filtre encodé, absence de suppression de `tags`, validation des réponses (AC1 à AC4), fixtures fictives.
+  - `tests/unit/contrat-etiquettes.test.ts` : corps, chemins, filtre encodé, absence de suppression de `tags`, validation des réponses (AC1 à AC4), fixtures fictives ; le source de `src/config/synchro.ts` ne contient aucun `user_id` littéral ni décodage de jeton (`atob`, `JSON.parse` du jeton) (AC2).
 - **Brief de contexte**
   - *Pourquoi* : appliquer les étiquettes de statut et d’ami sur le site, retirer celles de l’extension.
   - *État actuel* : `lot.ts` (T-009) génère déjà créations / poses / retraits quand les types sont disponibles ; `registre.ts` (T-005) conserve les couples.
-  - *À faire* : un type dont un paramètre reste « non relevé » n’entre pas dans la table (G5). Le retrait d’étiquette ne supprime jamais l’étiquette du site.
-  - *Contrats* : G1 à G5 ; avertissement de visibilité dans l’aperçu si le contrat montre qu’elles sont visibles des autres joueurs (H34, adapté en T-015 par retouche si nécessaire).
+  - *À faire* : un type dont un paramètre reste « non relevé » n’entre pas dans la table (G5). Le retrait d’étiquette ne supprime jamais l’étiquette du site. `synchro.ts` décrit où lire `user_id`, sans en contenir ; ne jamais décoder le jeton sans décision d’Alexis écrite dans la spec.
+  - *Contrats* : G1 à G5, G7 ; avertissement de visibilité dans l’aperçu si le contrat montre qu’elles sont visibles des autres joueurs (H34, adapté en T-015 par retouche si nécessaire).
   - *Pièges* : le nom d’étiquette ne doit jamais être tronqué (H6).
   - *Vérifier* : `npx vitest run tests/unit/contrat-etiquettes.test.ts tests/unit/lot.test.ts && npm run check`
 
