@@ -168,3 +168,102 @@ describe('Cas négatifs', () => {
   it('tests/ n’est pas concerné par l’interdiction de l’aléatoire', () =>
     permis('export const n = Math.random();', 'tests/unit/file.test.ts'));
 });
+
+const BACKGROUND = 'src/background.ts';
+
+describe('Déstructuration : réseau', () => {
+  const formes: Record<string, string> = {
+    'const { fetch } = globalThis': 'export const { fetch: f } = globalThis;',
+    'const { fetch } = window': 'export const { fetch: f } = window;',
+    'const { XMLHttpRequest } = globalThis': 'export const { XMLHttpRequest: X } = globalThis;',
+    'const { WebSocket } = globalThis': 'export const { WebSocket: W } = globalThis;',
+    'const { EventSource } = globalThis': 'export const { EventSource: E } = globalThis;',
+    'const { sendBeacon } = navigator': 'export const { sendBeacon: s } = navigator;',
+  };
+  for (const [nom, code] of Object.entries(formes)) {
+    for (const f of [AUTRE, CONTENT, APP, JETON, BACKGROUND]) {
+      it(`SC-017 : ${nom} est interdit dans ${f}`, () => interdit(code, f));
+    }
+    it(`SC-017 : ${nom} est permis dans src/lib/reseau.ts`, () => permis(code, RESEAU));
+  }
+});
+
+describe('Réseau interdit dans jeton.ts et background.ts', () => {
+  const codes = [
+    "export const r = fetch('https://exemple.test/');",
+    "export const r = globalThis.fetch('https://exemple.test/');",
+    'export const x = new XMLHttpRequest();',
+    "export const b = navigator.sendBeacon('https://exemple.test/', 'x');",
+  ];
+  for (const code of codes) {
+    it(`SC-017 : ${code} est interdit dans jeton.ts`, () => interdit(code, JETON));
+    it(`SC-017 : ${code} est interdit dans background.ts`, () => interdit(code, BACKGROUND));
+  }
+});
+
+describe('Déstructuration : stockage et cookies', () => {
+  const formes: Record<string, string> = {
+    'const { cookie } = document': 'export const { cookie } = document;',
+    'const { localStorage: ls } = window': 'export const { localStorage: ls } = window;',
+    'const { sessionStorage } = globalThis': 'export const { sessionStorage: s } = globalThis;',
+    'const { cookieStore } = globalThis': 'export const { cookieStore: c } = globalThis;',
+    'const { indexedDB } = globalThis': 'export const { indexedDB: i } = globalThis;',
+    'const { cookie } = globalThis.document': 'export const { cookie: c } = globalThis.document;',
+  };
+  for (const [nom, code] of Object.entries(formes)) {
+    it(`SC-017 : ${nom} est interdit dans src/lib`, () => interdit(code, AUTRE));
+    it(`SC-017 : ${nom} est interdit dans src/app`, () => interdit(code, APP));
+    it(`SC-017 : ${nom} est interdit dans src/content`, () => interdit(code, CONTENT));
+  }
+  it('SC-017 : const { setItem } = localStorage est interdit dans jeton.ts', () =>
+    interdit('export const { setItem } = localStorage;', JETON));
+  it('SC-017 : const { indexedDB } = globalThis est interdit dans src/lib (variante)', () =>
+    interdit('export const { indexedDB: i } = globalThis;', AUTRE));
+});
+
+describe('Déstructuration : aléatoire', () => {
+  const formes: Record<string, string> = {
+    'const { random } = Math': 'export const { random } = Math;',
+    'const { getRandomValues } = crypto': 'export const { getRandomValues } = crypto;',
+    'const { randomUUID } = crypto': 'export const { randomUUID } = crypto;',
+    'const { randomUUID } = globalThis.crypto': 'export const { randomUUID } = globalThis.crypto;',
+  };
+  for (const [nom, code] of Object.entries(formes)) {
+    for (const f of [FILE, RESEAU, JETON]) {
+      it(`SC-010 : ${nom} est interdit dans ${f}`, () => interdit(code, f));
+    }
+  }
+});
+
+describe('SC-017 : écritures IndexedDB interdites dans jeton.ts', () => {
+  const ecritures: Record<string, string> = {
+    "s.delete('k')": "export function f(s: IDBObjectStore) { s.delete('k'); }",
+    'cursor.update(v)': 'export function f(cursor: IDBCursor, v: unknown) { cursor.update(v); }',
+    'cursor.delete()': 'export function f(cursor: IDBCursor) { cursor.delete(); }',
+    "s.createIndex('i', 'p')": "export function f(s: IDBObjectStore) { s.createIndex('i', 'p'); }",
+    "s.deleteIndex('i')": "export function f(s: IDBObjectStore) { s.deleteIndex('i'); }",
+    "db.transaction('s', 'readwrite')": "export function f(db: IDBDatabase) { return db.transaction('s', 'readwrite'); }",
+    "db.transaction('s', 'versionchange')": "export function f(db: IDBDatabase) { return db.transaction('s', 'versionchange'); }",
+    "indexedDB.open('x', 2)": "indexedDB.open('x', 2);",
+    's.add(v)': 'export function f(s: IDBObjectStore, v: unknown) { s.add(v); }',
+    's.clear()': 'export function f(s: IDBObjectStore) { s.clear(); }',
+    "db.createObjectStore('s')": "export function f(db: IDBDatabase) { db.createObjectStore('s'); }",
+  };
+  for (const [nom, code] of Object.entries(ecritures)) {
+    it(`SC-017 : ${nom} est interdit dans jeton.ts`, () => interdit(code, JETON));
+  }
+  it('SC-017 : Set.add et Map.delete restent permis hors jeton.ts', () =>
+    permis(
+      'export function f(s: Set<string>, m: Map<string, number>) { s.add("a"); m.delete("a"); }',
+      AUTRE,
+    ));
+});
+
+describe('Contournements réalistes (mineurs)', () => {
+  it('SC-017 : window[`localStorage`] (clé en gabarit) est interdit dans src/lib', () =>
+    interdit('export const v = window[`localStorage`].getItem("a");', AUTRE));
+  it('SC-017 : document[`cookie`] (clé en gabarit) est interdit dans src/lib', () =>
+    interdit('export const c = document[`cookie`];', AUTRE));
+  it('AC5 : .click.call(el) est interdit dans src/content', () =>
+    interdit('export function f(el: HTMLElement) { el.click.call(el); }', CONTENT));
+});
