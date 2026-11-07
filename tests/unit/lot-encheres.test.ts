@@ -76,8 +76,8 @@ describe('enchères : places libres (AC1)', () => {
   })
 
   it('sans lienCardId (défaut), le type enchère est non disponible (H45)', () => {
-    const { lienCardId: _ignore, ...sans } = config()
-    const l = lot(coll(carte('a')), sans as Config)
+    const sans: Config = { maxVentesSimultanees: 5, longueurMaxEtiquette: 50, nomsExistants: [] }
+    const l = lot(coll(carte('a')), sans)
     expect(encheres(l.actions)).toEqual([])
     expect(raisons(l, 'a')).toEqual(['action-non-disponible'])
   })
