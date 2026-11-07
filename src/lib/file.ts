@@ -1,0 +1,252 @@
+/**
+ * Exécuteur à cadence fixe de la synchronisation complète.
+ *
+ * Logique pure : horloge, transport, confirmation, revérification, application
+ * locale et journal sont **injectés**. Aucun accès à `chrome.*`, au réseau ni au
+ * jeton. Cadence fixe, sans aléa ni délai variable : aucune simulation de
+ * comportement humain. Les échéances sont en temps absolu, si bien qu’un minuteur
+ * ralenti (onglet masqué) ne peut jamais rendre l’exécution plus rapide.
+ *
+ * Pas de reprise automatique après interruption, et jamais de relance d’une
+ * requête dont le résultat est inconnu.
+ */
+
+import type { Action, EtatExecution, ResultatAction } from './actions'
+
+/** Intervalle minimal entre deux débuts de requête. */
+export const INTERVALLE_MS = 6000
+/** Fenêtre glissante et plafond de requêtes dans cette fenêtre. */
+export const FENETRE_MS = 60_000
+export const MAX_PAR_FENETRE = 10
+/** Nombre d’échecs cumulés (actions passées exclues) qui arrête la file. */
+export const MAX_ECHECS = 3
+/** Codes HTTP qui arrêtent la file dès la première occurrence. */
+export const CODES_ARRET: readonly number[] = [401, 403, 429]
+/** Libellé fixe d’un résultat d’arrêt sans requête émise (jeton absent). */
+export const CAUSE_JETON_ABSENT = 'jeton-absent'
+
+const VERSION_ETAT = 1
+
+export interface Horloge {
+  /** Date courante, en millisecondes. */
+  now: () => number
+  /** Résout dès que `now() >= echeance` (échéance absolue). */
+  attendreJusqua: (echeance: number) => Promise<void>
+}
+
+export type Decision = 'defausser' | 'passer' | 'arreter'
+export type Verification = 'ok' | 'passee'
+
+type Ou<T> = T | Promise<T>
+
+export interface JournalFile {
+  /** Écrit une entrée « en cours » avant l’envoi et renvoie son identifiant. */
+  ouvrir: (action: Action) => Ou<string>
+  completer: (id: string, resultat: ResultatAction) => Ou<void>
+  /** Inscrit l’entrée en « passée » (action non envoyée). */
+  passer: (id: string) => Ou<void>
+}
+
+export interface DependancesFile {
+  horloge: Horloge
+  transport: (ordre: Action) => Promise<ResultatAction>
+  confirmer: (action: Action) => Ou<Decision>
+  reverifier: (action: Action) => Ou<Verification>
+  appliquer: (action: Action, resultat: ResultatAction) => Ou<void>
+  journal: JournalFile
+}
+
+export type RaisonArret =
+  | 'manuel'
+  | 'echecs'
+  | 'code-http'
+  | 'resultat'
+  | 'ecriture'
+  | 'transport'
+  | 'confirmation'
+
+export interface EtatFile extends EtatExecution {
+  raison: RaisonArret | null
+}
+
+export interface File {
+  /** Lance l’exécution ; refusé (exception) tant qu’une exécution est en cours. */
+  demarrer: (actions: readonly Action[], idLot: string) => Promise<EtatFile>
+  /** Ajoute en fin de file ; `false` si aucune exécution n’est en cours. */
+  ajouter: (actions: readonly Action[]) => boolean
+  arreter: () => void
+  etat: () => EtatFile | null
+  /** Notifie chaque changement d’état ; renvoie la fonction de désabonnement. */
+  abonner: (ecouteur: (etat: EtatFile) => void) => () => void
+}
+
+/** Sentinelle interne : arrêt demandé. */
+class Arret extends Error {
+  constructor(readonly raison: RaisonArret) {
+    super(raison)
+  }
+}
+
+export function creerFile(deps: DependancesFile): File {
+  const { horloge, transport, confirmer, reverifier, appliquer, journal } = deps
+
+  let enCours = false
+  let file: Action[] = []
+  let etat: EtatFile | null = null
+  let arretDemande = false
+  let reveil: () => void = () => {}
+  let signalArret: Promise<void> = Promise.resolve()
+  const ecouteurs = new Set<(e: EtatFile) => void>()
+
+  // Mémoire de cadence, conservée tant que la file vit (mêmes règles d’une exécution à l’autre).
+  let dernierDebut = Number.NEGATIVE_INFINITY
+  let derniereReponse = Number.NEGATIVE_INFINITY
+  const debuts: number[] = []
+
+  const publier = (): void => {
+    if (etat === null) return
+    const copie = { ...etat }
+    for (const e of [...ecouteurs]) e(copie)
+  }
+
+  const changer = (changement: Partial<EtatFile>): void => {
+    if (etat === null) return
+    etat = { ...etat, ...changement }
+    publier()
+  }
+
+  /** Attend l’échéance, ou l’arrêt manuel s’il survient avant. */
+  async function attendre(echeance: number): Promise<void> {
+    if (horloge.now() < echeance) {
+      await Promise.race([horloge.attendreJusqua(echeance), signalArret])
+    }
+    if (arretDemande) throw new Arret('manuel')
+  }
+
+  /** Date de début autorisée : cadence de 6 s, réponse précédente, confirmation, fenêtre de 60 s. */
+  function debutAutorise(plancher: number): number {
+    let debut = Math.max(dernierDebut + INTERVALLE_MS, derniereReponse, plancher)
+    const recents = debuts.filter((d) => d > debut - FENETRE_MS)
+    if (recents.length >= MAX_PAR_FENETRE) {
+      debut = Math.max(debut, recents[recents.length - MAX_PAR_FENETRE]! + FENETRE_MS)
+    }
+    return debut
+  }
+
+  async function traiter(action: Action, echecs: { n: number }): Promise<void> {
+    if ((await reverifier(action)) === 'passee') {
+      const id = await journal.ouvrir(action)
+      await journal.passer(id)
+      return
+    }
+
+    let plancher = Number.NEGATIVE_INFINITY
+    if (action.type === 'defausse') {
+      const decision = await confirmer(action)
+      if (arretDemande) throw new Arret('manuel')
+      if (decision === 'arreter') throw new Arret('confirmation')
+      if (decision === 'passer') {
+        const id = await journal.ouvrir(action)
+        await journal.passer(id)
+        return
+      }
+      plancher = horloge.now()
+    }
+
+    await attendre(debutAutorise(plancher))
+
+    const id = await journal.ouvrir(action)
+    if (arretDemande) {
+      // Arrêt survenu pendant l’écriture du journal : rien n’est émis.
+      await journal.passer(id)
+      throw new Arret('manuel')
+    }
+
+    const debut = horloge.now()
+    let resultat: ResultatAction
+    try {
+      resultat = await transport(action)
+    } catch {
+      resultat = { classe: 'inconnu', codeHttp: null, cause: 'erreur de transport' }
+      await journal.completer(id, resultat)
+      throw new Arret('transport')
+    }
+    if (!(resultat.classe === 'arret' && resultat.cause === CAUSE_JETON_ABSENT)) {
+      dernierDebut = debut
+      derniereReponse = horloge.now()
+      debuts.push(debut)
+      if (debuts.length > MAX_PAR_FENETRE * 2) debuts.splice(0, debuts.length - MAX_PAR_FENETRE * 2)
+    }
+    await journal.completer(id, resultat)
+
+    switch (resultat.classe) {
+      case 'reussie':
+        await appliquer(action, resultat)
+        return
+      case 'echec':
+        if (resultat.codeHttp !== null && CODES_ARRET.includes(resultat.codeHttp)) throw new Arret('code-http')
+        echecs.n++
+        if (echecs.n >= MAX_ECHECS) throw new Arret('echecs')
+        return
+      default:
+        // arrêt, forme hors contrat, redirection, délai, erreur réseau, résultat inconnu.
+        throw new Arret('resultat')
+    }
+  }
+
+  async function boucle(): Promise<void> {
+    const echecs = { n: 0 }
+    let raison: RaisonArret | null = null
+    try {
+      while (file.length > 0) {
+        if (arretDemande) throw new Arret('manuel')
+        const action = file.shift()!
+        await traiter(action, echecs)
+        changer({ traitees: etat!.traitees + 1 })
+      }
+    } catch (e) {
+      raison = e instanceof Arret ? e.raison : 'ecriture'
+    }
+    file = []
+    changer({ etat: raison === null ? 'terminee' : 'arretee', raison })
+    enCours = false
+  }
+
+  return {
+    demarrer(actions, idLot) {
+      if (enCours) throw new Error('Une exécution est déjà en cours.')
+      enCours = true
+      arretDemande = false
+      signalArret = new Promise<void>((r) => (reveil = r))
+      file = [...actions]
+      etat = {
+        version: VERSION_ETAT,
+        idLot,
+        etat: 'en-cours',
+        traitees: 0,
+        total: actions.length,
+        raison: null,
+      }
+      publier()
+      return boucle().then(() => etat!)
+    },
+    ajouter(actions) {
+      if (!enCours || etat === null) return false
+      file.push(...actions)
+      changer({ total: etat.total + actions.length })
+      return true
+    },
+    arreter() {
+      if (!enCours) return
+      arretDemande = true
+      reveil()
+    },
+    etat: () => (etat === null ? null : { ...etat }),
+    abonner(ecouteur) {
+      ecouteurs.add(ecouteur)
+      return () => {
+        ecouteurs.delete(ecouteur)
+      }
+    },
+  }
+}
