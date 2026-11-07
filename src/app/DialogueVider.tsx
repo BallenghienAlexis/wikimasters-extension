@@ -5,7 +5,7 @@ interface Props {
   onConfirmer: () => void;
 }
 
-const BOUTON = 'inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded border px-4';
+const BOUTON = 'inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded border px-4 font-semibold';
 
 /**
  * Rend inertes tous les éléments qui entourent le dialogue (D-26). Renvoie la fonction
@@ -38,29 +38,22 @@ const DialogueVider: React.FC<Props> = ({ onAnnuler, onConfirmer }) => {
   const boite = useRef<HTMLDivElement>(null);
   const annuler = useRef<HTMLButtonElement>(null);
   const vider = useRef<HTMLButtonElement>(null);
-  const rappel = useRef(onAnnuler);
-
-  useEffect(() => {
-    rappel.current = onAnnuler;
-  }, [onAnnuler]);
 
   useEffect(() => {
     annuler.current?.focus();
     const rétablir = boite.current ? isolerArrierePlan(boite.current) : () => {};
-    const surTouche = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        rappel.current();
-      }
-    };
-    document.addEventListener('keydown', surTouche);
     return () => {
-      document.removeEventListener('keydown', surTouche);
       rétablir();
     };
   }, []);
 
-  const piegerTab = (e: React.KeyboardEvent) => {
+  const surTouche = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      onAnnuler();
+      return;
+    }
     if (e.key !== 'Tab') return;
     const premier = annuler.current;
     const dernier = vider.current;
@@ -82,7 +75,7 @@ const DialogueVider: React.FC<Props> = ({ onAnnuler, onConfirmer }) => {
         aria-modal="true"
         aria-labelledby="titre-dialogue-vider"
         aria-describedby="corps-dialogue-vider"
-        onKeyDown={piegerTab}
+        onKeyDown={surTouche}
         className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded border border-paper bg-ink-2 p-4"
       >
         <h2 id="titre-dialogue-vider" className="text-lg font-semibold">
@@ -95,7 +88,7 @@ const DialogueVider: React.FC<Props> = ({ onAnnuler, onConfirmer }) => {
           <button
             ref={annuler}
             type="button"
-            className={`${BOUTON} border-paper bg-ink hover:bg-line active:bg-line`}
+            className={`${BOUTON} border-paper bg-ink text-paper hover:bg-line active:bg-line`}
             onClick={onAnnuler}
           >
             Annuler

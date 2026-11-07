@@ -102,8 +102,8 @@ export function entreesAffichees(entrees: EntreeJournal[], nombre: number): { vi
   return { visibles: recentes.slice(0, nombre), restantes: Math.max(0, recentes.length - nombre) };
 }
 
-const BOUTON = 'inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded border px-4';
-const BOUTON_SECONDAIRE = `${BOUTON} border-muted bg-ink text-paper hover:bg-line active:bg-line`;
+const BOUTON = 'inline-flex min-h-11 min-w-11 items-center justify-center rounded border px-4';
+const BOUTON_SECONDAIRE = `${BOUTON} cursor-pointer border-muted bg-ink text-paper hover:bg-line active:bg-line`;
 const BOUTON_DESACTIVE = `${BOUTON} cursor-not-allowed border-dashed border-muted bg-ink text-muted`;
 
 interface Props {
@@ -170,7 +170,6 @@ const Journal: React.FC<Props> = ({ entrees, registre, retraitDisponible, onglet
           {visibles.map((e) => {
             const couple = retraits.get(e.id);
             const parametre = libelleParametre(e);
-            const arret = e.idCarte === '';
             const idRaison = `raison-retrait-${e.id}`;
             return (
               <li key={e.id} className="flex flex-col gap-2 border-b border-line py-2 text-sm md:flex-row md:items-start md:justify-between">
@@ -178,28 +177,22 @@ const Journal: React.FC<Props> = ({ entrees, registre, retraitDisponible, onglet
                   <time dateTime={e.horodatage} className="text-muted">
                     {formaterHorodatage(e.horodatage)}
                   </time>{' '}
-                  {arret ? (
-                    <span className="font-semibold text-defausser">Arrêt : {parametre ?? libelleResultat(e.resultat)}</span>
-                  ) : (
-                    <>
-                      <span>
-                        {rareteDe(e.idCarte) !== '' && `[${rareteDe(e.idCarte)}] `}
-                        {e.titre}
-                      </span>{' '}
-                      <span className={`font-semibold ${CLASSES_TYPE[e.type]}`}>{libelleType(e.type)}</span>
-                      {parametre !== null && <> {parametre}</>}
-                      {' : '}
-                      <span className={`font-semibold ${CLASSES_RESULTAT[e.resultat]}`}>{libelleResultat(e.resultat)}</span>
-                      {e.codeHttp !== null && <span className="text-muted"> · HTTP {e.codeHttp}</span>}
-                    </>
-                  )}
-                  {mentionNonAnnulable(e) && <p className="text-sm text-muted">Non annulable par l’extension</p>}
+                <span>
+                  {rareteDe(e.idCarte) !== '' && `[${rareteDe(e.idCarte)}] `}
+                  {e.titre}
+                </span>{' '}
+                <span className={`font-semibold ${CLASSES_TYPE[e.type]}`}>{libelleType(e.type)}</span>
+                {parametre !== null && <> {parametre}</>}
+                {' : '}
+                <span className={`font-semibold ${CLASSES_RESULTAT[e.resultat]}`}>{libelleResultat(e.resultat)}</span>
+                {e.codeHttp !== null && <span className="text-muted"> · HTTP {e.codeHttp}</span>}
+            {mentionNonAnnulable(e) && <p className="text-sm text-muted">Non annulable par l’extension</p>}
                 </div>
                 {couple && (
                   <div className="flex flex-col gap-1 md:items-end">
                     <button
                       type="button"
-                      aria-label={`Retirer l’étiquette « ${couple.nomEtiquette} » de ${e.titre}`}
+                      aria-label={`Retirer l’étiquette « ${couple.nomEtiquette} » de ${rareteDe(e.idCarte) !== '' ? `[${rareteDe(e.idCarte)}] ` : ''}${e.titre}`}
                       aria-disabled={raison !== null ? 'true' : undefined}
                       aria-describedby={raison !== null ? idRaison : undefined}
                       className={`${raison !== null ? BOUTON_DESACTIVE : BOUTON_SECONDAIRE} w-full md:w-auto`}
