@@ -14,13 +14,22 @@ import {
   type Filtres,
 } from '../lib/collection';
 import { versCsv, versJson } from '../lib/exports';
-import { chargerCollection, chargerPreferences, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences } from '../lib/stockage';
+import { chargerCollection, chargerExecution, chargerPreferences, chargerRegistre, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences } from '../lib/stockage';
 import { progression, texteProgression, type Synchro } from '../lib/synchro';
 import { LIBELLES_THEMES, IDS_THEMES, themesDeCarte } from '../lib/themes';
 import { appliquerTri, preferencesParDefaut, type Preferences } from '../lib/tri';
+import type { Registre } from '../lib/actions';
+import { registreVide } from '../lib/registre';
 import AssistantTri from './AssistantTri';
+import Synchronisation from './Synchronisation';
 import FileVente from './FileVente';
 import CarteLigne from './CarteLigne';
+
+interface EtatStockageSynchro {
+  registre: Registre | null;
+  executionEnCours: boolean;
+  executionIllisible: boolean;
+}
 
 const TAILLE_PAGE = 200;
 const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded border border-line bg-ink-2 px-4';
@@ -47,11 +56,43 @@ const App: React.FC = () => {
   const [preferences, setPreferences] = useState<Preferences>(preferencesParDefaut);
   const [assistantOuvert, setAssistantOuvert] = useState(false);
   const [synchro, setSynchro] = useState<Synchro | null>(null);
+  const [registre, setRegistre] = useState<Registre>(registreVide);
+  const [executionEnCours, setExecutionEnCours] = useState(false);
+  const [registreIllisible, setRegistreIllisible] = useState(false);
+  const [executionIllisible, setExecutionIllisible] = useState(false);
   const champFichier = useRef<HTMLInputElement>(null);
+
+  // Lit le registre et l’état d’exécution ; un échec est signalé à l’aperçu, jamais avalé.
+  const lireStockageSynchro = async (): Promise<EtatStockageSynchro> => {
+    const etat: EtatStockageSynchro = { registre: null, executionEnCours: false, executionIllisible: false };
+    try {
+      etat.registre = await chargerRegistre();
+    } catch {
+      etat.registre = null;
+    }
+    try {
+      etat.executionEnCours = (await chargerExecution())?.etat === 'en-cours';
+    } catch {
+      etat.executionIllisible = true;
+    }
+    return etat;
+  };
+  const appliquerStockageSynchro = (etat: EtatStockageSynchro): void => {
+    if (etat.registre) setRegistre(etat.registre);
+    setRegistreIllisible(etat.registre === null);
+    setExecutionEnCours(etat.executionEnCours);
+    setExecutionIllisible(etat.executionIllisible);
+  };
+  const relireStockageSynchro = async (): Promise<Registre | null> => {
+    const etat = await lireStockageSynchro();
+    appliquerStockageSynchro(etat);
+    return etat.registre;
+  };
 
   useEffect(() => {
     void chargerPreferences().then(setPreferences);
     void chargerSynchro().then(setSynchro);
+    void lireStockageSynchro().then(appliquerStockageSynchro);
     return ecouterSynchro(setSynchro);
   }, []);
 
@@ -181,6 +222,16 @@ const App: React.FC = () => {
             cartes={collection.cartes}
             onMiseEnVente={(id) => editer(id, { statut: 'en-vente', decidePar: 'moi' })}
             onTerminee={(id) => appliquer(terminerEnchere(collection, id))}
+          />
+
+          <Synchronisation
+            collection={collection}
+            registre={registre}
+            registreIllisible={registreIllisible}
+            executionIllisible={executionIllisible}
+            nbOnglets={0}
+            executionEnCours={executionEnCours}
+            onReessayer={relireStockageSynchro}
           />
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
