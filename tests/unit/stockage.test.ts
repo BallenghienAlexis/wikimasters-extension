@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EtatExecution, Registre } from '../../src/lib/actions';
 import { collectionVide, type Carte } from '../../src/lib/collection';
-import { versJson } from '../../src/lib/exports';
+import { versCsv, versJson } from '../../src/lib/exports';
 import { ouvrirEntree, type Journal } from '../../src/lib/journal';
 import { poserCouple, enregistrerEtiquette, registreVide } from '../../src/lib/registre';
 import {
   CLES_STOCKAGE,
+  VERSION_JOURNAL,
   chargerCollection,
   chargerExecution,
   chargerJournal,
@@ -82,7 +83,7 @@ const execution = (surcharge: Partial<EtatExecution> = {}): EtatExecution => ({
   ...surcharge,
 });
 
-const cles = (): string[] => (Array.isArray(CLES_STOCKAGE) ? [...CLES_STOCKAGE] : Object.values(CLES_STOCKAGE as Record<string, string>));
+const cles = (): string[] => Object.values(CLES_STOCKAGE);
 
 const clesRecursives = (valeur: unknown): string[] => {
   if (typeof valeur !== 'object' || valeur === null) return [];
@@ -127,8 +128,16 @@ describe('CLES_STOCKAGE', () => {
     await enregistrerRegistre(registreRempli());
     await enregistrerJournal(journalRempli());
     await enregistrerExecution(execution());
-    const json = versJson({ ...collectionVide(), cartes: [carte] });
-    for (const mot of ['registre', 'journal', 'execution', 'etiquettes', 'couples', 'idLot']) expect(json).not.toContain(mot);
+    await enregistrerSignalSynchro(1700000000000);
+    await enregistrerCollection({ ...collectionVide(), cartes: [carte] });
+    const charge = await chargerCollection();
+    expect(charge.cartes).toHaveLength(1);
+    const json = versJson(charge);
+    const csv = versCsv(charge.cartes);
+    for (const sortie of [json, csv]) {
+      for (const mot of ['registre', 'journal', 'execution', 'etiquettes', 'couples', 'idLot', 'etiq-1', 'Ami Un', 'lot-1', 'pose-etiquette', 'signalSynchro', '1700000000000'])
+        expect(sortie).not.toContain(mot);
+    }
   });
 });
 
@@ -171,18 +180,40 @@ describe('journal', () => {
     expect(await chargerJournal()).toEqual([]);
   });
 
-  it('AC1 : écrit la valeur complète sous « journal » puis la relit', async () => {
+  it('AC1 : écrit l’enveloppe versionnée sous « journal » puis la relit', async () => {
     const j = journalRempli();
     await enregistrerJournal(j);
-    expect(faux.set).toHaveBeenCalledWith({ journal: j });
+    expect(VERSION_JOURNAL).toBe(1);
+    expect(faux.set).toHaveBeenCalledWith({ journal: { version: 1, entrees: j } });
+    expect(faux.donnees.get('journal')).toEqual({ version: 1, entrees: j });
     expect(await chargerJournal()).toEqual(j);
   });
 
-  it('AC1 : valeur illisible → erreur lisible et aucune réécriture', async () => {
-    faux.donnees.set('journal', [{ n: 'importe quoi' }]);
+  it('AC1 : entrées illisibles dans l’enveloppe → erreur lisible et aucune réécriture', async () => {
+    const brut = { version: 1, entrees: [{ n: 'importe quoi' }] };
+    faux.donnees.set('journal', brut);
     await expect(chargerJournal()).rejects.toThrow(/^Données stockées illisibles/);
     expect(faux.set).not.toHaveBeenCalled();
-    expect(faux.donnees.get('journal')).toEqual([{ n: 'importe quoi' }]);
+    expect(faux.remove).not.toHaveBeenCalled();
+    expect(faux.donnees.get('journal')).toEqual(brut);
+  });
+
+  it('AC1 : version inconnue → erreur lisible, valeur non écrasée', async () => {
+    const brut = { version: 2, entrees: journalRempli() };
+    faux.donnees.set('journal', brut);
+    await expect(chargerJournal()).rejects.toThrow(/^Données stockées illisibles/);
+    expect(faux.set).not.toHaveBeenCalled();
+    expect(faux.remove).not.toHaveBeenCalled();
+    expect(faux.donnees.get('journal')).toEqual(brut);
+  });
+
+  it('AC1 : tableau nu (ancienne forme) → erreur lisible, valeur non écrasée', async () => {
+    const brut = journalRempli();
+    faux.donnees.set('journal', brut);
+    await expect(chargerJournal()).rejects.toThrow(/^Données stockées illisibles/);
+    expect(faux.set).not.toHaveBeenCalled();
+    expect(faux.remove).not.toHaveBeenCalled();
+    expect(faux.donnees.get('journal')).toEqual(brut);
   });
 
   it('AC2 : un échec d’écriture est remonté', async () => {
