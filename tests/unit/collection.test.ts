@@ -332,7 +332,7 @@ describe('accesseurs idsSite', () => {
 
 describe('stockage : migration à la lecture (faux chrome.storage)', () => {
   const installer = (contenu: Record<string, unknown>) => {
-    const set = vi.fn(async (_: Record<string, unknown>) => undefined);
+    const set = vi.fn<(valeurs: Record<string, unknown>) => Promise<undefined>>(async () => undefined);
     const get = vi.fn(async (cle: string) => (cle in contenu ? { [cle]: contenu[cle] } : {}));
     vi.stubGlobal('chrome', { storage: { local: { get, set }, onChanged: { addListener: vi.fn(), removeListener: vi.fn() } } });
     return { set };

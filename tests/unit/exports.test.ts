@@ -48,8 +48,9 @@ describe('versCsv', () => {
 
 describe('versJson', () => {
   const sansIds = (c: Carte): Omit<Carte, 'idsSite'> => {
-    const { idsSite: _ignore, ...reste } = c;
-    return reste;
+    const reste: Partial<Carte> = { ...c };
+    delete reste.idsSite;
+    return reste as Omit<Carte, 'idsSite'>;
   };
 
   it('SC-019 : écrit version 1 sans idsSite, même si la carte en porte', () => {
