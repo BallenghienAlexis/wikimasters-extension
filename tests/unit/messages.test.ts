@@ -7,7 +7,13 @@ import {
   messageResultat,
   validerOrdre,
   validerResultat,
-  type MessagePort,
+  type MessageOrdre,
+  type MessageProtocole,
+  type MessageResultat,
+  CAUSES_RESULTAT,
+  NOM_PORT,
+  PRIX_MAX,
+  validerSignal,
 } from '../../src/lib/messages'
 
 const ordreDefausse = {
@@ -16,7 +22,7 @@ const ordreDefausse = {
 }
 const resultatOk = {
   message: 'resultat',
-  resultat: { classe: 'reussie', codeHttp: 200, cause: 'Action réussie' },
+  resultat: { classe: 'reussie', codeHttp: 200, cause: 'action réussie' },
 }
 
 describe('validerOrdre', () => {
@@ -58,6 +64,15 @@ describe('validerOrdre', () => {
     ).toBeNull()
   })
 
+  it('prix d’enchère : entier strictement positif sous le plafond', () => {
+    const e = (prix: unknown) => ({ message: 'ordre', ordre: { type: 'enchere', idCarte: 'a|b', idExemplaire: 'e', prix } })
+    for (const mauvais of [0, 0.5, 1.5, -3, NaN, Infinity, PRIX_MAX + 1, Number.MAX_SAFE_INTEGER, 1e300]) {
+      expect(validerOrdre(e(mauvais)), String(mauvais)).toBeNull()
+    }
+    expect(validerOrdre(e(1))).not.toBeNull()
+    expect(validerOrdre(e(PRIX_MAX))).not.toBeNull()
+  })
+
   it('rejette un identifiant vide ou de plus de 200 caractères', () => {
     const base = ordreDefausse.ordre
     expect(validerOrdre({ ...ordreDefausse, ordre: { ...base, idExemplaire: '' } })).toBeNull()
@@ -76,7 +91,7 @@ describe('validerOrdre', () => {
 describe('validerResultat', () => {
   it('accepte un résultat valide', () => {
     expect(validerResultat(resultatOk)).toEqual(resultatOk.resultat)
-    const sansCode = { message: 'resultat', resultat: { classe: 'inconnu', codeHttp: null, cause: 'x' } }
+    const sansCode = { message: 'resultat', resultat: { classe: 'inconnu', codeHttp: null, cause: 'action non disponible' } }
     expect(validerResultat(sansCode)).toEqual(sansCode.resultat)
     for (const classe of ['reussie', 'echec', 'arret', 'inconnu']) {
       expect(validerResultat({ message: 'resultat', resultat: { ...resultatOk.resultat, classe } })).not.toBeNull()
@@ -97,7 +112,18 @@ describe('validerResultat', () => {
     expect(validerResultat({ ...resultatOk, resultat: { ...r, codeHttp: '200' } })).toBeNull()
     expect(validerResultat({ ...resultatOk, resultat: { ...r, cause: '' } })).toBeNull()
     expect(validerResultat({ ...resultatOk, resultat: { ...r, cause: 'x'.repeat(201) } })).toBeNull()
+    expect(validerResultat({ ...resultatOk, resultat: { ...r, cause: 'texte libre quelconque' } })).toBeNull()
     expect(validerResultat({ ...resultatOk, resultat: { classe: 'reussie', codeHttp: 200 } })).toBeNull()
+  })
+
+  it('n’accepte que les libellés de la liste fermée, dont ceux produits aujourd’hui', () => {
+    for (const cause of ['action non disponible', 'erreur d’émission', 'erreur de transport', 'jeton-absent']) {
+      expect(CAUSES_RESULTAT).toContain(cause)
+    }
+    for (const cause of CAUSES_RESULTAT) {
+      expect(validerResultat({ ...resultatOk, resultat: { ...resultatOk.resultat, cause } })).not.toBeNull()
+    }
+    expect(validerResultat({ ...resultatOk, resultat: { ...resultatOk.resultat, cause: 'Bearer abc' } })).toBeNull()
   })
 
   it('rejette ce qui n’est pas un résultat', () => {
@@ -107,9 +133,38 @@ describe('validerResultat', () => {
   })
 })
 
+describe('validerSignal', () => {
+  it('accepte exactement bonjour et arret', () => {
+    expect(validerSignal({ message: 'bonjour' })).toBe('bonjour')
+    expect(validerSignal({ message: 'arret' })).toBe('arret')
+    expect(validerSignal(messageBonjour())).toBe('bonjour')
+    expect(validerSignal(messageArret())).toBe('arret')
+  })
+
+  it('rejette tout le reste, champ parasite compris', () => {
+    const rejetes: unknown[] = [
+      null, undefined, 3, 'bonjour', [], {},
+      { message: 'bonjour', token: 'x' },
+      { message: 'arret', extra: 1 },
+      { message: 'ordre' },
+      { message: 'Bonjour' },
+      { message: '__proto__' },
+      ordreDefausse,
+      resultatOk,
+    ]
+    for (const brut of rejetes) expect(validerSignal(brut)).toBeNull()
+  })
+})
+
+describe('nom du port', () => {
+  it('est défini dans messages.ts', () => {
+    expect(NOM_PORT).toBe('wm-synchro')
+  })
+})
+
 describe('constructeurs', () => {
   it('produisent des messages que la validation relit à l’identique', () => {
-    const resultat: ResultatAction = { classe: 'echec', codeHttp: 429, cause: 'Trop de requêtes' }
+    const resultat: ResultatAction = { classe: 'echec', codeHttp: 429, cause: 'erreur réseau' }
     expect(validerResultat(messageResultat(resultat))).toEqual(resultat)
     expect(messageBonjour()).toEqual({ message: 'bonjour' })
     expect(messageArret()).toEqual({ message: 'arret' })
@@ -118,11 +173,13 @@ describe('constructeurs', () => {
 
 describe('types du protocole (AC3)', () => {
   it('n’a aucun champ libre', () => {
-    expectTypeOf<MessagePort>().not.toBeAny()
-    type Champs = MessagePort extends infer M ? (M extends object ? M[keyof M] : never) : never
+    expectTypeOf<MessageProtocole>().not.toBeAny()
+    type Champs = MessageProtocole extends infer M ? (M extends object ? M[keyof M] : never) : never
     expectTypeOf<unknown>().not.toMatchTypeOf<Champs>()
     expectTypeOf<Champs>().not.toBeUnknown()
     expectTypeOf<Champs>().not.toBeAny()
-    expectTypeOf<Record<string, unknown>>().not.toMatchTypeOf<MessagePort>()
+    expectTypeOf<Record<string, unknown>>().not.toMatchTypeOf<MessageProtocole>()
+    expectTypeOf<MessageOrdre['ordre']>().toEqualTypeOf<Action>()
+    expectTypeOf<MessageResultat['resultat']>().toEqualTypeOf<ResultatAction>()
   })
 })

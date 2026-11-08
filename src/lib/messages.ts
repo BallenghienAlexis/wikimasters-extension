@@ -12,6 +12,27 @@ import { TYPES_ACTION, type Action, type ResultatAction, type TypeAction } from 
 
 const LONGUEUR_MAX = 200
 
+/** Nom du port ouvert par le content script vers la page de gestion. */
+export const NOM_PORT = 'wm-synchro'
+
+/** Plafond du prix de départ d’une enchère (au-delà : ordre rejeté). */
+export const PRIX_MAX = 1_000_000
+
+/**
+ * Libellés fixes admis dans `cause` d’un résultat. Une cause hors liste fait rejeter le
+ * message : rien de libre (jeton, en-tête, corps) ne peut transiter par ce champ.
+ */
+export const CAUSES_RESULTAT: readonly string[] = [
+  'action réussie',
+  'action non disponible',
+  'erreur d’émission',
+  'erreur de transport',
+  'erreur réseau',
+  'délai dépassé',
+  'réponse hors contrat',
+  'jeton-absent',
+]
+
 const CLASSES: ReadonlyArray<ResultatAction['classe']> = ['reussie', 'echec', 'arret', 'inconnu']
 
 export interface MessageBonjour {
@@ -30,7 +51,7 @@ export interface MessageArret {
 }
 
 /** Tout message admis sur le port. */
-export type MessagePort = MessageBonjour | MessageOrdre | MessageResultat | MessageArret
+export type MessageProtocole = MessageBonjour | MessageOrdre | MessageResultat | MessageArret
 
 export function messageBonjour(): MessageBonjour {
   return { message: 'bonjour' }
@@ -66,6 +87,13 @@ function texte(valeur: unknown): string | null {
   return valeur
 }
 
+/** Valide un signal sans charge utile (`bonjour` ou `arret`) ; `null` pour tout le reste. */
+export function validerSignal(brut: unknown): 'bonjour' | 'arret' | null {
+  const enveloppe = enObjet(brut)
+  if (!enveloppe || !cles(enveloppe, ['message'])) return null
+  return enveloppe.message === 'bonjour' || enveloppe.message === 'arret' ? enveloppe.message : null
+}
+
 /** Valide un ordre : enveloppe `{ message: 'ordre', ordre }`. Renvoie l’action ou `null`. */
 export function validerOrdre(brut: unknown): Action | null {
   const enveloppe = enObjet(brut)
@@ -97,7 +125,7 @@ export function validerOrdre(brut: unknown): Action | null {
       const idExemplaire = texte(ordre.idExemplaire)
       const prix = ordre.prix
       if (!cles(ordre, ['type', 'idCarte', 'idExemplaire', 'prix']) || idExemplaire === null) return null
-      if (typeof prix !== 'number' || !Number.isFinite(prix) || prix < 0) return null
+      if (typeof prix !== 'number' || !Number.isSafeInteger(prix) || prix < 1 || prix > PRIX_MAX) return null
       return { type: 'enchere', idCarte, idExemplaire, prix }
     }
     case 'defausse': {
@@ -120,6 +148,6 @@ export function validerResultat(brut: unknown): ResultatAction | null {
     if (typeof codeHttp !== 'number' || !Number.isInteger(codeHttp) || codeHttp < 100 || codeHttp > 599) return null
   }
   const cause = texte(resultat.cause)
-  if (cause === null) return null
+  if (cause === null || !CAUSES_RESULTAT.includes(cause)) return null
   return { classe: classe as ResultatAction['classe'], codeHttp: codeHttp as number | null, cause }
 }

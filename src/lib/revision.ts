@@ -32,6 +32,8 @@ function prixCourant(carte: Carte): number | null {
 }
 
 /**
+ * Juge la cohérence de l’action avec l’état ACTUEL, et non le changement depuis l’aperçu :
+ * une carte modifiée puis remise dans l’état d’origine reste « ok ».
  * « passee » si la carte n’existe plus, est devenue favori, a changé de statut,
  * de prix de départ ou d’ami, ou si l’exemplaire visé n’est plus dans son `idsSite`.
  */

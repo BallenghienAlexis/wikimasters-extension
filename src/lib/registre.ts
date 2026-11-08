@@ -17,6 +17,11 @@ function identifiantValide(v: unknown): v is string {
   return typeof v === 'string' && v.length > 0 && v.length <= LONGUEUR_MAX_ID
 }
 
+/** Table sans prototype : un nom comme `__proto__` ou `constructor` reste une simple clé. */
+function tableVide(): Record<string, string> {
+  return Object.create(null) as Record<string, string>
+}
+
 export function registreVide(): Registre {
   return { version: VERSION_REGISTRE, etiquettes: {}, couples: [] }
 }
@@ -24,7 +29,10 @@ export function registreVide(): Registre {
 /** Mémorise l’identifiant d’une étiquette créée. Entrée invalide : registre inchangé. */
 export function enregistrerEtiquette(r: Registre, nom: string, idEtiquette: string): Registre {
   if (!identifiantValide(nom) || !identifiantValide(idEtiquette)) return r
-  return { ...r, etiquettes: { ...r.etiquettes, [nom]: idEtiquette }, couples: r.couples }
+  const etiquettes = tableVide()
+  for (const [cle, id] of Object.entries(r.etiquettes)) etiquettes[cle] = id
+  etiquettes[nom] = idEtiquette
+  return { ...r, etiquettes, couples: r.couples }
 }
 
 export function couplesDe(r: Registre, idExemplaire: string): Array<{ ex: string; nom: string }> {
@@ -62,7 +70,7 @@ export function validerRegistre(brut: unknown): Registre | null {
   if (typeof et !== 'object' || et === null || Array.isArray(et)) return null
   if (!Array.isArray(o.couples)) return null
 
-  const etiquettes: Record<string, string> = {}
+  const etiquettes = tableVide()
   for (const [nom, id] of Object.entries(et)) {
     if (!identifiantValide(nom) || !identifiantValide(id)) return null
     etiquettes[nom] = id
@@ -70,10 +78,15 @@ export function validerRegistre(brut: unknown): Registre | null {
 
   const couples: Array<{ ex: string; nom: string }> = []
   const compte = new Map<string, number>()
+  const vus = new Set<string>()
   for (const c of o.couples as unknown[]) {
     if (typeof c !== 'object' || c === null || Array.isArray(c)) return null
     const { ex, nom } = c as Record<string, unknown>
     if (!identifiantValide(ex) || !identifiantValide(nom)) return null
+    // Séparateur impossible dans un identifiant sérialisé : JSON.stringify de la paire.
+    const cle = JSON.stringify([ex, nom])
+    if (vus.has(cle)) return null
+    vus.add(cle)
     const n = (compte.get(ex) ?? 0) + 1
     if (n > COUPLES_MAX_PAR_EXEMPLAIRE) return null
     compte.set(ex, n)

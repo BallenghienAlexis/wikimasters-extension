@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { Action, Registre, ResultatAction } from '../../src/lib/actions'
 import type { Carte, Collection } from '../../src/lib/collection'
 import type { Config } from '../../src/lib/lot'
+import { CONFIG_PRIX } from '../../src/config/prix'
+import { prixDepart } from '../../src/lib/tri'
 import { appliquerResultat, reverifierAction } from '../../src/lib/revision'
 
 const config: Config = { maxVentesSimultanees: 5, longueurMaxEtiquette: null, nomsExistants: [] }
@@ -52,6 +54,20 @@ describe('reverifierAction (AC1)', () => {
   it('enchère : sans prixCible, le prix de la matrice fait foi', () => {
     const sansCible = carte({ prixCible: null, valeurMarchande: 1_000_000 })
     expect(reverifierAction({ ...enchere, prix: 1 }, coll(sansCible), reg(), config)).toBe('passee')
+  })
+
+  it('enchère sans prixCible : « ok » quand le prix est celui de la matrice', () => {
+    const valeur = Math.min(...CONFIG_PRIX.matricePrixDepart.map((t) => t.valeurMin)) * 2
+    const prix = prixDepart(valeur)
+    expect(prix).not.toBeNull()
+    const sansCible = carte({ prixCible: null, valeurMarchande: valeur })
+    expect(reverifierAction({ ...enchere, prix: prix! }, coll(sansCible), reg(), config)).toBe('ok')
+  })
+
+  it('défausse avec quantité > 1 mais un seul identifiant restant : ok pour cet identifiant', () => {
+    const c = carte({ statut: 'defausser', quantite: 3, idsSite: ['ex-1'] })
+    expect(reverifierAction(defausse, coll(c), reg(), config)).toBe('ok')
+    expect(reverifierAction({ ...defausse, idExemplaire: 'ex-2' }, coll(c), reg(), config)).toBe('passee')
   })
 
   it('défausse', () => {
@@ -170,6 +186,8 @@ describe('appliquerResultat : état inchangé (AC3)', () => {
     defausse,
     { type: 'pose-etiquette', idCarte: 'commune|Chat', idExemplaire: 'ex-1', nomEtiquette: 'N' },
     { type: 'creation-etiquette', idCarte: 'commune|Chat', nomEtiquette: 'N' },
+    { type: 'retrait-etiquette', idCarte: 'commune|Chat', idExemplaire: 'ex-1', nomEtiquette: 'N' },
+    { type: 'lecture', idCarte: 'commune|Chat' },
   ]
   for (const classe of ['echec', 'inconnu', 'arret'] as const) {
     it(`classe ${classe} : mêmes références`, () => {

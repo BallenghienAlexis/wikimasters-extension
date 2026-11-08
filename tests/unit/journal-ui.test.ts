@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -147,6 +148,15 @@ describe('rendu en texte brut (AC1)', () => {
     expect(html).toContain('&lt;img');
   });
 
+  it('entrée sans identifiant de carte : pas de repère de rareté, libellé sans crochets (écart assumé avec D-29)', () => {
+    const html = renderToStaticMarkup(
+      React.createElement(Journal, { ...props, registre: registre(['Ami · Léa']), entrees: [entree({ idCarte: '' })] }),
+    );
+    expect(html).toContain('aria-label="Retirer l’étiquette « Ami · Léa » de Carte fictive"');
+    expect(html).not.toContain('[] ');
+    expect(html).not.toContain('[C]');
+  });
+
   it('journal vide : message et bouton Vider désactivé avec raison', () => {
     const html = renderToStaticMarkup(React.createElement(Journal, { ...props, entrees: [] }));
     expect(html).toContain('Le journal est vide. Les actions envoyées au site apparaîtront ici.');
@@ -183,6 +193,15 @@ describe('DialogueVider (AC4)', () => {
     expect(html).toContain('Vider le journal ?');
     expect(html).toContain('Cela efface l’historique local. La collection et les étiquettes enregistrées ne sont pas touchées.');
     expect(html.indexOf('Annuler')).toBeLessThan(html.indexOf('>Vider<'));
+  });
+});
+
+describe('DialogueVider, focus au clic sur le voile', () => {
+  it('le voile remet le focus sur « Annuler » au mousedown, sans fermer', () => {
+    const source = readFileSync('src/app/DialogueVider.tsx', 'utf8');
+    expect(source).toMatch(/onMouseDown=\{/);
+    expect(source).toMatch(/annuler\.current\?\.focus\(\)/);
+    expect(source).not.toMatch(/data-testid="dialogue-vider"\s*onClick/);
   });
 });
 
