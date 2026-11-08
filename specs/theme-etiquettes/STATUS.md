@@ -1,14 +1,14 @@
 # STATUS — theme-etiquettes
 
 - **Besoin** : « Thèmes précis et étiquettes de thème sur le site » (Alexis, 2026-11-08) : étendre `src/lib/themes.ts` (pont, tunnel, chien, chat, cheval…), garder la cohérence avec l’assistant de tri (Garder / Échanger + nom de l’ami), et poser les thèmes précis comme étiquettes sur le site (« Thème · chien ») en plus de « Statut · … » et « Ami · … ».
-- **Étape courante** : 1-spec
+- **Étape courante** : 2-planification
 - **Mis à jour** : 2026-11-08
 
 ## Gate spec
-- [ ] Spec validée par Alexis — date : … — termes : « … »
+- [x] Spec validée par Alexis — date : 2026-11-08 — termes : « Je valide la spec » (après résumé avec 4 points à trancher : H1 thème = étiquette parents compris, H14 forme « #À échanger Léa », H15 remplacement de « Ami · nom », H9 homonymes)
 
 ## Planification
-- [ ] spec.md · [ ] spec.refined.md · [ ] design.md · [ ] plan.md · [ ] tasks.md · [ ] PR des artefacts mergée (#…)
+- [x] spec.md · [ ] spec.refined.md · [ ] design.md · [ ] plan.md · [ ] tasks.md · [ ] PR des artefacts mergée (#…)
 
 ## Décisions par défaut
 Hypothèses non bloquantes de `refine`, adoptées sans question.

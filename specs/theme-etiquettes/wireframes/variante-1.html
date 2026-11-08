@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Variante 1 — Aperçu du lot : section « Étiquettes prévues » regroupée par nom</title>
+<style>
+  :root { --ink:#fbf8f2; --ink2:#f1ece2; --paper:#1b1815; --muted:#635c52; --line:#d8d1c4; --garder:#0f6b45; --echanger:#1f4fb8; --vendre:#8a5a00; --defausser:#a8321f; color-scheme: light dark; }
+  @media (prefers-color-scheme: dark) { :root { --ink:#13110f; --ink2:#1c1916; --paper:#ede8df; --muted:#a39c91; --line:#3a352f; --garder:#52d69a; --echanger:#7ba4ff; --vendre:#f4c356; --defausser:#ff9a8b; } }
+  body { margin:0; background:var(--ink); color:var(--paper); font:16px/1.45 system-ui, sans-serif; }
+  main { max-width:1100px; margin:0 auto; padding:16px; }
+  .note { font-size:.85rem; color:var(--muted); border:1px dashed var(--line); padding:8px; margin-bottom:12px; }
+  .bandeau { border:2px solid var(--defausser); padding:12px; border-radius:4px; }
+  .bandeau strong { color:var(--defausser); }
+  section { margin-top:16px; border:1px solid var(--line); background:var(--ink2); border-radius:4px; padding:16px; }
+  h2 { margin:0 0 8px; font-size:1.1rem; }
+  .muted { color:var(--muted); font-size:.9rem; }
+  .visi { border-left:4px solid var(--vendre); padding:8px 12px; margin:12px 0; }
+  table { width:100%; border-collapse:collapse; font-size:.9rem; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .etat { font-weight:600; color:var(--muted); }
+  .theme { font-weight:600; }
+  button { min-height:44px; padding:0 16px; border:1px solid var(--paper); background:transparent; color:var(--paper); border-radius:4px; font:inherit; }
+  button[disabled] { border-color:var(--line); color:var(--muted); }
+  details summary { min-height:44px; display:flex; align-items:center; cursor:pointer; }
+  @media (max-width:600px) { thead { display:none; } tr, td { display:block; } td { border:0; padding:2px 0; } tr { border-bottom:1px solid var(--line); padding:6px 0; } }
+</style>
+</head>
+<body>
+<main>
+  <p class="note">Variante 1 (recommandée) : les étiquettes de thème ont leur propre section dans l’aperçu, regroupées par nom. Tant que T-024 n’est pas livré, elles sont listées comme « prévues », sans être comptées dans « Lancer ». Rien n’est envoyé.</p>
+
+  <div class="bandeau" role="note">
+    <strong>! Action sur le site à votre place</strong><br>
+    Règles § 3, CGU § 6, robots.txt « Disallow: /api/ ». Risque de bannissement accepté le 07/11/2026.
+  </div>
+
+  <section aria-labelledby="t1">
+    <h2 id="t1">Lot prêt : 0 action à envoyer</h2>
+    <p class="muted">Les étiquettes ne peuvent pas encore être envoyées (relevés du site en attente). L’aperçu montre ce qui serait posé.</p>
+
+    <div class="visi" role="note">
+      <strong>Visibilité non vérifiée.</strong> Les étiquettes « Thème · … », « Statut · … » et « Ami · … » sont peut-être visibles par les autres joueurs : ce point du site n’a pas encore été relevé.
+    </div>
+
+    <h3>Étiquettes prévues (envoi pas encore possible)</h3>
+    <table>
+      <thead><tr><th>Étiquette</th><th>Cartes</th><th>Exemplaires</th><th>Pourquoi</th><th>État</th></tr></thead>
+      <tbody>
+        <tr><td class="theme">Thème · Chien</td><td>12</td><td>15</td><td>suivi par moi</td><td class="etat">nouvelle · non disponible</td></tr>
+        <tr><td class="theme">Thème · Pont</td><td>4</td><td>4</td><td>suivi par Léa</td><td class="etat">nouvelle · non disponible</td></tr>
+        <tr><td class="theme">Thème · Cheval</td><td>3</td><td>5</td><td>suivi par moi (via #Animaux)</td><td class="etat">nouvelle · non disponible</td></tr>
+        <tr><td>Statut · Garder</td><td>31</td><td>40</td><td>statut</td><td class="etat">non disponible</td></tr>
+        <tr><td>Ami · Léa</td><td>6</td><td>6</td><td>ami</td><td class="etat">non disponible</td></tr>
+      </tbody>
+    </table>
+    <p class="muted">Total prévu : 70 poses · 3 étiquettes de thème nouvelles sur 40 au plus pour le compte · durée estimée une fois disponible : 8 min.</p>
+
+    <details>
+      <summary>Thèmes non posés (2)</summary>
+      <ul class="muted">
+        <li>[C] Titre fictif A : « Thème · Tunnel » au-delà du plafond de 2 thèmes par exemplaire</li>
+        <li>[R] Titre fictif B : « Thème · Chat » à retirer (plus suivi), retrait prévu au prochain lot</li>
+      </ul>
+    </details>
+
+    <p><button disabled aria-describedby="pq">Lancer les 0 action</button></p>
+    <p id="pq" class="muted">Désactivé : aucune action disponible pour l’instant.</p>
+  </section>
+</main>
+</body>
+</html>
