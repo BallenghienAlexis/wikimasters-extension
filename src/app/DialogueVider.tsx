@@ -68,7 +68,17 @@ const DialogueVider: React.FC<Props> = ({ onAnnuler, onConfirmer }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/80" data-testid="dialogue-vider">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/80"
+      data-testid="dialogue-vider"
+      onMouseDown={(e) => {
+        // Un clic sur le voile ne ferme rien : le focus revient sur « Annuler ».
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+          annuler.current?.focus();
+        }
+      }}
+    >
       <div
         ref={boite}
         role="dialog"

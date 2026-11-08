@@ -35,5 +35,6 @@ export const TABLE_CONTRAT: TableContrat = {
 }
 
 export function typesDisponibles(table: TableContrat = TABLE_CONTRAT): TypesDisponibles {
-  return new Set(Object.keys(table) as TypeAction[])
+  const types = (Object.keys(table) as TypeAction[]).filter((t) => table[t] !== undefined)
+  return new Set(types)
 }

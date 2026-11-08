@@ -199,9 +199,9 @@ describe('DialogueVider (AC4)', () => {
 describe('DialogueVider, focus au clic sur le voile', () => {
   it('le voile remet le focus sur « Annuler » au mousedown, sans fermer', () => {
     const source = readFileSync('src/app/DialogueVider.tsx', 'utf8');
-    expect(source).toMatch(/onMouseDown={/);
-    expect(source).toMatch(/annuler.current?.focus()/);
-    expect(source).not.toMatch(/onClick={onAnnuler}[^>]*data-testid/);
+    expect(source).toMatch(/onMouseDown=\{/);
+    expect(source).toMatch(/annuler\.current\?\.focus\(\)/);
+    expect(source).not.toMatch(/data-testid="dialogue-vider"\s*onClick/);
   });
 });
 

@@ -4,7 +4,7 @@
 import type { Action, EtatExecution, ResultatAction } from '../lib/actions';
 import type { Horloge } from '../lib/file';
 import { cloreInterrompues as cloreJournal, type Journal } from '../lib/journal';
-import { messageOrdre, validerResultat } from '../lib/messages';
+import { NOM_PORT, messageOrdre, validerResultat } from '../lib/messages';
 import {
   chargerExecution,
   chargerJournal,
@@ -15,8 +15,6 @@ import {
 
 export const ORIGINE_SITE = 'https://www.wiki-masters.com';
 export const NOM_VERROU = 'wm-collection-execution';
-export const NOM_PORT = 'wm-synchro';
-
 
 interface Chrono {
   now: () => number;

@@ -3,8 +3,8 @@
 import { LIBELLES_STATUT, type Carte, type Collection } from '../lib/collection';
 import { identifiantCarte, lireFenetreEnchere, lirePositionPage, regrouperCartes, trouverCartes } from '../lib/lecteur';
 import { chargerCollection, ecouterCollection, enregistrerPage, enregistrerValeur, fusionnerDansStockage } from '../lib/stockage';
-import { demarrerExecutant } from './executant';
 import { progression, texteProgression, type Synchro } from '../lib/synchro';
+import { demarrerExecutant } from './executant';
 
 const CLASSE_REPERE = 'wm-repere';
 const CLASSE_SYNCHRO = 'wm-synchro';

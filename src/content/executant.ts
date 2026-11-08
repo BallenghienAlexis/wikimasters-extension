@@ -2,7 +2,7 @@
 // Les ordres ne viennent QUE de ce port : aucun écouteur sur la page du site, qui est hostile.
 // Par défaut, aucune requête n'est émise : `emettre` renvoie « action non disponible ».
 import type { Action, ResultatAction } from '../lib/actions';
-import { messageBonjour, messageResultat, validerOrdre } from '../lib/messages';
+import { NOM_PORT, messageBonjour, messageResultat, validerOrdre } from '../lib/messages';
 import { CLES_STOCKAGE } from '../lib/stockage';
 
 export type Emettre = (ordre: Action) => Promise<ResultatAction>;
@@ -11,7 +11,6 @@ export interface OptionsExecutant {
   emettre?: Emettre;
 }
 
-export const NOM_PORT = 'wm-synchro';
 export const CAUSE_NON_DISPONIBLE = 'action non disponible';
 const CAUSE_ERREUR = 'erreur d’émission';
 

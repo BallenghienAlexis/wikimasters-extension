@@ -34,7 +34,7 @@ function fauxPort(sender: Sender | undefined, name: string = NOM_PORT) {
 }
 
 const bon = (tab: number): Sender => ({ id: 'mon-extension', url: `${ORIGINE_SITE}/collection`, tab: { id: tab } });
-const OK: ResultatAction = { classe: 'reussie', codeHttp: 200, cause: 'ok' };
+const OK: ResultatAction = { classe: 'reussie', codeHttp: 200, cause: 'action réussie' };
 const attendre = () => new Promise((r) => setTimeout(r, 0));
 
 let connecter: (port: ReturnType<typeof fauxPort>) => void;
