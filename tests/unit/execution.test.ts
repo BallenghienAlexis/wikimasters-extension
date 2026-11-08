@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EtatExecution, ResultatAction } from '../../src/lib/actions';
-import { creerExecution, creerHorloge, NOM_PORT, ORIGINE_SITE } from '../../src/app/execution';
+import { creerExecution, creerHorloge, horlogeReelle, ORIGINE_SITE } from '../../src/app/execution';
+import { NOM_PORT } from '../../src/lib/messages';
 import { ouvrirEntree, type Journal } from '../../src/lib/journal';
 
 type Ecouteur<T> = (valeur: T) => void;
@@ -33,7 +34,7 @@ function fauxPort(sender: Sender | undefined, name: string = NOM_PORT) {
 }
 
 const bon = (tab: number): Sender => ({ id: 'mon-extension', url: `${ORIGINE_SITE}/collection`, tab: { id: tab } });
-const OK: ResultatAction = { classe: 'reussie', codeHttp: 200, cause: 'ok' };
+const OK: ResultatAction = { classe: 'reussie', codeHttp: 200, cause: 'action réussie' };
 const attendre = () => new Promise((r) => setTimeout(r, 0));
 
 let connecter: (port: ReturnType<typeof fauxPort>) => void;
@@ -309,6 +310,15 @@ describe('horloge réelle (monotone)', () => {
     await h.attendreJusqua(100);
     expect(perf.t).toBeGreaterThanOrEqual(100);
     expect(delais).toEqual([100, 10]);
+  });
+
+  it('horlogeReelle est construite sur performance, pas sur Date', () => {
+    const espion = vi.spyOn(performance, 'now').mockReturnValue(1234);
+    try {
+      expect(horlogeReelle.now()).toBe(1234);
+    } finally {
+      espion.mockRestore();
+    }
   });
 
   it('échéance déjà passée : aucun minuteur', async () => {

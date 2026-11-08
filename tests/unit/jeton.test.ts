@@ -54,10 +54,18 @@ describe('SC-018 (AC3) : aucun cache', () => {
   });
 });
 
+describe('SC-017 (AC5) : retrait des commentaires', () => {
+  it('ne coupe pas une chaîne contenant //', () => {
+    const retirer = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(?<!:)\/\/.*$/gm, '');
+    expect(retirer("const u = 'https://exemple.test'; // fin")).toContain('https://exemple.test');
+    expect(retirer('a(); // setItem')).not.toContain('setItem');
+  });
+});
+
 describe('SC-017 (AC5) : le source ne contient ni écriture ni sortie', () => {
   const source = readFileSync(resolve(__dirname, '..', '..', 'src', 'lib', 'jeton.ts'), 'utf8');
   // Commentaires retirés : seul le code compte.
-  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(?<!:)\/\/.*$/gm, '');
   const interdits: Array<[string, RegExp]> = [
     ['setItem', /\bsetItem\b/],
     ['removeItem', /\bremoveItem\b/],

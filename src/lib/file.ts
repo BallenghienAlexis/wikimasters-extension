@@ -51,6 +51,10 @@ export interface DependancesFile {
   horloge: Horloge
   transport: (ordre: Action) => Promise<ResultatAction>
   confirmer: (action: Action) => Ou<Decision>
+  /**
+   * Revérifie l’action. Appelée deux fois par action (avant la confirmation, puis juste avant
+   * l’envoi) : elle doit être sans effet de bord.
+   */
   reverifier: (action: Action) => Ou<Verification>
   appliquer: (action: Action, resultat: ResultatAction) => Ou<void>
   journal: JournalFile

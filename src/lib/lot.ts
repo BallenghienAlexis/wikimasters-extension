@@ -83,6 +83,8 @@ export function construireEncheres(
   const autorisee = config.lienCardId === true && disponibles.has('enchere')
 
   for (const c of candidates) {
+    // Garde-fou propre : jamais d’enchère sur un favori ou une carte qui n’est pas à vendre.
+    if (c.favori || c.statut !== 'vendre') continue
     const ecarter = (raison: RaisonEcart): void => {
       ecartees.push({ idCarte: c.id, titre: c.titre, raison })
     }
@@ -92,7 +94,7 @@ export function construireEncheres(
       continue
     }
     const prix = c.prixCible ?? prixDepart(valeur)
-    if (prix === null || !(prix >= 1)) {
+    if (prix === null || !Number.isSafeInteger(prix) || prix < 1) {
       ecarter('prix-invalide')
       continue
     }
@@ -113,7 +115,7 @@ export function construireEncheres(
   }
 
   valides.sort((a, b) => b.prix - a.prix || b.valeur - a.valeur || comparer(a.carte.id, b.carte.id))
-  const places = Math.max(0, config.maxVentesSimultanees - enVente)
+  const places = Math.max(0, Math.floor(config.maxVentesSimultanees - enVente))
   const actions: Action[] = []
   valides.forEach(({ carte, prix, idExemplaire }, rang) => {
     if (rang < places) actions.push({ type: 'enchere', idCarte: carte.id, idExemplaire, prix })
@@ -247,10 +249,19 @@ export function construireLot(
   const encheres = construireEncheres(aVendre, enVente, config, disponibles)
   ecartees.push(...encheres.ecartees)
 
+  // Une même raison n’est donnée qu’une fois par carte (ex. étiquettes et enchère indisponibles).
+  const vues = new Set<string>()
+  const ecarteesUniques = ecartees.filter((e) => {
+    const cle = JSON.stringify([e.idCarte, e.raison])
+    if (vues.has(cle)) return false
+    vues.add(cle)
+    return true
+  })
+
   return {
-    // Les actions `lecture` (SC-024) s'inséreront ici, avant les créations (H9).
+    // Les actions `lecture` (SC-024) s’inséreront ici, avant les créations (H9).
     actions: [...creations, ...retraits, ...poses, ...encheres.actions, ...defausses],
-    ecartees,
+    ecartees: ecarteesUniques,
     obsoletes,
   }
 }

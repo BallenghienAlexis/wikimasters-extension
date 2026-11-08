@@ -4,8 +4,14 @@ import { TYPES_ACTION } from '../../src/lib/actions'
 import type { Carte, Collection } from '../../src/lib/collection'
 import { collectionVide } from '../../src/lib/collection'
 import { prixDepart } from '../../src/lib/tri'
-import { construireLot, type Config } from '../../src/lib/lot'
+import { CONFIG_PRIX } from '../../src/config/prix'
+import { construireEncheres, construireLot, type Config } from '../../src/lib/lot'
 import { registreVide } from '../../src/lib/registre'
+
+// Valeurs déduites de la matrice, pas des chiffres du réglage courant.
+const VALEUR = Math.min(...CONFIG_PRIX.matricePrixDepart.map((t) => t.valeurMin))
+const VALEUR_SOUS_MATRICE = VALEUR - 1
+const VALEUR_DOUBLE = VALEUR * 2
 
 const TOUS: TypesDisponibles = new Set<TypeAction>(TYPES_ACTION)
 
@@ -22,7 +28,7 @@ const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
   prixCible: null,
   note: '',
   ami: null,
-  valeurMarchande: 30,
+  valeurMarchande: VALEUR,
   decidePar: null,
   ...extra,
 })
@@ -82,6 +88,18 @@ describe('enchères : places libres (AC1)', () => {
     expect(raisons(l, 'a')).toEqual(['action-non-disponible'])
   })
 
+  it('un nombre de places non entier est arrondi à l’entier inférieur', () => {
+    const cartes = ['a', 'b', 'c', 'd'].map((id) => carte(id))
+    const l = lot(coll(...cartes), config({ maxVentesSimultanees: 2.5 }))
+    expect(encheres(l.actions)).toHaveLength(2)
+  })
+
+  it('une carte à vendre reçoit une seule fois « action non disponible »', () => {
+    const dispo = new Set<TypeAction>(TYPES_ACTION.filter((t) => t !== 'enchere' && t !== 'pose-etiquette'))
+    const l = lot(coll(carte('a')), config(), dispo)
+    expect(raisons(l, 'a')).toEqual(['action-non-disponible'])
+  })
+
   it('lienCardId à false : aucune enchère', () => {
     const l = lot(coll(carte('a')), config({ lienCardId: false }))
     expect(encheres(l.actions)).toEqual([])
@@ -99,10 +117,11 @@ describe('enchères : places libres (AC1)', () => {
 describe('enchères : prix, tri et départage (AC2)', () => {
   it('prix = prixCible sinon prixDepart(valeurMarchande)', () => {
     const l = lot(
-      coll(carte('a', { prixCible: 7, valeurMarchande: 30 }), carte('b', { prixCible: null, valeurMarchande: 60 })),
+      coll(carte('a', { prixCible: 7, valeurMarchande: VALEUR }), carte('b', { prixCible: null, valeurMarchande: VALEUR_DOUBLE })),
     )
     const prix = Object.fromEntries(encheres(l.actions).map((e) => [e.idCarte, e.prix]))
-    expect(prix).toEqual({ a: 7, b: prixDepart(60) })
+    expect(prixDepart(VALEUR_DOUBLE)).not.toBeNull()
+    expect(prix).toEqual({ a: 7, b: prixDepart(VALEUR_DOUBLE) })
   })
 
   it('tri par prix décroissant, puis valeur marchande décroissante, puis id croissant', () => {
@@ -135,7 +154,7 @@ describe('enchères : cartes écartées (AC3)', () => {
   })
 
   it('prix absent (aucune tranche de la matrice)', () => {
-    const l = lot(coll(carte('a', { valeurMarchande: 3, prixCible: null })))
+    const l = lot(coll(carte('a', { valeurMarchande: VALEUR_SOUS_MATRICE, prixCible: null })))
     expect(encheres(l.actions)).toEqual([])
     expect(raisons(l, 'a')).toEqual(['prix-invalide'])
   })
@@ -147,9 +166,36 @@ describe('enchères : cartes écartées (AC3)', () => {
     expect(raisons(l, 'b')).toEqual(['prix-invalide'])
   })
 
+  it('prix non entier ou hors entiers sûrs', () => {
+    const l = lot(
+      coll(
+        carte('a', { prixCible: 2.5 }),
+        carte('b', { prixCible: Number.MAX_SAFE_INTEGER + 2, valeurMarchande: Number.MAX_VALUE }),
+        carte('c', { prixCible: Number.NaN }),
+      ),
+    )
+    expect(encheres(l.actions)).toEqual([])
+    for (const id of ['a', 'b', 'c']) expect(raisons(l, id)).toEqual(['prix-invalide'])
+  })
+
+  it('carte vendre avec idsSite vide : non reliée, sans enchère', () => {
+    const l = lot(coll(carte('a', { idsSite: [] })))
+    expect(encheres(l.actions)).toEqual([])
+    expect(raisons(l, 'a')).toEqual(['non-reliee'])
+  })
+
+  it('construireEncheres ignore un favori ou une carte qui n’est pas à vendre', () => {
+    const r = construireEncheres([carte('f', { favori: true }), carte('g', { statut: 'garder' })], 0, config(), TOUS)
+    expect(r.actions).toEqual([])
+    expect(r.ecartees).toEqual([])
+  })
+
   it('prix supérieur ou égal à la valeur marchande', () => {
     const l = lot(
-      coll(carte('a', { prixCible: 30, valeurMarchande: 30 }), carte('b', { prixCible: 31, valeurMarchande: 30 })),
+      coll(
+        carte('a', { prixCible: VALEUR, valeurMarchande: VALEUR }),
+        carte('b', { prixCible: VALEUR + 1, valeurMarchande: VALEUR }),
+      ),
     )
     expect(encheres(l.actions)).toEqual([])
     expect(raisons(l, 'a')).toEqual(['prix-superieur-valeur'])
@@ -208,7 +254,7 @@ describe('enchères : étiquettes d’une carte à vendre (AC4, H16)', () => {
 describe('enchères : performance (AC5)', () => {
   it('5 000 cartes fictives avec enchères en moins de 500 ms', () => {
     const cartes = Array.from({ length: 5000 }, (_, i) =>
-      carte(`c${String(i).padStart(5, '0')}`, { valeurMarchande: 20 + (i % 500), statut: i % 3 === 0 ? 'vendre' : 'garder' }),
+      carte(`c${String(i).padStart(5, '0')}`, { valeurMarchande: VALEUR + (i % 500), statut: i % 3 === 0 ? 'vendre' : 'garder' }),
     )
     const t0 = performance.now()
     const l = lot(coll(...cartes), config({ maxVentesSimultanees: 50 }))
