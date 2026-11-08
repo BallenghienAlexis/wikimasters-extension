@@ -1,9 +1,34 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CONFIG_PRIX } from '../config/prix';
-import type { Action, CarteEcartee, RaisonEcart, Registre, TypeAction, TypesDisponibles } from '../lib/actions';
+import type {
+  Action,
+  CarteEcartee,
+  EntreeJournal,
+  RaisonEcart,
+  Registre,
+  ResultatAction,
+  TypeAction,
+  TypesDisponibles,
+} from '../lib/actions';
 import type { Carte, Collection } from '../lib/collection';
 import { typesDisponibles } from '../lib/contrat';
-import { construireLot, type EtiquetteObsolete, type LotConstruit } from '../lib/lot';
+import { CODES_ARRET, creerFile, type Decision, type EtatFile, type File as FileLot, type RaisonArret } from '../lib/file';
+import { completerEntree, ouvrirEntree, passerEntree } from '../lib/journal';
+import { construireLot, type Config, type EtiquetteObsolete, type LotConstruit } from '../lib/lot';
+import { appliquerResultat, reverifierAction } from '../lib/revision';
+import {
+  chargerCollection,
+  chargerExecution,
+  chargerJournal,
+  chargerRegistre,
+  enregistrerCollection,
+  enregistrerExecution,
+  enregistrerJournal,
+  enregistrerRegistre,
+} from '../lib/stockage';
+import DialogueDefausse from './DialogueDefausse';
+import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
+import Journal, { type CoupleRetrait } from './Journal';
 
 /** Secondes entre deux requêtes (cadence fixe de la file). */
 const SECONDES_PAR_ACTION = 6;
@@ -221,6 +246,188 @@ export function detailsDuLot(actions: readonly Action[], cartes: ReadonlyMap<str
   });
 }
 
+// ───────────────────────── Exécution (câblage de la file, T-017) ─────────────────────────
+
+const CAUSES_ARRET: Record<RaisonArret, string> = {
+  manuel: 'arrêt demandé',
+  echecs: '3 erreurs',
+  'code-http': 'le site a refusé la requête',
+  resultat: 'résultat hors contrat ou inconnu',
+  ecriture: 'enregistrement local impossible',
+  transport: 'erreur de transport',
+  confirmation: 'arrêt demandé à la confirmation',
+  verification: 'revérification impossible',
+  'confirmation-indisponible': 'confirmation indisponible',
+};
+
+/** Libellé fixe de la cause d’un arrêt (D-41) : jamais le texte d’une réponse du site. */
+export function libelleCause(raison: RaisonArret | null, codeHttp: number | null, deconnecte = false): string {
+  if (deconnecte) return 'l’onglet WikiMasters s’est déconnecté';
+  if (raison === null) return CAUSES_ARRET.manuel;
+  if (raison === 'code-http' && codeHttp !== null && CODES_ARRET.includes(codeHttp)) return `réponse ${codeHttp}`;
+  return CAUSES_ARRET[raison];
+}
+
+export interface Bilan {
+  reussies: number;
+  passees: number;
+  erreurs: number;
+  dernierCode: number | null;
+  dernierInconnu: boolean;
+}
+
+const bilanVide = (): Bilan => ({ reussies: 0, passees: 0, erreurs: 0, dernierCode: null, dernierInconnu: false });
+
+export const pluriel = (n: number, singulier: string, p: string): string => `${n} ${n > 1 ? p : singulier}`;
+
+export const texteEnCours = (traitees: number, total: number, erreurs: number): string =>
+  `En cours${NB}: ${traitees} / ${total} · ${pluriel(erreurs, 'erreur', 'erreurs')}`;
+
+export const phraseProgression = (traitees: number, total: number, erreurs: number): string =>
+  `${traitees} sur ${total} faites, ${pluriel(erreurs, 'erreur', 'erreurs')}`;
+
+export const pourcentage = (traitees: number, total: number): number =>
+  total <= 0 ? 0 : Math.min(100, Math.round((traitees / total) * 100));
+
+export function texteFin(etat: EtatFile, bilan: Bilan, deconnecte: boolean): { titre: string; detail: string | null } {
+  if (etat.etat === 'terminee') {
+    return {
+      titre: 'Lot terminé',
+      detail: `${pluriel(bilan.reussies, 'réussie', 'réussies')}, ${pluriel(bilan.passees, 'passée', 'passées')}, ${pluriel(bilan.erreurs, 'échouée', 'échouées')}`,
+    };
+  }
+  const restantes = Math.max(0, etat.total - etat.traitees);
+  return {
+    titre: `Lot arrêté${NB}: ${libelleCause(etat.raison, bilan.dernierCode, deconnecte)}`,
+    detail: `${pluriel(restantes, 'action n’a', 'actions n’ont')} pas été envoyée${restantes > 1 ? 's' : ''}.`,
+  };
+}
+
+interface Pont {
+  confirmer: ((action: Action) => Promise<Decision>) | null;
+  idLot: string;
+  bilan: Bilan;
+  deconnecte: boolean;
+  /** Répond « Arrêter le lot » à une confirmation ouverte (arrêt ou déconnexion). */
+  annuler: (() => void) | null;
+}
+
+interface ContexteExecution {
+  execution: Execution;
+  file: FileLot;
+  pont: Pont;
+  /** Écritures de l’état d’exécution, enchaînées pour garder l’ordre. */
+  ecritures: Promise<void>;
+}
+
+const CONFIG_LOT: Config = {
+  maxVentesSimultanees: CONFIG_PRIX.maxVentesSimultanees,
+  longueurMaxEtiquette: null,
+  nomsExistants: [],
+};
+
+const parametreDe = (a: Action): string | null =>
+  a.type === 'enchere' ? String(a.prix) : a.type === 'lecture' || a.type === 'defausse' ? null : a.nomEtiquette;
+
+let contexte: ContexteExecution | null = null;
+
+/**
+ * Contexte unique pour toute la durée de vie de la page : une seule file, une seule exécution
+ * (la file garde sa mémoire de cadence). Créé au premier besoin, jamais au rendu.
+ */
+function contexteExecution(): ContexteExecution {
+  if (contexte) return contexte;
+  const execution = creerExecutionReelle();
+  const pont: Pont = { confirmer: null, idLot: '', bilan: bilanVide(), deconnecte: false, annuler: null };
+  const titreDe = async (idCarte: string): Promise<string> =>
+    (await chargerCollection()).cartes.find((c) => c.id === idCarte)?.titre ?? idCarte;
+  const file = creerFile({
+    horloge: horlogeReelle,
+    transport: (ordre) => execution.transport(ordre),
+    confirmer: (action) => {
+      if (!pont.confirmer) throw new Error('Confirmation indisponible.');
+      return pont.confirmer(action);
+    },
+    reverifier: async (action) => {
+      const [collection, registre] = await Promise.all([chargerCollection(), chargerRegistre()]);
+      return reverifierAction(action, collection, registre, CONFIG_LOT);
+    },
+    appliquer: async (action, resultat) => {
+      const [collection, registre] = await Promise.all([chargerCollection(), chargerRegistre()]);
+      const suivant = appliquerResultat(collection, registre, action, resultat);
+      if (suivant.collection !== collection) await enregistrerCollection(suivant.collection);
+      if (suivant.registre !== registre) await enregistrerRegistre(suivant.registre);
+    },
+    journal: {
+      ouvrir: async (action) => {
+        const titre = await titreDe(action.idCarte);
+        const { journal, id } = ouvrirEntree(
+          await chargerJournal(),
+          { idCarte: action.idCarte, titre, type: action.type, parametre: parametreDe(action), idLot: pont.idLot },
+          () => new Date(),
+        );
+        await enregistrerJournal(journal);
+        return id;
+      },
+      completer: async (id, resultat: ResultatAction) => {
+        if (resultat.classe === 'reussie') pont.bilan.reussies++;
+        else pont.bilan.erreurs++;
+        pont.bilan.dernierCode = resultat.codeHttp;
+        pont.bilan.dernierInconnu = resultat.classe === 'inconnu';
+        await enregistrerJournal(completerEntree(await chargerJournal(), id, resultat));
+      },
+      passer: async (id) => {
+        pont.bilan.passees++;
+        await enregistrerJournal(passerEntree(await chargerJournal(), id));
+      },
+    },
+  });
+  // Chaque changement d’état est écrit : une exécution « en cours » orpheline sera close à la réouverture.
+  const ctx: ContexteExecution = { execution, file, pont, ecritures: Promise.resolve() };
+  file.abonner((e) => {
+    const { raison: _raison, ...etat } = e;
+    void _raison;
+    ctx.ecritures = ctx.ecritures.then(() => enregistrerExecution(etat)).catch(() => {});
+  });
+  execution.ecouter();
+  void execution.signaler().catch(() => {});
+  contexte = ctx;
+  return ctx;
+}
+
+/** Lance un lot sous le verrou unique ; l’exécution s’arrête si l’onglet WikiMasters se ferme. */
+async function lancerLot(actions: readonly Action[], idLot: string): Promise<void> {
+  const ctx = contexteExecution();
+  ctx.pont.idLot = idLot;
+  ctx.pont.bilan = bilanVide();
+  ctx.pont.deconnecte = false;
+  await ctx.execution.demarrer(async (interruption) => {
+    const arreter = (): void => {
+      ctx.pont.deconnecte = true;
+      ctx.file.arreter();
+      ctx.pont.annuler?.();
+    };
+    interruption.addEventListener('abort', arreter);
+    try {
+      await ctx.file.demarrer(actions, idLot);
+    } finally {
+      interruption.removeEventListener('abort', arreter);
+      await ctx.ecritures;
+    }
+  });
+}
+
+const nouvelIdLot = (prefixe: string): string => `${prefixe}-${Date.now()}`;
+
+/** Actions de retrait pour un couple (carte, étiquette) encore posé au registre. */
+export function actionsRetrait(couple: CoupleRetrait, collection: Collection, registre: Registre): Action[] {
+  const carte = collection.cartes.find((c) => c.id === couple.idCarte);
+  const ids = new Set(carte?.idsSite ?? []);
+  return registre.couples
+    .filter((c) => c.nom === couple.nomEtiquette && ids.has(c.ex))
+    .map((c) => ({ type: 'retrait-etiquette', idCarte: couple.idCarte, idExemplaire: c.ex, nomEtiquette: couple.nomEtiquette }));
+}
+
 const CLASSE_BOUTON = 'inline-flex min-h-11 min-w-11 items-center justify-center rounded border bg-ink px-4';
 const CLASSE_ACTIF = 'cursor-pointer hover:bg-line active:bg-line text-paper';
 const CLASSE_INACTIF = 'border-dashed border-muted text-muted cursor-not-allowed';
@@ -253,6 +460,104 @@ function BandeauRisque(): React.ReactElement {
     </section>
   );
 }
+
+interface ConfirmationOuverte {
+  carte: string;
+  rang: number;
+  total: number;
+  resoudre: (d: Decision) => void;
+}
+
+interface PropsZone {
+  exec: { etat: EtatFile; bilan: Bilan; deconnecte: boolean } | null;
+  interrompu: boolean;
+  attenteDecision: boolean;
+  titreRef: React.RefObject<HTMLHeadingElement | null>;
+  arreterRef: React.RefObject<HTMLButtonElement | null>;
+  onArreter: () => void;
+  onFermer: () => void;
+}
+
+/** Zone d’exécution (D-19 à D-23) : progression, arrêt, états de fin. Aucune animation (D-39). */
+const ZoneExecution: React.FC<PropsZone> = ({ exec, interrompu, attenteDecision, titreRef, arreterRef, onArreter, onFermer }) => {
+  const enCours = exec?.etat.etat === 'en-cours';
+  const termine = exec?.etat.etat === 'terminee';
+  const fin = exec && !enCours ? texteFin(exec.etat, exec.bilan, exec.deconnecte) : null;
+  const bordure = enCours ? 'border-l-paper' : termine ? 'border-l-garder' : 'border-l-defausser';
+  const traitees = exec?.etat.traitees ?? 0;
+  const total = exec?.etat.total ?? 0;
+  const erreurs = exec?.bilan.erreurs ?? 0;
+  return (
+    <section
+      aria-labelledby="titre-execution"
+      className={`mt-4 rounded border border-line border-l-4 ${bordure} bg-ink-2 p-4`}
+      data-testid="zone-execution"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && enCours && !attenteDecision) {
+          e.preventDefault();
+          onArreter();
+        }
+      }}
+    >
+      <h2 id="titre-execution" ref={titreRef} tabIndex={-1} className="font-semibold">
+        Exécution du lot
+      </h2>
+
+      {enCours && (
+        <>
+          <p className="mt-2 font-semibold">
+            {attenteDecision ? 'En attente de votre décision' : texteEnCours(traitees, total, erreurs)}
+          </p>
+          <div className="mt-2 h-2 rounded bg-line">
+            <div
+              role="progressbar"
+              aria-label="Progression du lot"
+              aria-valuemin={0}
+              aria-valuemax={total}
+              aria-valuenow={traitees}
+              className="h-2 rounded bg-paper"
+              style={{ width: `${pourcentage(traitees, total)}%` }}
+            />
+          </div>
+          <button
+            ref={arreterRef}
+            type="button"
+            className={`${CLASSE_BOUTON} ${CLASSE_ACTIF} mt-3 border-muted font-semibold`}
+            onClick={onArreter}
+          >
+            Arrêter
+          </button>
+          {!attenteDecision && <p className="mt-2 text-sm text-muted">Échap{NB}: arrêter le lot</p>}
+        </>
+      )}
+
+      <div role="status" aria-live="polite" aria-atomic="true" className="mt-2">
+        {enCours && exec && <p className="text-sm text-muted">{phraseProgression(traitees, total, erreurs)}</p>}
+        {fin && (
+          <>
+            <p className={`font-semibold ${termine ? 'text-garder' : 'text-defausser'}`}>{fin.titre}</p>
+            {fin.detail && <p className="mt-1">{fin.detail}</p>}
+            {!termine && exec?.bilan.dernierInconnu && (
+              <p className="mt-1 font-semibold text-vendre">Résultat inconnu, à vérifier sur le site.</p>
+            )}
+          </>
+        )}
+        {!exec && interrompu && (
+          <>
+            <p className="font-semibold text-defausser">Lot interrompu</p>
+            <p className="mt-1">La page ou l’onglet a été fermé ou rechargé. L’exécution ne reprend pas toute seule.</p>
+          </>
+        )}
+      </div>
+
+      {!enCours && (
+        <button type="button" className={`${CLASSE_BOUTON} ${CLASSE_ACTIF} mt-3 border-muted`} onClick={onFermer}>
+          Fermer
+        </button>
+      )}
+    </section>
+  );
+};
 
 interface Props {
   collection: Collection;
@@ -289,6 +594,96 @@ const Synchronisation: React.FC<Props> = ({
   const ouvrirRef = useRef<HTMLButtonElement>(null);
   const dejaOuvert = useRef(false);
 
+  const [exec, setExec] = useState<{ etat: EtatFile; bilan: Bilan; deconnecte: boolean } | null>(null);
+  const [interrompu, setInterrompu] = useState(false);
+  const [fermee, setFermee] = useState(false);
+  const [ongletsLive, setOngletsLive] = useState<number | null>(null);
+  /** État d’exécution relu au montage : `null` tant que la page n’a pas vérifié. */
+  const [enCoursStocke, setEnCoursStocke] = useState<boolean | null>(null);
+  const [erreurLancement, setErreurLancement] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<ConfirmationOuverte | null>(null);
+  const [entrees, setEntrees] = useState<EntreeJournal[]>([]);
+  const [journalIllisible, setJournalIllisible] = useState(false);
+  const [registreMaj, setRegistreMaj] = useState<Registre | null>(null);
+  const confirmationRef = useRef<ConfirmationOuverte | null>(null);
+  const rangsRef = useRef<Map<Action, { k: number; n: number }>>(new Map());
+  const collectionRef = useRef(collection);
+  useEffect(() => {
+    collectionRef.current = collection;
+  }, [collection]);
+  const arreterRef = useRef<HTMLButtonElement>(null);
+  const titreExecRef = useRef<HTMLHeadingElement>(null);
+
+  const registreCourant = registreMaj ?? registre;
+
+  const decider = useCallback((d: Decision): void => {
+    const c = confirmationRef.current;
+    if (!c) return;
+    confirmationRef.current = null;
+    setConfirmation(null);
+    c.resoudre(d);
+    // Le focus revient à « Arrêter », ou au titre de la zone après « Arrêter le lot ».
+    setTimeout(() => (d === 'arreter' ? titreExecRef : arreterRef).current?.focus(), 0);
+  }, []);
+
+  useEffect(() => {
+    let actif = true;
+    const ctx = contexteExecution();
+    const relire = async (): Promise<void> => {
+      try {
+        const j = await chargerJournal();
+        if (actif) {
+          setEntrees(j);
+          setJournalIllisible(false);
+        }
+      } catch {
+        if (actif) setJournalIllisible(true);
+      }
+      try {
+        const r = await chargerRegistre();
+        if (actif) setRegistreMaj(r);
+      } catch {
+        /* le registre reste celui de la page */
+      }
+    };
+    ctx.pont.confirmer = (action) =>
+      new Promise<Decision>((resoudre) => {
+        const rang = rangsRef.current.get(action) ?? { k: 1, n: 1 };
+        const cartesCourantes = new Map(collectionRef.current.cartes.map((x) => [x.id, x]));
+        const c: ConfirmationOuverte = { carte: carteTexte(action.idCarte, cartesCourantes), rang: rang.k, total: rang.n, resoudre };
+        confirmationRef.current = c;
+        setConfirmation(c);
+      });
+    ctx.pont.annuler = () => decider('arreter');
+    const majOnglets = (): void => setOngletsLive(ctx.execution.nbOngletsWikiMasters());
+    majOnglets();
+    const desabonnerOnglets = ctx.execution.abonner(majOnglets);
+    const publier = (etat: EtatFile): void => {
+      setExec({ etat, bilan: { ...ctx.pont.bilan }, deconnecte: ctx.pont.deconnecte });
+      void relire();
+    };
+    const desabonnerFile = ctx.file.abonner(publier);
+    const courant = ctx.file.etat();
+    if (courant) publier(courant);
+    void relire();
+    void (async () => {
+      const avant = await chargerExecution().catch(() => null);
+      await ctx.execution.cloreInterrompues().catch(() => {});
+      const apres = await chargerExecution().catch(() => null);
+      if (!actif) return;
+      if (avant?.etat === 'en-cours' && apres?.etat === 'arretee') setInterrompu(true);
+      setEnCoursStocke(apres?.etat === 'en-cours');
+    })();
+    return () => {
+      actif = false;
+      desabonnerOnglets();
+      desabonnerFile();
+      ctx.pont.annuler?.();
+      ctx.pont.confirmer = null;
+      ctx.pont.annuler = null;
+    };
+  }, [decider]);
+
   const dispo = useMemo(() => disponibles ?? typesDisponibles(), [disponibles]);
   const cartes = useMemo(() => new Map(collection.cartes.map((c) => [c.id, c])), [collection.cartes]);
 
@@ -302,9 +697,9 @@ const Synchronisation: React.FC<Props> = ({
     }
   }, [ouvert]);
 
-  const ouvrir = (): void => setEtat(preparerLot(collection, registreIllisible ? null : registre, dispo));
+  const ouvrir = (): void => setEtat(preparerLot(collection, registreIllisible ? null : registreCourant, dispo));
   const reessayer = async (): Promise<void> => {
-    const r = onReessayer ? await onReessayer() : registreIllisible ? null : registre;
+    const r = onReessayer ? await onReessayer() : registreIllisible ? null : registreCourant;
     setEtat(preparerLot(collection, r, dispo));
   };
 
@@ -327,14 +722,82 @@ const Synchronisation: React.FC<Props> = ({
   const n = separes?.disponibles.length ?? 0;
   const avecIndisponibles = lignes.some((l) => l.raison === 'action-non-disponible');
   const afficherLancer = n > 0 || avecIndisponibles;
-  const raison = raisonDesactivation({ nbOnglets, executionEnCours, executionIllisible, nbDisponibles: n });
+  const enCours = exec?.etat.etat === 'en-cours' || (enCoursStocke === null ? executionEnCours : enCoursStocke);
+  const nbOngletsReel = ongletsLive ?? nbOnglets;
+  const raison = raisonDesactivation({ nbOnglets: nbOngletsReel, executionEnCours: enCours, executionIllisible, nbDisponibles: n });
+
+  const phase = exec?.etat.etat ?? null;
+  useEffect(() => {
+    if (phase === 'en-cours') arreterRef.current?.focus();
+    else if (phase !== null) titreExecRef.current?.focus();
+  }, [phase]);
+
+  const lancer = (actions: Action[], idLot: string): void => {
+    setErreurLancement(null);
+    setInterrompu(false);
+    setFermee(false);
+    const total = new Map<string, number>();
+    for (const a of actions) if (a.type === 'defausse') total.set(a.idCarte, (total.get(a.idCarte) ?? 0) + 1);
+    const vus = new Map<string, number>();
+    const rangs = new Map<Action, { k: number; n: number }>();
+    for (const a of actions) {
+      if (a.type !== 'defausse') continue;
+      const k = (vus.get(a.idCarte) ?? 0) + 1;
+      vus.set(a.idCarte, k);
+      rangs.set(a, { k, n: total.get(a.idCarte) ?? k });
+    }
+    rangsRef.current = rangs;
+    lancerLot(actions, idLot).catch((e: unknown) =>
+      setErreurLancement(e instanceof Error ? e.message : 'Le lot n’a pas pu être lancé.'),
+    );
+  };
+  const lancerDepuisApercu = (actions: Action[]): void => (onLancer ?? ((a: Action[]) => lancer(a, nouvelIdLot('lot'))))(actions);
+
+  const arreter = (): void => {
+    contexteExecution().file.arreter();
+    decider('arreter');
+  };
+
+  const retirer = (couple: CoupleRetrait): void => {
+    const actions = actionsRetrait(couple, collection, registreCourant);
+    if (actions.length === 0) return;
+    const ctx = contexteExecution();
+    if (ctx.file.etat()?.etat === 'en-cours' && ctx.file.ajouter(actions)) return;
+    lancer(actions, nouvelIdLot('retrait'));
+  };
+
+  const vider = (): void => {
+    enregistrerJournal([])
+      .then(() => setEntrees([]))
+      .catch(() => setJournalIllisible(true));
+  };
+
+  const zoneVisible = (exec !== null || interrompu) && !fermee;
+  const fermerZone = (): void => {
+    setFermee(true);
+    setExec(null);
+    setInterrompu(false);
+    setEtat(null);
+  };
   const classeSecondaire = `${CLASSE_BOUTON} ${CLASSE_ACTIF} border-muted`;
 
   return (
     <div data-testid="synchronisation">
       <BandeauRisque />
 
-      <section aria-labelledby="titre-synchro" className="mt-4 rounded border border-line bg-ink-2 p-4">
+      {zoneVisible && (
+        <ZoneExecution
+          exec={exec}
+          interrompu={interrompu}
+          attenteDecision={confirmation !== null}
+          titreRef={titreExecRef}
+          arreterRef={arreterRef}
+          onArreter={arreter}
+          onFermer={fermerZone}
+        />
+      )}
+
+      <section aria-labelledby="titre-synchro" hidden={zoneVisible} className="mt-4 rounded border border-line bg-ink-2 p-4">
         <h2 id="titre-synchro" ref={titreRef} tabIndex={-1} className="font-semibold" data-testid="titre-apercu">
           {lot ? titreApercu(n) : 'Synchronisation avec WikiMasters'}
         </h2>
@@ -443,7 +906,7 @@ const Synchronisation: React.FC<Props> = ({
                   aria-describedby={raison !== null ? 'raison-lancer' : undefined}
                   className={`${CLASSE_BOUTON} font-semibold ${raison !== null ? CLASSE_INACTIF : `${CLASSE_ACTIF} border-paper`}`}
                   onClick={() => {
-                    if (raison === null) onLancer?.(separes.disponibles);
+                    if (raison === null) lancerDepuisApercu(separes.disponibles);
                   }}
                 >
                   {n === 0 ? 'Lancer' : n > 1 ? `Lancer les ${n} actions` : 'Lancer l’action'}
@@ -461,6 +924,31 @@ const Synchronisation: React.FC<Props> = ({
           </>
         )}
       </section>
+
+      {erreurLancement !== null && (
+        <p role="alert" className="mt-4 break-words font-semibold text-defausser">
+          Lancement impossible{NB}: {erreurLancement}
+        </p>
+      )}
+
+      <Journal
+        entrees={entrees}
+        registre={registreCourant}
+        retraitDisponible={dispo.has('retrait-etiquette')}
+        ongletPret={nbOngletsReel === 1}
+        illisible={journalIllisible}
+        onRetirer={retirer}
+        onVider={vider}
+      />
+
+      {confirmation && (
+        <DialogueDefausse
+          carte={confirmation.carte}
+          rang={confirmation.rang}
+          total={confirmation.total}
+          onDecision={decider}
+        />
+      )}
     </div>
   );
 };
