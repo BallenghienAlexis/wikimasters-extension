@@ -60,6 +60,8 @@ const App: React.FC = () => {
   const [executionEnCours, setExecutionEnCours] = useState(false);
   const [registreIllisible, setRegistreIllisible] = useState(false);
   const [executionIllisible, setExecutionIllisible] = useState(false);
+  // Tant que la lecture initiale du stockage n’est pas finie, l’aperçu du lot n’est pas proposé (D-18).
+  const [stockageSynchroLu, setStockageSynchroLu] = useState(false);
   const champFichier = useRef<HTMLInputElement>(null);
 
   // Lit le registre et l’état d’exécution ; un échec est signalé à l’aperçu, jamais avalé.
@@ -82,6 +84,7 @@ const App: React.FC = () => {
     setRegistreIllisible(etat.registre === null);
     setExecutionEnCours(etat.executionEnCours);
     setExecutionIllisible(etat.executionIllisible);
+    setStockageSynchroLu(true);
   };
   const relireStockageSynchro = async (): Promise<Registre | null> => {
     const etat = await lireStockageSynchro();
@@ -228,6 +231,7 @@ const App: React.FC = () => {
             collection={collection}
             registre={registre}
             preferences={preferences}
+            chargement={!stockageSynchroLu}
             registreIllisible={registreIllisible}
             executionIllisible={executionIllisible}
             nbOnglets={0}
