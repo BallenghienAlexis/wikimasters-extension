@@ -12,6 +12,8 @@ import {
   chargerJournal,
   chargerRegistre,
   chargerSignalSynchro,
+  lireCollectionBrute,
+  reinitialiserCollection,
   effacerExecution,
   enregistrerCollection,
   enregistrerExecution,
@@ -288,5 +290,28 @@ describe('signal de synchro', () => {
   it('AC2 : un échec d’écriture est remonté', async () => {
     faux.echecEcriture = new Error('écriture impossible');
     await expect(enregistrerSignalSynchro(1)).rejects.toThrow('écriture impossible');
+  });
+});
+
+describe('récupération d’une collection illisible', () => {
+  it('lit le contenu brut sans le valider ni le modifier', async () => {
+    const futur = { version: 3, cartes: [{ id: 'Rare|Loutre' }] };
+    faux.donnees.set('collection', futur);
+    await expect(chargerCollection()).rejects.toThrow('Données stockées illisibles');
+    expect(await lireCollectionBrute()).toEqual(futur);
+    expect(faux.donnees.get('collection')).toEqual(futur);
+  });
+
+  it('retourne undefined quand rien n’est stocké', async () => {
+    expect(await lireCollectionBrute()).toBeUndefined();
+  });
+
+  it('réinitialise la seule clé de la collection', async () => {
+    faux.donnees.set('collection', { version: 3 });
+    faux.donnees.set('preferences', { a: 1 });
+    await reinitialiserCollection();
+    expect(faux.donnees.has('collection')).toBe(false);
+    expect(faux.donnees.get('preferences')).toEqual({ a: 1 });
+    expect(await chargerCollection()).toEqual(collectionVide());
   });
 });
