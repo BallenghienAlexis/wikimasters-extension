@@ -71,3 +71,12 @@ describe('versJson', () => {
     expect(versCsv([]).split('\r\n')[0]).not.toContain('idsSite');
   });
 });
+
+describe('exports et thèmes précis (SC-020)', () => {
+  it('garde les colonnes du CSV et y met les nouveaux libellés', () => {
+    const lignes = versCsv([carte({ titre: 'Berger allemand', description: 'race de chien' })]).split('\r\n');
+    expect(lignes[0]?.endsWith(',themes') || lignes[0]?.endsWith(';themes')).toBe(true);
+    expect(lignes[1]).toContain('#Chien');
+    expect(lignes[1]).toContain('#Animaux');
+  });
+});
