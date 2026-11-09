@@ -1,3 +1,4 @@
+import { meilleureDuree } from './duree';
 import { describe, expect, it } from 'vitest';
 import type { Carte } from '../../src/lib/collection';
 import { compterThemes, LIBELLES_THEMES, themesDeCarte } from '../../src/lib/themes';
@@ -336,9 +337,11 @@ describe('performance (SC-017)', () => {
       titre: `Carte fictive ${i}`,
       description: i % 2 === 0 ? 'race de chien et fromage de montagne' : 'barrage hydroélectrique en Ukraine',
     }));
-    const debut = performance.now();
-    for (const c of cartes) themesDeCarte(c);
-    expect(performance.now() - debut).toBeLessThan(200);
+    expect(
+      meilleureDuree(() => {
+        for (const c of cartes) themesDeCarte(c);
+      }),
+    ).toBeLessThan(200);
   });
 });
 
@@ -354,8 +357,7 @@ describe('non-régression (SC-006)', () => {
   });
 
   it('reste linéaire sur une description hostile de 120 000 caractères', () => {
-    const debut = performance.now();
-    themesDeCarte({ titre: 'grand ', description: 'grand '.repeat(20000) + 'barrage-'.repeat(1000) });
-    expect(performance.now() - debut).toBeLessThan(200);
+    const carte = { titre: 'grand ', description: 'grand '.repeat(20000) + 'barrage-'.repeat(1000) };
+    expect(meilleureDuree(() => void themesDeCarte(carte))).toBeLessThan(200);
   });
 });

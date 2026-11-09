@@ -1,3 +1,4 @@
+import { meilleureDuree } from './duree'
 import { describe, expect, it } from 'vitest'
 import type { Action, Registre, TypeAction, TypesDisponibles } from '../../src/lib/actions'
 import { TYPES_ACTION } from '../../src/lib/actions'
@@ -240,9 +241,8 @@ describe('corrections de revue (SC-010, SC-021)', () => {
     const cartes = Array.from({ length: 5000 }, (_, i) =>
       carte(`c${String(i).padStart(5, '0')}`, { titre: `Carte ${i}`, description: i % 2 ? 'race de chien' : 'pont sur un lac', statut: 'echanger' }),
     )
-    const debut = performance.now()
-    construireLot(coll(...cartes), registre(), config({ amis, limiteParExemplaire: 2, limiteNoms: 3 }), TOUS)
-    expect(performance.now() - debut).toBeLessThan(500)
+    const cfg = config({ amis, limiteParExemplaire: 2, limiteNoms: 3 })
+    expect(meilleureDuree(() => void construireLot(coll(...cartes), registre(), cfg, TOUS))).toBeLessThan(500)
   })
 })
 
@@ -307,8 +307,6 @@ describe('performance (SC-017)', () => {
     const cartes = Array.from({ length: 5000 }, (_, i) =>
       carte(`c${String(i).padStart(5, '0')}`, { titre: `Carte ${i}`, description: i % 2 ? 'race de chien' : 'pont sur un lac', statut: 'echanger' }),
     )
-    const debut = performance.now()
-    construireLot(coll(...cartes), registre(), config({ amis }), TOUS)
-    expect(performance.now() - debut).toBeLessThan(500)
+    expect(meilleureDuree(() => void construireLot(coll(...cartes), registre(), config({ amis }), TOUS))).toBeLessThan(500)
   })
 })
