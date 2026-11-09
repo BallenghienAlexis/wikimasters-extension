@@ -10,7 +10,7 @@ WM Collection est une extension Chrome personnelle pour préparer le tri, l'éch
 
 **« Édition » désigne donc l'édition locale** : statut, prix cible et note de chaque carte, stockés dans l'extension. Rien n'est modifié sur le site.
 
-**Lecture du site** : quand le joueur ouvre `/collection`, le content script lit les cartes affichées et y pose un repère avec sa décision. Il ne clique pas, ne change pas de page et ne fait aucune requête : le joueur tourne les pages et agit lui-même. Les règles ne parlent pas explicitement du scraping : c'est une zone grise, assumée par Alexis, avec un risque non nul.
+**Lecture du site** : quand le joueur ouvre `/collection`, le content script lit les cartes affichées et y pose un repère avec sa décision. Il ne clique pas, ne change pas de page et ne fait aucune requête (hors synchronisation automatique, désactivée par défaut, décrite plus bas) : le joueur tourne les pages et agit lui-même. Les règles ne parlent pas explicitement du scraping : c'est une zone grise, assumée par Alexis, avec un risque non nul.
 
 **Pas de verrou réseau** (levé par Alexis le 2026-11-07, il limitait trop les fonctionnalités) : la CSP n'interdit plus `connect-src`, le lint n'interdit plus `fetch`. Le risque de bannissement est assumé. Restent en place : permission `storage` seule, pas d'`eval` ni de code distant, et `click`, `submit`, `dispatchEvent`, `focus` interdits dans le code exécuté sur le site tant qu'une spec n'a pas décidé explicitement d'agir à la place du joueur. Les repères insérés dans la page laissent une empreinte (`wm-*`) que le site pourrait détecter : choix assumé par Alexis.
 

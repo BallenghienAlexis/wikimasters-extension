@@ -1,8 +1,7 @@
 // Validation et conversion des réponses de l'API du site (lecture seule).
 // Fonctions pures : ni chrome.*, ni fetch. Liste blanche des champs : rien n'est copié hors de celle-ci.
-import { identifiantCarte } from './lecteur';
+import { RARETES, identifiantCarte } from './lecteur';
 
-const RARETES = ['L', 'UR', 'SR', 'R', 'PC', 'C'];
 const MAX_TEXTE = 300;
 const MAX_ID = 200;
 const MAX_ETIQUETTES = 200;

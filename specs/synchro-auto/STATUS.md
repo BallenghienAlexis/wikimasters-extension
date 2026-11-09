@@ -20,6 +20,11 @@
 ## Tâches
 | Tâche | Vague | Agent | Branche | Worktree | PR | Itération | CI | Revue | Sécurité | Statut |
 |---|---|---|---|---|---|---|---|---|---|---|
+| T-901 | src/lib/lectureApi.ts | `couleur` des étiquettes non validée | Décliné : champ non affiché, donc sans effet. |
+| T-901 | src/lib/lectureApi.ts | `analyserPrix` ignore `isPro` | Décliné : inutile sans compte PRO. |
+| T-901 | tests/unit/ecarts.test.ts | Assertion sur les thèmes absente | Décliné : couvert par d'autres tests. |
+| T-901 | src/lib/ordonnanceur.ts | `triStable` jamais prouvé en réel | Décliné : optimisation non activée, sûre par défaut. |
+| T-901 | AGENTS.md, README.md, releve-api.md, e2e, lecteur.ts, ordonnanceur.ts, synchroAuto.ts | Retouches 1 à 7 | Faites dans T-901 (RARETES était dupliquée : exportée depuis `lecteur.ts`). |
 | T-201 | V1 | dev-core | — | — | — | 0 | — | — | — | à-faire |
 | T-202 | V1 | dev-core | — | — | — | 0 | — | — | — | à-faire |
 | T-203 | V2 | dev-core | — | — | — | 0 | — | — | — | à-faire |

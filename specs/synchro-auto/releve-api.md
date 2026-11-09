@@ -20,7 +20,7 @@ Constats :
 - `id` (exemplaire) ≠ `card_id` : le lien est donc connu, ce qui règle l'inconnue « `card_id` ↔ `user_card_id` » de `contrat-api.md`.
 - `starred` correspond au favori du site ; `pendingTradeCardIds` liste les cartes engagées dans un échange.
 - Collection d'Alexis le jour du relevé : 6 675 exemplaires, 6 668 cartes distinctes → **134 pages** de 50. À 6 s par requête, une lecture complète dure environ **14 minutes** ; d'où l'intérêt du mode incrémental (`stats` d'abord, 1 requête).
-- Une page au-delà de la dernière renvoie 200 avec `collection: []` (fin de parcours fiable).
+- Le paramètre `page` **commence à 0** (vérifié en direct) ; chaque page compte 50 éléments au plus. Une page hors limites (au-delà de la dernière) renvoie 200 avec `collection: []` (fin de parcours fiable).
 - Le site appelle aussi `/api/notifications` et `/api/trades?active=1` à chaque chargement.
 
 ## Prix du marché : **débloqué** (relevé du 2026-11-09, fenêtre « Mettre aux enchères » ouverte puis annulée)
