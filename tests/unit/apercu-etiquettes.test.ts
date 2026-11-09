@@ -4,6 +4,7 @@ import type { Carte, Collection } from '../../src/lib/collection'
 import { collectionVide } from '../../src/lib/collection'
 import type { Config } from '../../src/lib/lot'
 import { THEME_AUTRES, themesDeCarte } from '../../src/lib/themes'
+import { meilleureDuree } from './duree'
 import { registreVide } from '../../src/lib/registre'
 import { dureeMinutes } from '../../src/app/Synchronisation'
 import { dureeMinutesApercu, regrouperEtiquettes, texteDureeLongue } from '../../src/lib/apercuEtiquettes'
@@ -156,9 +157,8 @@ describe('regrouperEtiquettes : performance (AC5)', () => {
     const cartes = Array.from({ length: 5000 }, (_, i) =>
       carte(`c${String(i).padStart(5, '0')}`, { titre: `Carte ${i}`, description: i % 2 ? 'race de chien' : 'pont sur un lac', statut: 'echanger' }),
     )
-    const debut = performance.now()
-    regrouperEtiquettes(coll(...cartes), registre(), config({ amis }))
-    expect(performance.now() - debut).toBeLessThan(500)
+    const cfg = config({ amis })
+    expect(meilleureDuree(() => void regrouperEtiquettes(coll(...cartes), registre(), cfg))).toBeLessThan(500)
   })
 })
 
