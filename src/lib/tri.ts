@@ -2,6 +2,7 @@
 // Rien n'est exécuté sur le site : le joueur défausse, vend et échange lui-même.
 import { CONFIG_PRIX, type ConfigPrix } from '../config/prix';
 import type { Carte, Collection, Statut } from './collection';
+import { normaliser } from './collection';
 import { themesDeCarte } from './themes';
 
 export interface Ami {
@@ -27,6 +28,16 @@ export function prixDepart(valeur: number, config: ConfigPrix = CONFIG_PRIX): nu
   return atteintes.reduce((haute, tranche) => (tranche.valeurMin > haute.valeurMin ? tranche : haute)).prixDepart;
 }
 
+/**
+ * Amis dont au moins un thème figure parmi ceux de la carte (parents compris), dans l'ordre de la liste.
+ * Règle unique, partagée par le tri (premier ami) et par le lot (tous les amis).
+ */
+export function amisConcernes(themesCarte: readonly string[], amis: readonly Ami[]): Ami[] {
+  if (themesCarte.length === 0) return [];
+  const themes = new Set(themesCarte);
+  return amis.filter((ami) => ami.themes.some((theme) => themes.has(theme)));
+}
+
 export interface Proposition {
   statut: Statut;
   ami: string | null;
@@ -41,7 +52,7 @@ export function proposerTri(carte: Carte, preferences: Preferences, config: Conf
   const themes = themesDeCarte(carte);
   if (preferences.mesThemes.some((theme) => themes.includes(theme))) return garder;
 
-  const ami = preferences.amis.find((a) => a.themes.some((theme) => themes.includes(theme)));
+  const ami = amisConcernes(themes, preferences.amis)[0];
   if (ami) return { statut: 'echanger', ami: ami.nom, prixCible: null };
 
   // Sans valeur connue, on ne propose rien : une défausse ne se rattrape pas.
@@ -113,4 +124,24 @@ export function lirePreferences(brut: unknown): Preferences {
     Array.isArray(amis) && amis.every((a) => typeof a === 'object' && a !== null && typeof a.nom === 'string' && estListeTextes(a.themes));
   if (version !== 2 || !estListeTextes(mesThemes) || !amisValides) return preferencesParDefaut();
   return { version, mesThemes, amis };
+}
+
+const cleAmi = (nom: string): string => normaliser(nom.trim());
+
+/**
+ * Ajoute les amis et intérêts initiaux aux préférences : un ami absent est ajouté, un ami présent
+ * (même nom, casse et accents ignorés) reçoit les thèmes qui lui manquent. Rien n'est jamais retiré,
+ * l'entrée n'est pas modifiée, et l'opération est idempotente.
+ */
+export function fusionnerAmisInitiaux(preferences: Preferences, initiaux: readonly Ami[]): Preferences {
+  const amis: Ami[] = preferences.amis.map((a) => ({ nom: a.nom, themes: [...a.themes] }));
+  for (const initial of initiaux) {
+    const existant = amis.find((a) => cleAmi(a.nom) === cleAmi(initial.nom));
+    if (!existant) {
+      amis.push({ nom: initial.nom, themes: [...initial.themes] });
+      continue;
+    }
+    for (const theme of initial.themes) if (!existant.themes.includes(theme)) existant.themes.push(theme);
+  }
+  return { ...preferences, mesThemes: [...preferences.mesThemes], amis };
 }

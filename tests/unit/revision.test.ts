@@ -86,7 +86,7 @@ describe('reverifierAction (AC1)', () => {
     expect(reverifierAction(pose, coll(carte({ statut: 'garder' })), reg(), config)).toBe('passee')
     expect(reverifierAction(pose, coll(carte({ favori: true })), reg(), config)).toBe('passee')
     expect(reverifierAction(pose, coll(carte({ idsSite: ['ex-2'] })), reg(), config)).toBe('passee')
-    const ami: Action = { ...pose, nomEtiquette: 'Ami · Zoé' }
+    const ami: Action = { ...pose, nomEtiquette: '#À échanger Zoé' }
     expect(reverifierAction(ami, coll(carte({ statut: 'echanger', ami: 'Zoé' })), reg(), config)).toBe('ok')
     expect(reverifierAction(ami, coll(carte({ statut: 'echanger', ami: 'Léa' })), reg(), config)).toBe('passee')
   })

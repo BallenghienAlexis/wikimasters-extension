@@ -3,11 +3,13 @@ import type { EtatExecution, Registre } from './actions';
 import { validerJournal, type Journal } from './journal';
 import { registreVide, validerRegistre } from './registre';
 import { lireSynchro, noterPage, type Pagination, type Synchro } from './synchro';
-import { lirePreferences, proposerTri, type Preferences } from './tri';
+import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../config/amis';
+import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, proposerTri, type Preferences } from './tri';
 
 const CLE = 'collection';
 const CLE_SYNCHRO = 'synchro';
 const CLE_PREFERENCES = 'preferences';
+const CLE_AMIS_INITIAUX = 'amisInitiaux';
 const CLE_REGISTRE = 'registre';
 const CLE_JOURNAL = 'journal';
 const CLE_EXECUTION = 'execution';
@@ -21,6 +23,7 @@ export const CLES_STOCKAGE = {
   collection: CLE,
   synchro: CLE_SYNCHRO,
   preferences: CLE_PREFERENCES,
+  amisInitiaux: CLE_AMIS_INITIAUX,
   registre: CLE_REGISTRE,
   journal: CLE_JOURNAL,
   execution: CLE_EXECUTION,
@@ -122,9 +125,26 @@ export async function enregistrerCollection(collection: Collection): Promise<voi
   await chrome.storage.local.set({ [CLE]: collection });
 }
 
+/**
+ * Préférences stockées, avec les amis initiaux de `src/config/amis.ts` fusionnés une seule fois par version
+ * (drapeau `amisInitiaux`). Des préférences illisibles ne sont ni fusionnées ni écrasées. Si l'écriture
+ * échoue, les préférences fusionnées sont rendues quand même et le drapeau n'est pas posé.
+ */
 export async function chargerPreferences(): Promise<Preferences> {
-  const contenu = await chrome.storage.local.get(CLE_PREFERENCES);
-  return lirePreferences(contenu[CLE_PREFERENCES]);
+  const contenu = await chrome.storage.local.get([CLE_PREFERENCES, CLE_AMIS_INITIAUX]);
+  const brut = contenu[CLE_PREFERENCES];
+  const lues = lirePreferences(brut);
+  const illisible = brut !== undefined && JSON.stringify(lues) !== JSON.stringify(brut) && JSON.stringify(lues) === JSON.stringify(preferencesParDefaut());
+  if (illisible) return lues;
+  const version = contenu[CLE_AMIS_INITIAUX];
+  if (typeof version === 'number' && version >= VERSION_AMIS_INITIAUX) return lues;
+  const fusionnees = fusionnerAmisInitiaux(lues, AMIS_INITIAUX);
+  try {
+    await chrome.storage.local.set({ [CLE_PREFERENCES]: fusionnees, [CLE_AMIS_INITIAUX]: VERSION_AMIS_INITIAUX });
+  } catch {
+    /* le drapeau n'est pas posé : la fusion sera retentée au prochain chargement */
+  }
+  return fusionnees;
 }
 
 export async function enregistrerPreferences(preferences: Preferences): Promise<void> {
