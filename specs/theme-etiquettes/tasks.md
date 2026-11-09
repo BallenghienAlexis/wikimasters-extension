@@ -20,6 +20,10 @@ Garde-fous communs (tout dev les lit) :
 | T-108 | UI : « Étiquettes prévues » dans l’aperçu | ui | dev-ui | T-105, T-106, T-107 | SC-014, SC-015, SC-016, SC-019 | — |
 | T-109 | E2e et captures | tests | dev-test | T-108 | SC-014, SC-015, SC-017, SC-019, SC-020 | [P] |
 | T-110 | Documentation (AGENTS.md, notes synchro-complete) | docs | dev-core | T-108 | — | [P] |
+| T-901 | Mesure de performance sur la meilleure de trois exécutions (retouche de revue) | tests | dev-core | T-101 | SC-017 | — |
+| T-902 | Thèmes calculés une seule fois par carte, clés de noms mémorisées (retouche de revue) | logique | dev-core | T-104 | SC-017 | — |
+| T-903 | Étiquettes mémorisées par carte pour l’aperçu (retouche de revue) | logique | dev-core | T-106 | SC-017 | — |
+| T-904 | Retouches : titre de test, `readonly`, indicateur de disponibilité de l’aperçu, test de casse, noms fictifs | logique | dev-core | T-108 | SC-007, SC-014, SC-024 | — |
 
 Couverture : SC-001 à 006 (T-101) · 007 (T-103) · 008 à 011, 021, 022 (T-104) · 012 (T-105) · 013, 018 (T-102 ; 018 aussi T-106) · 014 (T-106, T-108, T-109) · 015 (T-108, T-109) · 016 (T-106, T-108) · 017 (T-101, T-104, T-106, T-109) · 019 (T-108, T-109) · 020 (T-101, T-109) · 023 (T-101) · 024 (T-107) · 025 (T-103, T-104).
 Contrôles : aucun fichier dans deux tâches d’une même vague ; graphe acyclique ; fichiers carrefour : `src/lib/lot.ts` (T-104 seul), `src/app/Synchronisation.tsx` (T-108 seul), `src/lib/stockage.ts` (T-107 seul), `src/lib/actions.ts` (T-104 seul).
@@ -269,3 +273,13 @@ Contrôles : aucun fichier dans deux tâches d’une même vague ; graphe acycli
   - *Contrats* : français, typographie française.
   - *Pièges* : ne pas inscrire de donnée réelle du compte ; ne pas toucher à `specs/synchro-complete/` (le remplacement de « Ami · … » y est consigné par `spec.refined.md`).
   - *Vérifier* : `npm run check`
+
+## T-901 à T-904 — Retouches de revue (faites)
+- **T-901** (#35), **T-902** (#36), **T-903** (#46) : performance (SC-017), mergées.
+- **T-904** (retouches des mineurs de revue) :
+  1. `tests/unit/lot.test.ts` : le titre « longueur inconnue (null) » dit désormais que seul le plafond du registre, 200, s’applique.
+  2. `src/lib/lot.ts` : `EtiquettesCarte` en `readonly string[]`, interface et `WeakMap` remontées au-dessus de la fonction.
+  3. `src/app/EtiquettesPrevues.tsx` : « (envoi pas encore possible) », « non disponible » et « une fois disponible » dépendent de la prop `disponible` (défaut : `false`, tests existants inchangés).
+  4. `tests/unit/tri.test.ts` : fusion d’un ami initial saisi en minuscules (« benji »).
+  5. `tests/unit/stockage.test.ts` : prénoms fictifs (Benji, Anna) par `vi.mock` de `src/config/amis.ts` ; les vrais prénoms restent dans le seul fichier de réglages (G2).
+- **Vérifier** : `npm run check && npm run build`
