@@ -7,7 +7,7 @@ Extension Chrome personnelle pour préparer le tri, l'échange et la vente d'une
 - Lire les cartes de chaque page Collection que vous ouvrez sur WikiMasters, et relever la moyenne du marché quand vous ouvrez « Mettre aux enchères ».
 - Déduire les thèmes de chaque carte, et gérer vos thèmes et ceux de vos amis à tout moment.
 - Proposer un tri : garder, échanger avec un ami, vendre, défausser.
-- Préparer les étiquettes de statut, de thème et d’échange (« #À échanger <nom> » pour vos amis) et en montrer l’aperçu. Elles ne sont pas envoyées au site tant que le contrat des étiquettes n’est pas relevé.
+- Préparer les étiquettes de statut, de thème et d'échange (« #À échanger <nom> » pour vos amis) et en montrer l'aperçu. Elles ne sont pas envoyées au site tant que le contrat des étiquettes n'est pas relevé.
 - Lister les ventes à lancer selon vos places libres (5 enchères au plus).
 - Afficher un repère avec votre décision sur les cartes du site.
 - Éditer chaque carte, filtrer, repérer les doublons, importer et exporter en CSV ou JSON.
