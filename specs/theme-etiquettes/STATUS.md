@@ -34,7 +34,7 @@ Hypothèses non bloquantes de `refine`, adoptées sans question.
 | T-901 | — | dev-core | — | — | #35 | — | verte | APPROVED | APPROVED | mergée |
 | T-902 | — | dev-core | — | — | #36 | — | verte | APPROVED | APPROVED | mergée |
 | T-903 | — | dev-core | — | — | #46 | — | verte | APPROVED | APPROVED | mergée |
-| T-904 | — | dev-core | feat/T-904-retouches | .worktrees/T-904-retouches | (à renseigner) | 0 | — | — | — | en-revue |
+| T-904 | — | dev-core | feat/T-904-retouches | .worktrees/T-904-retouches | #49 | 0 | — | — | — | en-revue |
 
 Statuts : à-faire · tests-écrits · en-revue · changements-demandés · mergée · escalade
 
