@@ -16,7 +16,7 @@ Garde-fous communs (tout dev les lit) :
 | T-104 | `lot.ts` : étiquettes d’échange et de thème, limites, retraits | logique | dev-core | T-101, T-102, T-103 | SC-008 à SC-011, SC-021, SC-022, SC-025 | [P] |
 | T-105 | `revision.ts` : revérification des étiquettes de thème et d’échange | logique | dev-core | T-104 | SC-012 | [P] |
 | T-106 | Regroupement d’aperçu, totaux et durée | logique | dev-core | T-104 | SC-014 (logique), SC-016, SC-017 | [P] |
-| T-107 | Amis initiaux (Benjamin, Anatole) | données | dev-core | T-103 | SC-024 | [P] |
+| T-107 | Amis initiaux : fusion automatique (Benjamin, Anatole) | données | dev-core | T-103 | SC-024 | [P] |
 | T-108 | UI : « Étiquettes prévues » dans l’aperçu | ui | dev-ui | T-105, T-106, T-107 | SC-014, SC-015, SC-016, SC-019 | — |
 | T-109 | E2e et captures | tests | dev-test | T-108 | SC-014, SC-015, SC-017, SC-019, SC-020 | [P] |
 | T-110 | Documentation (AGENTS.md, notes synchro-complete) | docs | dev-core | T-108 | — | [P] |
@@ -87,7 +87,8 @@ Contrôles : aucun fichier dans deux tâches d’une même vague ; graphe acycli
   1. `tri.ts` exporte `amisConcernes(themesCarte: readonly string[], amis: readonly Ami[]): Ami[]` : tous les amis, dans l’ordre de la liste, dont au moins un thème figure dans `themesCarte` (parents compris, car `themesDeCarte` les inclut).
   2. `proposerTri` utilise le premier ami renvoyé : comportement inchangé (SC-007 d, e).
   3. SC-007 (a) à (f) : `mesThemes: ['chien']` → `garder` ; ami Léa suivant `animaux` → carte « chien » `echanger` avec `ami: 'Léa'` ; `garder` l’emporte sur `echanger` ; premier ami en cas de deux ; favori → `garder` et `decidePar: 'moi'` jamais remplacé ; préférences `version: 2` relues à l’identique.
-  4. Avec un ami suivant `barrage`, une carte « barrage hydroélectrique » est `echanger` pour cet ami ; idem `tibet` et `ukraine` (SC-025, prénoms fictifs).
+  4. `tri.ts` exporte `fusionnerAmisInitiaux(preferences, initiaux)` (pure) : ajoute l’ami absent (nom comparé sans casse ni accents), ajoute à l’ami présent les thèmes manquants, ne retire rien, ne mute pas l’entrée, est idempotente (SC-024).
+  5. Avec un ami suivant `barrage`, une carte « barrage hydroélectrique » est `echanger` pour cet ami ; idem `tibet` et `ukraine` (SC-025, prénoms fictifs).
 - **Tests attendus**
   - `tests/unit/tri.test.ts` (extension) : AC1 à AC4.
 - **Brief de contexte**
@@ -173,7 +174,7 @@ Contrôles : aucun fichier dans deux tâches d’une même vague ; graphe acycli
   - *Pièges* : un exemplaire non relié n’est pas compté ; une carte `idsSite` en conflit est écartée comme dans le lot.
   - *Vérifier* : `npx vitest run tests/unit/apercu-etiquettes.test.ts && npm run check`
 
-## T-107 — Amis initiaux (Benjamin, Anatole)
+## T-107 — Amis initiaux : fusion automatique (Benjamin, Anatole)
 - **Couche** : données · **Agent** : dev-core
 - **Dépend de** : T-103 · **Parallélisable** : [P]
 - **SC couverts** : SC-024 · **Règles design** : —
@@ -182,19 +183,21 @@ Contrôles : aucun fichier dans deux tâches d’une même vague ; graphe acycli
   - `src/lib/stockage.ts`
   - `tests/unit/stockage.test.ts`
 - **Critères d’acceptation**
-  1. `src/config/amis.ts` exporte `AMIS_INITIAUX: Ami[]` : Benjamin (`barrage`, `tibet`), Anatole (`ukraine`).
-  2. `chargerPreferences()` renvoie `{ version: 2, mesThemes: [], amis: AMIS_INITIAUX }` (copie) quand aucune valeur n’est stockée sous la clé `preferences`.
-  3. Avec des préférences stockées (même vides), le résultat est identique à celui d’avant (aucune fusion) ; des préférences illisibles donnent les valeurs par défaut vides comme aujourd’hui.
-  4. `AMIS_INITIAUX` n’est importé que par `stockage.ts` (test de confinement par lecture des sources).
+  1. `src/config/amis.ts` exporte `AMIS_INITIAUX: Ami[]` (Benjamin : `barrage`, `tibet` ; Anatole : `ukraine`) et `VERSION_AMIS_INITIAUX = 1`.
+  2. `chargerPreferences()` : si le drapeau `amisInitiaux` du stockage est absent ou inférieur à `VERSION_AMIS_INITIAUX`, applique `fusionnerAmisInitiaux` aux préférences lues (ou aux valeurs par défaut si aucune), écrit **en une seule opération** les préférences fusionnées et le drapeau, puis les renvoie.
+  3. Drapeau à jour : les préférences sont renvoyées telles que stockées, sans fusion (un thème décoché n’est pas rajouté).
+  4. Préférences illisibles : valeurs par défaut en mémoire, rien n’est écrit ni écrasé.
+  5. Un échec d’écriture renvoie quand même les préférences fusionnées en mémoire et ne pose pas le drapeau.
+  6. `AMIS_INITIAUX` n’est importé que par `stockage.ts`.
 - **Tests attendus**
-  - `tests/unit/stockage.test.ts` (extension, `chrome.storage` simulé) : AC1 à AC4.
+  - `tests/unit/stockage.test.ts` (extension, `chrome.storage` simulé) : AC1 à AC6 avec préférences vides, existantes avec Benjamin partiel, avec un ami « benjamin » en minuscules, et avec un thème décoché après fusion.
 - **Brief de contexte**
-  - *Pourquoi* : Alexis veut que Benjamin aime les barrages et le Tibet et Anatole l’Ukraine, pour les échanges (message du 2026-11-09).
-  - *État actuel* : `stockage.ts` `chargerPreferences` (l.125-128) appelle `lirePreferences(contenu[CLE_PREFERENCES])`, qui renvoie `preferencesParDefaut()` si rien ou illisible.
-  - *À faire* : seul le cas « clé absente » (`undefined`) est amorcé ; ne pas confondre avec « illisible » (H17). Ne pas modifier `preferencesParDefaut` (les tests de tri l’utilisent).
-  - *Contrats* : `chrome.storage` confiné à `stockage.ts` ; fichier de configuration à renseigner par Alexis, comme `src/config/prix.ts`.
-  - *Pièges* : renvoyer une copie profonde pour qu’un appelant ne mute pas la constante.
-  - *Vérifier* : `npx vitest run tests/unit/stockage.test.ts && npm run check`
+  - *Pourquoi* : Alexis veut que Benjamin aime les barrages et le Tibet et Anatole l’Ukraine, ajoutés automatiquement (2026-11-09).
+  - *État actuel* : `stockage.ts` `chargerPreferences` (l.125-128) appelle `lirePreferences` ; `enregistrerPreferences` écrit sous la clé `preferences`.
+  - *À faire* : clé séparée pour le drapeau (les `Preferences` `version: 2` ne changent pas) ; utiliser `fusionnerAmisInitiaux` de T-103. Ne pas modifier `preferencesParDefaut`.
+  - *Contrats* : `chrome.storage` confiné à `stockage.ts` ; fichier de réglages d’Alexis comme `src/config/prix.ts`.
+  - *Pièges* : plusieurs appels simultanés à `chargerPreferences` (App et Synchronisation) : la fusion est idempotente, pas de double ami ; ne jamais écraser une donnée illisible.
+  - *Vérifier* : `npx vitest run tests/unit/stockage.test.ts tests/unit/tri.test.ts && npm run check`
 
 ## T-108 — UI : « Étiquettes prévues » dans l’aperçu
 - **Couche** : ui · **Agent** : dev-ui

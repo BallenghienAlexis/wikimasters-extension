@@ -15,7 +15,7 @@ Hypothèses non bloquantes de `refine`, adoptées sans question.
 - 2026-11-08 — Décision d’Alexis (question posée en session) : les thèmes précis deviennent AUSSI des étiquettes sur le site, en plus des étiquettes Statut et Ami.
 
 - 2026-11-09 — Demande d’Alexis : Benjamin aime « barrages » et « Tibet », Anatole aime « Ukraine ». Thèmes `tibet` et `ukraine` ajoutés (60 au total), `barrage` élargi au pluriel ; SC-023 à SC-025.
-- 2026-11-09 — H17 : amis initiaux dans `src/config/amis.ts`, inscrits aux préférences seulement au premier usage ; des préférences déjà stockées ne sont pas modifiées (Alexis coche les thèmes dans l’assistant).
+- 2026-11-09 — H17 (décision d’Alexis) : amis initiaux dans `src/config/amis.ts`, fusionnés automatiquement une seule fois dans les préférences, y compris déjà stockées, sans rien retirer.
 - 2026-11-09 — H18 à H20 : voir `spec.refined.md`. Les crochets de « #À échanger [nom ami] » sont lus comme un emplacement (H14 validée au gate).
 
 ## Tâches

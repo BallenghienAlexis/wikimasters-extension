@@ -13,7 +13,7 @@ Tout se joue en logique pure et dans l’aperçu : **aucune requête, aucun type
 4. **Limites du site** (SC-010) : appliquées dans `exemplairesAttendus` (par exemplaire) et dans `construireLot` (par compte, H6). Une étiquette écartée est rapportée dans un nouveau champ `LotConstruit.nonPosees` (nom, carte, raison). Raisons existantes réutilisées (`nom-trop-long`, `homonyme`) et une nouvelle `au-dela-limite`.
 5. **Registre v2** (`src/lib/registre.ts`) : `VERSION_REGISTRE = 2`, plafond de 256 couples (forme), migration v1 → v2 sans perte, idempotente ; `poserCouple` ne refuse plus le 3ᵉ couple.
 6. **Aperçu** : fonction pure `regrouperEtiquettes(lot, collection, registre, config)` (`src/lib/apercuEtiquettes.ts`) → lignes, totaux, volumes, non posées ; composant `EtiquettesPrevues.tsx` ; `Synchronisation.tsx` l’insère et passe les amis au lot (`CONFIG_LOT` devient dérivé des préférences). `App.tsx` transmet `preferences`.
-7. **Amis initiaux** (`src/config/amis.ts`, `stockage.ts`) : Benjamin (`barrage`, `tibet`), Anatole (`ukraine`), inscrits seulement quand aucune préférence n’est stockée (SC-024).
+7. **Amis initiaux** (`src/config/amis.ts`, `stockage.ts`) : Benjamin (`barrage`, `tibet`), Anatole (`ukraine`), fusionnés automatiquement une seule fois dans les préférences, même déjà stockées (SC-024, décision d’Alexis du 2026-11-09). Fonction pure `fusionnerAmisInitiaux` dans `tri.ts` (T-103), drapeau `amisInitiaux` séparé dans `stockage.ts` (T-107).
 
 ### Flux de données
 ```mermaid
@@ -32,7 +32,7 @@ flowchart LR
 |---|---|---|
 | `src/lib/themes.ts` | +60 thèmes et motifs | T-101 |
 | `src/lib/registre.ts` | v2, 256 couples, migration | T-102 |
-| `src/lib/tri.ts` | `amisConcernes`, `proposerTri` l’utilise | T-103 |
+| `src/lib/tri.ts` | `amisConcernes`, `fusionnerAmisInitiaux`, `proposerTri` utilise la première | T-103 |
 | `src/lib/lot.ts`, `src/lib/actions.ts` | étiquettes attendues, limites, non posées, raison `au-dela-limite` | T-104 |
 | `src/lib/revision.ts` | revérification avec `Config` | T-105 |
 | `src/lib/apercuEtiquettes.ts` (créé) | regroupement, totaux, durée | T-106 |
@@ -46,7 +46,7 @@ flowchart LR
 - Poser seulement le thème le plus précis : va contre la réponse 1 d’Alexis (spec § Volume).
 - Garder aussi « Ami · <nom> » : une pose de plus par exemplaire sans information (spec § 0 B).
 - Appeler `proposerTri` depuis le lot : interdit (le statut stocké décide, SC-005 de synchro-complete).
-- Fusionner les amis initiaux dans des préférences déjà stockées : écraserait des choix d’Alexis (H17).
+- Réappliquer les amis initiaux à chaque chargement : rajouterait un thème décoché (fusion une seule fois, drapeau).
 - Registre compact (SC-018) : à n’envisager que si le test de quota dépasse 5 Mo (risque R4).
 
 ### Contraintes
@@ -91,7 +91,7 @@ Contextes inchangés (page `collection.html` pour lot et aperçu ; pas de servic
 | L4 | Retraits massifs inattendus après changement de taxonomie ou d’amis (H11) | moyenne | moyen | L’aperçu montre le volume avant « Lancer » ; seules les étiquettes du registre sont retirées |
 | L4 | Perf. 5 000 cartes × 20 amis | faible | moyen | Regex compilées au chargement ; `Set` pour les thèmes d’amis ; SC-017 |
 | L6/L8 | Aperçu lent sur de gros lots | moyenne | moyen | Agrégation en un passage ; 100 lignes affichées au plus |
-| L7 | Préférences déjà stockées : Benjamin et Anatole n’ont pas les nouveaux intérêts | élevée | faible | Documenté (H17) ; thèmes visibles dans l’assistant |
+| L7 | La fusion écrase ou duplique des choix d’Alexis | faible | moyen | Union sans retrait, noms comparés sans casse ni accents, drapeau unique, tests sur préférences existantes |
 | L2/L4 | Quota de 5 Mo du registre dépassé (SC-018) | faible | moyen | Test de taille ; forme compacte proposée seulement si dépassé |
 
 ## 4. Ordre d’exécution
