@@ -15,6 +15,7 @@
 - G1 — La collection locale se met à jour **sans que le joueur ouvre ni tourne une page `/collection`**.
 - G2 — Une synchro se déclenche seule : au chargement d'une page du site, au démarrage du navigateur (dès qu'un onglet WikiMasters s'ouvre) et périodiquement tant qu'un onglet du site est ouvert.
 - G3 — Elle est **incrémentale** : une page n'est relue que si le total ou son contenu a changé ; une nouvelle carte ne coûte pas un parcours complet.
+- G5 — Même principe pour **toute** donnée WikiMasters → extension : le **prix du marché** (valeur marchande de chaque carte, aujourd'hui relevée seulement quand le joueur ouvre la fenêtre « Mettre aux enchères » ou saisie à la main) et les **étiquettes** posées sur le site (aujourd'hui non relues), sans intervention du joueur.
 - G4 — Elle reste prudente : cadence fixe, arrêt immédiat sur 401/403/429, journal, interrupteur visible dans l'interface.
 
 ## 2. Options étudiées
@@ -36,6 +37,10 @@
 - Fusion dans la collection locale par le même chemin que la lecture visuelle (`fusionnerDansStockage`), sans jamais écraser une décision `decidePar: 'moi'`.
 - Interrupteur « Synchronisation automatique » (désactivée par défaut), état et dernière synchro dans l'interface, entrées au journal.
 
+- **Prix du marché** : relevé automatique de la valeur marchande, par carte, pour alimenter l'assistant de tri et la file de vente. Source à relever (SC-011) : l'API marketplace (`/api/marketplace/...`) ou le détail d'une carte. Seulement pour les cartes dont la valeur est inconnue ou plus ancienne que N jours, à la même cadence fixe ; jamais en rafale.
+- **Étiquettes** : relecture des étiquettes du site (`tags` et `user_card_tags`, `GET /rest/v1/...`) pour que l'extension reflète ce qui est réellement posé (Statut · …, Ami · …, Thème · …) et détecte les écarts, y compris après une modification faite à la main sur le site. Source et filtres à relever (SC-012).
+- Les trois synchros partagent un seul ordonnanceur : collection d'abord, puis étiquettes, puis prix du marché ; une seule requête en vol, une seule file, un budget de requêtes par fenêtre commun.
+
 **Exclu**
 - Toute écriture sur le site (reste dans `synchro-complete`).
 - Service worker qui appelle le site ; `host_permissions` ; lecture de cookies.
@@ -54,6 +59,10 @@
 | SC-007 | Option désactivée (défaut) : aucune requête n'est émise. | e2e |
 | SC-008 | Une décision `decidePar: 'moi'` n'est jamais modifiée par la synchro. | unitaire |
 | SC-009 | Le jeton n'apparaît ni dans le stockage, ni dans le journal, ni dans l'interface ; seul `jeton.ts` le lit. | unitaire existant étendu |
+| SC-011 | **Relevé préalable prix** : endpoint, forme de la réponse et clé de la valeur marchande par carte, écrits dans `contrat-api.md` d'après les captures d'Alexis. | manuel |
+| SC-012 | **Relevé préalable étiquettes** : `GET` de `tags` et de `user_card_tags` (hôte, filtres, pagination, lien avec `user_card_id`), idem. | manuel |
+| SC-013 | Option activée : une valeur marchande inconnue ou périmée est relevée seule ; une valeur saisie à la main n'est jamais écrasée sans être signalée ; le budget commun de requêtes (SC-005) vaut pour les trois synchros ensemble. | unitaire |
+| SC-014 | Une étiquette modifiée ou retirée à la main sur le site est détectée à la synchro suivante et affichée comme écart dans l'interface ; la synchro ne corrige rien sur le site. | unitaire + e2e |
 | SC-010 | Réponse de forme inattendue : la carte est ignorée, la synchro continue, le journal le note (comme `lecteur.ts`). | unitaire |
 
 ## 5. Constraints
@@ -65,9 +74,11 @@
 
 ## 6. Non-Goals
 - Synchroniser l'état des enchères ou les amis.
+- Corriger automatiquement les écarts d'étiquettes (c'est une écriture, donc `synchro-complete`).
 - Fonctionner navigateur fermé ou sans aucun onglet WikiMasters.
 
 ## Hypothèses
 - H1 — Un onglet WikiMasters est presque toujours ouvert quand Alexis joue ; l'option A suffit pour le besoin (« à chaque redémarrage du navigateur » = dès que le site est rouvert).
 - H2 — La lecture API réutilise le mode d'authentification déjà retenu pour `synchro-complete` (jeton en mémoire, option B du 2026-11-07).
+- H4 — Les prix et les étiquettes passent par le même mécanisme (option A, onglet ouvert) ; leurs endpoints ne sont pas encore relevés, donc rien n'est deviné.
 - H3 — Périodicité par défaut : 30 min, minimum 10 min.
