@@ -179,3 +179,12 @@ describe('EtiquettesPrevues : rendu sûr et responsive (AC6)', () => {
     expect(html).toMatch(/<table[^>]*class="[^"]*hidden md:table|<ul[^>]*md:hidden/)
   })
 })
+
+describe('aperçu et lecture des préférences (revue T-108)', () => {
+  it('App attend la lecture des préférences avant de proposer l’aperçu', async () => {
+    const { readFileSync } = await import('node:fs')
+    const src = readFileSync('src/app/App.tsx', 'utf8')
+    expect(src).toContain('chargement={!stockageSynchroLu || !preferencesLues}')
+    expect(src).toMatch(/chargerPreferences\(\)\s*\.then\(setPreferences\)\s*\.finally\(\(\) => setPreferencesLues\(true\)\)/)
+  })
+})
