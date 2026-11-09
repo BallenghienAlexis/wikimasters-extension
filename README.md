@@ -17,9 +17,9 @@ Extension Chrome personnelle pour préparer le tri, l'échange et la vente d'une
 
 ## Synchronisation automatique
 
-Au lieu de tourner les pages une à une, l’extension peut lire votre collection, vos étiquettes et le prix du marché de vos cartes par l’API interne du site (requêtes `GET` en lecture seule). **Elle est désactivée par défaut.** Le `robots.txt` du site interdit `/api/` : le risque de bannissement est réel, et il est assumé (décision du 2026-11-09, détail dans [AGENTS.md](AGENTS.md)).
+Tournez les pages vous-même, ou laissez la synchro lire pour vous : l’extension peut lire votre collection, vos étiquettes et le prix du marché de vos cartes par l’API interne du site (requêtes `GET` en lecture seule). **Elle est désactivée par défaut.** Le `robots.txt` du site interdit `/api/` : le risque de bannissement est réel, et il est assumé (décision du 2026-11-09, détail dans [AGENTS.md](AGENTS.md)).
 
-Pour l'activer :
+Pour l’activer :
 
 1. Ouvrez la page de gestion (clic sur l’icône) et, dans la section « Synchronisation automatique », mettez l’interrupteur sur « Activée » (Espace au clavier).
 2. Gardez un onglet WikiMasters ouvert, connecté à votre compte : la synchro part au chargement d’une page du site, puis toutes les 30 min tant que l’onglet est visible.

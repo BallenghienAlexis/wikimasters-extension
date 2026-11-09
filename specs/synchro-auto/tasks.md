@@ -94,3 +94,16 @@ Vagues : V1 : T-201 [P], T-202 [P] · V2 : T-203 [P], T-204 [P] · V3 : T-205 ·
 - **Couche** : docs · **Dépend de** : T-207
 - **Fichiers concernés** : `AGENTS.md`, `README.md`
 - **Critères d'acceptation** : le cadre WikiMasters décrit la lecture automatique (décision d'Alexis du 2026-11-09, risque rappelé, cookies de même origine, jeton non lu) ; l'architecture cite les nouveaux fichiers.
+
+## T-901 — Retouches
+- **Couche** : logique · **Dépend de** : T-208 · **SC** : SC-007
+- **Fichiers concernés** : `AGENTS.md`, `README.md`, `specs/synchro-auto/releve-api.md`, `specs/synchro-auto/STATUS.md`, `tests/e2e/synchro-auto.spec.ts`, `src/lib/lecteur.ts`, `src/lib/lectureApi.ts`, `src/lib/ordonnanceur.ts`, `src/content/synchroAuto.ts`, `tests/unit/ordonnanceur.test.ts`
+- **Critères d'acceptation**
+  1. `AGENTS.md` : « aucune requête » vaut hors synchronisation automatique (désactivée par défaut).
+  2. `README.md` : apostrophes ’ uniformes dans la section Synchronisation automatique ; mention « ou laissez la synchro lire pour vous ».
+  3. `releve-api.md` : `page` commence à 0 (50 éléments par page, page hors limites → 200 avec `collection: []`).
+  4. E2e « désactivé » : après l'attente, activer la préférence et vérifier que les requêtes partent.
+  5. `RARETES` exporté depuis `lecteur.ts` et réutilisé dans `lectureApi.ts`.
+  6. Plafond de pages (400) quand `total` est inconnu, avec test.
+  7. `catch` silencieux de `synchroAuto.ts` : message générique sans contenu de réponse, ou décliné avec raison.
+- **Vérifier** : `npm run check && npm run build && npx playwright test tests/e2e/synchro-auto.spec.ts --trace off`.

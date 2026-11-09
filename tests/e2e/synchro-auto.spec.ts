@@ -110,6 +110,12 @@ test.describe('synchronisation automatique sur site fictif', () => {
     const site = await ouvrirSite(context, { [CHEMIN_STATS]: { corps: STATS } });
     await site.page.waitForTimeout(PLUS_QU_UNE_CADENCE_MS);
     expect(site.api).toEqual([]);
+
+    // Contre-épreuve : « désactivé » n'est pas « jamais câblé ». Une fois la préférence activée, les requêtes partent.
+    await poser(serviceWorker, { syncAuto: true });
+    await site.page.reload();
+    await expect.poll(() => site.api.length, { timeout: 15_000, intervals: [250] }).toBeGreaterThan(0);
+    expect(site.api[0]?.chemin).toBe(CHEMIN_STATS);
   });
 
   test('activée sans synchro récente : stats puis pages jusqu’à la fin, collection mise à jour sans interaction (SC-002)', async ({ context, serviceWorker }) => {

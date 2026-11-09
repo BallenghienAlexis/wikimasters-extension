@@ -213,7 +213,9 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
       }
       return resultat;
     } catch {
-      // Stockage illisible ou indisponible (extension rechargée) : aucune requête, aucun détail ne sort.
+      // Stockage illisible ou indisponible (extension rechargée) : message générique, jamais le contenu
+      // d'une réponse ni le détail de l'erreur.
+      deps.journal?.('Synchronisation interrompue : stockage indisponible.');
       return null;
     } finally {
       enCours = false;

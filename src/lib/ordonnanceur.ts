@@ -28,6 +28,8 @@ export const MAX_PRIX_PAR_EXECUTION = 100;
 const PREMIERE_PAGE = 0;
 const CARTES_PAR_PAGE = 50;
 const PAGES_DE_MARGE = 2;
+/** Plafond de pages quand `total` est inconnu (stats illisibles) : 400 pages = 20 000 exemplaires. */
+export const MAX_PAGES_SANS_TOTAL = 400;
 
 export interface ReponseApi {
   statut: number;
@@ -307,10 +309,10 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   async function lirePages(total: number | null): Promise<boolean> {
     let ok = true;
     // Plafond : pages attendues + marge ; au-delà, arrêt propre (lecture jugée incomplète).
-    const maxPages = Math.ceil((total ?? 0) / CARTES_PAR_PAGE) + PAGES_DE_MARGE;
+    const maxPages = total === null ? MAX_PAGES_SANS_TOTAL : Math.ceil(total / CARTES_PAR_PAGE) + PAGES_DE_MARGE;
     for (let page = PREMIERE_PAGE; ; page++) {
-      if (total !== null && page - PREMIERE_PAGE >= maxPages) {
-        journal(`Arrêt de la lecture : plus de ${maxPages} pages pour ${total} exemplaires.`);
+      if (page - PREMIERE_PAGE >= maxPages) {
+        journal(total === null ? `Arrêt de la lecture : plus de ${maxPages} pages (total inconnu).` : `Arrêt de la lecture : plus de ${maxPages} pages pour ${total} exemplaires.`);
         return false;
       }
       const r = await requete(cheminPage(page));

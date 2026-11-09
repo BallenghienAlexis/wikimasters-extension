@@ -3,6 +3,7 @@ import { FENETRE_MS, INTERVALLE_MS, MAX_PAR_FENETRE, type Horloge } from '../../
 import type { Carte, Collection } from '../../src/lib/collection';
 import { VERSION_SCHEMA } from '../../src/lib/collection';
 import {
+  MAX_PAGES_SANS_TOTAL,
   PAUSE_APRES_ARRET_MS,
   ancienneteMaxPrixMs,
   etatInitial,
@@ -238,6 +239,21 @@ describe('ordonnanceur — pages : départ à 0 et plafond', () => {
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });
     expect(b.departs.filter((d) => d.chemin.includes('page=')).length).toBe(4);
     expect(r.issue).toBe('termine');
+    expect(r.complete).toBe(false);
+    expect(r.etat.derniereComplete).toBeNull();
+  });
+});
+
+describe('ordonnanceur — plafond sans total', () => {
+  it('s\'arrête à MAX_PAGES_SANS_TOTAL pages si les stats sont illisibles et que le site ne finit jamais', async () => {
+    const b = banc(
+      (chemin) => (chemin.includes('/stats') ? { statut: 200, json: { forme: 'inattendue' } } : { statut: 200, json: { collection: [exemplaire(1)] } }),
+      collectionDe([]),
+      etatInitial(),
+      { maxPrix: 0 },
+    );
+    const r = await synchroniser(b.deps);
+    expect(b.departs.filter((d) => d.chemin.includes('page=')).length).toBe(MAX_PAGES_SANS_TOTAL);
     expect(r.complete).toBe(false);
     expect(r.etat.derniereComplete).toBeNull();
   });
