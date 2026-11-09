@@ -119,6 +119,13 @@ function etiquettesEchange(carte: Carte, themes: readonly string[], amis: readon
   return noms.map((n) => `${PREFIXE_ECHANGE}${n}`)
 }
 
+interface EtiquettesCarte {
+  retenues: readonly string[]
+  ecartees: readonly string[]
+}
+
+const MEMO_ETIQUETTES = new WeakMap<Carte, { amis: readonly Ami[] | undefined; limite: number | null | undefined; resultat: EtiquettesCarte }>()
+
 /**
  * Étiquettes d’une carte pour chaque exemplaire relié, dans l’ordre de priorité de H5 :
  * Statut, étiquettes d’échange (carte `echanger`), puis thèmes. `ecartees` : thèmes au-delà de la
@@ -136,13 +143,6 @@ export function etiquettesDeCarte(carte: Carte, config?: Pick<Config, 'amis' | '
   MEMO_ETIQUETTES.set(carte, { amis, limite, resultat })
   return resultat
 }
-
-interface EtiquettesCarte {
-  retenues: string[]
-  ecartees: string[]
-}
-
-const MEMO_ETIQUETTES = new WeakMap<Carte, { amis: readonly Ami[] | undefined; limite: number | null | undefined; resultat: EtiquettesCarte }>()
 
 function calculerEtiquettes(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire'>): EtiquettesCarte {
   if (carte.favori || !STATUTS_ETIQUETES.has(carte.statut) || !carte.idsSite) return { retenues: [], ecartees: [] }
@@ -181,7 +181,7 @@ export function exemplairesAttendus(carte: Carte, config?: Pick<Config, 'amis' |
  */
 function nomsAuDelaDeLaLimite(
   cartes: readonly Carte[],
-  etiquettes: ReadonlyMap<string, { retenues: string[] }>,
+  etiquettes: ReadonlyMap<string, { retenues: readonly string[] }>,
   registre: Registre,
   limiteNoms: number | null | undefined,
 ): Set<string> {
@@ -343,7 +343,7 @@ export function construireLot(
     let tropLong = false
     let homonyme = false
     const { retenues, ecartees: ecarteesCarte } = parCarte.get(c.id) ?? { retenues: [], ecartees: [] }
-    const attendus: ExemplaireAttendu[] = retenues.length === 0 ? [] : c.idsSite.map((idExemplaire) => ({ idExemplaire, etiquettes: retenues }))
+    const attendus: Array<{ idExemplaire: string; etiquettes: readonly string[] }> = retenues.length === 0 ? [] : c.idsSite.map((idExemplaire) => ({ idExemplaire, etiquettes: retenues }))
     const dejaSignalees = new Set<string>()
     const nonPoseeCarte = (nomEtiquette: string, raison: RaisonNonPosee): void => {
       const cle = `${nomEtiquette}\u0000${raison}`

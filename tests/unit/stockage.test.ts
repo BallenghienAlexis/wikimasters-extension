@@ -3,7 +3,17 @@ import type { EtatExecution, Registre } from '../../src/lib/actions';
 import { collectionVide, type Carte } from '../../src/lib/collection';
 import { versCsv, versJson } from '../../src/lib/exports';
 import { ouvrirEntree, type Journal } from '../../src/lib/journal';
+import { DEFINITIONS_THEMES } from '../../src/lib/themes';
 import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../../src/config/amis';
+
+// Noms fictifs : le test ne dépend pas des vrais amis du fichier de réglages.
+vi.mock('../../src/config/amis', () => ({
+  VERSION_AMIS_INITIAUX: 1,
+  AMIS_INITIAUX: [
+    { nom: 'Benji', themes: ['barrage', 'tibet'] },
+    { nom: 'Anna', themes: ['ukraine'] },
+  ],
+}));
 import { poserCouple, enregistrerEtiquette, registreVide } from '../../src/lib/registre';
 import {
   CLES_STOCKAGE,
@@ -313,10 +323,13 @@ describe('signal de synchro', () => {
 describe('amis initiaux (SC-024)', () => {
   const lire = async () => (await chargerPreferences()).amis;
 
-  it('AC1 : le fichier de réglages porte Benjamin et Anatole', () => {
-    expect(AMIS_INITIAUX.find((a) => a.nom === 'Benjamin')?.themes).toEqual(['barrage', 'tibet']);
-    expect(AMIS_INITIAUX.find((a) => a.nom === 'Anatole')?.themes).toEqual(['ukraine']);
-    expect(VERSION_AMIS_INITIAUX).toBe(1);
+  it('AC1 : le fichier de réglages porte les thèmes barrage, tibet et ukraine, tous connus', async () => {
+    const reel = await vi.importActual<typeof import('../../src/config/amis')>('../../src/config/amis');
+    const themes = reel.AMIS_INITIAUX.flatMap((a) => a.themes);
+    for (const t of ['barrage', 'tibet', 'ukraine']) expect(themes).toContain(t);
+    const connus = new Set(DEFINITIONS_THEMES.map((d) => d.id));
+    for (const t of themes) expect(connus.has(t)).toBe(true);
+    expect(reel.VERSION_AMIS_INITIAUX).toBe(1);
   });
 
   it('AC2 : sans préférence stockée, les amis initiaux sont inscrits avec le drapeau, en une écriture', async () => {
@@ -328,15 +341,15 @@ describe('amis initiaux (SC-024)', () => {
     expect(faux.donnees.get('preferences')).toEqual(p);
   });
 
-  it('AC2 : avec des préférences déjà stockées, Benjamin et Anatole sont ajoutés sans rien retirer', async () => {
-    await enregistrerPreferences({ version: 2, mesThemes: ['chien'], amis: [{ nom: 'Benjamin', themes: ['pont'] }, { nom: 'Léa', themes: ['lac'] }] });
+  it('AC2 : avec des préférences déjà stockées, Benji et Anna sont ajoutés sans rien retirer', async () => {
+    await enregistrerPreferences({ version: 2, mesThemes: ['chien'], amis: [{ nom: 'Benji', themes: ['pont'] }, { nom: 'Léa', themes: ['lac'] }] });
     faux.set.mockClear();
     const p = await chargerPreferences();
     expect(p.mesThemes).toEqual(['chien']);
     expect(p.amis).toEqual([
-      { nom: 'Benjamin', themes: ['pont', 'barrage', 'tibet'] },
+      { nom: 'Benji', themes: ['pont', 'barrage', 'tibet'] },
       { nom: 'Léa', themes: ['lac'] },
-      { nom: 'Anatole', themes: ['ukraine'] },
+      { nom: 'Anna', themes: ['ukraine'] },
     ]);
     expect(faux.set).toHaveBeenCalledTimes(1);
   });
@@ -344,17 +357,17 @@ describe('amis initiaux (SC-024)', () => {
   it('AC3 : une fois le drapeau posé, un thème décoché n’est pas rajouté', async () => {
     await chargerPreferences();
     const apres = (await chargerPreferences());
-    await enregistrerPreferences({ ...apres, amis: apres.amis.map((a) => (a.nom === 'Benjamin' ? { ...a, themes: ['barrage'] } : a)) });
+    await enregistrerPreferences({ ...apres, amis: apres.amis.map((a) => (a.nom === 'Benji' ? { ...a, themes: ['barrage'] } : a)) });
     faux.set.mockClear();
     const p = await chargerPreferences();
-    expect(p.amis.find((a) => a.nom === 'Benjamin')?.themes).toEqual(['barrage']);
+    expect(p.amis.find((a) => a.nom === 'Benji')?.themes).toEqual(['barrage']);
     expect(faux.set).not.toHaveBeenCalled();
   });
 
   it('AC3 : un drapeau périmé relance la fusion', async () => {
     faux.donnees.set('preferences', { version: 2, mesThemes: [], amis: [] });
     faux.donnees.set('amisInitiaux', 0);
-    expect((await lire()).map((a) => a.nom)).toEqual(['Benjamin', 'Anatole']);
+    expect((await lire()).map((a) => a.nom)).toEqual(['Benji', 'Anna']);
   });
 
   it('AC4 : des préférences illisibles ne sont ni écrasées ni fusionnées', async () => {

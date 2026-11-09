@@ -279,6 +279,13 @@ describe('fusionnerAmisInitiaux (SC-024)', () => {
     expect(r.amis.find((a) => a.nom.trim() === 'anna')?.themes).toEqual(['ukraine']);
   });
 
+  it('fusionne un ami initial saisi en minuscules sans le dupliquer', () => {
+    const r = fusionnerAmisInitiaux(prefs({ amis: [{ nom: 'benji', themes: ['pont'] }] }), initiaux)
+    expect(r.amis.filter((a) => a.nom.trim().toLowerCase() === 'benji')).toHaveLength(1)
+    expect(r.amis.find((a) => a.nom === 'benji')?.themes).toEqual(['pont', 'barrage', 'tibet'])
+    expect(r.amis.map((a) => a.nom)).toEqual(['benji', 'Anna'])
+  })
+
   it('conserve mesThemes, est idempotente et ne mute pas l’entrée', () => {
     const entree = prefs({ mesThemes: ['chien'], amis: [{ nom: 'Benji', themes: ['pont'] }] });
     const copie = JSON.stringify(entree);

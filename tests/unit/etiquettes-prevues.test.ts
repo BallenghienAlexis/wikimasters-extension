@@ -57,6 +57,18 @@ describe('EtiquettesPrevues : lignes (AC1)', () => {
     expect(html).toContain('>non disponible<')
   })
 
+  it('envoi disponible : plus de mention « pas encore possible » ni « non disponible »', () => {
+    const { c, apercu } = cas()
+    const html = renderToStaticMarkup(
+      React.createElement(EtiquettesPrevues, { apercu, cartes: new Map(c.cartes.map((x) => [x.id, x])), disponible: true }),
+    )
+    expect(html).toContain('Étiquettes prévues')
+    expect(html).not.toContain('pas encore possible')
+    expect(html).not.toContain('non disponible')
+    expect(html).not.toContain('une fois disponible')
+    expect(html).toContain(`durée estimée${NB}: `)
+  })
+
   it('tableau avec en-têtes de colonne et libellés visibles en liste empilée', () => {
     const { c, apercu } = cas()
     const html = rendre(c, apercu)
