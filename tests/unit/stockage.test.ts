@@ -41,6 +41,10 @@ import {
   enregistrerEtatSynchro,
   enregistrerArretSynchro,
   ecouterArretSynchro,
+  chargerStatutSynchro,
+  enregistrerStatutSynchro,
+  ecouterSynchroAuto,
+  type StatutSynchro,
 } from '../../src/lib/stockage';
 
 const MOTIF_SENSIBLE = /jeton|token|cookie|session|auth/i;
@@ -129,7 +133,7 @@ afterEach(() => {
 describe('CLES_STOCKAGE', () => {
   it('AC4 : énumère exactement les clés locales de l’extension', () => {
     expect([...cles()].sort()).toEqual([
-      'amisInitiaux', 'arretSynchro', 'bailSynchro', 'collection', 'derniereSynchro', 'etatSynchro', 'execution', 'journal', 'preferences', 'registre', 'signalSynchro', 'syncAuto', 'synchro',
+      'amisInitiaux', 'arretSynchro', 'bailSynchro', 'collection', 'derniereSynchro', 'etatSynchro', 'execution', 'journal', 'preferences', 'registre', 'signalSynchro', 'statutSynchro', 'syncAuto', 'synchro',
     ]);
   });
 
@@ -512,6 +516,72 @@ describe('T-205 : état de l’ordonnanceur et demande d’arrêt', () => {
     ecouteur({ autre: { newValue: 1 } }, 'local');
     ecouteur({ arretSynchro: { newValue: 'x' } }, 'local');
     expect(rappel).toHaveBeenCalledTimes(1);
+    stop();
+    expect(faux.retires).toHaveLength(1);
+  });
+});
+
+describe('T-206 : statut détaillé de la synchronisation', () => {
+  const statut = (surcharge: Partial<StatutSynchro> = {}): StatutSynchro => ({
+    version: 1,
+    etat: 'en-cours',
+    page: 3,
+    pages: 10,
+    raison: null,
+    codeHttp: null,
+    le: 1700000000000,
+    ajoutees: 0,
+    etiquettes: 0,
+    prix: 0,
+    ...surcharge,
+  });
+
+  it('renvoie null quand rien n’est écrit', async () => {
+    expect(await chargerStatutSynchro()).toBeNull();
+  });
+
+  it('relit ce qui a été écrit', async () => {
+    await enregistrerStatutSynchro(statut({ etat: 'arret', raison: 'code-http', codeHttp: 403, page: null, pages: null }));
+    expect(await chargerStatutSynchro()).toEqual(statut({ etat: 'arret', raison: 'code-http', codeHttp: 403, page: null, pages: null }));
+  });
+
+  it('traite une valeur illisible comme absente, sans lever d’erreur', async () => {
+    for (const brut of [
+      'x',
+      { ...statut(), version: 2 },
+      { ...statut(), etat: 'autre' },
+      { ...statut(), page: -1 },
+      { ...statut(), page: 1.5 },
+      { ...statut(), codeHttp: 99 },
+      { ...statut(), raison: 'inconnue' },
+      { ...statut(), le: 'hier' },
+      { ...statut(), prix: null },
+    ]) {
+      faux.donnees.set('statutSynchro', brut);
+      expect(await chargerStatutSynchro()).toBeNull();
+    }
+  });
+
+  it('refuse d’écrire un statut invalide et n’écrit que les champs listés', async () => {
+    await expect(enregistrerStatutSynchro({ ...statut(), etat: 'x' } as unknown as StatutSynchro)).rejects.toThrow();
+    await enregistrerStatutSynchro({ ...statut(), cookie: 'secret' } as unknown as StatutSynchro);
+    expect(Object.keys(faux.donnees.get('statutSynchro') as object).sort()).toEqual(
+      ['ajoutees', 'codeHttp', 'etat', 'etiquettes', 'le', 'page', 'pages', 'prix', 'raison', 'version'],
+    );
+  });
+
+  it('prévient pour syncAuto, statutSynchro, bailSynchro et derniereSynchro, pas pour le reste', () => {
+    const rappel = vi.fn();
+    const stop = ecouterSynchroAuto(rappel);
+    const ecouteur = faux.ajoutes[0] as (c: Record<string, unknown>, zone: string) => void;
+    ecouteur({ syncAuto: { newValue: true } }, 'local');
+    ecouteur({ statutSynchro: { newValue: statut() } }, 'local');
+    ecouteur({ bailSynchro: { newValue: 1 } }, 'local');
+    ecouteur({ derniereSynchro: { newValue: 1 } }, 'local');
+    expect(rappel).toHaveBeenCalledTimes(4);
+    ecouteur({ collection: { newValue: 1 } }, 'local');
+    ecouteur({ syncAuto: { newValue: false } }, 'sync');
+    expect(rappel).toHaveBeenCalledTimes(4);
     stop();
     expect(faux.retires).toHaveLength(1);
   });

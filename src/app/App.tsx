@@ -22,6 +22,7 @@ import type { Registre } from '../lib/actions';
 import { registreVide } from '../lib/registre';
 import AssistantTri from './AssistantTri';
 import Synchronisation from './Synchronisation';
+import SynchroAuto from './SynchroAuto';
 import FileVente from './FileVente';
 import CarteLigne from './CarteLigne';
 
@@ -230,6 +231,8 @@ const App: React.FC = () => {
             onMiseEnVente={(id) => editer(id, { statut: 'en-vente', decidePar: 'moi' })}
             onTerminee={(id) => appliquer(terminerEnchere(collection, id))}
           />
+
+          <SynchroAuto collection={collection} preferences={preferences} />
 
           <Synchronisation
             collection={collection}
