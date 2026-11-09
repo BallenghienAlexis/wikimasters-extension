@@ -113,6 +113,17 @@ function lireContenu(brut: unknown): Collection {
   return resultat.collection;
 }
 
+/** Contenu brut de la collection, sans validation : sert à sauvegarder des données illisibles avant tout effacement. */
+export async function lireCollectionBrute(): Promise<unknown> {
+  const contenu = await chrome.storage.local.get(CLE);
+  return contenu[CLE];
+}
+
+/** Efface la seule collection (jamais les préférences, le registre ni le journal). */
+export async function reinitialiserCollection(): Promise<void> {
+  await chrome.storage.local.remove(CLE);
+}
+
 export async function chargerCollection(): Promise<Collection> {
   const contenu = await chrome.storage.local.get(CLE);
   return lireContenu(contenu[CLE]);

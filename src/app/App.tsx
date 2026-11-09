@@ -14,7 +14,7 @@ import {
   type Filtres,
 } from '../lib/collection';
 import { versCsv, versJson } from '../lib/exports';
-import { chargerCollection, chargerExecution, chargerPreferences, chargerRegistre, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences } from '../lib/stockage';
+import { chargerCollection, chargerExecution, chargerPreferences, chargerRegistre, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences, lireCollectionBrute, reinitialiserCollection } from '../lib/stockage';
 import { progression, texteProgression, type Synchro } from '../lib/synchro';
 import { LIBELLES_THEMES, IDS_THEMES, themesDeCarte } from '../lib/themes';
 import { appliquerTri, preferencesParDefaut, type Preferences } from '../lib/tri';
@@ -60,6 +60,7 @@ const App: React.FC = () => {
   const [executionEnCours, setExecutionEnCours] = useState(false);
   const [registreIllisible, setRegistreIllisible] = useState(false);
   const [executionIllisible, setExecutionIllisible] = useState(false);
+  const [confirmerReinit, setConfirmerReinit] = useState(false);
   const champFichier = useRef<HTMLInputElement>(null);
 
   // Lit le registre et l’état d’exécution ; un échec est signalé à l’aperçu, jamais avalé.
@@ -152,6 +153,44 @@ const App: React.FC = () => {
       <main className="mx-auto max-w-3xl p-4">
         <h1 className="text-2xl font-semibold">WM Collection</h1>
         <p role="alert" className="mt-4">{blocage}</p>
+        <p className="mt-2 text-muted">
+          Vos données ne sont pas effacées. Si vous venez de mettre à jour l’extension, rechargez-la depuis le dossier <code>dist/</code> reconstruit. Sinon, sauvegardez d’abord le contenu, puis réinitialisez.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            type="button"
+            className={CLASSE_BOUTON}
+            onClick={() => {
+              void lireCollectionBrute().then((brut) => telecharger(JSON.stringify(brut ?? null, null, 2), 'wm-collection-brute.json', 'application/json'));
+            }}
+          >
+            Télécharger les données brutes
+          </button>
+          {confirmerReinit ? (
+            <>
+              <button
+                type="button"
+                className={CLASSE_BOUTON}
+                onClick={() => {
+                  void reinitialiserCollection().then(() => {
+                    setBlocage(null);
+                    setCollection(collectionVide());
+                    setChargee(true);
+                  });
+                }}
+              >
+                Oui, tout effacer
+              </button>
+              <button type="button" className={CLASSE_BOUTON} onClick={() => setConfirmerReinit(false)}>
+                Annuler
+              </button>
+            </>
+          ) : (
+            <button type="button" className={CLASSE_BOUTON} onClick={() => setConfirmerReinit(true)}>
+              Réinitialiser la collection
+            </button>
+          )}
+        </div>
       </main>
     );
   }
