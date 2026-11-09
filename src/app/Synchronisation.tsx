@@ -160,7 +160,7 @@ export interface LigneNonIncluse {
 
 export type Ecartees =
   | { type: 'liste'; lignes: LigneNonIncluse[] }
-  | { type: 'groupes'; groupes: Array<{ raison: RaisonLigne; nombre: number }> };
+  | { type: 'groupes'; groupes: Array<{ raison: RaisonLigne; nombre: number; nomEtiquette?: string }> };
 
 /** Fusionne écartées et obsolètes : une ligne par carte et par raison (et par nom pour une obsolète). */
 export function lignesNonIncluses(
@@ -182,9 +182,32 @@ export function lignesNonIncluses(
   return lignes;
 }
 
-export function libelleLigne(raison: RaisonLigne): string {
-  return raison === 'etiquette-obsolete' ? 'étiquette obsolète conservée' : RAISONS[raison];
+/** Places d’enchère occupées sur le maximum, pour la raison « en attente d’une place libre » (D-17). */
+export interface Places {
+  occupees: number;
+  max: number;
 }
+
+/** Raison en toutes lettres (D-17) : nom de l’étiquette obsolète, compte de places si connu. */
+export function libelleLigne(raison: RaisonLigne, detail: { nomEtiquette?: string; places?: Places } = {}): string {
+  if (raison === 'etiquette-obsolete') {
+    return detail.nomEtiquette ? `étiquette obsolète conservée${NB}: ${detail.nomEtiquette}` : 'étiquette obsolète conservée';
+  }
+  if (raison === 'en-attente-place' && detail.places) {
+    return `${RAISONS[raison]} (${detail.places.occupees} / ${detail.places.max})`;
+  }
+  return RAISONS[raison];
+}
+
+/** Nombre de cartes distinctes (une carte à deux raisons compte une fois). */
+export const nombreCartes = (lignes: readonly LigneNonIncluse[]): number => new Set(lignes.map((l) => l.idCarte)).size;
+
+/** Phrase de D-13 : les noms d’amis apparaissent dans des étiquettes visibles (H34, tant que la visibilité n’est pas relevée). */
+export const AVERTISSEMENT_AMIS = `Les étiquettes sont visibles des autres joueurs${NB}: les noms d’amis y apparaîtront.`;
+
+/** Le lot pose ou crée-t-il une étiquette « Ami · prénom » ? */
+export const contientAmi = (actions: readonly Action[]): boolean =>
+  actions.some((a) => 'nomEtiquette' in a && /^Ami[\s\u00a0]·/.test(a.nomEtiquette));
 
 export function texteLotVide(avecIndisponibles: boolean): string {
   return avecIndisponibles
@@ -213,9 +236,23 @@ export function preparerLot(collection: Collection, registre: Registre | null, d
 
 export function regrouperEcartees(ecartees: readonly LigneNonIncluse[], seuil: number = ECARTEES_MAX): Ecartees {
   if (ecartees.length <= seuil) return { type: 'liste', lignes: [...ecartees] };
-  const comptes = new Map<RaisonLigne, number>();
-  for (const e of ecartees) comptes.set(e.raison, (comptes.get(e.raison) ?? 0) + 1);
-  return { type: 'groupes', groupes: [...comptes].map(([raison, nombre]) => ({ raison, nombre })) };
+  // Un groupe par raison (et par nom pour une étiquette obsolète), en cartes distinctes.
+  const groupes = new Map<string, { raison: RaisonLigne; nomEtiquette?: string; cartes: Set<string> }>();
+  for (const e of ecartees) {
+    const nom = e.raison === 'etiquette-obsolete' ? e.nomEtiquette : undefined;
+    const cle = `${e.raison}\u0000${nom ?? ''}`;
+    const g = groupes.get(cle) ?? { raison: e.raison, nomEtiquette: nom, cartes: new Set<string>() };
+    g.cartes.add(e.idCarte);
+    groupes.set(cle, g);
+  }
+  return {
+    type: 'groupes',
+    groupes: [...groupes.values()].map((g) =>
+      g.nomEtiquette === undefined
+        ? { raison: g.raison, nombre: g.cartes.size }
+        : { raison: g.raison, nombre: g.cartes.size, nomEtiquette: g.nomEtiquette },
+    ),
+  };
 }
 
 /** Détail de chaque action, dans l’ordre du lot (numérotation des défausses par carte). */
@@ -289,10 +326,27 @@ export const phraseProgression = (traitees: number, total: number, erreurs: numb
 export const pourcentage = (traitees: number, total: number): number =>
   total <= 0 ? 0 : Math.min(100, Math.round((traitees / total) * 100));
 
+/** Phrase du lot interrompu, constaté à la réouverture (D-22, SC-013). */
+export const texteInterrompu = (): string =>
+  `Lot interrompu${NB}: la page ou l’onglet a été fermé ou rechargé. L’exécution ne reprend pas toute seule.`;
+
+/** Message affiché au lancement : libellé fixe de l’extension, jamais un texte venu d’ailleurs (D-41). */
+const ERREURS_LANCEMENT = new Set([
+  'Une exécution est déjà en cours.',
+  'Une exécution est déjà en cours dans un autre onglet.',
+  'Un seul onglet WikiMasters est requis.',
+  'Onglet WikiMasters déconnecté.',
+]);
+
+export function libelleErreurLancement(e: unknown): string {
+  return e instanceof Error && ERREURS_LANCEMENT.has(e.message) ? e.message : 'le lot n’a pas pu être lancé.';
+}
+
 export function texteFin(etat: EtatFile, bilan: Bilan, deconnecte: boolean): { titre: string; detail: string | null } {
   if (etat.etat === 'terminee') {
     return {
       titre: 'Lot terminé',
+      // Phrase unique avec le titre : « Lot terminé : N réussies, M passées, E échouées » (D-22).
       detail: `${pluriel(bilan.reussies, 'réussie', 'réussies')}, ${pluriel(bilan.passees, 'passée', 'passées')}, ${pluriel(bilan.erreurs, 'échouée', 'échouées')}`,
     };
   }
@@ -333,7 +387,8 @@ let contexte: ContexteExecution | null = null;
 
 /**
  * Contexte unique pour toute la durée de vie de la page : une seule file, une seule exécution
- * (la file garde sa mémoire de cadence). Créé au premier besoin, jamais au rendu.
+ * (la file garde sa mémoire de cadence). Créé au premier besoin : dans l’effet de montage du
+ * composant ou au lancement d’un lot, jamais pendant le rendu.
  */
 function contexteExecution(): ContexteExecution {
   if (contexte) return contexte;
@@ -419,8 +474,9 @@ async function lancerLot(actions: readonly Action[], idLot: string): Promise<voi
 
 const nouvelIdLot = (prefixe: string): string => `${prefixe}-${Date.now()}`;
 
-/** Actions de retrait pour un couple (carte, étiquette) encore posé au registre. */
-export function actionsRetrait(couple: CoupleRetrait, collection: Collection, registre: Registre): Action[] {
+/** Actions de retrait pour un couple (carte, étiquette) encore posé au registre ; aucune si le retrait n’est pas disponible. */
+export function actionsRetrait(couple: CoupleRetrait, collection: Collection, registre: Registre, retraitDisponible: boolean): Action[] {
+  if (!retraitDisponible) return [];
   const carte = collection.cartes.find((c) => c.id === couple.idCarte);
   const ids = new Set(carte?.idsSite ?? []);
   return registre.couples
@@ -440,7 +496,7 @@ function carteTexte(idCarte: string, cartes: ReadonlyMap<string, Carte>): string
   return i < 0 ? idCarte : `[${idCarte.slice(0, i)}] ${idCarte.slice(i + 1)}`;
 }
 
-function BandeauRisque(): React.ReactElement {
+function BandeauRisque({ avertirAmis }: { avertirAmis: boolean }): React.ReactElement {
   return (
     <section
       aria-labelledby="titre-risque"
@@ -451,12 +507,13 @@ function BandeauRisque(): React.ReactElement {
         <span aria-hidden="true">! </span>Action sur le site à votre place
       </h2>
       <p className="mt-2 break-words">
-        Cette synchronisation envoie des requêtes à WikiMasters à votre place. Les règles de la communauté (§ 3) interdisent la
-        rétro-ingénierie et l’interception du trafic, les conditions d’utilisation (§ 6) prévoient un bannissement pour
-        automatisation, et le fichier <code>robots.txt</code> du site indique « Disallow: /api/ ».
+        Cette synchronisation envoie des requêtes à WikiMasters à votre place. Les règles de la communauté (§{NB}3) interdisent la
+        rétro-ingénierie et l’interception du trafic, les conditions d’utilisation (§{NB}6) prévoient un bannissement pour
+        automatisation, et le fichier <code>robots.txt</code> du site indique «{NB}Disallow:{NB}/api/{NB}».
       </p>
       <p className="mt-2 font-semibold">Risque de bannissement accepté le 07/11/2026.</p>
       <p className="mt-2">Une enchère et une défausse ne s’annulent pas depuis l’extension.</p>
+      {avertirAmis && <p className="mt-2 font-semibold text-vendre">{AVERTISSEMENT_AMIS}</p>}
     </section>
   );
 }
@@ -535,18 +592,27 @@ const ZoneExecution: React.FC<PropsZone> = ({ exec, interrompu, attenteDecision,
         {enCours && exec && <p className="text-sm text-muted">{phraseProgression(traitees, total, erreurs)}</p>}
         {fin && (
           <>
-            <p className={`font-semibold ${termine ? 'text-garder' : 'text-defausser'}`}>{fin.titre}</p>
-            {fin.detail && <p className="mt-1">{fin.detail}</p>}
+            {termine ? (
+              <p>
+                <span className="font-semibold text-garder">{fin.titre}</span>
+                {fin.detail && `${NB}: ${fin.detail}`}
+              </p>
+            ) : (
+              <>
+                <p className="font-semibold text-defausser">{fin.titre}</p>
+                {fin.detail && <p className="mt-1">{fin.detail}</p>}
+              </>
+            )}
             {!termine && exec?.bilan.dernierInconnu && (
               <p className="mt-1 font-semibold text-vendre">Résultat inconnu, à vérifier sur le site.</p>
             )}
           </>
         )}
         {!exec && interrompu && (
-          <>
-            <p className="font-semibold text-defausser">Lot interrompu</p>
-            <p className="mt-1">La page ou l’onglet a été fermé ou rechargé. L’exécution ne reprend pas toute seule.</p>
-          </>
+          <p>
+            <span className="font-semibold text-defausser">Lot interrompu</span>
+            {texteInterrompu().slice('Lot interrompu'.length)}
+          </p>
         )}
       </div>
 
@@ -562,6 +628,8 @@ const ZoneExecution: React.FC<PropsZone> = ({ exec, interrompu, attenteDecision,
 interface Props {
   collection: Collection;
   registre: Registre;
+  /** La page lit encore le registre et l’état d’exécution : l’aperçu n’est pas proposé (D-18, « Calcul du lot… »). */
+  chargement?: boolean;
   /** Le registre n’a pas pu être lu : aucun lot ne peut être préparé. */
   registreIllisible?: boolean;
   /** L’état de l’exécution n’a pas pu être lu : « Lancer » reste désactivé. */
@@ -580,6 +648,7 @@ interface Props {
 const Synchronisation: React.FC<Props> = ({
   collection,
   registre,
+  chargement = false,
   registreIllisible = false,
   executionIllisible = false,
   nbOnglets,
@@ -687,6 +756,12 @@ const Synchronisation: React.FC<Props> = ({
   const dispo = useMemo(() => disponibles ?? typesDisponibles(), [disponibles]);
   const cartes = useMemo(() => new Map(collection.cartes.map((c) => [c.id, c])), [collection.cartes]);
 
+  const [focusTitre, setFocusTitre] = useState(0);
+  // Après un « Réessayer », le bloc d’erreur disparaît : le focus revient sur le titre (D-35, D-37).
+  useEffect(() => {
+    if (focusTitre > 0) titreRef.current?.focus();
+  }, [focusTitre]);
+
   const ouvert = etat !== null;
   useEffect(() => {
     if (ouvert) {
@@ -701,6 +776,7 @@ const Synchronisation: React.FC<Props> = ({
   const reessayer = async (): Promise<void> => {
     const r = onReessayer ? await onReessayer() : registreIllisible ? null : registreCourant;
     setEtat(preparerLot(collection, r, dispo));
+    setFocusTitre((k) => k + 1);
   };
 
   const lot = etat && 'lot' in etat ? etat.lot : null;
@@ -718,6 +794,15 @@ const Synchronisation: React.FC<Props> = ({
     return lignesNonIncluses([...lot.ecartees, ...indispo], lot.obsoletes);
   }, [lot, separes, cartes]);
   const groupees = useMemo(() => regrouperEcartees(lignes), [lignes]);
+  // Places d’enchère : exemplaires déjà en vente + enchères de ce lot, sur le maximum (D-17).
+  const places = useMemo<Places>(
+    () => ({
+      occupees:
+        collection.cartes.filter((c) => c.statut === 'en-vente').length + (lot?.actions.filter((a) => a.type === 'enchere').length ?? 0),
+      max: CONFIG_PRIX.maxVentesSimultanees,
+    }),
+    [collection.cartes, lot],
+  );
 
   const n = separes?.disponibles.length ?? 0;
   const avecIndisponibles = lignes.some((l) => l.raison === 'action-non-disponible');
@@ -748,7 +833,7 @@ const Synchronisation: React.FC<Props> = ({
     }
     rangsRef.current = rangs;
     lancerLot(actions, idLot).catch((e: unknown) =>
-      setErreurLancement(e instanceof Error ? e.message : 'Le lot n’a pas pu être lancé.'),
+      setErreurLancement(libelleErreurLancement(e)),
     );
   };
   const lancerDepuisApercu = (actions: Action[]): void => (onLancer ?? ((a: Action[]) => lancer(a, nouvelIdLot('lot'))))(actions);
@@ -759,7 +844,7 @@ const Synchronisation: React.FC<Props> = ({
   };
 
   const retirer = (couple: CoupleRetrait): void => {
-    const actions = actionsRetrait(couple, collection, registreCourant);
+    const actions = actionsRetrait(couple, collection, registreCourant, dispo.has('retrait-etiquette'));
     if (actions.length === 0) return;
     const ctx = contexteExecution();
     if (ctx.file.etat()?.etat === 'en-cours' && ctx.file.ajouter(actions)) return;
@@ -783,7 +868,7 @@ const Synchronisation: React.FC<Props> = ({
 
   return (
     <div data-testid="synchronisation">
-      <BandeauRisque />
+      <BandeauRisque avertirAmis={lot !== null && contientAmi(lot.actions)} />
 
       {zoneVisible && (
         <ZoneExecution
@@ -802,7 +887,11 @@ const Synchronisation: React.FC<Props> = ({
           {lot ? titreApercu(n) : 'Synchronisation avec WikiMasters'}
         </h2>
 
-        {!ouvert ? (
+        {!ouvert && chargement ? (
+          <p className="mt-2 text-sm text-muted" aria-busy="true">
+            Calcul du lot…
+          </p>
+        ) : !ouvert ? (
           <>
             <p className="mt-2 text-sm text-muted">
               Voyez d’abord ce qui serait envoyé au site. Rien n’est envoyé tant que vous n’avez pas lancé le lot.
@@ -872,23 +961,22 @@ const Synchronisation: React.FC<Props> = ({
 
             {lignes.length > 0 && (
               <details className="mt-3 text-sm text-muted">
-                <summary className="min-h-11 cursor-pointer py-2">Cartes non incluses ({lignes.length})</summary>
+                <summary className="min-h-11 cursor-pointer py-2">Cartes non incluses ({nombreCartes(lignes)})</summary>
                 {groupees.type === 'liste' ? (
                   <ul>
                     {groupees.lignes.map((e, i) => (
                       <li key={i} className="break-words py-1">
                         {carteTexte(e.idCarte, cartes)}
-                        {NB}: {libelleLigne(e.raison)}
-                        {e.nomEtiquette ? ` (${e.nomEtiquette})` : ''}
+                        {NB}: {libelleLigne(e.raison, { nomEtiquette: e.nomEtiquette, places })}
                       </li>
                     ))}
                   </ul>
                 ) : (
                   <ul>
                     {groupees.groupes.map((g) => (
-                      <li key={g.raison} className="py-1">
+                      <li key={`${g.raison}-${g.nomEtiquette ?? ''}`} className="break-words py-1">
                         {g.nombre} {g.nombre > 1 ? 'cartes' : 'carte'}
-                        {NB}: {libelleLigne(g.raison)}
+                        {NB}: {libelleLigne(g.raison, { nomEtiquette: g.nomEtiquette, places })}
                       </li>
                     ))}
                   </ul>

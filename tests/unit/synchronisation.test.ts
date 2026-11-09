@@ -307,10 +307,10 @@ describe('avertissement de visibilité des étiquettes d’amis (H34, D-13)', ()
 
 describe('retrait d’étiquette', () => {
   const reg: Registre = { version: 1, etiquettes: {}, couples: [{ ex: '1', nom: 'Statut · Garder' }, { ex: '2', nom: 'Statut · Garder' }, { ex: '9', nom: 'Autre' }] }
-  const col: Collection = { version: 1, cartes: [carte('a', { idsSite: ['1', '2'] })] } as Collection
+  const col: Collection = { version: 2, cartes: [carte('a', { idsSite: ['1', '2'] })] }
   const couple = { idCarte: 'a', nomEtiquette: 'Statut · Garder' }
   it('produit un retrait par exemplaire de la carte portant ce nom', () => {
-    expect(actionsRetrait(couple, col, reg, true).map((a) => [a.type, a.idExemplaire])).toEqual([
+    expect(actionsRetrait(couple, col, reg, true).map((a) => [a.type, 'idExemplaire' in a ? a.idExemplaire : null])).toEqual([
       ['retrait-etiquette', '1'],
       ['retrait-etiquette', '2'],
     ])
