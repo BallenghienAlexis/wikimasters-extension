@@ -171,6 +171,68 @@ const EXISTANTS_FIGES = [
   'arts', 'architecture', 'cinema', 'television', 'litterature', 'bd', 'langue', 'idees', 'religion', 'sport', 'football', 'cyclisme', 'combat', 'societe', 'crime',
 ];
 
+// Table id → libellé figée avant la feature (SC-002) : aucun renommage permis.
+const ANCIENS_LIBELLES: Record<string, string> = {
+  vehicule: '#Véhicule',
+  automobile: '#Automobile',
+  voiture: '#Voiture',
+  moto: '#Moto',
+  camion: '#Camion',
+  bus: '#Bus',
+  tracteur: '#Tracteur',
+  train: '#Train',
+  avion: '#Avion',
+  bateaux: '#Bateaux',
+  course: '#Course',
+  formule1: '#Formule 1',
+  nascar: '#Nascar',
+  rallye: '#Rallye',
+  musique: '#Musique',
+  rock: '#Rock',
+  poprock: '#Pop Rock',
+  pop: '#Pop',
+  metal: '#Métal',
+  grunge: '#Grunge',
+  jazz: '#Jazz',
+  techno: '#Techno',
+  rap: '#Rap',
+  classique: '#Musique classique',
+  histoire: '#Histoire',
+  guerre: '#Guerre',
+  nazis: '#Nazis',
+  politique: '#Politique',
+  royaute: '#Royauté',
+  sciences: '#Sciences',
+  espace: '#Espace',
+  sante: '#Santé',
+  technologie: '#Technologies',
+  informatique: '#Informatique',
+  jeuvideo: '#Jeu vidéo',
+  nature: '#Nature',
+  animaux: '#Animaux',
+  plantes: '#Plantes',
+  gastronomie: '#Gastronomie',
+  geographie: '#Géographie',
+  pays: '#Pays',
+  ville: '#Ville',
+  arts: '#Art',
+  architecture: '#Architecture',
+  cinema: '#Cinéma',
+  television: '#Télévision',
+  litterature: '#Littérature',
+  bd: '#BD et Manga',
+  langue: '#Langue',
+  idees: '#Philosophie',
+  religion: '#Religion',
+  sport: '#Sport',
+  football: '#Football',
+  cyclisme: '#Cyclisme',
+  combat: '#Arts martiaux',
+  societe: '#Société',
+  crime: '#Crime',
+  autres: '#Autres',
+};
+
 const sansAccent = (t: string): string => t.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 
 describe('taxonomie précise (SC-001 à SC-003)', () => {
@@ -207,10 +269,8 @@ describe('taxonomie précise (SC-001 à SC-003)', () => {
 
   it('fige les identifiants et libellés existants (SC-002)', () => {
     for (const id of EXISTANTS_FIGES) expect(LIBELLES_THEMES[id], id).toBeDefined();
-    expect(LIBELLES_THEMES).toMatchObject({
-      voiture: '#Voiture', rock: '#Rock', football: '#Football', animaux: '#Animaux', architecture: '#Architecture',
-      geographie: '#Géographie', bd: '#BD et Manga', classique: '#Musique classique', jeuvideo: '#Jeu vidéo', autres: '#Autres',
-    });
+    expect(LIBELLES_THEMES).toMatchObject(ANCIENS_LIBELLES);
+    expect(Object.keys(ANCIENS_LIBELLES)).toHaveLength(57 + 1); // + autres
     expect(EXISTANTS_FIGES).toHaveLength(57);
   });
 
@@ -258,6 +318,9 @@ describe('faux positifs (SC-005, SC-023)', () => {
     ['Vélodrome', 'enceinte sportive', 'velo'],
     ['Tibia', 'os de la jambe', 'tibet'],
     ['Ukulélé', 'instrument', 'ukraine'],
+    ['Matchs de barrages', 'rencontres de promotion', 'barrage'],
+    ['Les barrages de Ligue 1', 'rencontres de football', 'barrage'],
+    ['Île-de-France', 'région parisienne', 'ile'],
   ])('« %s — %s » ne reçoit pas %s', (titre, description, interdit) => {
     expect(themes(description, titre)).not.toContain(interdit);
   });
@@ -275,6 +338,24 @@ describe('performance (SC-017)', () => {
     }));
     const debut = performance.now();
     for (const c of cartes) themesDeCarte(c);
+    expect(performance.now() - debut).toBeLessThan(200);
+  });
+});
+
+describe('non-régression (SC-006)', () => {
+  it.each([
+    ['homme d’État français', ['politique']],
+    ['sixième planète du Système solaire', ['espace', 'sciences']],
+    ['constructeur automobile allemand', ['automobile', 'vehicule']],
+    ['groupe de heavy metal', ['metal', 'musique']],
+    ['pilote de Formule 1', ['formule1', 'course', 'sport']],
+  ])('« %s » garde ses thèmes d’avant', (description, avant) => {
+    expect(themes(description)).toEqual(expect.arrayContaining(avant));
+  });
+
+  it('reste linéaire sur une description hostile de 120 000 caractères', () => {
+    const debut = performance.now();
+    themesDeCarte({ titre: 'grand ', description: 'grand '.repeat(20000) + 'barrage-'.repeat(1000) });
     expect(performance.now() - debut).toBeLessThan(200);
   });
 });

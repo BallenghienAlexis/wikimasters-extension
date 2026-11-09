@@ -72,10 +72,12 @@ describe('versJson', () => {
   });
 });
 
+const COLONNES_ATTENDUES = ['id', 'titre', 'rarete', 'quantite', 'statut', 'prixCible', 'note', 'url', 'favori', 'description', 'ami', 'valeurMarchande'];
+
 describe('exports et thèmes précis (SC-020)', () => {
   it('garde les colonnes du CSV et y met les nouveaux libellés', () => {
     const lignes = versCsv([carte({ titre: 'Berger allemand', description: 'race de chien' })]).split('\r\n');
-    expect(lignes[0]?.endsWith(',themes') || lignes[0]?.endsWith(';themes')).toBe(true);
+    expect(lignes[0]?.replace(/^\uFEFF/, '')).toBe([...COLONNES_ATTENDUES, 'themes'].join(';'));
     expect(lignes[1]).toContain('#Chien');
     expect(lignes[1]).toContain('#Animaux');
   });
