@@ -8,6 +8,9 @@
 ## Résumé
 <!-- Ce que la PR change, en 2-4 lignes -->
 
+## Reste à faire
+<!-- « Rien », ou la liste précise (fichier:ligne, point) recopiée dans `specs/<feature>/retouches.md` § « À reprendre ». Jamais « non traité » sans liste. -->
+
 ## Preuves
 <!-- Fin de sortie de : npm run lint · npm run typecheck · npm test · npm run build · npm run test:e2e -->
 
