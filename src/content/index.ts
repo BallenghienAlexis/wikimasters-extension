@@ -5,6 +5,7 @@ import { identifiantCarte, lireFenetreEnchere, lirePositionPage, regrouperCartes
 import { chargerCollection, ecouterCollection, enregistrerPage, enregistrerValeur, fusionnerDansStockage } from '../lib/stockage';
 import { progression, texteProgression, type Synchro } from '../lib/synchro';
 import { demarrerExecutant } from './executant';
+import { demarrerSynchroAuto } from './synchroAuto';
 
 const CLASSE_REPERE = 'wm-repere';
 const CLASSE_SYNCHRO = 'wm-synchro';
@@ -77,3 +78,5 @@ void chargerCollection().then(afficherReperes);
 planifierLecture();
 // Pilotage depuis la page de gestion : aucune requête tant qu'aucune action n'est branchée.
 demarrerExecutant();
+// Lecture automatique de la collection par l'API du site : désactivée par défaut, 0 requête tant que l'option est coupée.
+demarrerSynchroAuto();

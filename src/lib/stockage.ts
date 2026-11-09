@@ -3,6 +3,7 @@ import type { EtatExecution, Registre } from './actions';
 import { validerJournal, type Journal } from './journal';
 import { registreVide, validerRegistre } from './registre';
 import { lireSynchro, noterPage, type Pagination, type Synchro } from './synchro';
+import type { EtatOrdonnanceur } from './ordonnanceur';
 import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../config/amis';
 import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, proposerTri, type Preferences } from './tri';
 
@@ -17,6 +18,8 @@ const CLE_SIGNAL = 'signalSynchro';
 const CLE_SYNC_AUTO = 'syncAuto';
 const CLE_DERNIERE_SYNCHRO = 'derniereSynchro';
 const CLE_BAIL_SYNCHRO = 'bailSynchro';
+const CLE_ETAT_SYNCHRO = 'etatSynchro';
+const CLE_ARRET_SYNCHRO = 'arretSynchro';
 
 /** Version de l’enveloppe du journal stocké. */
 export const VERSION_JOURNAL = 1;
@@ -34,6 +37,8 @@ export const CLES_STOCKAGE = {
   syncAuto: CLE_SYNC_AUTO,
   derniereSynchro: CLE_DERNIERE_SYNCHRO,
   bailSynchro: CLE_BAIL_SYNCHRO,
+  etatSynchro: CLE_ETAT_SYNCHRO,
+  arretSynchro: CLE_ARRET_SYNCHRO,
 } as const;
 
 function illisible(detail: string): Error {
@@ -148,6 +153,70 @@ export const enregistrerDerniereSynchro = (horodatage: number | null): Promise<v
 /** Horodatage (ms) d’expiration du bail qui empêche deux synchronisations simultanées, ou `null`. */
 export const chargerBailSynchro = (): Promise<number | null> => chargerHorodatage(CLE_BAIL_SYNCHRO);
 export const enregistrerBailSynchro = (expiration: number | null): Promise<void> => enregistrerHorodatage(CLE_BAIL_SYNCHRO, expiration);
+
+const MAX_ENTREES_ETAT = 100_000;
+const estObjet = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const nullOuHorodatage = (v: unknown): v is number | null => v === null || horodatageValide(v);
+const nullOuEntier = (v: unknown): v is number | null => v === null || (typeof v === 'number' && Number.isSafeInteger(v) && v >= 0);
+
+function validerEtatSynchro(brut: unknown): EtatOrdonnanceur | null {
+  if (!estObjet(brut) || brut.version !== 1) return null;
+  const { total, totalUnique, signatureEtiquettes, derniereComplete, arretJusqua, requetes, cardIds, prix } = brut;
+  if (!nullOuEntier(total) || !nullOuEntier(totalUnique)) return null;
+  if (signatureEtiquettes !== null && typeof signatureEtiquettes !== 'string') return null;
+  if (!nullOuHorodatage(derniereComplete) || !nullOuHorodatage(arretJusqua)) return null;
+  if (!Array.isArray(requetes) || requetes.length > MAX_ENTREES_ETAT || !requetes.every(horodatageValide)) return null;
+  if (!estObjet(cardIds) || Object.keys(cardIds).length > MAX_ENTREES_ETAT) return null;
+  if (!Object.values(cardIds).every((v) => typeof v === 'string')) return null;
+  if (!estObjet(prix) || Object.keys(prix).length > MAX_ENTREES_ETAT) return null;
+  const releves: EtatOrdonnanceur['prix'] = {};
+  for (const [id, r] of Object.entries(prix)) {
+    if (!estObjet(r) || !nullOuEntier(r.valeur) || !horodatageValide(r.releveLe)) return null;
+    releves[id] = { valeur: r.valeur, releveLe: r.releveLe };
+  }
+  return {
+    version: 1,
+    total,
+    totalUnique,
+    signatureEtiquettes,
+    derniereComplete,
+    arretJusqua,
+    requetes: [...requetes],
+    cardIds: { ...(cardIds as Record<string, string>) },
+    prix: releves,
+  };
+}
+
+/** État de l’ordonnanceur (aucun secret) ; `null` si jamais écrit, erreur s’il est illisible. */
+export async function chargerEtatSynchro(): Promise<EtatOrdonnanceur | null> {
+  const contenu = await chrome.storage.local.get(CLE_ETAT_SYNCHRO);
+  const brut = contenu[CLE_ETAT_SYNCHRO];
+  if (brut === undefined) return null;
+  const etat = validerEtatSynchro(brut);
+  if (etat === null) throw illisible('L’état de la synchronisation est invalide.');
+  return etat;
+}
+
+export async function enregistrerEtatSynchro(etat: EtatOrdonnanceur): Promise<void> {
+  if (validerEtatSynchro(etat) === null) throw new Error('État de synchronisation invalide.');
+  await chrome.storage.local.set({ [CLE_ETAT_SYNCHRO]: etat });
+}
+
+/** Demande d’arrêt de l’interface : un horodatage, aucune autre donnée. */
+export async function enregistrerArretSynchro(horodatage: number): Promise<void> {
+  if (!horodatageValide(horodatage)) throw new Error('Horodatage invalide.');
+  await chrome.storage.local.set({ [CLE_ARRET_SYNCHRO]: horodatage });
+}
+
+/** Ne signale que les demandes faites pendant l’écoute (une ancienne demande ne bloque rien). */
+export function ecouterArretSynchro(rappel: () => void): () => void {
+  const ecouteur = (changements: Record<string, chrome.storage.StorageChange>, zone: string): void => {
+    const changement = changements[CLE_ARRET_SYNCHRO];
+    if (zone === 'local' && changement && horodatageValide(changement.newValue)) rappel();
+  };
+  chrome.storage.onChanged.addListener(ecouteur);
+  return () => chrome.storage.onChanged.removeListener(ecouteur);
+}
 
 function lireContenu(brut: unknown): Collection {
   if (brut === undefined) return collectionVide();

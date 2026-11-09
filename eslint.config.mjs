@@ -46,7 +46,11 @@ const ACTIONS = [
 
 const GLOBALES_RESEAU = ['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource'];
 const NOMS_RESEAU = [...GLOBALES_RESEAU, 'sendBeacon'];
-const RESEAU = [...NOMS_RESEAU.map((nom) => regle(membre(nom), MSG_RESEAU)), regle(destructure(NOMS_RESEAU.join('|')), MSG_RESEAU)];
+const reseau = (noms) => [...noms.map((nom) => regle(membre(nom), MSG_RESEAU)), regle(destructure(noms.join('|')), MSG_RESEAU)];
+const RESEAU = reseau(NOMS_RESEAU);
+// Exécuteur de la synchronisation automatique : `fetch` seulement, aucune autre API réseau.
+const AUTRES_RESEAU = NOMS_RESEAU.filter((nom) => nom !== 'fetch');
+const RESEAU_SAUF_FETCH = reseau(AUTRES_RESEAU);
 
 const GLOBALES_STOCKAGE = ['cookieStore', 'localStorage', 'sessionStorage', 'indexedDB'];
 // Lecture : tout accès aux cookies et au stockage (`document.cookie`, `window['localStorage']`…).
@@ -97,7 +101,7 @@ const IMPORT_JETON = [
 
 const globales = (noms, message) => noms.map((name) => ({ name, message }));
 const GLOBALES = (reseau, stockage) => [
-  ...(reseau ? globales(GLOBALES_RESEAU, MSG_RESEAU) : []),
+  ...(reseau === 'sauf-fetch' ? globales(GLOBALES_RESEAU.filter((nom) => nom !== 'fetch'), MSG_RESEAU) : reseau ? globales(GLOBALES_RESEAU, MSG_RESEAU) : []),
   ...(stockage ? globales(GLOBALES_STOCKAGE, MSG_STOCKAGE) : []),
 ];
 
@@ -108,7 +112,7 @@ function regles({ site = false, reseau = true, stockage = true, alea = false, je
   const syntaxe = [
     ...(site ? HTML : [HTML[0], HTML[1]]),
     ...(site ? ACTIONS : []),
-    ...(reseau ? RESEAU : []),
+    ...(reseau === 'sauf-fetch' ? RESEAU_SAUF_FETCH : reseau ? RESEAU : []),
     ...(stockage ? STOCKAGE : []),
     ...ECRITURES,
     ...(idb ? ECRITURES_JETON : []),
@@ -137,6 +141,11 @@ export default tseslint.config(
     // Le code exécuté sur le site lit et affiche, mais n'agit jamais à la place du joueur.
     files: SITE,
     rules: regles({ site: true }),
+  },
+  {
+    // Seul fichier du content script autorisé à appeler `fetch` (GET même origine, voir synchro-auto-lint.test.ts).
+    files: ['src/content/synchroAuto.ts'],
+    rules: regles({ site: true, reseau: 'sauf-fetch', alea: true }),
   },
   {
     // Aléatoire interdit dans la file (cadence fixe).
