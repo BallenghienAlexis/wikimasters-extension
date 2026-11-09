@@ -67,7 +67,7 @@ const EtiquettesPrevues: React.FC<Props> = ({ apercu, cartes }) => {
           </table>
           <ul aria-label={TITRE} className="md:hidden">
             {lignes.map((l) => (
-              <li key={l.nom} className="grid grid-cols-1 gap-1 border-b border-line py-2 text-sm">
+              <li key={l.nom} className="grid grid-cols-1 gap-1 border-b border-line py-2 text-sm md:grid-cols-4">
                 <span className="break-words font-semibold">{l.nom}</span>
                 <span>Cartes{NB}: {l.cartes}</span>
                 <span>Exemplaires{NB}: {l.exemplaires}</span>
