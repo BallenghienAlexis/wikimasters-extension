@@ -6,7 +6,8 @@ import type { Carte } from '../lib/collection';
 /** Espace insécable : typographie française avant « : » (DT-14). */
 const NB = ' ';
 
-const TITRE = 'Étiquettes prévues (envoi pas encore possible)';
+const TITRE_BASE = 'Étiquettes prévues';
+const TITRE_INDISPONIBLE = `${TITRE_BASE} (envoi pas encore possible)`;
 
 /** Texte exact de l’avertissement (DT-04, SC-015). */
 const AVERTISSEMENT = `les étiquettes de thème, de statut et d’échange, dont les prénoms de vos amis, sont peut-être visibles par les autres joueurs.`;
@@ -17,7 +18,8 @@ const RAISONS: Record<RaisonNonPosee, string> = {
   'au-dela-limite': 'au-delà de la limite du site',
 };
 
-const etat = (l: LigneEtiquette): string => (l.nouvelle ? 'nouvelle · non disponible' : 'non disponible');
+const etat = (l: LigneEtiquette, disponible: boolean): string =>
+  disponible ? (l.nouvelle ? 'nouvelle' : 'à poser') : l.nouvelle ? 'nouvelle · non disponible' : 'non disponible';
 
 const pluriel = (n: number, un: string, plusieurs: string): string => `${n} ${n > 1 ? plusieurs : un}`;
 
@@ -31,10 +33,13 @@ function texteCarte(idCarte: string, titre: string, cartes: ReadonlyMap<string, 
 interface Props {
   apercu: ApercuEtiquettes;
   cartes: ReadonlyMap<string, Carte>;
+  /** L’envoi des étiquettes est possible. Par défaut : non disponible. */
+  disponible?: boolean;
 }
 
 /** Étiquettes attendues, regroupées par nom (T-108). Composant pur : texte seul, aucune requête. */
-const EtiquettesPrevues: React.FC<Props> = ({ apercu, cartes }) => {
+const EtiquettesPrevues: React.FC<Props> = ({ apercu, cartes, disponible = false }) => {
+  const TITRE = disponible ? TITRE_BASE : TITRE_INDISPONIBLE;
   const { lignes, restantes, totaux, nonPosees } = apercu;
   if (lignes.length === 0 && nonPosees.length === 0) return null;
   const attendue = lignes.length > 0;
@@ -60,7 +65,7 @@ const EtiquettesPrevues: React.FC<Props> = ({ apercu, cartes }) => {
                   <td className="break-words px-2 py-2 align-top font-semibold">{l.nom}</td>
                   <td className="px-2 py-2 align-top">{l.cartes}</td>
                   <td className="px-2 py-2 align-top">{l.exemplaires}</td>
-                  <td className="px-2 py-2 align-top text-muted">{etat(l)}</td>
+                  <td className="px-2 py-2 align-top text-muted">{etat(l, disponible)}</td>
                 </tr>
               ))}
             </tbody>
@@ -71,7 +76,7 @@ const EtiquettesPrevues: React.FC<Props> = ({ apercu, cartes }) => {
                 <span className="break-words font-semibold">{l.nom}</span>
                 <span>Cartes{NB}: {l.cartes}</span>
                 <span>Exemplaires{NB}: {l.exemplaires}</span>
-                <span className="text-muted">État{NB}: {etat(l)}</span>
+                <span className="text-muted">État{NB}: {etat(l, disponible)}</span>
               </li>
             ))}
           </ul>
@@ -85,7 +90,7 @@ const EtiquettesPrevues: React.FC<Props> = ({ apercu, cartes }) => {
             {' · '}
             {pluriel(totaux.nomsNouveaux, 'nom nouveau', 'noms nouveaux')}
             {' · '}
-            durée estimée une fois disponible{NB}: {texteDureeLongue(totaux.minutes)}
+            durée estimée{disponible ? '' : ' une fois disponible'}{NB}: {texteDureeLongue(totaux.minutes)}
           </p>
         </>
       )}

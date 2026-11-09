@@ -203,7 +203,7 @@ describe('noms d’étiquette (AC8)', () => {
     expect(de(lot.actions, 'pose-etiquette').map((a) => (a as { nomEtiquette: string }).nomEtiquette)).toEqual(['Statut · Échanger'])
   })
 
-  it('longueur inconnue (null) : aucune limite appliquée', () => {
+  it('longueur inconnue (null) : seul le plafond du registre, 200, s’applique', () => {
     const lot = construireLot(coll(carte('a', { statut: 'echanger', ami: 'x'.repeat(150) })), registre(), config({ longueurMaxEtiquette: null }), TOUS)
     expect(lot.ecartees).toEqual([])
     expect(de(lot.actions, 'pose-etiquette')).toHaveLength(2)
