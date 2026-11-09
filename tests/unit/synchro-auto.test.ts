@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { VERSION_SCHEMA, type Carte, type Collection } from '../../src/lib/collection';
 import type { Horloge } from '../../src/lib/file';
 import { etatInitial, type EtatOrdonnanceur, type ReponseApi } from '../../src/lib/ordonnanceur';
+import type { StatutSynchro } from '../../src/lib/stockage';
 import { preferencesParDefaut } from '../../src/lib/tri';
 import {
   DELAI_SYNCHRO_MS,
@@ -69,12 +70,14 @@ interface Banc {
   deps: DependancesSynchroAuto;
   horloge: Horloge & { t: number };
   chemins: string[];
+  statuts: StatutSynchro[];
   stockage: { actif: boolean; derniere: number | null; collection: Collection; etat: EtatOrdonnanceur | null; bail: number | null };
 }
 
 function banc(options: { actif?: boolean; derniere?: number | null; cartes?: Carte[]; reponse?: (c: string, n: number) => ReponseApi } = {}): Banc {
   const horloge = horlogeSimulee();
   const chemins: string[] = [];
+  const statuts: StatutSynchro[] = [];
   const reponse = options.reponse ?? siteFictif(2);
   const stockage: Banc['stockage'] = {
     actif: options.actif ?? true,
@@ -109,9 +112,12 @@ function banc(options: { actif?: boolean; derniere?: number | null; cartes?: Car
       },
     },
     chargerPreferences: async () => preferencesParDefaut(),
+    noterStatut: async (statut) => {
+      statuts.push(structuredClone(statut));
+    },
     journal: () => undefined,
   };
-  return { deps, horloge, chemins, stockage };
+  return { deps, horloge, chemins, statuts, stockage };
 }
 
 afterEach(() => {
@@ -340,5 +346,87 @@ describe('T-205 : état initial', () => {
     const b = banc();
     await creerSynchroAuto(b.deps).declencher();
     expect(b.stockage.etat?.version).toBe(etatInitial().version);
+  });
+});
+
+describe('T-206 : statut détaillé pour l’interface', () => {
+  it('désactivée : aucun statut écrit', async () => {
+    const b = banc({ actif: false });
+    await creerSynchroAuto(b.deps).declencher();
+    expect(b.statuts).toEqual([]);
+  });
+
+  it('écrit « en cours » avec la page lue et le nombre de pages, puis « terminée » avec les comptes', async () => {
+    const b = banc({ reponse: siteFictif(120) });
+    await creerSynchroAuto(b.deps).declencher();
+    const enCours = b.statuts.filter((s) => s.etat === 'en-cours');
+    expect(enCours[0]?.page).toBeNull();
+    const pages = enCours.map((s) => s.page).filter((p) => p !== null);
+    expect(pages).toEqual(expect.arrayContaining([1, 2, 3]));
+    expect(Math.max(...(pages as number[]))).toBeLessThanOrEqual(3);
+    expect(enCours.some((s) => s.pages === 3)).toBe(true);
+    const dernier = b.statuts.at(-1) as StatutSynchro;
+    expect(dernier.etat).toBe('termine');
+    expect(dernier.raison).toBeNull();
+    expect(dernier.ajoutees).toBe(120);
+    expect(dernier.prix).toBeGreaterThan(0);
+    expect(dernier.le).toBeGreaterThanOrEqual(T0);
+  });
+
+  it('compte les étiquettes distinctes lues sur le site', async () => {
+    const reponse = (chemin: string, n: number): ReponseApi => {
+      const r = siteFictif(2)(chemin);
+      if (/page=0/.test(chemin)) {
+        const j = r.json as { collection: Array<{ tags: unknown[] }> };
+        j.collection[0]!.tags = [{ id: 't1', name: 'Statut · Garder' }];
+        j.collection[1]!.tags = [{ id: 't1', name: 'Statut · Garder' }, { id: 't2', name: '#Espace' }];
+      }
+      void n;
+      return r;
+    };
+    const b = banc({ reponse });
+    await creerSynchroAuto(b.deps).declencher();
+    expect((b.statuts.at(-1) as StatutSynchro).etiquettes).toBe(2);
+  });
+
+  it('un 403 écrit « arrêt » avec le code et la raison', async () => {
+    const b = banc({ reponse: () => ({ statut: 403, json: null }) });
+    await creerSynchroAuto(b.deps).declencher();
+    const dernier = b.statuts.at(-1) as StatutSynchro;
+    expect(dernier.etat).toBe('arret');
+    expect(dernier.raison).toBe('code-http');
+    expect(dernier.codeHttp).toBe(403);
+  });
+
+  it('un arrêt demandé écrit la raison « manuel »', async () => {
+    const b = banc({ reponse: siteFictif(120) });
+    const synchro = creerSynchroAuto(b.deps);
+    const transport = b.deps.transport;
+    b.deps.transport = async (chemin) => {
+      synchro.arreter();
+      return transport(chemin);
+    };
+    await synchro.declencher();
+    const dernier = b.statuts.at(-1) as StatutSynchro;
+    expect(dernier.etat).toBe('arret');
+    expect(dernier.raison).toBe('manuel');
+    expect(dernier.codeHttp).toBeNull();
+  });
+
+  it('pause après arrêt (repos) : le statut précédent est conservé', async () => {
+    const b = banc();
+    b.stockage.etat = { ...etatInitial(), arretJusqua: T0 + 10 * MIN };
+    await creerSynchroAuto(b.deps).declencher();
+    expect(b.statuts).toEqual([]);
+  });
+
+  it('une erreur d’écriture du statut n’interrompt pas la synchro', async () => {
+    const b = banc();
+    b.deps.noterStatut = async () => {
+      throw new Error('stockage indisponible');
+    };
+    const resultat = await creerSynchroAuto(b.deps).declencher();
+    expect(resultat?.issue).toBe('termine');
+    expect(b.stockage.derniere).not.toBeNull();
   });
 });
