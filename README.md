@@ -10,9 +10,26 @@ Extension Chrome personnelle pour préparer le tri, l'échange et la vente d'une
 - Préparer les étiquettes de statut, de thème et d'échange (« #À échanger <nom> » pour vos amis) et en montrer l'aperçu. Elles ne sont pas envoyées au site tant que le contrat des étiquettes n'est pas relevé.
 - Lister les ventes à lancer selon vos places libres (5 enchères au plus).
 - Afficher un repère avec votre décision sur les cartes du site.
+- Se synchroniser seule avec le site, si vous l’activez (voir ci-dessous).
 - Éditer chaque carte, filtrer, repérer les doublons, importer et exporter en CSV ou JSON.
 
-**Elle ne clique sur rien sur le site** : vous tournez les pages, défaussez, vendez et échangez vous-même. Le cadre et ses raisons sont dans [AGENTS.md](AGENTS.md).
+**Elle ne clique sur rien sur le site** : vous défaussez, vendez et échangez vous-même. Le cadre et ses raisons sont dans [AGENTS.md](AGENTS.md).
+
+## Synchronisation automatique
+
+Au lieu de tourner les pages une à une, l’extension peut lire votre collection, vos étiquettes et le prix du marché de vos cartes par l’API interne du site (requêtes `GET` en lecture seule). **Elle est désactivée par défaut.** Le `robots.txt` du site interdit `/api/` : le risque de bannissement est réel, et il est assumé (décision du 2026-11-09, détail dans [AGENTS.md](AGENTS.md)).
+
+Pour l'activer :
+
+1. Ouvrez la page de gestion (clic sur l’icône) et, dans la section « Synchronisation automatique », mettez l’interrupteur sur « Activée » (Espace au clavier).
+2. Gardez un onglet WikiMasters ouvert, connecté à votre compte : la synchro part au chargement d’une page du site, puis toutes les 30 min tant que l’onglet est visible.
+
+À savoir :
+
+- Les requêtes utilisent votre session de navigateur ; l’extension ne lit ni jeton ni cookie.
+- Cadence fixe : 6 s entre deux requêtes, 10 par minute au plus. Une lecture complète des pages prend plusieurs minutes (environ 14 min pour 134 pages). Ensuite, seul ce qui a changé est relu, et les prix manquants ou périmés sont relevés par lots.
+- Le bouton « Arrêter » coupe tout de suite. Si le site répond 401, 403 ou 429, ou après 3 échecs, la synchro s’arrête et ne reprend pas avant 30 min.
+- Vos décisions et vos valeurs saisies à la main ne sont jamais écrasées. Les étiquettes lues sur le site servent à afficher les « Écarts avec le site » ; rien n’est corrigé sur le site.
 
 ## Régler les prix
 
