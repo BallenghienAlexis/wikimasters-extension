@@ -9,6 +9,7 @@ const RESEAU = 'src/lib/reseau.ts';
 const JETON = 'src/lib/jeton.ts';
 const FILE = 'src/lib/file.ts';
 const CONTENT = 'src/content/index.ts';
+const SYNCHRO_AUTO = 'src/content/synchroAuto.ts';
 const APP = 'src/app/Page.tsx';
 
 let eslint: ESLint;
@@ -266,4 +267,27 @@ describe('Contournements réalistes (mineurs)', () => {
     interdit('export const c = document[`cookie`];', AUTRE));
   it('AC5 : .click.call(el) est interdit dans src/content', () =>
     interdit('export function f(el: HTMLElement) { el.click.call(el); }', CONTENT));
+});
+
+describe('T-205 : fetch autorisé dans src/content/synchroAuto.ts et seulement là', () => {
+  const appel = "export const r = fetch('/api/x', { credentials: 'same-origin' });";
+  it('fetch est permis dans synchroAuto.ts', () => permis(appel, SYNCHRO_AUTO));
+  it('fetch reste interdit dans les autres fichiers de src/content', () => {
+    return Promise.all(['src/content/index.ts', 'src/content/executant.ts', 'src/content/autre.ts'].map((f) => interdit(appel, f)));
+  });
+  for (const code of [
+    'export const x = new XMLHttpRequest();',
+    "export const w = new WebSocket('wss://exemple.test/');",
+    "export const e = new EventSource('https://exemple.test/');",
+    "export const b = navigator.sendBeacon('/x', 'y');",
+    "export const r = globalThis.fetch('/api/x');",
+  ]) {
+    it(`${code} reste interdit dans synchroAuto.ts (sauf fetch nu)`, () =>
+      code.includes('globalThis.fetch') ? permis(code, SYNCHRO_AUTO) : interdit(code, SYNCHRO_AUTO));
+  }
+  it('les actions sur le site restent interdites dans synchroAuto.ts', () =>
+    interdit('export function f(el: HTMLElement) { el.click(); }', SYNCHRO_AUTO));
+  it('jeton reste non importable depuis synchroAuto.ts', () =>
+    interdit("import { lireJeton } from '../lib/jeton';\nexport const j = lireJeton;", SYNCHRO_AUTO));
+  it('les cookies restent interdits dans synchroAuto.ts', () => interdit('export const c = document.cookie;', SYNCHRO_AUTO));
 });

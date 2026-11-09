@@ -27,6 +27,10 @@ import {
   enregistrerPreferences,
   enregistrerRegistre,
   enregistrerSignalSynchro,
+  chargerEtatSynchro,
+  enregistrerEtatSynchro,
+  enregistrerArretSynchro,
+  ecouterArretSynchro,
 } from '../../src/lib/stockage';
 
 const MOTIF_SENSIBLE = /jeton|token|cookie|session|auth/i;
@@ -37,12 +41,16 @@ interface FauxStockage {
   set: ReturnType<typeof vi.fn>;
   remove: ReturnType<typeof vi.fn>;
   echecEcriture: Error | null;
+  ajoutes: unknown[];
+  retires: unknown[];
 }
 
 const installerFauxChrome = (): FauxStockage => {
   const faux: FauxStockage = {
     donnees: new Map(),
     echecEcriture: null,
+    ajoutes: [],
+    retires: [],
     get: vi.fn(),
     set: vi.fn(),
     remove: vi.fn(),
@@ -64,7 +72,7 @@ const installerFauxChrome = (): FauxStockage => {
   (globalThis as unknown as { chrome: unknown }).chrome = {
     storage: {
       local: { get: faux.get, set: faux.set, remove: faux.remove },
-      onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      onChanged: { addListener: vi.fn((f: unknown) => faux.ajoutes.push(f)), removeListener: vi.fn((f: unknown) => faux.retires.push(f)) },
     },
   };
   return faux;
@@ -111,7 +119,7 @@ afterEach(() => {
 describe('CLES_STOCKAGE', () => {
   it('AC4 : énumère exactement les clés locales de l’extension', () => {
     expect([...cles()].sort()).toEqual([
-      'amisInitiaux', 'bailSynchro', 'collection', 'derniereSynchro', 'execution', 'journal', 'preferences', 'registre', 'signalSynchro', 'syncAuto', 'synchro',
+      'amisInitiaux', 'arretSynchro', 'bailSynchro', 'collection', 'derniereSynchro', 'etatSynchro', 'execution', 'journal', 'preferences', 'registre', 'signalSynchro', 'syncAuto', 'synchro',
     ]);
   });
 
@@ -446,5 +454,52 @@ describe('T-202 : état de la synchronisation automatique', () => {
   it('SC-007 : l’interrupteur écrit seulement sa propre clé', async () => {
     await enregistrerSyncAuto(true);
     expect(faux.set).toHaveBeenCalledWith({ syncAuto: true });
+  });
+});
+
+describe('T-205 : état de l’ordonnanceur et demande d’arrêt', () => {
+  const etat = () => ({
+    version: 1 as const,
+    total: 3,
+    totalUnique: 3,
+    signatureEtiquettes: 't0:1',
+    derniereComplete: 1700000000000,
+    arretJusqua: null,
+    requetes: [1700000000000],
+    cardIds: { 'R|Carte 1': 'card-1' },
+    prix: { 'R|Carte 1': { valeur: 120, releveLe: 1700000000000 } },
+  });
+
+  it('aucun état stocké : null', async () => {
+    expect(await chargerEtatSynchro()).toBeNull();
+  });
+
+  it('l’état écrit est relu à l’identique', async () => {
+    await enregistrerEtatSynchro(etat());
+    expect(await chargerEtatSynchro()).toEqual(etat());
+    expect(faux.set).toHaveBeenCalledWith({ etatSynchro: etat() });
+  });
+
+  it('un état illisible est refusé sans être écrasé', async () => {
+    for (const invalide of ['x', 1, [], { version: 2 }, { ...etat(), total: -1 }, { ...etat(), requetes: ['a'] }, { ...etat(), cardIds: { a: 1 } }, { ...etat(), prix: { a: { valeur: 'x', releveLe: 1 } } }]) {
+      faux.donnees.set('etatSynchro', invalide);
+      await expect(chargerEtatSynchro(), JSON.stringify(invalide)).rejects.toThrow(/illisibles/);
+    }
+    await expect(enregistrerEtatSynchro({ ...etat(), total: -1 })).rejects.toThrow();
+  });
+
+  it('la demande d’arrêt écrit un horodatage et prévient les écouteurs', async () => {
+    await enregistrerArretSynchro(1700000000000);
+    expect(faux.set).toHaveBeenCalledWith({ arretSynchro: 1700000000000 });
+    const rappel = vi.fn();
+    const stop = ecouterArretSynchro(rappel);
+    const ecouteur = faux.ajoutes[0] as (c: Record<string, unknown>, zone: string) => void;
+    ecouteur({ arretSynchro: { newValue: 1700000000001 } }, 'local');
+    ecouteur({ arretSynchro: { newValue: 1700000000002 } }, 'sync');
+    ecouteur({ autre: { newValue: 1 } }, 'local');
+    ecouteur({ arretSynchro: { newValue: 'x' } }, 'local');
+    expect(rappel).toHaveBeenCalledTimes(1);
+    stop();
+    expect(faux.retires).toHaveLength(1);
   });
 });
