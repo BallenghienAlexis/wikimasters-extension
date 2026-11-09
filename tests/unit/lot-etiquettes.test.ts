@@ -41,7 +41,7 @@ const attendues = (c: Carte, cfg: Config = config()): string[] => exemplairesAtt
 describe('étiquettes attendues (SC-008)', () => {
   it('donne Statut puis les thèmes, du plus précis au plus général, sans #Autres', () => {
     expect(attendues(carte('a', CHIEN))).toEqual(['Statut · Garder', '#Chien', '#Animaux', '#Nature'])
-    expect(attendues(carte('a', { titre: 'Carte', description: 'agrume' }))).toEqual(['Statut · Garder', '#Gastronomie'])
+    expect(attendues(carte('a', { titre: 'Carte', description: 'agrume' }))).toEqual(['Statut · Garder', '#Fruit', '#Gastronomie'])
     expect(attendues(carte('a'))).toEqual(['Statut · Garder'])
   })
 
@@ -124,7 +124,8 @@ describe('lot : créations, poses, ordre (SC-008)', () => {
     ])
     const poses = lot.actions.filter((a) => a.type === 'pose-etiquette')
     expect(poses).toHaveLength(12)
-    expect(lot.actions.findIndex((a) => a.type === 'pose-etiquette')).toBeGreaterThan(lot.actions.findLastIndex((a) => a.type === 'creation-etiquette') - 1)
+    const types = lot.actions.map((a) => a.type)
+    expect(types.indexOf('pose-etiquette')).toBeGreaterThan(types.lastIndexOf('creation-etiquette'))
   })
 
   it('aucune action pour un couple déjà au registre', () => {
@@ -139,8 +140,8 @@ describe('homonymes et longueur (SC-009, SC-021)', () => {
     const lot = construireLot(coll(carte('a', CHIEN)), registre(), config({ nomsExistants: ['#Chien'] }), TOUS)
     expect(nomsDe(lot.actions, 'creation-etiquette')).not.toContain('#Chien')
     expect(nomsDe(lot.actions, 'pose-etiquette')).not.toContain('#Chien')
-    expect(lot.ecartees).toContainEqual({ idCarte: 'a', titre: 'Carte a', raison: 'homonyme' })
-    expect(lot.nonPosees).toContainEqual({ idCarte: 'a', titre: 'Carte a', nomEtiquette: '#Chien', raison: 'homonyme' })
+    expect(lot.ecartees).toContainEqual({ idCarte: 'a', titre: 'Berger allemand', raison: 'homonyme' })
+    expect(lot.nonPosees).toContainEqual({ idCarte: 'a', titre: 'Berger allemand', nomEtiquette: '#Chien', raison: 'homonyme' })
   })
 
   it('un homonyme d’échange est écarté de la même façon', () => {
