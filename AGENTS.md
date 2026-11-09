@@ -85,6 +85,13 @@ Repris de LifeLog. Artefacts par feature dans `specs/<feature>/` : `spec.md` →
 - Fin de run sans intervention : les hypothèses non bloquantes de `refine` sont adoptées par défaut ; les points mineurs des revues passent par une tâche `T-9xx retouches` (ou sont déclinés avec leur raison) ; puis vérification, merge sur `main` avec le même gate, et suppression des branches et worktrees du run. Les PR de documents de l'orchestrateur passent par la CI et `security-reviewer`, sans `reviewer`. Alexis n'intervient qu'à la validation de la spec, en cas d'escalade, ou si GitHub refuse réellement une opération.
 - **Dépôt** : `BallenghienAlexis/wikimasters-extension`, privé. Seul le commit initial a été poussé directement sur `main`, car la branche n'existait pas encore.
 
+### Suivi et communication (Alexis ne cherche jamais)
+
+- Alexis ne va **jamais** chercher l'état d'avancement d'un fil, d'une PR ou d'un agent, ni ce qu'on attend de lui : tout passe par le coordinateur, qui le relaie dans le chat du projet.
+- Chaque fil (session de travail) termine **chaque réponse** par un bloc « Ce dont j'ai besoin d'Alexis » : questions numérotées, ou « Rien ». Une demande noyée dans le texte ne compte pas.
+- Un point reporté (mineur de revue, retouche) est écrit **avec son détail** (fichier:ligne, point) dans `specs/<feature>/retouches.md` § « À reprendre », commité. Une PR ne dit jamais « non traité » sans renvoyer à cette liste (section « Reste à faire » du modèle de PR).
+- Si un fil ne retrouve pas ce qu'on lui demande, il le dit au coordinateur avec ce qu'il a cherché, sans renvoyer Alexis fouiller.
+
 ### Definition of Done (une tâche)
 
 1. Les critères d'acceptation de la tâche sont couverts par des tests écrits **avant** le code et qui passent.

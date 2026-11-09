@@ -19,3 +19,27 @@
 - Le test du dialogue vérifie le source (pas de DOM dans Vitest, pas de nouvelle dépendance) ; un test e2e pourra le couvrir avec T-017.
 - `CAUSES_RESULTAT` contient quelques libellés de réserve (`action réussie`, `erreur réseau`, `délai dépassé`, `réponse hors contrat`) : T-021 l’étendra au besoin.
 - `Synchronisation.tsx` et `App.tsx` : réservés à T-017, leurs retouches viendront après.
+
+## Traité : revues de T-015 et T-017 (`Synchronisation.tsx`, `App.tsx`)
+
+- T-015 sécurité 1 : l’avertissement de visibilité (D-13, H34) s’affiche dans le bandeau dès que le lot contient une étiquette « Ami · … », tant que la visibilité n’est pas relevée.
+- T-015 code 1 : « Cartes non incluses (N) » compte des cartes ; les groupes d’étiquettes obsolètes gardent leur nom (« étiquette obsolète conservée : favori »).
+- T-015 code 2 : « en attente d’une place libre (5 / 5) » (places occupées = exemplaires en vente + enchères du lot).
+- T-015 code 3 : le focus revient sur le titre après un « Réessayer ».
+- T-015 code 4 : `App.tsx` ne propose pas l’aperçu avant la fin de la lecture du stockage (« Calcul du lot… », `aria-busy`).
+- T-015 code 5 : espaces insécables dans le bandeau de risque.
+- T-017 sécurité 1 : `actionsRetrait` renvoie `[]` si le retrait d’étiquette n’est pas disponible.
+- T-017 code 2 : phrases de fin D-22 (« Lot terminé : N réussies, M passées, E échouées » ; « Lot interrompu : … »).
+- T-017 code 3 : `erreurLancement` n’affiche que des libellés fixes (D-41).
+- T-017 code 4 : tests de `libelleCause`, `texteFin`, `texteEnCours`, `pourcentage`, `actionsRetrait`.
+- T-017 code 6 : commentaire du contexte d’exécution corrigé.
+
+## À reprendre
+
+Chaque point dit ce qu’il attend. Source : revues de T-015 (#21) et T-017 (#23).
+
+- **T-015 sécurité 2** (`Synchronisation.tsx`, `construireLot` : `longueurMaxEtiquette: null`, `nomsExistants: []` figés dans `preparerLot` et `CONFIG_LOT`). Attend le contrat : la limite de longueur et les noms existants ne sont pas relevés dans `contrat-api.md`. À faire en **T-021**, quand le contrat les donne. Tant que c’est figé, les écarts « nom trop long » et « homonyme » ne se déclenchent jamais.
+- **T-015 code 6** (`tests/unit/synchronisation.test.ts`) : le câblage de « Réessayer » n’est pas testé. Attend l’e2e de **T-018** (pas de DOM dans Vitest). Même attente pour le focus après « Réessayer » et pour l’état « Calcul du lot… » de cette retouche, non vérifiables en unitaire.
+- **T-017 code 1** (`ZoneExecution`) : décompte « prochaine action dans N s » (D-20), hors région live. Attend un changement de `src/lib/file.ts` : la file doit exposer l’échéance de la prochaine action (aujourd’hui interne à `attendre`), avec son test. `file.ts` n’est pas dans le périmètre de cette retouche ; tâche de logique à créer, puis branchement dans `ZoneExecution`.
+- **T-017 code 5** (`tests/unit/dialogue-defausse.test.ts:18-21`) : le test du focus initial vérifie la constante `BOUTON_FOCUS_INITIAL`, pas `document.activeElement`. Attend l’e2e de **T-018**.
+- **T-015 code 6 bis** : captures `specs/synchro-complete/captures/T-015/*.png` hors liste fermée : exception acceptée, rien à faire.
