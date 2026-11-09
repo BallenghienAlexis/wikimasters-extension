@@ -4,7 +4,7 @@ import type { Action, Registre, TypeAction, TypesDisponibles } from '../../src/l
 import { TYPES_ACTION } from '../../src/lib/actions'
 import type { Carte, Collection } from '../../src/lib/collection'
 import { collectionVide } from '../../src/lib/collection'
-import { construireLot, exemplairesAttendus, type Config } from '../../src/lib/lot'
+import { construireLot, etiquettesDeCarte, exemplairesAttendus, type Config } from '../../src/lib/lot'
 import { registreVide } from '../../src/lib/registre'
 
 const TOUS: TypesDisponibles = new Set<TypeAction>(TYPES_ACTION)
@@ -309,5 +309,26 @@ describe('performance (SC-017)', () => {
       carte(`c${String(i).padStart(5, '0')}`, { titre: `Carte ${i}`, description: i % 2 ? 'race de chien' : 'pont sur un lac', statut: 'echanger' }),
     )
     expect(meilleureDuree(() => void construireLot(coll(...cartes), registre(), config({ amis }), TOUS))).toBeLessThan(500)
+  })
+})
+
+describe('mémorisation des étiquettes par carte (T-903)', () => {
+  it('même carte et mêmes réglages : même résultat ; amis ou limite différents : recalcul', () => {
+    const c = carte('a', { ...CHIEN, statut: 'echanger' })
+    const amis = [{ nom: 'Léa', themes: ['animaux'] }]
+    const cfg = { amis, limiteParExemplaire: null }
+    expect(etiquettesDeCarte(c, cfg)).toBe(etiquettesDeCarte(c, cfg))
+    const autres = etiquettesDeCarte(c, { amis: [{ nom: 'Hugo', themes: ['animaux'] }], limiteParExemplaire: null })
+    expect(autres.retenues).toContain('#À échanger Hugo')
+    expect(autres.retenues).not.toContain('#À échanger Léa')
+    expect(etiquettesDeCarte(c, { amis, limiteParExemplaire: 1 }).retenues).toEqual(['Statut · Échanger'])
+  })
+
+  it('une carte modifiée (nouvel objet) est recalculée', () => {
+    const c = carte('a', { ...CHIEN, statut: 'garder' })
+    const avant = etiquettesDeCarte(c, config())
+    const apres = etiquettesDeCarte({ ...c, statut: 'vendre' }, config())
+    expect(avant.retenues[0]).toBe('Statut · Garder')
+    expect(apres.retenues[0]).toBe('Statut · Vendre')
   })
 })
