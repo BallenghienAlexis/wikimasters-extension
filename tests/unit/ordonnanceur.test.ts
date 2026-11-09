@@ -66,7 +66,7 @@ const statsJson = (total: number, unique = total, tags: Array<[string, number]> 
   tagOptions: tags.map(([nom, n], i) => ({ id: `tag-${i}`, name: nom, color: '#abcdef', cardCount: n })),
 });
 
-/** Site fictif : pages de 2 exemplaires, prix fixes par carte. */
+/** Site fictif : pages de 50 exemplaires, comme le site, prix fixes par carte. */
 function siteFictif(nCartes: number, options: { prix?: (n: number) => number | null; tags?: Array<[string, number]> } = {}) {
   const exemplaires = Array.from({ length: nCartes }, (_, i) => exemplaire(i + 1));
   return (chemin: string): ReponseApi => {
@@ -74,7 +74,7 @@ function siteFictif(nCartes: number, options: { prix?: (n: number) => number | n
     const page = /\/api\/my-collection\?.*page=(\d+)/.exec(chemin);
     if (page) {
       const p = Number(page[1]);
-      return { statut: 200, json: { collection: exemplaires.slice((p - 1) * 2, p * 2) } };
+      return { statut: 200, json: { collection: exemplaires.slice(p * 50, (p + 1) * 50) } };
     }
     const vente = /\/api\/marketplace\/cards\/card-(\d+)\/sales\?scope=summary$/.exec(chemin);
     if (vente) {
@@ -177,11 +177,11 @@ describe('ordonnanceur — critère 2 : pages dans l’ordre jusqu’à collecti
     const b = banc((chemin) => {
       if (chemin.includes('/stats')) return { statut: 200, json: statsJson(3) };
       const p = Number(/page=(\d+)/.exec(chemin)![1]);
-      return { statut: 200, json: { collection: exemplaires.slice((p - 1) * 2, p * 2) } };
+      return { statut: 200, json: { collection: exemplaires.slice(p * 2, (p + 1) * 2) } };
     });
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });
     const pages = b.departs.map((d) => d.chemin).filter((c) => c.includes('page='));
-    expect(pages.map((c) => /page=(\d+)/.exec(c)![1])).toEqual(['1', '2', '3']);
+    expect(pages.map((c) => /page=(\d+)/.exec(c)![1])).toEqual(['0', '1', '2']);
     expect(pages.every((c) => c.includes('stats=0'))).toBe(true);
     const c1 = r.collection.cartes.find((c) => c.id === idCarte(1))!;
     expect(c1.etiquettesSite).toEqual(['Garder']);
@@ -191,21 +191,21 @@ describe('ordonnanceur — critère 2 : pages dans l’ordre jusqu’à collecti
   });
 
   it('sans tri stable : relecture complète même si la première page est identique au local', async () => {
-    const site = siteFictif(6);
+    const site = siteFictif(120);
     const premier = banc(site);
     const r1 = await synchroniser({ ...premier.deps, maxPrix: 0 });
-    const etat = { ...r1.etat, total: 5 }; // simule un total différent
+    const etat = { ...r1.etat, total: 119 }; // simule un total différent
     const b = banc(site, r1.collection, etat);
     await synchroniser({ ...b.deps, maxPrix: 0 });
     expect(b.departs.filter((d) => d.chemin.includes('page=')).length).toBe(4); // 3 pages + page vide
   });
 
   it('avec tri stable : s’arrête dès la première page identique au local', async () => {
-    const site = siteFictif(8);
+    const site = siteFictif(200);
     const premier = banc(site);
     const r1 = await synchroniser({ ...premier.deps, maxPrix: 0 });
     // une carte ajoutée en fin : seule la dernière page change ; tri stable déclaré → arrêt dès la page identique
-    const etat = { ...r1.etat, total: 7 };
+    const etat = { ...r1.etat, total: 199 };
     const b = banc(site, r1.collection, etat, { triStable: true });
     await synchroniser({ ...b.deps, maxPrix: 0 });
     expect(b.departs.filter((d) => d.chemin.includes('page=')).length).toBe(1);
@@ -215,12 +215,31 @@ describe('ordonnanceur — critère 2 : pages dans l’ordre jusqu’à collecti
     const b = banc((chemin) => {
       if (chemin.includes('/stats')) return { statut: 200, json: statsJson(2) };
       const p = Number(/page=(\d+)/.exec(chemin)![1]);
-      return { statut: 200, json: { collection: p === 1 ? [exemplaire(1), { id: 'x' }] : [] } };
+      return { statut: 200, json: { collection: p === 0 ? [exemplaire(1), { id: 'x' }] : [] } };
     });
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });
     expect(r.collection.cartes).toHaveLength(1);
     expect(r.ignorees).toBe(1);
     expect(b.journal.join('\n')).toMatch(/ignorée/);
+  });
+});
+
+describe('ordonnanceur — pages : départ à 0 et plafond', () => {
+  it('demande la page 0 en premier', async () => {
+    const b = banc(siteFictif(2));
+    await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(b.departs[1]?.chemin).toBe('/api/my-collection?sort=rarity&page=0&stats=0');
+  });
+
+  it('plafonne les pages à ceil(total / 50) + 2 si le site ne renvoie jamais de page vide', async () => {
+    const b = banc((chemin) =>
+      chemin.includes('/stats') ? { statut: 200, json: statsJson(100) } : { statut: 200, json: { collection: [exemplaire(1)] } },
+    );
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(b.departs.filter((d) => d.chemin.includes('page=')).length).toBe(4);
+    expect(r.issue).toBe('termine');
+    expect(r.complete).toBe(false);
+    expect(r.etat.derniereComplete).toBeNull();
   });
 });
 
@@ -320,7 +339,7 @@ describe('ordonnanceur — critère 3 : prix', () => {
 
 describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
   it('sépare deux requêtes d’au moins 6 s, au plus 10 par 60 s, une seule en vol', async () => {
-    const b = banc(siteFictif(40));
+    const b = banc(siteFictif(600));
     await synchroniser({ ...b.deps, maxPrix: 0 });
     const t = b.departs.map((d) => d.t);
     expect(t.length).toBeGreaterThan(MAX_PAR_FENETRE);

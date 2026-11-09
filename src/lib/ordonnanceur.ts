@@ -25,7 +25,9 @@ export const ancienneteMaxPrixMs = 30 * 86_400_000;
 export const DUREE_BAIL_MS = 2 * 60_000;
 /** Plafond de prix relevés par exécution (le reste attend la synchro suivante). */
 export const MAX_PRIX_PAR_EXECUTION = 100;
-const PREMIERE_PAGE = 1;
+const PREMIERE_PAGE = 0;
+const CARTES_PAR_PAGE = 50;
+const PAGES_DE_MARGE = 2;
 
 export interface ReponseApi {
   statut: number;
@@ -270,7 +272,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         stats.totalUnique === etat.totalUnique &&
         signature(stats) === etat.signatureEtiquettes;
 
-      if (!inchange) complet = (await lirePages()) && complet;
+      if (!inchange) complet = (await lirePages(stats?.total ?? null)) && complet;
       if (complet && stats !== null) {
         etat.total = stats.total;
         etat.totalUnique = stats.totalUnique;
@@ -302,9 +304,15 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   }
 
   /** Vrai si toutes les pages ont été lues sans échec. */
-  async function lirePages(): Promise<boolean> {
+  async function lirePages(total: number | null): Promise<boolean> {
     let ok = true;
+    // Plafond : pages attendues + marge ; au-delà, arrêt propre (lecture jugée incomplète).
+    const maxPages = Math.ceil((total ?? 0) / CARTES_PAR_PAGE) + PAGES_DE_MARGE;
     for (let page = PREMIERE_PAGE; ; page++) {
+      if (total !== null && page - PREMIERE_PAGE >= maxPages) {
+        journal(`Arrêt de la lecture : plus de ${maxPages} pages pour ${total} exemplaires.`);
+        return false;
+      }
       const r = await requete(cheminPage(page));
       if (r === null) {
         ok = false;
