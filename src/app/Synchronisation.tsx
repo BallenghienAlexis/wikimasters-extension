@@ -13,6 +13,7 @@ import type {
 import type { Carte, Collection } from '../lib/collection';
 import { typesDisponibles } from '../lib/contrat';
 import { CODES_ARRET, creerFile, type Decision, type EtatFile, type File as FileLot, type RaisonArret } from '../lib/file';
+import { regrouperEtiquettes, type ApercuEtiquettes } from '../lib/apercuEtiquettes';
 import { completerEntree, ouvrirEntree, passerEntree } from '../lib/journal';
 import { construireLot, type Config, type EtiquetteObsolete, type LotConstruit } from '../lib/lot';
 import { appliquerResultat, reverifierAction } from '../lib/revision';
@@ -20,13 +21,16 @@ import {
   chargerCollection,
   chargerExecution,
   chargerJournal,
+  chargerPreferences,
   chargerRegistre,
   enregistrerCollection,
   enregistrerExecution,
   enregistrerJournal,
   enregistrerRegistre,
 } from '../lib/stockage';
+import { preferencesParDefaut, type Preferences } from '../lib/tri';
 import DialogueDefausse from './DialogueDefausse';
+import EtiquettesPrevues from './EtiquettesPrevues';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
 import Journal, { type CoupleRetrait } from './Journal';
 
@@ -194,17 +198,27 @@ export function texteLotVide(avecIndisponibles: boolean): string {
 
 export type ResultatLot = { lot: LotConstruit } | { erreur: string };
 
+/** Configuration du lot à partir des préférences (amis et thèmes suivis pour les étiquettes d’échange). */
+export function configDuLot(preferences: Preferences): Config {
+  return {
+    maxVentesSimultanees: CONFIG_PRIX.maxVentesSimultanees,
+    longueurMaxEtiquette: null,
+    nomsExistants: [],
+    amis: preferences.amis,
+  };
+}
+
 /** Construit le lot. Un registre illisible (`null`) ou une exception donnent une cause fixe en français. */
-export function preparerLot(collection: Collection, registre: Registre | null, dispo: TypesDisponibles): ResultatLot {
+export function preparerLot(
+  collection: Collection,
+  registre: Registre | null,
+  dispo: TypesDisponibles,
+  config: Config = configDuLot(preferencesParDefaut()),
+): ResultatLot {
   if (registre === null) return { erreur: 'le registre des étiquettes est illisible' };
   try {
     return {
-      lot: construireLot(
-        collection,
-        registre,
-        { maxVentesSimultanees: CONFIG_PRIX.maxVentesSimultanees, longueurMaxEtiquette: null, nomsExistants: [] },
-        dispo,
-      ),
+      lot: construireLot(collection, registre, config, dispo),
     };
   } catch {
     return { erreur: 'calcul impossible' };
@@ -320,12 +334,6 @@ interface ContexteExecution {
   ecritures: Promise<void>;
 }
 
-const CONFIG_LOT: Config = {
-  maxVentesSimultanees: CONFIG_PRIX.maxVentesSimultanees,
-  longueurMaxEtiquette: null,
-  nomsExistants: [],
-};
-
 const parametreDe = (a: Action): string | null =>
   a.type === 'enchere' ? String(a.prix) : a.type === 'lecture' || a.type === 'defausse' ? null : a.nomEtiquette;
 
@@ -349,8 +357,8 @@ function contexteExecution(): ContexteExecution {
       return pont.confirmer(action);
     },
     reverifier: async (action) => {
-      const [collection, registre] = await Promise.all([chargerCollection(), chargerRegistre()]);
-      return reverifierAction(action, collection, registre, CONFIG_LOT);
+      const [collection, registre, preferences] = await Promise.all([chargerCollection(), chargerRegistre(), chargerPreferences()]);
+      return reverifierAction(action, collection, registre, configDuLot(preferences));
     },
     appliquer: async (action, resultat) => {
       const [collection, registre] = await Promise.all([chargerCollection(), chargerRegistre()]);
@@ -562,6 +570,8 @@ const ZoneExecution: React.FC<PropsZone> = ({ exec, interrompu, attenteDecision,
 interface Props {
   collection: Collection;
   registre: Registre;
+  /** Préférences (amis et thèmes) : figées à l’ouverture de l’aperçu pour les étiquettes d’échange. */
+  preferences?: Preferences;
   /** Le registre n’a pas pu être lu : aucun lot ne peut être préparé. */
   registreIllisible?: boolean;
   /** L’état de l’exécution n’a pas pu être lu : « Lancer » reste désactivé. */
@@ -580,6 +590,7 @@ interface Props {
 const Synchronisation: React.FC<Props> = ({
   collection,
   registre,
+  preferences = preferencesParDefaut(),
   registreIllisible = false,
   executionIllisible = false,
   nbOnglets,
@@ -697,10 +708,25 @@ const Synchronisation: React.FC<Props> = ({
     }
   }, [ouvert]);
 
-  const ouvrir = (): void => setEtat(preparerLot(collection, registreIllisible ? null : registreCourant, dispo));
+  // Aperçu des étiquettes, figé avec le lot : mêmes collection, registre et préférences (H24).
+  const [apercuEtiquettes, setApercuEtiquettes] = useState<ApercuEtiquettes | null>(null);
+  const figer = (r: Registre | null): void => {
+    const config = configDuLot(preferences);
+    setEtat(preparerLot(collection, r, dispo, config));
+    let apercu: ApercuEtiquettes | null = null;
+    if (r !== null) {
+      try {
+        apercu = regrouperEtiquettes(collection, r, config);
+      } catch {
+        apercu = null;
+      }
+    }
+    setApercuEtiquettes(apercu);
+  };
+  const ouvrir = (): void => figer(registreIllisible ? null : registreCourant);
   const reessayer = async (): Promise<void> => {
     const r = onReessayer ? await onReessayer() : registreIllisible ? null : registreCourant;
-    setEtat(preparerLot(collection, r, dispo));
+    figer(r);
   };
 
   const lot = etat && 'lot' in etat ? etat.lot : null;
@@ -869,6 +895,8 @@ const Synchronisation: React.FC<Props> = ({
                 )}
               </>
             )}
+
+            {apercuEtiquettes && <EtiquettesPrevues apercu={apercuEtiquettes} cartes={cartes} />}
 
             {lignes.length > 0 && (
               <details className="mt-3 text-sm text-muted">

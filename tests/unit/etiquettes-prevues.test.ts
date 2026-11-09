@@ -59,7 +59,7 @@ describe('EtiquettesPrevues : lignes (AC1)', () => {
   it('tableau avec en-têtes de colonne et libellés visibles en liste empilée', () => {
     const { c, apercu } = cas()
     const html = rendre(c, apercu)
-    for (const t of ['Étiquette', 'Cartes', 'Exemplaires', 'État']) expect(html).toContain(`<th scope="col"`) && expect(html).toContain(t)
+    for (const t of ['Étiquette', 'Cartes', 'Exemplaires', 'État']) expect(html).toContain(`<th scope="col" class="px-2 py-2 font-semibold">${t}</th>`)
     expect(html).toContain('<caption')
     expect(html).toContain(`Exemplaires${NB}: `)
     expect(html).toContain(`État${NB}: `)
@@ -163,7 +163,7 @@ describe('EtiquettesPrevues : rendu sûr et responsive (AC6)', () => {
   it('aucune classe de couleur hors tokens, jamais text-muted sur bg-line', () => {
     const { c, apercu } = cas()
     const html = rendre(c, apercu)
-    const classes = [...html.matchAll(/class="([^"]*)"/g)].flatMap((m) => m[1].split(/\s+/))
+    const classes = [...html.matchAll(/class="([^"]*)"/g)].flatMap((m) => (m[1] ?? '').split(/\s+/))
     const couleurs = classes.filter((k) => /^(text|bg|border|border-l)-/.test(k))
     const permises = /^(text-(sm|xs|base|paper|muted|vendre|echanger|garder|defausser|left)|bg-(ink|ink-2|line)|border(-l)?-(line|vendre|\d|b|l)|border-l-4|border-b|border)$/
     for (const k of couleurs) expect(k, k).toMatch(permises)

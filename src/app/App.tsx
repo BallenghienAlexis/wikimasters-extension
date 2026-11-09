@@ -227,6 +227,7 @@ const App: React.FC = () => {
           <Synchronisation
             collection={collection}
             registre={registre}
+            preferences={preferences}
             registreIllisible={registreIllisible}
             executionIllisible={executionIllisible}
             nbOnglets={0}
