@@ -12,7 +12,7 @@ import {
 
 describe('registre : ajout, retrait, purge', () => {
   it('démarre vide', () => {
-    expect(registreVide()).toEqual({ version: 1, etiquettes: {}, couples: [] })
+    expect(registreVide()).toEqual({ version: 2, etiquettes: {}, couples: [] })
   })
 
   it('enregistre une étiquette et pose des couples', () => {
@@ -45,20 +45,26 @@ describe('registre : ajout, retrait, purge', () => {
   })
 })
 
-describe('registre : borne de 2 couples par exemplaire', () => {
-  it('refuse un 3e couple pour un même exemplaire', () => {
+describe('registre : plus de plafond de 2 couples (SC-013)', () => {
+  it('accepte un 3e couple pour un même exemplaire', () => {
     let r = poserCouple(registreVide(), 'ex-1', 'A')
     r = poserCouple(r, 'ex-1', 'B')
-    const apres = poserCouple(r, 'ex-1', 'C')
-    expect(apres).toBe(r)
-    expect(couplesDe(apres, 'ex-1')).toHaveLength(2)
+    r = poserCouple(r, 'ex-1', 'C')
+    expect(couplesDe(r, 'ex-1')).toHaveLength(3)
   })
 
-  it('accepte 2 couples pour un autre exemplaire', () => {
-    let r = poserCouple(registreVide(), 'ex-1', 'A')
-    r = poserCouple(r, 'ex-1', 'B')
-    r = poserCouple(r, 'ex-2', 'A')
-    expect(r.couples).toHaveLength(3)
+  it('accepte jusqu’à 12 couples et plus', () => {
+    let r = registreVide()
+    for (let i = 0; i < 12; i++) r = poserCouple(r, 'ex-1', `N${i}`)
+    expect(couplesDe(r, 'ex-1')).toHaveLength(12)
+  })
+
+  it('refuse un couple au-delà de la limite du site, si elle est connue', () => {
+    let r = poserCouple(registreVide(), 'ex-1', 'A', 2)
+    r = poserCouple(r, 'ex-1', 'B', 2)
+    const apres = poserCouple(r, 'ex-1', 'C', 2)
+    expect(apres).toBe(r)
+    expect(poserCouple(r, 'ex-1', 'C', null)).not.toBe(r)
   })
 
   it('refuse les identifiants vides ou trop longs', () => {
@@ -73,14 +79,14 @@ describe('registre : borne de 2 couples par exemplaire', () => {
 describe('validerRegistre', () => {
   it('accepte un registre valide et reconstruit champ par champ', () => {
     const brut = {
-      version: 1,
+      version: 2,
       etiquettes: { A: 'et-1' },
       couples: [{ ex: 'ex-1', nom: 'A', parasite: 'x' }],
       jeton: 'secret',
     }
     const r = validerRegistre(brut)
     expect(r).toEqual({
-      version: 1,
+      version: 2,
       etiquettes: { A: 'et-1' },
       couples: [{ ex: 'ex-1', nom: 'A' }],
     })
@@ -128,7 +134,8 @@ describe('validerRegistre', () => {
     42,
     [],
     {},
-    { version: 2, etiquettes: {}, couples: [] },
+    { version: 3, etiquettes: {}, couples: [] },
+    { version: 0, etiquettes: {}, couples: [] },
     { version: 1, etiquettes: [], couples: [] },
     { version: 1, etiquettes: { A: 3 }, couples: [] },
     { version: 1, etiquettes: { A: '' }, couples: [] },
@@ -137,13 +144,9 @@ describe('validerRegistre', () => {
     { version: 1, etiquettes: {}, couples: [{ ex: '', nom: 'A' }] },
     { version: 1, etiquettes: {}, couples: [{ ex: 'e', nom: 'x'.repeat(201) }] },
     {
-      version: 1,
+      version: 2,
       etiquettes: {},
-      couples: [
-        { ex: 'e', nom: 'A' },
-        { ex: 'e', nom: 'B' },
-        { ex: 'e', nom: 'C' },
-      ],
+      couples: Array.from({ length: 257 }, (_, i) => ({ ex: 'e', nom: `N${i}` })),
     },
   ])('renvoie null pour %j', (brut) => {
     expect(validerRegistre(brut)).toBeNull()
@@ -181,5 +184,61 @@ describe('immuabilité', () => {
     const copie = structuredClone(brut)
     expect(validerRegistre(brut)).toBeNull()
     expect(brut).toEqual(copie)
+  })
+})
+
+describe('migration v1 → v2 et bornes (SC-013, SC-018)', () => {
+  const v1 = {
+    version: 1,
+    etiquettes: { 'Statut · Garder': 'et-1', '#Chien': 'et-2' },
+    couples: [
+      { ex: 'ex-1', nom: 'Statut · Garder' },
+      { ex: 'ex-1', nom: '#Chien' },
+      { ex: 'ex-2', nom: 'Statut · Garder' },
+    ],
+  }
+
+  it('lit un registre v1 et le migre en v2 sans perte', () => {
+    const r = validerRegistre(v1)
+    expect(r).not.toBeNull()
+    expect(r!.version).toBe(2)
+    expect(r!.etiquettes).toEqual(v1.etiquettes)
+    expect(r!.couples).toEqual(v1.couples)
+  })
+
+  it('est idempotente', () => {
+    const une = validerRegistre(v1)!
+    const deux = validerRegistre(une)!
+    expect(deux).toEqual(une)
+  })
+
+  it('ne modifie pas l’entrée v1', () => {
+    const copie = JSON.stringify(v1)
+    validerRegistre(v1)
+    expect(JSON.stringify(v1)).toBe(copie)
+  })
+
+  it('accepte 256 couples par exemplaire et rejette 257', () => {
+    const faire = (n: number) => ({
+      version: 2,
+      etiquettes: {},
+      couples: Array.from({ length: n }, (_, i) => ({ ex: 'e', nom: `N${i}` })),
+    })
+    expect(validerRegistre(faire(256))).not.toBeNull()
+    expect(validerRegistre(faire(257))).toBeNull()
+  })
+
+  it('rejette une version inconnue sans rien écraser', () => {
+    expect(validerRegistre({ ...v1, version: 3 })).toBeNull()
+  })
+
+  it('pèse au plus 5 Mo pour 5 000 exemplaires à 12 couples', () => {
+    const etiquettes: Record<string, string> = {}
+    const noms = Array.from({ length: 12 }, (_, i) => `#Nom d’étiquette fictif ${String(i).padStart(2, '0')}`.slice(0, 25))
+    for (const nom of noms) etiquettes[nom] = 'e'.repeat(36)
+    const couples = []
+    for (let i = 0; i < 5000; i++) for (const nom of noms) couples.push({ ex: `${String(i).padStart(36, 'x')}`, nom })
+    const taille = new TextEncoder().encode(JSON.stringify({ version: 2, etiquettes, couples })).length
+    expect(taille).toBeLessThanOrEqual(5 * 1024 * 1024)
   })
 })

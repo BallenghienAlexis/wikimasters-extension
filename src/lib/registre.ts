@@ -7,11 +7,16 @@
  */
 import type { Registre } from './actions'
 
-export const VERSION_REGISTRE = 1
+export const VERSION_REGISTRE = 2
+/** Versions lisibles : la 1 est migrée en 2 sans perte (SC-013). */
+const VERSIONS_LISIBLES: readonly unknown[] = [1, VERSION_REGISTRE]
 /** Longueur maximale d’un identifiant ou d’un nom d’étiquette. */
 export const LONGUEUR_MAX_ID = 200
-/** Nombre maximal de couples par exemplaire relié. */
-export const COUPLES_MAX_PAR_EXEMPLAIRE = 2
+/**
+ * Borne de forme du registre stocké (H7) : elle ne sert qu'à rejeter une donnée corrompue.
+ * La limite réelle du site est un réglage passé à `poserCouple`.
+ */
+export const COUPLES_MAX_PAR_EXEMPLAIRE = 256
 
 function identifiantValide(v: unknown): v is string {
   return typeof v === 'string' && v.length > 0 && v.length <= LONGUEUR_MAX_ID
@@ -39,12 +44,15 @@ export function couplesDe(r: Registre, idExemplaire: string): Array<{ ex: string
   return r.couples.filter((c) => c.ex === idExemplaire).map((c) => ({ ex: c.ex, nom: c.nom }))
 }
 
-/** Pose un couple. Refusé (registre inchangé) au-delà de 2 couples pour l’exemplaire. */
-export function poserCouple(r: Registre, idExemplaire: string, nom: string): Registre {
+/**
+ * Pose un couple. Refusé (registre inchangé) au-delà de `limite` couples pour l’exemplaire,
+ * si la limite du site est connue ; sans limite (`null` ou absente), aucun plafond propre.
+ */
+export function poserCouple(r: Registre, idExemplaire: string, nom: string, limite: number | null = null): Registre {
   if (!identifiantValide(idExemplaire) || !identifiantValide(nom)) return r
   const existants = r.couples.filter((c) => c.ex === idExemplaire)
   if (existants.some((c) => c.nom === nom)) return r
-  if (existants.length >= COUPLES_MAX_PAR_EXEMPLAIRE) return r
+  if (limite !== null && existants.length >= limite) return r
   return { ...r, couples: [...r.couples, { ex: idExemplaire, nom }] }
 }
 
@@ -65,7 +73,7 @@ export function purgerCarte(r: Registre, idsExemplaires: readonly string[]): Reg
 export function validerRegistre(brut: unknown): Registre | null {
   if (typeof brut !== 'object' || brut === null || Array.isArray(brut)) return null
   const o = brut as Record<string, unknown>
-  if (o.version !== VERSION_REGISTRE) return null
+  if (!VERSIONS_LISIBLES.includes(o.version)) return null
   const et = o.etiquettes
   if (typeof et !== 'object' || et === null || Array.isArray(et)) return null
   if (!Array.isArray(o.couples)) return null
