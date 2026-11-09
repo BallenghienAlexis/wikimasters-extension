@@ -199,6 +199,53 @@ describe('limites du site (SC-010)', () => {
   })
 })
 
+describe('corrections de revue (SC-010, SC-021)', () => {
+  it('limite par exemplaire basse : les échanges retirés sont signalés', () => {
+    const lot = construireLot(coll(carte('a', { ...CHIEN, statut: 'echanger' })), registre(), config({ amis: AMIS, limiteParExemplaire: 1 }), TOUS)
+    const noms = lot.nonPosees.map((n) => n.nomEtiquette)
+    expect(noms).toContain('#À échanger Léa')
+    expect(noms).toContain('#À échanger Hugo')
+    expect(lot.nonPosees.every((n) => n.raison === 'au-dela-limite')).toBe(true)
+  })
+
+  it('limite à 0 : « Statut · … » reste posé', () => {
+    expect(attendues(carte('a', CHIEN), config({ limiteParExemplaire: 0 }))).toEqual(['Statut · Garder'])
+  })
+
+  it('les noms du registre plus attendus comptent dans la limite de noms', () => {
+    const reg = registre(
+      [{ ex: 'ex-z', nom: '#Vieux' }],
+      { 'Ami · Léa': 'e1', '#Vieux': 'e2', '#Autre': 'e3' },
+    )
+    const lot = construireLot(coll(carte('a', CHIEN)), reg, config({ limiteNoms: 3 }), TOUS)
+    expect(nomsDe(lot.actions, 'creation-etiquette')).toEqual([])
+    expect(nomsDe(lot.actions, 'pose-etiquette')).toEqual([])
+    expect(lot.nonPosees.map((n) => n.nomEtiquette)).toContain('Statut · Garder')
+  })
+
+  it('l’ami de la carte et l’ami de la liste ne diffèrent pas par la casse', () => {
+    const noms = attendues(carte('a', { ...CHIEN, statut: 'echanger', ami: 'léa' }), config({ amis: AMIS }))
+    expect(noms.filter((n) => n.startsWith('#À échanger'))).toEqual(['#À échanger léa', '#À échanger Hugo'])
+  })
+
+  it('un nom de plus de 200 caractères est écarté même sans longueur connue', () => {
+    const lot = construireLot(coll(carte('a', { statut: 'echanger', ami: 'x'.repeat(250) })), registre(), config({ longueurMaxEtiquette: null }), TOUS)
+    expect(lot.nonPosees.some((n) => n.raison === 'nom-trop-long')).toBe(true)
+    expect(nomsDe(lot.actions, 'pose-etiquette')).toEqual(['Statut · Échanger'])
+  })
+
+  it('performance avec limites connues : moins de 500 ms', () => {
+    const themes = ['animaux', 'pont', 'chien', 'chat', 'volcan', 'lac', 'tunnel', 'cheval', 'ile', 'ski']
+    const amis = Array.from({ length: 20 }, (_, i) => ({ nom: `Ami ${i}`, themes }))
+    const cartes = Array.from({ length: 5000 }, (_, i) =>
+      carte(`c${String(i).padStart(5, '0')}`, { titre: `Carte ${i}`, description: i % 2 ? 'race de chien' : 'pont sur un lac', statut: 'echanger' }),
+    )
+    const debut = performance.now()
+    construireLot(coll(...cartes), registre(), config({ amis, limiteParExemplaire: 2, limiteNoms: 3 }), TOUS)
+    expect(performance.now() - debut).toBeLessThan(500)
+  })
+})
+
 describe('retraits (SC-011, SC-022)', () => {
   const r = (noms: string[]): Registre => registre(noms.map((nom) => ({ ex: 'ex-a', nom })), Object.fromEntries(noms.map((n, i) => [n, `e${i}`])))
 

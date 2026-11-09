@@ -14,7 +14,8 @@ import type {
   TypeAction,
   TypesDisponibles,
 } from './actions'
-import { LIBELLES_STATUT, type Carte, type Collection, type Statut } from './collection'
+import { LIBELLES_STATUT, normaliser, type Carte, type Collection, type Statut } from './collection'
+import { LONGUEUR_MAX_ID } from './registre'
 import { amisConcernes, prixDepart, type Ami } from './tri'
 import { DEFINITIONS_THEMES, LIBELLES_THEMES, THEME_AUTRES, themesDeCarte } from './themes'
 
@@ -89,9 +90,14 @@ function themesOrdonnes(carte: Carte): string[] {
 /** Étiquettes d’échange (SC-021) : l’ami de la carte, puis chaque ami de la liste qui suit un thème de la carte. */
 function etiquettesEchange(carte: Carte, themes: readonly string[], amis: readonly Ami[]): string[] {
   const noms: string[] = []
+  const vus = new Set<string>()
   const ajouter = (nom: string): void => {
     const net = nom.trim()
-    if (net !== '' && !noms.includes(net)) noms.push(net)
+    const cle = normaliser(net)
+    if (net !== '' && !vus.has(cle)) {
+      vus.add(cle)
+      noms.push(net)
+    }
   }
   ajouter(carte.ami ?? '')
   for (const ami of amisConcernes(themes, amis)) ajouter(ami.nom)
@@ -115,7 +121,9 @@ export function etiquettesDeCarte(carte: Carte, config?: Pick<Config, 'amis' | '
   if (limite === null || limite === undefined || !Number.isFinite(limite) || limite < prioritaires.length) {
     // Pas de limite connue, ou limite plus basse que Statut et échanges : ceux-là restent, les thèmes sont écartés.
     if (limite === null || limite === undefined || !Number.isFinite(limite)) return { retenues: tous, ecartees: [] }
-    return { retenues: prioritaires.slice(0, Math.max(1, Math.floor(limite))), ecartees: libellesThemes }
+    // Limite à 0 : « Statut · … » reste posé malgré tout (au moins une étiquette par exemplaire).
+    const n = Math.max(1, Math.floor(limite))
+    return { retenues: prioritaires.slice(0, n), ecartees: [...prioritaires.slice(n), ...libellesThemes] }
   }
   const n = Math.floor(limite)
   return { retenues: tous.slice(0, n), ecartees: tous.slice(n) }
@@ -132,23 +140,32 @@ export function exemplairesAttendus(carte: Carte, config?: Pick<Config, 'amis' |
 }
 
 /**
- * Noms exclus par la limite de noms du compte (H6) : d’abord les noms déjà au registre, puis Statut et
- * échanges, puis les nouveaux thèmes par nombre d’exemplaires décroissant et par libellé.
+ * Noms exclus par la limite de noms du compte (H6). Tous les noms du registre restent sur le compte
+ * et occupent des places (même s’ils ne sont plus attendus) ; il reste `limite − noms du registre`
+ * places pour les nouveaux noms : Statut et échanges d’abord, puis les thèmes par nombre
+ * d’exemplaires décroissant et par libellé.
  */
-function nomsAuDelaDeLaLimite(cartes: readonly Carte[], registre: Registre, config: Config): Set<string> {
-  const limite = config.limiteNoms
-  if (limite === null || limite === undefined || !Number.isFinite(limite)) return new Set()
+function nomsAuDelaDeLaLimite(
+  cartes: readonly Carte[],
+  etiquettes: ReadonlyMap<string, { retenues: string[] }>,
+  registre: Registre,
+  limiteNoms: number | null | undefined,
+): Set<string> {
+  if (limiteNoms === null || limiteNoms === undefined || !Number.isFinite(limiteNoms)) return new Set()
+  const dansRegistre = new Set([...Object.keys(registre.etiquettes), ...registre.couples.map((x) => x.nom)])
   const compte = new Map<string, number>()
   for (const c of cartes) {
-    for (const { etiquettes } of exemplairesAttendus(c, config)) for (const nom of etiquettes) compte.set(nom, (compte.get(nom) ?? 0) + 1)
+    const retenues = etiquettes.get(c.id)?.retenues ?? []
+    const nb = c.idsSite?.length ?? 0
+    if (nb === 0) continue
+    for (const nom of retenues) compte.set(nom, (compte.get(nom) ?? 0) + nb)
   }
-  const connus = new Set([...Object.keys(registre.etiquettes), ...registre.couples.map((x) => x.nom)])
-  const rang = (nom: string): number => (connus.has(nom) ? 0 : nom.startsWith(PREFIXE_STATUT) || nom.startsWith(PREFIXE_ECHANGE) ? 1 : 2)
-  const ordonnes = [...compte.keys()]
-    .filter((nom) => connus.has(nom) || compte.has(nom))
+  const rang = (nom: string): number => (nom.startsWith(PREFIXE_STATUT) || nom.startsWith(PREFIXE_ECHANGE) ? 1 : 2)
+  const nouveaux = [...compte.keys()]
+    .filter((nom) => !dansRegistre.has(nom))
     .sort((a, b) => rang(a) - rang(b) || (rang(a) === 2 ? (compte.get(b) ?? 0) - (compte.get(a) ?? 0) : 0) || a.localeCompare(b, 'fr'))
-  const gardes = new Set(ordonnes.slice(0, Math.max(0, Math.floor(limite))))
-  return new Set(ordonnes.filter((nom) => !gardes.has(nom)))
+  const places = Math.max(0, Math.floor(limiteNoms) - dansRegistre.size)
+  return new Set(nouveaux.slice(places))
 }
 
 /**
@@ -228,7 +245,8 @@ export function construireLot(
     else couplesParExemplaire.set(c.ex, [c.nom])
   }
   const connus = new Set(config.nomsExistants)
-  const limite = config.longueurMaxEtiquette
+  // Plafond absolu : un nom plus long que la limite d’identifiant du registre ne serait pas retirable.
+  const limite = Math.min(config.longueurMaxEtiquette ?? LONGUEUR_MAX_ID, LONGUEUR_MAX_ID)
 
   const creations: Action[] = []
   const retraits: Action[] = []
@@ -237,7 +255,8 @@ export function construireLot(
   const ecartees: CarteEcartee[] = []
   const obsoletes: EtiquetteObsolete[] = []
   const nonPosees: EtiquetteNonPosee[] = []
-  const exclus = nomsAuDelaDeLaLimite(cartes, registre, config)
+  const parCarte = new Map(cartes.map((c) => [c.id, etiquettesDeCarte(c, config)] as const))
+  const exclus = nomsAuDelaDeLaLimite(cartes, parCarte, registre, config.limiteNoms)
   const creesCeLot = new Set<string>()
   const aVendre: Carte[] = []
   let enVente = 0
@@ -289,13 +308,16 @@ export function construireLot(
     let nonDispo = false
     let tropLong = false
     let homonyme = false
-    const attendus = exemplairesAttendus(c, config)
+    const { retenues, ecartees: ecarteesCarte } = parCarte.get(c.id) ?? { retenues: [], ecartees: [] }
+    const attendus: ExemplaireAttendu[] = retenues.length === 0 ? [] : c.idsSite.map((idExemplaire) => ({ idExemplaire, etiquettes: retenues }))
+    const dejaSignalees = new Set<string>()
     const nonPoseeCarte = (nomEtiquette: string, raison: RaisonNonPosee): void => {
-      if (!nonPosees.some((n) => n.idCarte === c.id && n.nomEtiquette === nomEtiquette && n.raison === raison)) {
-        nonPosees.push({ idCarte: c.id, titre: c.titre, nomEtiquette, raison })
-      }
+      const cle = `${nomEtiquette}\u0000${raison}`
+      if (dejaSignalees.has(cle)) return
+      dejaSignalees.add(cle)
+      nonPosees.push({ idCarte: c.id, titre: c.titre, nomEtiquette, raison })
     }
-    for (const nom of etiquettesDeCarte(c, config).ecartees) nonPoseeCarte(nom, 'au-dela-limite')
+    for (const nom of ecarteesCarte) nonPoseeCarte(nom, 'au-dela-limite')
 
     for (const { idExemplaire, etiquettes: toutes } of attendus) {
       const etiquettes = toutes.filter((nom) => !exclus.has(nom))
@@ -311,7 +333,7 @@ export function construireLot(
 
       for (const nom of etiquettes) {
         if (presents.includes(nom)) continue
-        if (limite !== null && nom.length > limite) {
+        if (nom.length > limite) {
           tropLong = true
           nonPoseeCarte(nom, 'nom-trop-long')
           continue
