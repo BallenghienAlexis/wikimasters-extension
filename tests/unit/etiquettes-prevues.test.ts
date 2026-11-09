@@ -20,6 +20,7 @@ const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
   url: null,
   favori: false,
   idsSite: [`ex-${id}`],
+  etiquettesSite: [],
   statut: 'garder',
   prixCible: null,
   note: '',
@@ -177,5 +178,14 @@ describe('EtiquettesPrevues : rendu sûr et responsive (AC6)', () => {
     expect(html).toContain('grid-cols-1')
     expect(html).toContain('md:grid-cols-4')
     expect(html).toMatch(/<table[^>]*class="[^"]*hidden md:table|<ul[^>]*md:hidden/)
+  })
+})
+
+describe('aperçu et lecture des préférences (revue T-108)', () => {
+  it('App attend la lecture des préférences avant de proposer l’aperçu', async () => {
+    const { readFileSync } = await import('node:fs')
+    const src = readFileSync('src/app/App.tsx', 'utf8')
+    expect(src).toContain('chargement={!stockageSynchroLu || !preferencesLues}')
+    expect(src).toMatch(/chargerPreferences\(\)\s*\.then\(setPreferences\)\s*\.finally\(\(\) => setPreferencesLues\(true\)\)/)
   })
 })
