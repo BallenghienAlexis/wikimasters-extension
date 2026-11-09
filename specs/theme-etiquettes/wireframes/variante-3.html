@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Variante 3 — Assistant de tri : arbre des thèmes et choix par thème de l’étiquette sur le site</title>
+<style>
+  :root { --ink:#fbf8f2; --ink2:#f1ece2; --paper:#1b1815; --muted:#635c52; --line:#d8d1c4; --garder:#0f6b45; --echanger:#1f4fb8; color-scheme: light dark; }
+  @media (prefers-color-scheme: dark) { :root { --ink:#13110f; --ink2:#1c1916; --paper:#ede8df; --muted:#a39c91; --line:#3a352f; --garder:#52d69a; --echanger:#7ba4ff; } }
+  body { margin:0; background:var(--ink); color:var(--paper); font:16px/1.45 system-ui, sans-serif; }
+  main { max-width:1100px; margin:0 auto; padding:16px; }
+  .note { font-size:.85rem; color:var(--muted); border:1px dashed var(--line); padding:8px; margin-bottom:12px; }
+  section { border:1px solid var(--line); background:var(--ink2); border-radius:4px; padding:16px; }
+  h2 { margin:0 0 8px; font-size:1.1rem; }
+  .muted { color:var(--muted); font-size:.9rem; }
+  table { width:100%; border-collapse:collapse; font-size:.9rem; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
+  td.enfant { padding-left:32px; }
+  td.petit { padding-left:56px; }
+  label { display:inline-flex; align-items:center; gap:6px; min-height:44px; }
+  input { width:20px; height:20px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="note">Variante 3 : dans l’assistant de tri, les thèmes s’affichent en arbre (parent, enfants). Une colonne « Étiquette sur le site » permet de choisir thème par thème ceux qui deviennent des étiquettes, indépendamment de « Mon thème » et des amis. Plus de contrôle, un réglage de plus à tenir.</p>
+  <section aria-labelledby="t3">
+    <h2 id="t3">Mes thèmes</h2>
+    <table>
+      <thead><tr><th>Thème</th><th>Cartes</th><th>Mon thème</th><th>Étiquette sur le site</th></tr></thead>
+      <tbody>
+        <tr><td>#Nature</td><td>210</td><td><label><input type="checkbox"> Mon thème</label></td><td><label><input type="checkbox"> Étiquette</label></td></tr>
+        <tr><td class="enfant">#Animaux</td><td>120</td><td><label><input type="checkbox" checked> Mon thème</label></td><td><label><input type="checkbox"> Étiquette</label></td></tr>
+        <tr><td class="petit">#Chien</td><td>12</td><td class="muted">inclus par #Animaux</td><td><label><input type="checkbox" checked> Étiquette</label></td></tr>
+        <tr><td class="petit">#Chat</td><td>9</td><td class="muted">inclus par #Animaux</td><td><label><input type="checkbox"> Étiquette</label></td></tr>
+        <tr><td class="petit">#Cheval</td><td>3</td><td class="muted">inclus par #Animaux</td><td><label><input type="checkbox" checked> Étiquette</label></td></tr>
+        <tr><td>#Art</td><td>80</td><td><label><input type="checkbox"> Mon thème</label></td><td><label><input type="checkbox"> Étiquette</label></td></tr>
+        <tr><td class="enfant">#Architecture</td><td>34</td><td><label><input type="checkbox"> Mon thème</label></td><td><label><input type="checkbox"> Étiquette</label></td></tr>
+        <tr><td class="petit">#Pont</td><td>4</td><td class="muted">Léa</td><td><label><input type="checkbox" checked> Étiquette</label></td></tr>
+        <tr><td class="petit">#Tunnel</td><td>2</td><td><label><input type="checkbox"> Mon thème</label></td><td><label><input type="checkbox"> Étiquette</label></td></tr>
+      </tbody>
+    </table>
+    <p class="muted">3 thèmes choisis comme étiquettes sur 40 au plus.</p>
+  </section>
+</main>
+</body>
+</html>

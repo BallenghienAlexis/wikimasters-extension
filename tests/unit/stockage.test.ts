@@ -3,9 +3,11 @@ import type { EtatExecution, Registre } from '../../src/lib/actions';
 import { collectionVide, type Carte } from '../../src/lib/collection';
 import { versCsv, versJson } from '../../src/lib/exports';
 import { ouvrirEntree, type Journal } from '../../src/lib/journal';
+import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../../src/config/amis';
 import { poserCouple, enregistrerEtiquette, registreVide } from '../../src/lib/registre';
 import {
   CLES_STOCKAGE,
+  chargerPreferences,
   VERSION_JOURNAL,
   chargerCollection,
   chargerExecution,
@@ -16,6 +18,7 @@ import {
   enregistrerCollection,
   enregistrerExecution,
   enregistrerJournal,
+  enregistrerPreferences,
   enregistrerRegistre,
   enregistrerSignalSynchro,
 } from '../../src/lib/stockage';
@@ -101,7 +104,7 @@ afterEach(() => {
 
 describe('CLES_STOCKAGE', () => {
   it('AC4 : énumère exactement les clés locales de l’extension', () => {
-    expect([...cles()].sort()).toEqual(['collection', 'execution', 'journal', 'preferences', 'registre', 'signalSynchro', 'synchro']);
+    expect([...cles()].sort()).toEqual(['amisInitiaux', 'collection', 'execution', 'journal', 'preferences', 'registre', 'signalSynchro', 'synchro']);
   });
 
   it('AC4 : aucune clé ne ressemble à un jeton, un cookie ou une session', () => {
@@ -288,5 +291,77 @@ describe('signal de synchro', () => {
   it('AC2 : un échec d’écriture est remonté', async () => {
     faux.echecEcriture = new Error('écriture impossible');
     await expect(enregistrerSignalSynchro(1)).rejects.toThrow('écriture impossible');
+  });
+});
+
+describe('amis initiaux (SC-024)', () => {
+  const lire = async () => (await chargerPreferences()).amis;
+
+  it('AC1 : le fichier de réglages porte Benjamin et Anatole', () => {
+    expect(AMIS_INITIAUX.find((a) => a.nom === 'Benjamin')?.themes).toEqual(['barrage', 'tibet']);
+    expect(AMIS_INITIAUX.find((a) => a.nom === 'Anatole')?.themes).toEqual(['ukraine']);
+    expect(VERSION_AMIS_INITIAUX).toBe(1);
+  });
+
+  it('AC2 : sans préférence stockée, les amis initiaux sont inscrits avec le drapeau, en une écriture', async () => {
+    const p = await chargerPreferences();
+    expect(p.mesThemes).toEqual([]);
+    expect(p.amis).toEqual(AMIS_INITIAUX);
+    expect(faux.set).toHaveBeenCalledTimes(1);
+    expect(faux.donnees.get('amisInitiaux')).toBe(VERSION_AMIS_INITIAUX);
+    expect(faux.donnees.get('preferences')).toEqual(p);
+  });
+
+  it('AC2 : avec des préférences déjà stockées, Benjamin et Anatole sont ajoutés sans rien retirer', async () => {
+    await enregistrerPreferences({ version: 2, mesThemes: ['chien'], amis: [{ nom: 'Benjamin', themes: ['pont'] }, { nom: 'Léa', themes: ['lac'] }] });
+    faux.set.mockClear();
+    const p = await chargerPreferences();
+    expect(p.mesThemes).toEqual(['chien']);
+    expect(p.amis).toEqual([
+      { nom: 'Benjamin', themes: ['pont', 'barrage', 'tibet'] },
+      { nom: 'Léa', themes: ['lac'] },
+      { nom: 'Anatole', themes: ['ukraine'] },
+    ]);
+    expect(faux.set).toHaveBeenCalledTimes(1);
+  });
+
+  it('AC3 : une fois le drapeau posé, un thème décoché n’est pas rajouté', async () => {
+    await chargerPreferences();
+    const apres = (await chargerPreferences());
+    await enregistrerPreferences({ ...apres, amis: apres.amis.map((a) => (a.nom === 'Benjamin' ? { ...a, themes: ['barrage'] } : a)) });
+    faux.set.mockClear();
+    const p = await chargerPreferences();
+    expect(p.amis.find((a) => a.nom === 'Benjamin')?.themes).toEqual(['barrage']);
+    expect(faux.set).not.toHaveBeenCalled();
+  });
+
+  it('AC3 : un drapeau périmé relance la fusion', async () => {
+    faux.donnees.set('preferences', { version: 2, mesThemes: [], amis: [] });
+    faux.donnees.set('amisInitiaux', 0);
+    expect((await lire()).map((a) => a.nom)).toEqual(['Benjamin', 'Anatole']);
+  });
+
+  it('AC4 : des préférences illisibles ne sont ni écrasées ni fusionnées', async () => {
+    faux.donnees.set('preferences', { version: 99, amis: 'x' });
+    const p = await chargerPreferences();
+    expect(p).toEqual({ version: 2, mesThemes: [], amis: [] });
+    expect(faux.set).not.toHaveBeenCalled();
+    expect(faux.donnees.get('preferences')).toEqual({ version: 99, amis: 'x' });
+  });
+
+  it('AC5 : un échec d’écriture renvoie quand même les amis fusionnés, sans poser le drapeau', async () => {
+    faux.echecEcriture = new Error('écriture impossible');
+    const p = await chargerPreferences();
+    expect(p.amis).toEqual(AMIS_INITIAUX);
+    expect(faux.donnees.has('amisInitiaux')).toBe(false);
+  });
+
+  it('AC6 : AMIS_INITIAUX n’est importé que par stockage.ts et les tests', async () => {
+    const { readdirSync, readFileSync, statSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const parcourir = (d: string): string[] =>
+      readdirSync(d).flatMap((f) => (statSync(join(d, f)).isDirectory() ? parcourir(join(d, f)) : [join(d, f)]));
+    const importeurs = parcourir('src').filter((f) => /config\/amis|AMIS_INITIAUX/.test(readFileSync(f, 'utf-8')));
+    expect(importeurs.map((f) => f.replaceAll('\\', '/')).sort()).toEqual(['src/config/amis.ts', 'src/lib/stockage.ts']);
   });
 });
