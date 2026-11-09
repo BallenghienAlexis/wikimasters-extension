@@ -24,6 +24,7 @@ const NB = ' '
 
 const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
   id,
+  etiquettesSite: [],
   titre: `Carte ${id}`,
   rarete: 'R',
   description: '',

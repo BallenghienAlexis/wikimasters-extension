@@ -376,10 +376,11 @@ describe('amis initiaux (SC-024)', () => {
 
 describe('T-202 : migration de la collection stockée', () => {
   it('SC-012 : une collection v2 stockée est lue en v3 avec etiquettesSite vide', async () => {
-    const { etiquettesSite: _ignore, ...v2 } = {
+    const v2: Record<string, unknown> = {
       id: 'c1', titre: 'Loutre', rarete: 'Rare', quantite: 1, url: null, favori: false, idsSite: ['s1'], etiquettesSite: [],
       description: '', statut: 'garder', prixCible: null, note: '', ami: null, valeurMarchande: 12, decidePar: 'moi',
     };
+    delete v2.etiquettesSite;
     faux.donnees.set('collection', { version: 2, cartes: [v2] });
     const c = await chargerCollection();
     expect(c.version).toBe(3);

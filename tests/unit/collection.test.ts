@@ -214,7 +214,8 @@ describe('migrerCollection', () => {
   });
 
   it('SC-012 : v2 → v3 garde tous les champs et ajoute etiquettesSite vide', () => {
-    const { etiquettesSite: _ignore, ...sans } = carte({ idsSite: ['a'], statut: 'vendre', prixCible: 12 });
+    const sans: Partial<Carte> = carte({ idsSite: ['a'], statut: 'vendre', prixCible: 12 });
+    delete sans.etiquettesSite;
     const r = migrerCollection({ version: 2, cartes: [sans] });
     expect(r.version).toBe(3);
     expect(r.cartes[0]).toEqual({ ...sans, etiquettesSite: [] });
@@ -251,7 +252,8 @@ describe('analyserStockage', () => {
   });
 
   it('SC-012 : accepte une v2 (migrée avec etiquettesSite vide) et une v3 avec étiquettes', () => {
-    const { etiquettesSite: _ignore, ...sans } = carte();
+    const sans: Partial<Carte> = carte();
+    delete sans.etiquettesSite;
     const a = analyserStockage({ version: 2, cartes: [sans] });
     expect(a.ok).toBe(true);
     if (a.ok) expect(a.collection.cartes[0]?.etiquettesSite).toEqual([]);
@@ -373,12 +375,12 @@ describe('stockage : migration à la lecture (faux chrome.storage)', () => {
   };
   afterEach(() => vi.unstubAllGlobals());
 
-  it('SC-019 : migre une v1 stockée en v2 à la lecture, sans perte', async () => {
+  it('SC-019 : migre une v1 stockée en v3 à la lecture, sans perte', async () => {
     installer({ collection: v1([CARTE_V1]) });
     const { chargerCollection } = await import('../../src/lib/stockage');
     const c = await chargerCollection();
-    expect(c.version).toBe(2);
-    expect(c.cartes[0]).toMatchObject({ ...CARTE_V1, idsSite: null });
+    expect(c.version).toBe(3);
+    expect(c.cartes[0]).toMatchObject({ ...CARTE_V1, idsSite: null, etiquettesSite: [] });
   });
 
   it('SC-019 : relit une v2 avec ses idsSite', async () => {
@@ -387,10 +389,10 @@ describe('stockage : migration à la lecture (faux chrome.storage)', () => {
     expect((await chargerCollection()).cartes[0]?.idsSite).toEqual(['s1']);
   });
 
-  it('SC-019 : une collection absente donne une collection vide v2', async () => {
+  it('SC-019 : une collection absente donne une collection vide v3', async () => {
     installer({});
     const { chargerCollection } = await import('../../src/lib/stockage');
-    expect(await chargerCollection()).toEqual({ version: 2, cartes: [] });
+    expect(await chargerCollection()).toEqual({ version: 3, cartes: [] });
   });
 
   it('SC-019 : une donnée illisible lève une erreur et n’est jamais écrasée', async () => {

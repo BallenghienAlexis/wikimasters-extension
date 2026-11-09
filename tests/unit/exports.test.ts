@@ -10,6 +10,7 @@ const carte = (surcharge: Partial<Carte> = {}): Carte => ({
   url: null,
   favori: false,
   idsSite: null,
+  etiquettesSite: [],
   description: '',
   ami: null,
   valeurMarchande: null,
@@ -47,22 +48,30 @@ describe('versCsv', () => {
 });
 
 describe('versJson', () => {
-  const sansIds = (c: Carte): Omit<Carte, 'idsSite'> => {
+  const sansIds = (c: Carte): Omit<Carte, 'idsSite' | 'etiquettesSite'> => {
     const reste: Partial<Carte> = { ...c };
     delete reste.idsSite;
-    return reste as Omit<Carte, 'idsSite'>;
+    delete reste.etiquettesSite;
+    return reste as Omit<Carte, 'idsSite' | 'etiquettesSite'>;
   };
 
   it('SC-019 : écrit version 1 sans idsSite, même si la carte en porte', () => {
-    const collection = { version: 2 as const, cartes: [carte({ idsSite: ['s1', 's2'] }), carte({ id: 'c2' })] };
+    const collection = { version: 3 as const, cartes: [carte({ idsSite: ['s1', 's2'] }), carte({ id: 'c2' })] };
     const json = JSON.parse(versJson(collection));
     expect(json.version).toBe(1);
     expect(versJson(collection)).not.toContain('idsSite');
     expect(versJson(collection)).not.toContain('s1');
   });
 
+  it('SC-012 : n’écrit pas les étiquettes du site', () => {
+    const collection = { version: 3 as const, cartes: [carte({ etiquettesSite: ['Ami · Léa'] })] };
+    expect(versJson(collection)).not.toContain('etiquettesSite');
+    expect(versJson(collection)).not.toContain('Léa');
+    expect(versCsv(collection.cartes)).toBe(versCsv([carte()]));
+  });
+
   it('SC-019 : produit un fichier réimportable sans perte (hors idsSite)', () => {
-    const collection = { version: 2 as const, cartes: [carte({ note: 'é "ok"', idsSite: ['s1'] })] };
+    const collection = { version: 3 as const, cartes: [carte({ note: 'é "ok"', idsSite: ['s1'] })] };
     expect(analyserImport(JSON.parse(versJson(collection)))).toEqual({ ok: true, cartes: collection.cartes.map(sansIds) });
   });
 

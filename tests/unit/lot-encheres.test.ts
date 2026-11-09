@@ -24,6 +24,7 @@ const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
   url: null,
   favori: false,
   idsSite: [`ex-${id}-1`, `ex-${id}-2`],
+  etiquettesSite: [],
   statut: 'vendre',
   prixCible: null,
   note: '',
