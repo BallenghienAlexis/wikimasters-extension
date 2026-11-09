@@ -134,11 +134,11 @@ describe('étiquettes (SC-007 a à e, H16)', () => {
     expect(de(lot.actions, 'pose-etiquette').map((a) => (a as { nomEtiquette: string }).nomEtiquette)).toEqual(['Statut · Vendre'])
   })
 
-  it('(b) échanger avec un ami reçoit aussi « Ami · <nom> » (trim), pas si l’ami est vide', () => {
+  it('(b) échanger avec un ami reçoit aussi « #À échanger <nom> » (trim), pas si l’ami est vide', () => {
     const lot = construireLot(coll(carte('a', { statut: 'echanger', ami: '  Léa ' }), carte('b', { statut: 'echanger', ami: '   ' })), registre(), config(), TOUS)
     const noms = (id: string) =>
       de(lot.actions, 'pose-etiquette').filter((a) => a.idCarte === id).map((a) => (a as { nomEtiquette: string }).nomEtiquette)
-    expect(noms('a')).toEqual(['Statut · Échanger', 'Ami · Léa'])
+    expect(noms('a')).toEqual(['Statut · Échanger', '#À échanger Léa'])
     expect(noms('b')).toEqual(['Statut · Échanger'])
   })
 
@@ -186,8 +186,8 @@ describe('étiquettes (SC-007 a à e, H16)', () => {
 
   it('exemplairesAttendus donne les étiquettes attendues par exemplaire', () => {
     expect(exemplairesAttendus(carte('a', { statut: 'echanger', ami: 'Léa', idsSite: ['x1', 'x2'] }))).toEqual([
-      { idExemplaire: 'x1', etiquettes: ['Statut · Échanger', 'Ami · Léa'] },
-      { idExemplaire: 'x2', etiquettes: ['Statut · Échanger', 'Ami · Léa'] },
+      { idExemplaire: 'x1', etiquettes: ['Statut · Échanger', '#À échanger Léa'] },
+      { idExemplaire: 'x2', etiquettes: ['Statut · Échanger', '#À échanger Léa'] },
     ])
     expect(exemplairesAttendus(carte('a', { favori: true }))).toEqual([])
     expect(exemplairesAttendus(carte('a', { statut: 'defausser' }))).toEqual([])
