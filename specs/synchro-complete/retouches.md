@@ -19,3 +19,7 @@
 - Le test du dialogue vérifie le source (pas de DOM dans Vitest, pas de nouvelle dépendance) ; un test e2e pourra le couvrir avec T-017.
 - `CAUSES_RESULTAT` contient quelques libellés de réserve (`action réussie`, `erreur réseau`, `délai dépassé`, `réponse hors contrat`) : T-021 l’étendra au besoin.
 - `Synchronisation.tsx` et `App.tsx` : réservés à T-017, leurs retouches viendront après.
+
+## À reprendre
+
+Les points mineurs des revues de T-015 et T-017 (`App.tsx`, `Synchronisation.tsx`) n'ont pas été recopiés ici au moment du merge : leur détail n'est plus dans le dépôt. À retrouver auprès de l'orchestrateur du run d'origine, puis à lister ici (fichier:ligne, point) avant la tâche de retouches.
