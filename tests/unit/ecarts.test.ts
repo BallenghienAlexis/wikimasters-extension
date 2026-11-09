@@ -27,7 +27,7 @@ const CHIEN = { titre: 'Berger allemand', description: 'race de chien' }
 describe('calculerEcarts', () => {
   it('signale une étiquette attendue absente du site', () => {
     const c = carte('a', { ...CHIEN, etiquettesSite: [] })
-    const [e] = calculerEcarts([c])
+    const e = calculerEcarts([c])[0]!
     expect(e.idCarte).toBe('a')
     expect(e.manquantes).toContain('Statut · Garder')
     expect(e.enTrop).toEqual([])
@@ -35,7 +35,7 @@ describe('calculerEcarts', () => {
 
   it('signale une étiquette présente sur le site mais non attendue', () => {
     const c = carte('b', { etiquettesSite: ['Statut · Garder', 'Statut · Vendre'] })
-    const [e] = calculerEcarts([c])
+    const e = calculerEcarts([c])[0]!
     expect(e.enTrop).toEqual(['Statut · Vendre'])
     expect(e.manquantes).toEqual([])
   })
@@ -47,7 +47,7 @@ describe('calculerEcarts', () => {
 
   it('traite les étiquettes d’échange avec les amis fournis', () => {
     const c = carte('d', { ...CHIEN, statut: 'echanger' })
-    const [e] = calculerEcarts([c], { amis: [{ nom: 'Léa', themes: ['animaux'] }] })
+    const e = calculerEcarts([c], { amis: [{ nom: 'Léa', themes: ['animaux'] }] })[0]!
     expect(e.manquantes).toContain('#À échanger Léa')
   })
 
@@ -60,6 +60,6 @@ describe('calculerEcarts', () => {
 
   it('attend zéro étiquette pour un favori : tout ce qui est posé est en trop', () => {
     const c = carte('f', { favori: true, etiquettesSite: ['Statut · Garder'] })
-    expect(calculerEcarts([c])[0].enTrop).toEqual(['Statut · Garder'])
+    expect(calculerEcarts([c])[0]!.enTrop).toEqual(['Statut · Garder'])
   })
 })
