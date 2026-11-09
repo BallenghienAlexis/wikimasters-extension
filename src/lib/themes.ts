@@ -87,6 +87,81 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'combat', libelle: '#Arts martiaux', motifs: ['arts martiaux', 'boxeur', 'boxeuse', 'catcheur', 'judoka', 'karate'], parents: ['sport'] },
   { id: 'societe', libelle: '#Société', motifs: ['sociolog', "homme d'affaires", "femme d'affaires", 'entreprise', 'econom', 'droit', 'adulter', 'habitants'] },
   { id: 'crime', libelle: '#Crime', motifs: ['tueur', 'criminel', 'cartel', 'assassin', 'torture', 'mafia', 'gang '], parents: ['societe'] },
+
+  // Thèmes précis (feature theme-etiquettes). Une lookahead `(?![a-z0-9])` vise le mot entier.
+  // Animaux
+  { id: 'chien', libelle: '#Chien', motifs: ['chiens?(?![a-z0-9])', 'chienne', 'canis lupus familiaris'], parents: ['animaux', 'nature'] },
+  { id: 'chat', libelle: '#Chat', motifs: ['chats?(?![a-z0-9])', 'chaton', 'felis catus'], parents: ['animaux', 'nature'] },
+  { id: 'cheval', libelle: '#Cheval', motifs: ['cheval(?![a-z0-9])', 'chevaux', 'equide', 'jument', 'poney'], parents: ['animaux', 'nature'] },
+  { id: 'felin', libelle: '#Félin', motifs: ['lions?(?![a-z0-9])', 'lionne', 'tigre', 'guepard', 'leopard', 'panthere', 'felide'], parents: ['animaux', 'nature'] },
+  { id: 'ours', libelle: '#Ours', motifs: ['ours(?![a-z0-9])', 'ourse(?![a-z0-9])'], parents: ['animaux', 'nature'] },
+  { id: 'singe', libelle: '#Singe', motifs: ['singes?(?![a-z0-9])', 'primate', 'gorille', 'chimpanze', 'orang-outan'], parents: ['animaux', 'nature'] },
+  { id: 'cetace', libelle: '#Cétacé', motifs: ['cetace', 'baleine', 'orque', 'cachalot', 'marsouin'], parents: ['animaux', 'nature'] },
+  { id: 'requin', libelle: '#Requin', motifs: ['requin'], parents: ['animaux', 'nature'] },
+  { id: 'serpent', libelle: '#Serpent', motifs: ['serpent', 'vipere', 'cobra', 'boa(?![a-z0-9])'], parents: ['animaux', 'nature'] },
+  { id: 'rapace', libelle: '#Rapace', motifs: ['rapace', 'aigle', 'faucon', 'hibou', 'chouette', 'vautour', 'strigide'], parents: ['animaux', 'nature'] },
+  { id: 'dinosaure', libelle: '#Dinosaure', motifs: ['dinosaure', 'theropode', 'sauropode'], parents: ['animaux', 'nature'] },
+  { id: 'insecte', libelle: '#Insecte', motifs: ['insecte', 'coleoptere', 'fourmis?(?![a-z0-9])', 'abeille', 'guepe'], parents: ['animaux', 'nature'] },
+  { id: 'papillon', libelle: '#Papillon', motifs: ['papillon', 'lepidoptere'], parents: ['animaux', 'nature'] },
+  { id: 'araignee', libelle: '#Araignée', motifs: ['araignee', 'arachnide'], parents: ['animaux', 'nature'] },
+
+  // Architecture
+  { id: 'pont', libelle: '#Pont', motifs: ['ponts?(?![a-z0-9])', 'viaduc', 'passerelle'], parents: ['architecture', 'arts'] },
+  { id: 'tunnel', libelle: '#Tunnel', motifs: ['tunnel'], parents: ['architecture', 'arts'] },
+  { id: 'tour', libelle: '#Tour', motifs: ['tour eiffel', 'tour de guet', 'donjon', 'beffroi', 'minaret', 'campanile'], parents: ['architecture', 'arts'] },
+  { id: 'chateau', libelle: '#Château', motifs: ['chateau', 'forteresse', 'citadelle'], parents: ['architecture', 'arts'] },
+  { id: 'cathedrale', libelle: '#Cathédrale', motifs: ['cathedrale', 'basilique', 'abbaye'], parents: ['architecture', 'arts'] },
+  { id: 'phare', libelle: '#Phare', motifs: ['phare de ', 'phare du ', "phare d'", 'phares(?![a-z0-9])', 'gardien de phare'], parents: ['architecture', 'arts'] },
+  { id: 'barrage', libelle: '#Barrage', motifs: ['barrage hydroelectrique', 'barrages hydroelectriques', 'barrage-voute', 'barrage-poids', 'grands? barrages?', "retenue d'eau", 'barrages(?![a-z0-9])'], parents: ['architecture', 'arts'] },
+  { id: 'gratteciel', libelle: '#Gratte-ciel', motifs: ['gratte-ciel'], parents: ['architecture', 'arts'] },
+
+  // Géographie
+  { id: 'tibet', libelle: '#Tibet', motifs: ['tibet', 'lhassa', 'dalai'], parents: ['geographie'] },
+  { id: 'ukraine', libelle: '#Ukraine', motifs: ['ukrain', 'kiev(?![a-z0-9])', 'kyiv', 'kharkiv', 'odessa', 'donbass'], parents: ['pays', 'geographie'] },
+  { id: 'montagne', libelle: '#Montagne', motifs: ['montagne', 'massifs?(?![a-z0-9])', 'monts?(?![a-z0-9])'], parents: ['geographie'] },
+  { id: 'volcan', libelle: '#Volcan', motifs: ['volcan'], parents: ['geographie'] },
+  { id: 'ile', libelle: '#Île', motifs: ['iles?(?![a-z0-9])', 'archipel', 'atoll'], parents: ['geographie'] },
+  { id: 'fleuve', libelle: '#Fleuve', motifs: ['fleuve', 'riviere', 'affluent'], parents: ['geographie'] },
+  { id: 'lac', libelle: '#Lac', motifs: ['lacs?(?![a-z0-9])'], parents: ['geographie'] },
+  { id: 'desert', libelle: '#Désert', motifs: ['deserts?(?![a-z0-9])', 'desertique'], parents: ['geographie'] },
+  { id: 'ocean', libelle: '#Océan', motifs: ['ocean', 'mers?(?![a-z0-9])'], parents: ['geographie'] },
+
+  // Espace
+  { id: 'planete', libelle: '#Planète', motifs: ['planete', 'exoplanete'], parents: ['espace', 'sciences'] },
+  { id: 'etoile', libelle: '#Étoile', motifs: ['etoiles?(?![a-z0-9])', 'supernova', 'naine blanche'], parents: ['espace', 'sciences'] },
+  { id: 'galaxie', libelle: '#Galaxie', motifs: ['galaxie'], parents: ['espace', 'sciences'] },
+  { id: 'comete', libelle: '#Comète', motifs: ['comete', 'asteroide'], parents: ['espace', 'sciences'] },
+  { id: 'fusee', libelle: '#Fusée', motifs: ['fusee', 'lanceur spatial'], parents: ['vehicule', 'espace', 'sciences'] },
+
+  // Plantes et gastronomie
+  { id: 'arbre', libelle: '#Arbre', motifs: ['arbre', 'conifere'], parents: ['plantes', 'nature'] },
+  { id: 'fleur', libelle: '#Fleur', motifs: ['fleurs?(?![a-z0-9])', 'orchidee'], parents: ['plantes', 'nature'] },
+  { id: 'champignon', libelle: '#Champignon', motifs: ['champignon'], parents: ['plantes', 'nature'] },
+  { id: 'fromage', libelle: '#Fromage', motifs: ['fromage'], parents: ['gastronomie'] },
+  { id: 'vin', libelle: '#Vin', motifs: ['vins?(?![a-z0-9])', 'vignoble', 'cepage'], parents: ['gastronomie'] },
+  { id: 'biere', libelle: '#Bière', motifs: ['biere'], parents: ['gastronomie'] },
+  { id: 'fruit', libelle: '#Fruit', motifs: ['fruit', 'agrume'], parents: ['gastronomie'] },
+  { id: 'dessert', libelle: '#Dessert', motifs: ['dessert', 'patisserie', 'gateau'], parents: ['gastronomie'] },
+
+  // Sport
+  { id: 'tennis', libelle: '#Tennis', motifs: ['tennis'], parents: ['sport'] },
+  { id: 'rugby', libelle: '#Rugby', motifs: ['rugby'], parents: ['sport'] },
+  { id: 'basketball', libelle: '#Basketball', motifs: ['basket'], parents: ['sport'] },
+  { id: 'ski', libelle: '#Ski', motifs: ['skis?(?![a-z0-9])', 'skieur', 'skieuse'], parents: ['sport'] },
+  { id: 'golf', libelle: '#Golf', motifs: ['golf(?![a-z0-9])', 'golfeur', 'golfeuse'], parents: ['sport'] },
+  { id: 'natation', libelle: '#Natation', motifs: ['natation', 'nageur', 'nageuse'], parents: ['sport'] },
+  { id: 'velo', libelle: '#Vélo', motifs: ['velos?(?![a-z0-9])', 'bicyclette'], parents: ['vehicule'] },
+
+  // Histoire, religion, bande dessinée
+  { id: 'egypteantique', libelle: '#Égypte antique', motifs: ['pharaon', 'egypte antique', 'ancienne egypte'], parents: ['histoire'] },
+  { id: 'romeantique', libelle: '#Rome antique', motifs: ['rome antique', 'empire romain', 'empereur romain', 'legion romaine'], parents: ['histoire'] },
+  { id: 'greceantique', libelle: '#Grèce antique', motifs: ['grece antique', 'antiquite grecque', 'cite grecque'], parents: ['histoire'] },
+  { id: 'moyenage', libelle: '#Moyen Âge', motifs: ['moyen age', 'medieval', 'chevalier'], parents: ['histoire'] },
+  { id: 'prehistoire', libelle: '#Préhistoire', motifs: ['prehistor', 'neolithique', 'paleolithique'], parents: ['histoire'] },
+  { id: 'premiereguerre', libelle: '#Première Guerre mondiale', motifs: ['premiere guerre mondiale', 'grande guerre'], parents: ['guerre', 'histoire'] },
+  { id: 'secondeguerre', libelle: '#Seconde Guerre mondiale', motifs: ['seconde guerre mondiale', 'deuxieme guerre mondiale'], parents: ['guerre', 'histoire'] },
+  { id: 'mythologie', libelle: '#Mythologie', motifs: ['mytholog', 'divinite'], parents: ['religion'] },
+  { id: 'superheros', libelle: '#Super-héros', motifs: ['super-heros', 'super heros', 'super-heroine'], parents: ['bd', 'litterature'] },
 ];
 
 export const LIBELLES_THEMES: Record<string, string> = {
