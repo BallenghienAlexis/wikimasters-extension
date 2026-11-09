@@ -9,6 +9,8 @@ interface DefinitionTheme {
   id: string;
   libelle: string;
   // Une espace finale vise le mot entier : « pop » ne doit pas trouver « population ».
+  // Les motifs précis peuvent aussi être de petites expressions : `(?![a-z0-9])` vise le mot entier,
+  // `(?<!…)` exclut un contexte. Elles restent sans quantificateur imbriqué (calcul linéaire).
   motifs: string[];
   // Une carte #Rock reçoit aussi #Musique.
   parents?: string[];
@@ -112,7 +114,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'chateau', libelle: '#Château', motifs: ['chateau', 'forteresse', 'citadelle'], parents: ['architecture', 'arts'] },
   { id: 'cathedrale', libelle: '#Cathédrale', motifs: ['cathedrale', 'basilique', 'abbaye'], parents: ['architecture', 'arts'] },
   { id: 'phare', libelle: '#Phare', motifs: ['phare de ', 'phare du ', "phare d'", 'phares(?![a-z0-9])', 'gardien de phare'], parents: ['architecture', 'arts'] },
-  { id: 'barrage', libelle: '#Barrage', motifs: ['barrage hydroelectrique', 'barrages hydroelectriques', 'barrage-voute', 'barrage-poids', 'grands? barrages?', "retenue d'eau", 'barrages(?![a-z0-9])'], parents: ['architecture', 'arts'] },
+  { id: 'barrage', libelle: '#Barrage', motifs: ['barrage hydroelectrique', 'barrages hydroelectriques', 'barrage-voute', 'barrage-poids', 'grands? barrages?', "retenue d'eau", '(?<!match(?:s)? de )barrages(?![a-z0-9])(?! de (?:ligue|promotion|relegation))'], parents: ['architecture', 'arts'] },
   { id: 'gratteciel', libelle: '#Gratte-ciel', motifs: ['gratte-ciel'], parents: ['architecture', 'arts'] },
 
   // Géographie
@@ -120,7 +122,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'ukraine', libelle: '#Ukraine', motifs: ['ukrain', 'kiev(?![a-z0-9])', 'kyiv', 'kharkiv', 'odessa', 'donbass'], parents: ['pays', 'geographie'] },
   { id: 'montagne', libelle: '#Montagne', motifs: ['montagne', 'massifs?(?![a-z0-9])', 'monts?(?![a-z0-9])'], parents: ['geographie'] },
   { id: 'volcan', libelle: '#Volcan', motifs: ['volcan'], parents: ['geographie'] },
-  { id: 'ile', libelle: '#Île', motifs: ['iles?(?![a-z0-9])', 'archipel', 'atoll'], parents: ['geographie'] },
+  { id: 'ile', libelle: '#Île', motifs: ['iles?(?![a-z0-9-])', 'archipel', 'atoll'], parents: ['geographie'] },
   { id: 'fleuve', libelle: '#Fleuve', motifs: ['fleuve', 'riviere', 'affluent'], parents: ['geographie'] },
   { id: 'lac', libelle: '#Lac', motifs: ['lacs?(?![a-z0-9])'], parents: ['geographie'] },
   { id: 'desert', libelle: '#Désert', motifs: ['deserts?(?![a-z0-9])', 'desertique'], parents: ['geographie'] },
