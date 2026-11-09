@@ -265,7 +265,7 @@ describe('ordonnanceur — critère 3 : prix', () => {
     const etat = etatLu(collectionDe(cartes), { [idCarte(1)]: 'card-1' });
     const b = banc(siteFictif(1), collectionDe(cartes), etat);
     const r = await synchroniser(b.deps);
-    expect(r.collection.cartes[0].valeurMarchande).toBe(999);
+    expect(r.collection.cartes[0]?.valeurMarchande).toBe(999);
     expect(r.signalements).toEqual([{ idCarte: idCarte(1), saisie: 999, site: 101 }]);
   });
 
@@ -283,7 +283,7 @@ describe('ordonnanceur — critère 3 : prix', () => {
     etat.prix[idCarte(1)] = { valeur: 50, releveLe: T0 - 40 * JOUR };
     const b = banc(siteFictif(1), collectionDe(cartes), etat);
     const r = await synchroniser(b.deps);
-    expect(r.collection.cartes[0].valeurMarchande).toBe(101);
+    expect(r.collection.cartes[0]?.valeurMarchande).toBe(101);
     expect(r.signalements).toEqual([]);
   });
 
@@ -303,7 +303,7 @@ describe('ordonnanceur — critère 3 : prix', () => {
     const b = banc(siteFictif(1, { prix: () => null }), collectionDe(cartes), etat);
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('termine');
-    expect(r.collection.cartes[0].valeurMarchande).toBeNull();
+    expect(r.collection.cartes[0]?.valeurMarchande).toBeNull();
     const b2 = banc(siteFictif(1, { prix: () => null }), r.collection, r.etat);
     await synchroniser(b2.deps);
     expect(cheminsPrix(b2)).toEqual([]);
@@ -324,8 +324,8 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     await synchroniser({ ...b.deps, maxPrix: 0 });
     const t = b.departs.map((d) => d.t);
     expect(t.length).toBeGreaterThan(MAX_PAR_FENETRE);
-    for (let i = 1; i < t.length; i++) expect(t[i] - t[i - 1]).toBeGreaterThanOrEqual(INTERVALLE_MS);
-    for (let i = 0; i + MAX_PAR_FENETRE < t.length; i++) expect(t[i + MAX_PAR_FENETRE] - t[i]).toBeGreaterThanOrEqual(FENETRE_MS);
+    for (let i = 1; i < t.length; i++) expect((t[i] ?? 0) - (t[i - 1] ?? 0)).toBeGreaterThanOrEqual(INTERVALLE_MS);
+    for (let i = 0; i + MAX_PAR_FENETRE < t.length; i++) expect((t[i + MAX_PAR_FENETRE] ?? 0) - (t[i] ?? 0)).toBeGreaterThanOrEqual(FENETRE_MS);
     expect(b.enVolMax()).toBe(1);
   });
 
@@ -334,7 +334,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     etat.requetes = Array.from({ length: MAX_PAR_FENETRE }, (_, i) => T0 - 1000 + i); // 10 requêtes à l’instant
     const b = banc(siteFictif(1), collectionDe([]), etat);
     await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(b.departs[0].t - (T0 - 1000)).toBeGreaterThanOrEqual(FENETRE_MS);
+    expect((b.departs[0]?.t ?? 0) - (T0 - 1000)).toBeGreaterThanOrEqual(FENETRE_MS);
   });
 
   it.each([401, 403, 429])('arrêt immédiat sur %i, sans reprise avant 30 min', async (code) => {
@@ -370,7 +370,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
       () => ({ statut: 200, json: { inattendu: true } }),
       () => ({ statut: 200, json: { collection: [] } }),
     ];
-    const b = banc((_c, n) => reponses[n - 1]());
+    const b = banc((_c, n) => reponses[n - 1]!());
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });
     expect(r.issue).toBe('arret');
     expect(r.raison).toBe('echecs');
@@ -389,9 +389,8 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
   });
 
   it('s’arrête sur demande manuelle avant la requête suivante', async () => {
-    let n = 0;
     const b = banc(siteFictif(10));
-    const r = await synchroniser({ ...b.deps, maxPrix: 0, arretDemande: () => ++n > 2 });
+    const r = await synchroniser({ ...b.deps, maxPrix: 0, arretDemande: () => b.departs.length >= 2 });
     expect(r.issue).toBe('arret');
     expect(r.raison).toBe('manuel');
     expect(b.departs.length).toBe(2);
