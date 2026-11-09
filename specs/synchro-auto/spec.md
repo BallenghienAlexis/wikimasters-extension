@@ -11,6 +11,12 @@
 - Le contrat relevé le 2026-11-07 (`synchro-complete/contrat-api.md`) contient déjà `GET /api/my-collection?sort=rarity&page=N&stats=0` (page à partir de 0) et `GET /api/my-collection/stats?sort=rarity`. **Forme des réponses et mode d'authentification de `/api/` : non relevés.**
 - Briques réutilisables : `file.ts` (cadence fixe 6 s, 10 requêtes max par 60 s, arrêt sur 401/403/429, 3 échecs), `jeton.ts` (seul module qui lit le jeton, content script, origine du site), journal et registre.
 
+## 0 bis. Relevé du 2026-11-09 (voir `releve-api.md`)
+- L'API `/api/` s'authentifie par **cookies de même origine** : la lecture n'a pas besoin du jeton. Le service worker resterait inutilisable (hôte non autorisé dans le manifeste), l'option A tient.
+- Les **étiquettes** sont déjà dans `my-collection` (`tags`) et `stats` (`tagOptions`) : pas de lecture Supabase, pas de requête en plus.
+- Le **prix du marché** est bloqué : `/api/marketplace/cards/<id>/sales` exige un compte PRO (403). Source de la valeur affichée dans « Mettre aux enchères » inconnue.
+- Une lecture complète = 134 pages ≈ 14 min à 6 s la requête.
+
 ## 1. Goals
 - G1 — La collection locale se met à jour **sans que le joueur ouvre ni tourne une page `/collection`**.
 - G2 — Une synchro se déclenche seule : au chargement d'une page du site, au démarrage du navigateur (dès qu'un onglet WikiMasters s'ouvre) et périodiquement tant qu'un onglet du site est ouvert.
@@ -37,8 +43,8 @@
 - Fusion dans la collection locale par le même chemin que la lecture visuelle (`fusionnerDansStockage`), sans jamais écraser une décision `decidePar: 'moi'`.
 - Interrupteur « Synchronisation automatique » (désactivée par défaut), état et dernière synchro dans l'interface, entrées au journal.
 
-- **Prix du marché** : relevé automatique de la valeur marchande, par carte, pour alimenter l'assistant de tri et la file de vente. Source à relever (SC-011) : l'API marketplace (`/api/marketplace/...`) ou le détail d'une carte. Seulement pour les cartes dont la valeur est inconnue ou plus ancienne que N jours, à la même cadence fixe ; jamais en rafale.
-- **Étiquettes** : relecture des étiquettes du site (`tags` et `user_card_tags`, `GET /rest/v1/...`) pour que l'extension reflète ce qui est réellement posé (Statut · …, Ami · …, Thème · …) et détecte les écarts, y compris après une modification faite à la main sur le site. Source et filtres à relever (SC-012).
+- **Prix du marché** : relevé automatique de la valeur marchande, par carte, pour alimenter l'assistant de tri et la file de vente. **Bloqué tant que la source n'est pas relevée** (SC-011) : `/sales` exige un compte PRO ; sinon l'extension garde la saisie à la main. Seulement pour les cartes dont la valeur est inconnue ou plus ancienne que N jours, à la même cadence fixe ; jamais en rafale.
+- **Étiquettes** : relecture des étiquettes du site **via `my-collection` et `stats`** (aucune requête de plus, aucun appel à l'hôte Supabase) pour que l'extension reflète ce qui est réellement posé (Statut · …, Ami · …, Thème · …) et détecte les écarts, y compris après une modification faite à la main sur le site. 
 - Les trois synchros partagent un seul ordonnanceur : collection d'abord, puis étiquettes, puis prix du marché ; une seule requête en vol, une seule file, un budget de requêtes par fenêtre commun.
 
 **Exclu**
@@ -50,7 +56,7 @@
 ## 4. Success Criteria
 | ID | Critère | Vérifiable par |
 |---|---|---|
-| SC-001 | **Relevé préalable** : forme de la réponse de `my-collection` et de `stats`, authentification de `/api/`, comportement des pages vides et des erreurs, ajouté à `contrat-api.md`, écrit par Alexis ou d'après ses captures, jamais deviné. | manuel |
+| SC-001 | ~~Relevé préalable~~ **Fait le 2026-11-09** (`releve-api.md`) ; reste à figer les erreurs 401/429 : forme de la réponse de `my-collection` et de `stats`, authentification de `/api/`, comportement des pages vides et des erreurs, ajouté à `contrat-api.md`, écrit par Alexis ou d'après ses captures, jamais deviné. | manuel |
 | SC-002 | Page du site ouverte, option activée, aucune synchro récente : la collection locale est mise à jour sans interaction, et le nombre de requêtes émises est égal au nombre de pages à relire. | e2e (site fictif) |
 | SC-003 | Total inchangé depuis la dernière synchro complète : une seule requête (`stats`) est émise. | unitaire + e2e |
 | SC-004 | Une carte ajoutée : seules les pages touchées sont relues (ou arrêt dès la première page identique, selon le relevé). | unitaire |
@@ -60,7 +66,7 @@
 | SC-008 | Une décision `decidePar: 'moi'` n'est jamais modifiée par la synchro. | unitaire |
 | SC-009 | Le jeton n'apparaît ni dans le stockage, ni dans le journal, ni dans l'interface ; seul `jeton.ts` le lit. | unitaire existant étendu |
 | SC-011 | **Relevé préalable prix** : endpoint, forme de la réponse et clé de la valeur marchande par carte, écrits dans `contrat-api.md` d'après les captures d'Alexis. | manuel |
-| SC-012 | **Relevé préalable étiquettes** : `GET` de `tags` et de `user_card_tags` (hôte, filtres, pagination, lien avec `user_card_id`), idem. | manuel |
+| SC-012 | Les étiquettes (`tags` de chaque exemplaire, `tagOptions`) sont stockées à chaque lecture de page, sans requête supplémentaire. | unitaire |
 | SC-013 | Option activée : une valeur marchande inconnue ou périmée est relevée seule ; une valeur saisie à la main n'est jamais écrasée sans être signalée ; le budget commun de requêtes (SC-005) vaut pour les trois synchros ensemble. | unitaire |
 | SC-014 | Une étiquette modifiée ou retirée à la main sur le site est détectée à la synchro suivante et affichée comme écart dans l'interface ; la synchro ne corrige rien sur le site. | unitaire + e2e |
 | SC-010 | Réponse de forme inattendue : la carte est ignorée, la synchro continue, le journal le note (comme `lecteur.ts`). | unitaire |
@@ -79,6 +85,7 @@
 
 ## Hypothèses
 - H1 — Un onglet WikiMasters est presque toujours ouvert quand Alexis joue ; l'option A suffit pour le besoin (« à chaque redémarrage du navigateur » = dès que le site est rouvert).
-- H2 — La lecture API réutilise le mode d'authentification déjà retenu pour `synchro-complete` (jeton en mémoire, option B du 2026-11-07).
+- H2 — La lecture API utilise les cookies de même origine ; le jeton n'est pas lu.
+- H5 — Décisions d'Alexis du 2026-11-09 : risque lié à `/api/` assumé, onglet WikiMasters ouvert accepté.
 - H4 — Les prix et les étiquettes passent par le même mécanisme (option A, onglet ouvert) ; leurs endpoints ne sont pas encore relevés, donc rien n'est deviné.
 - H3 — Périodicité par défaut : 30 min, minimum 10 min.
