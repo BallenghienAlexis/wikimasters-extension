@@ -125,7 +125,26 @@ function etiquettesEchange(carte: Carte, themes: readonly string[], amis: readon
  * limite du site par exemplaire ; Statut et échanges ne sont jamais écartés au profit d’un thème.
  * Vide pour un favori, une carte à trier ou à défausser, ou non reliée.
  */
-export function etiquettesDeCarte(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire'>): { retenues: string[]; ecartees: string[] } {
+export function etiquettesDeCarte(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire'>): EtiquettesCarte {
+  // Le lot, l’aperçu et le regroupement demandent trois fois les mêmes étiquettes pour les mêmes cartes
+  // (objets immuables) : le résultat est mémorisé par carte, tant que les amis et la limite sont les mêmes.
+  const amis = config?.amis
+  const limite = config?.limiteParExemplaire
+  const memo = MEMO_ETIQUETTES.get(carte)
+  if (memo && memo.amis === amis && memo.limite === limite) return memo.resultat
+  const resultat = calculerEtiquettes(carte, config)
+  MEMO_ETIQUETTES.set(carte, { amis, limite, resultat })
+  return resultat
+}
+
+interface EtiquettesCarte {
+  retenues: string[]
+  ecartees: string[]
+}
+
+const MEMO_ETIQUETTES = new WeakMap<Carte, { amis: readonly Ami[] | undefined; limite: number | null | undefined; resultat: EtiquettesCarte }>()
+
+function calculerEtiquettes(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire'>): EtiquettesCarte {
   if (carte.favori || !STATUTS_ETIQUETES.has(carte.statut) || !carte.idsSite) return { retenues: [], ecartees: [] }
   const themes = themesDeCarte(carte)
   const prioritaires = [`${PREFIXE_STATUT}${LIBELLES_STATUT[carte.statut]}`]
