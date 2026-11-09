@@ -7,6 +7,8 @@ import { preferencesParDefaut } from '../../src/lib/tri';
 import {
   DELAI_SYNCHRO_MS,
   creerSynchroAuto,
+  ecrireEvenementJournal,
+  type EvenementSynchro,
   demarrerSynchroAuto,
   type DependancesSynchroAuto,
 } from '../../src/content/synchroAuto';
@@ -71,6 +73,7 @@ interface Banc {
   horloge: Horloge & { t: number };
   chemins: string[];
   statuts: StatutSynchro[];
+  evenements: EvenementSynchro[];
   stockage: { actif: boolean; derniere: number | null; collection: Collection; etat: EtatOrdonnanceur | null; bail: number | null };
 }
 
@@ -78,6 +81,7 @@ function banc(options: { actif?: boolean; derniere?: number | null; cartes?: Car
   const horloge = horlogeSimulee();
   const chemins: string[] = [];
   const statuts: StatutSynchro[] = [];
+  const evenements: EvenementSynchro[] = [];
   const reponse = options.reponse ?? siteFictif(2);
   const stockage: Banc['stockage'] = {
     actif: options.actif ?? true,
@@ -115,9 +119,12 @@ function banc(options: { actif?: boolean; derniere?: number | null; cartes?: Car
     noterStatut: async (statut) => {
       statuts.push(structuredClone(statut));
     },
+    journaliser: async (e) => {
+      evenements.push(structuredClone(e));
+    },
     journal: () => undefined,
   };
-  return { deps, horloge, chemins, statuts, stockage };
+  return { deps, horloge, chemins, statuts, evenements, stockage };
 }
 
 afterEach(() => {
@@ -428,5 +435,107 @@ describe('T-206 : statut détaillé pour l’interface', () => {
     const resultat = await creerSynchroAuto(b.deps).declencher();
     expect(resultat?.issue).toBe('termine');
     expect(b.stockage.derniere).not.toBeNull();
+  });
+});
+
+describe('T-206 D-03 : événements dans le journal', () => {
+  it('désactivée ou en pause : rien n’est journalisé', async () => {
+    const b = banc({ actif: false });
+    await creerSynchroAuto(b.deps).declencher();
+    expect(b.evenements).toEqual([]);
+    const c = banc();
+    c.stockage.etat = { ...etatInitial(), arretJusqua: T0 + 10 * MIN };
+    await creerSynchroAuto(c.deps).declencher();
+    expect(c.evenements).toEqual([]);
+  });
+
+  it('début puis fin, avec des libellés fixes', async () => {
+    const b = banc();
+    await creerSynchroAuto(b.deps).declencher();
+    expect(b.evenements.map((e) => [e.titre, e.resultat, e.parametre, e.codeHttp])).toEqual([
+      ['Synchronisation automatique : début', 'reussie', null, null],
+      ['Synchronisation automatique : fin', 'reussie', null, null],
+    ]);
+  });
+
+  it.each([401, 403, 429])('un %i du site est journalisé avec son code', async (code) => {
+    const b = banc({ reponse: () => ({ statut: code, json: null }) });
+    await creerSynchroAuto(b.deps).declencher();
+    expect(b.evenements.at(-1)).toEqual({ titre: 'Synchronisation automatique : arrêt', resultat: 'interrompue', parametre: 'le site a refusé', codeHttp: code });
+  });
+
+  it('3 échecs : cause « 3 échecs »', async () => {
+    const b = banc({ reponse: () => ({ statut: 500, json: null }) });
+    await creerSynchroAuto(b.deps).declencher();
+    expect(b.evenements.at(-1)).toMatchObject({ titre: 'Synchronisation automatique : arrêt', parametre: '3 échecs consécutifs', codeHttp: null });
+  });
+
+  it('arrêt manuel : cause « arrêt demandé »', async () => {
+    const b = banc({ reponse: siteFictif(120) });
+    const synchro = creerSynchroAuto(b.deps);
+    const transport = b.deps.transport;
+    b.deps.transport = async (chemin) => {
+      synchro.arreter();
+      return transport(chemin);
+    };
+    await synchro.declencher();
+    expect(b.evenements.at(-1)).toMatchObject({ resultat: 'interrompue', parametre: 'arrêt demandé', codeHttp: null });
+  });
+
+  it('plafond de pages : cause « plafond de pages »', async () => {
+    // Le site annonce 2 exemplaires mais ne signale jamais la fin : le plafond (pages + 2) arrête la lecture.
+    const reponse = (chemin: string): ReponseApi => {
+      if (chemin.startsWith('/api/my-collection/stats')) return { statut: 200, json: { total: 2, totalUnique: 2, tagOptions: [] } };
+      if (/page=/.test(chemin)) return { statut: 200, json: { collection: [exemplaire(1)] } };
+      return { statut: 404, json: null };
+    };
+    const b = banc({ reponse });
+    await creerSynchroAuto(b.deps).declencher();
+    expect(b.evenements.at(-1)).toMatchObject({ titre: 'Synchronisation automatique : arrêt', parametre: 'plafond de pages' });
+  });
+
+  it('une erreur d’écriture du journal n’interrompt pas la synchro', async () => {
+    const b = banc();
+    b.deps.journaliser = async () => {
+      throw new Error('stockage indisponible');
+    };
+    expect((await creerSynchroAuto(b.deps).declencher())?.issue).toBe('termine');
+  });
+
+  it('aucun événement ne contient de corps de réponse, d’identifiant ni de jeton', async () => {
+    const b = banc({ reponse: (c, n) => (n === 1 ? { statut: 403, json: { token: 'secret', session: 'abc' } } : siteFictif(2)(c)) });
+    await creerSynchroAuto(b.deps).declencher();
+    expect(JSON.stringify(b.evenements)).not.toMatch(/secret|abc|token|session/i);
+  });
+});
+
+describe('T-206 D-03 : écriture dans le journal existant', () => {
+  const installer = () => {
+    const donnees = new Map<string, unknown>();
+    (globalThis as unknown as { chrome: unknown }).chrome = {
+      storage: {
+        local: {
+          get: async (cle: string) => (donnees.has(cle) ? { [cle]: structuredClone(donnees.get(cle)) } : {}),
+          set: async (o: Record<string, unknown>) => {
+            for (const [k, v] of Object.entries(o)) donnees.set(k, structuredClone(v));
+          },
+        },
+      },
+    };
+    return donnees;
+  };
+  afterEach(() => {
+    delete (globalThis as { chrome?: unknown }).chrome;
+  });
+
+  it('ajoute une entrée valide, à la suite des entrées existantes, sans identifiant de carte', async () => {
+    const donnees = installer();
+    await ecrireEvenementJournal({ titre: 'Synchronisation automatique : début', resultat: 'reussie', parametre: null, codeHttp: null }, () => new Date('2026-11-09T16:00:00.000Z'));
+    await ecrireEvenementJournal({ titre: 'Synchronisation automatique : arrêt', resultat: 'interrompue', parametre: 'le site a refusé', codeHttp: 403 }, () => new Date('2026-11-09T16:01:00.000Z'));
+    const { entrees, version } = donnees.get('journal') as { version: number; entrees: Array<Record<string, unknown>> };
+    expect(version).toBe(1);
+    expect(entrees).toHaveLength(2);
+    expect(entrees[1]).toMatchObject({ type: 'lecture', idCarte: '', titre: 'Synchronisation automatique : arrêt', parametre: 'le site a refusé', resultat: 'interrompue', codeHttp: 403, idLot: 'synchro-auto' });
+    expect(entrees[0]).toMatchObject({ resultat: 'reussie', codeHttp: null });
   });
 });
