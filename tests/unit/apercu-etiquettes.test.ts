@@ -3,6 +3,7 @@ import type { Registre } from '../../src/lib/actions'
 import type { Carte, Collection } from '../../src/lib/collection'
 import { collectionVide } from '../../src/lib/collection'
 import type { Config } from '../../src/lib/lot'
+import { THEME_AUTRES, themesDeCarte } from '../../src/lib/themes'
 import { registreVide } from '../../src/lib/registre'
 import { dureeMinutes } from '../../src/app/Synchronisation'
 import { dureeMinutesApercu, regrouperEtiquettes, texteDureeLongue } from '../../src/lib/apercuEtiquettes'
@@ -125,8 +126,26 @@ describe('regrouperEtiquettes : non posées et plafond (AC3, AC4)', () => {
     const amis = Array.from({ length: 150 }, (_, i) => ({ nom: `Ami ${String(i).padStart(3, '0')}`, themes: ['animaux'] }))
     const r = regrouperEtiquettes(coll(carte('a', { ...CHIEN, statut: 'echanger' })), registre(), config({ amis }))
     expect(r.lignes).toHaveLength(100)
-    expect(r.restantes).toBeGreaterThanOrEqual(50)
+    // Statut + 150 échanges + un thème par libellé détecté, moins les 100 lignes affichées.
+    const nbThemes = themesDeCarte({ ...CHIEN }).filter((t) => t !== THEME_AUTRES).length
+    expect(nbThemes).toBeGreaterThan(0)
+    expect(r.restantes).toBe(1 + 150 + nbThemes - 100)
     expect(r.lignes[0]!.genre).toBe('statut')
+  })
+})
+
+describe('regrouperEtiquettes : retraits (H11)', () => {
+  it('expose les retraits dus à un changement de statut', () => {
+    const c = carte('a', { statut: 'vendre' })
+    const r = regrouperEtiquettes(
+      coll(c),
+      registre([{ ex: 'ex-a', nom: 'Statut · Garder' }], { 'Statut · Garder': 'et-1' }),
+      config(),
+    )
+    expect(r.totaux.retraits).toBe(1)
+    expect(r.totaux.poses).toBe(1)
+    expect(r.totaux.nomsNouveaux).toBe(1)
+    expect(r.totaux.requetes).toBe(3)
   })
 })
 

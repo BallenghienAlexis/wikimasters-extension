@@ -40,6 +40,8 @@ export interface TotauxEtiquettes {
   echanges: number
   /** Noms à créer. */
   nomsNouveaux: number
+  /** Retraits d’étiquettes de l’extension qui ne sont plus attendues (H11). */
+  retraits: number
   /** Créations, retraits et poses : une requête chacune. */
   requetes: number
   minutes: number
@@ -123,6 +125,7 @@ export function regrouperEtiquettes(collection: Collection, registre: Registre, 
       themes: poses.filter((a) => genreDe(nomPose(a)) === 'theme').length,
       echanges: poses.filter((a) => genreDe(nomPose(a)) === 'echange').length,
       nomsNouveaux: creations,
+      retraits,
       requetes,
       minutes: dureeMinutesApercu(requetes),
     },
