@@ -16,6 +16,14 @@ WM Collection est une extension Chrome personnelle pour préparer le tri, l'éch
 
 La règle qui interdisait de masquer une automatisation a été retirée par Alexis le 2026-11-07 : chaque spec décide de ses limites (celle de `synchro-complete` garde une cadence fixe et aucun en-tête falsifié).
 
+**Lecture automatique de l’API (décision d’Alexis du 2026-11-09)** : Alexis autorise, pour la fonction « Synchronisation automatique » (spec `synchro-auto`), des requêtes `GET` en lecture seule vers `/api/` malgré le `Disallow` du `robots.txt` : `my-collection` et `my-collection/stats` (collection et étiquettes), puis `marketplace/cards/<id>/sales?scope=summary` (prix du marché, jamais la route sans `scope=summary`). Le risque de bannissement est rappelé et assumé. Garde-fous :
+- Les requêtes partent du content script, vers l’origine du site, avec les cookies de session de même origine envoyés par le navigateur. Cette fonction ne lit **aucun** jeton ni cookie (`jeton.ts` n’est pas importé), n’ajoute aucun en-tête et ne stocke rien de la session.
+- Un onglet WikiMasters doit être ouvert ; le service worker n’appelle jamais le site.
+- Fonction **désactivée par défaut** (interrupteur dans la page de gestion). Cadence fixe de 6 s entre deux requêtes, 10 au plus par minute, une seule requête en vol, une seule synchro à la fois (bail dans `chrome.storage.local`).
+- Arrêt immédiat sur 401, 403 ou 429, ou après 3 échecs ; aucune reprise avant 30 min.
+- Les décisions manuelles (`decidePar: 'moi'`) et les valeurs saisies à la main ne sont jamais écrasées ; les étiquettes du site ne servent qu’à afficher des écarts, sans rien corriger sur le site.
+- Toute autre route de `/api/`, et toute écriture, restent soumises à la règle ci-dessous.
+
 Tout code qui clique, envoie un formulaire ou appelle l'API interne du site à la place du joueur exige une décision explicite d'Alexis, écrite dans la spec de la feature, avec le risque de bannissement rappelé. Si WikiMasters ouvre une API ou donne un accord écrit, ce cadre est à mettre à jour ici.
 
 ## Stack
@@ -58,6 +66,7 @@ Charger l'extension : `chrome://extensions` › mode développeur › « Charger
 - `src/app/FileVente.tsx` : ventes à lancer selon les places libres, de la plus chère à la moins chère. Le joueur indique lui-même ce qu'il a mis aux enchères.
 - `src/config/prix.ts` : **réglages à renseigner par Alexis** : seuil de défausse, limite d'enchères simultanées, valeur de repli par rareté, matrice valeur marchande → prix de départ.
 - **Valeur marchande** : moyenne affichée dans la fenêtre « Mettre aux enchères », propre à chaque carte. Relevée quand le joueur ouvre cette fenêtre, ou saisie à la main.
+- **Synchronisation automatique** (lecture seule, voir le cadre d’usage) : `src/lib/lectureApi.ts` valide et convertit les réponses de l’API (stats, pages, prix), liste blanche des champs, forme inattendue ignorée. `src/lib/ordonnanceur.ts` est la logique pure du plan incrémental (`stats` → pages → prix), cadence, budget, arrêts, bail ; horloge et transport injectés. `src/lib/ecarts.ts` calcule les écarts entre étiquettes attendues et étiquettes lues sur le site. `src/content/synchroAuto.ts` est l’exécuteur du content script, **seul** fichier de `src/content` qui appelle `fetch`. `src/app/SynchroAuto.tsx` est la section de la page de gestion (interrupteur, état, écarts).
 - `src/lib/stockage.ts` : **seul** module de `src/lib` qui touche à `chrome.storage.local`.
 - **Données** : elles entrent par la lecture de `/collection` (identifiant `rareté|titre`, le site n'en expose pas d'autre) ou par import d'un fichier JSON (`{ "version": 1, "cartes": [...] }`). La quantité ne compte que les exemplaires présents sur la même page.
 - Le schéma de stockage porte un numéro de version : tout changement fournit une migration.
