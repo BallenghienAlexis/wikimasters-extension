@@ -327,8 +327,9 @@ export const pourcentage = (traitees: number, total: number): number =>
   total <= 0 ? 0 : Math.min(100, Math.round((traitees / total) * 100));
 
 /** Phrase du lot interrompu, constaté à la réouverture (D-22, SC-013). */
-export const texteInterrompu = (): string =>
-  `Lot interrompu${NB}: la page ou l’onglet a été fermé ou rechargé. L’exécution ne reprend pas toute seule.`;
+const TITRE_INTERROMPU = 'Lot interrompu';
+const SUITE_INTERROMPU = `${NB}: la page ou l’onglet a été fermé ou rechargé. L’exécution ne reprend pas toute seule.`;
+export const texteInterrompu = (): string => `${TITRE_INTERROMPU}${SUITE_INTERROMPU}`;
 
 /** Message affiché au lancement : libellé fixe de l’extension, jamais un texte venu d’ailleurs (D-41). */
 const ERREURS_LANCEMENT = new Set([
@@ -610,8 +611,8 @@ const ZoneExecution: React.FC<PropsZone> = ({ exec, interrompu, attenteDecision,
         )}
         {!exec && interrompu && (
           <p>
-            <span className="font-semibold text-defausser">Lot interrompu</span>
-            {texteInterrompu().slice('Lot interrompu'.length)}
+            <span className="font-semibold text-defausser">{TITRE_INTERROMPU}</span>
+            {SUITE_INTERROMPU}
           </p>
         )}
       </div>
