@@ -1,21 +1,41 @@
 # STATUS — synchro-auto
 
-- **Besoin** : « synchronisation WikiMasters vers l'extension 100 % automatique, sans navigation de ma part » (Alexis, 2026-11-09)
-- **Étape courante** : 1-spec (brouillon, en attente de la décision d'Alexis)
-- **Mis à jour** : 2026-11-09 16:00
+- **Besoin** : « synchronisation WikiMasters vers l'extension 100 % automatique, sans navigation de ma part » (Alexis, 2026-11-09) : collection, étiquettes, prix du marché.
+- **Étape courante** : 2-planification (artefacts prêts, PR ouverte)
+- **Mis à jour** : 2026-11-09 17:00
 
 ## Gate spec
-- [ ] Spec validée par Alexis — date : … — termes : « … »
-- [x] 2026-11-09 — Alexis : « oui » au risque, « oui » à l'onglet ouvert (via le chat du projet).
-- [x] (ancien) Décision de risque : lecture automatique de `/api/my-collection` (hors `robots.txt`, zone grise des règles), bannissement possible — Alexis assume ? Option A seule, ou A puis C ?
-- [x] Relevés collection, stats, étiquettes, authentification : faits dans Chrome le 2026-11-09 (`releve-api.md`)
-- [x] Relevé de la valeur marchande : `/sales?scope=summary`, lisible sans PRO (fenêtre ouverte puis annulée, rien validé) par Alexis (réponses de `my-collection`/`stats`, endpoint de la valeur marchande, lecture de `tags`/`user_card_tags`, authentification)
+- [x] Spec validée par Alexis — date : 2026-11-09 — termes : « oui » (via le chat du projet, après résumé : collection, étiquettes et prix du marché, onglet ouvert, 6 s, arrêt immédiat, interrupteur désactivé par défaut)
+- [x] Risque lié à la lecture automatique de `/api/` assumé — 2026-11-09 — « oui »
+- [x] Onglet WikiMasters ouvert accepté — 2026-11-09 — « oui »
+- [x] Relevés faits dans Chrome le 2026-11-09 (`releve-api.md`) : collection, stats, étiquettes, authentification par cookies, prix du marché (`sales?scope=summary`, sans PRO)
 
 ## Planification
-- [x] spec.md · [ ] spec.refined.md · [ ] design.md · [ ] plan.md · [ ] tasks.md · [ ] PR des artefacts mergée
+- [x] spec.md · [x] spec.refined.md · [x] design.md · [x] plan.md · [x] tasks.md · [ ] PR des artefacts mergée (#25)
+
+## Décisions par défaut
+- 2026-11-09 — H1 à H5 de `spec.md` adoptées.
+- 2026-11-09 — `spec.refined.md` = `spec.md` validée (aucune hypothèse bloquante).
+
+## Tâches
+| Tâche | Vague | Agent | Branche | Worktree | PR | Itération | CI | Revue | Sécurité | Statut |
+|---|---|---|---|---|---|---|---|---|---|---|
+| T-201 | V1 | dev-core | — | — | — | 0 | — | — | — | à-faire |
+| T-202 | V1 | dev-core | — | — | — | 0 | — | — | — | à-faire |
+| T-203 | V2 | dev-core | — | — | — | 0 | — | — | — | à-faire |
+| T-204 | V2 | dev-core | — | — | — | 0 | — | — | — | à-faire |
+| T-205 | V3 | dev-core | — | — | — | 0 | — | — | — | à-faire |
+| T-206 | V4 | dev-ui | — | — | — | 0 | — | — | — | à-faire |
+| T-207 | V5 | dev-test | — | — | — | 0 | — | — | — | à-faire |
+| T-208 | V6 | dev-core | — | — | — | 0 | — | — | — | à-faire |
+
+Statuts : à-faire · tests-écrits · en-revue · changements-demandés · mergée · escalade
+
+## Mineurs à reprendre
+| PR | fichier:ligne | Point | Suite (T-9xx ou décliné + raison) |
+|---|---|---|---|
 
 ## Journal
-- 2026-11-09 16:00 — Spec brouillon rédigée. Vérifié : aucune lecture automatique n'est prévue ailleurs (synchro-complete = écriture ; theme-etiquettes = thèmes).
-- 2026-11-09 16:02 — Demande d'Alexis : étendre à toute synchro site → extension (prix du marché, étiquettes). Spec élargie (G5, SC-011 à SC-014).
-- 2026-11-09 16:20 — Relevé Chrome : cookies de même origine, étiquettes dans my-collection, prix du marché bloqué (PRO). Règle du bloc final déplacée dans la PR #27.
-- 2026-11-09 16:45 — Prix du marché débloqué : `sales?scope=summary`. Spec complète, en attente de validation d'Alexis.
+- 2026-11-09 16:00 — Spec brouillon rédigée.
+- 2026-11-09 16:45 — Relevés Chrome ; spec complète.
+- 2026-11-09 17:00 — Spec validée par Alexis ; design, plan et tasks rédigés.
