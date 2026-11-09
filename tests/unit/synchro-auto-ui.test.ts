@@ -119,9 +119,9 @@ describe('T-206 D-01 : interrupteur', () => {
     expect(rendre({ actif: true })).toMatch(/aria-checked="true"/);
   });
 
-  it('la ligne d’état est un texte annoncé (role="status")', () => {
+  it('la ligne d’état est un texte annoncé poliment (aria-live, sans role="status" déjà pris par le message de page)', () => {
     const html = rendre({ actif: true });
-    expect(html).toMatch(/role="status"[^>]*>[^<]*En attente d’un onglet WikiMasters/);
+    expect(html).toMatch(/aria-live="polite"[^>]*>[^<]*En attente d’un onglet WikiMasters/);
   });
 
   it('rien ne prévient que l’option est active pour un lecteur d’écran seulement par la couleur', () => {

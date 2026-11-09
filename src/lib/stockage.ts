@@ -3,7 +3,7 @@ import type { EtatExecution, Registre } from './actions';
 import { validerJournal, type Journal } from './journal';
 import { registreVide, validerRegistre } from './registre';
 import { lireSynchro, noterPage, type Pagination, type Synchro } from './synchro';
-import type { EtatOrdonnanceur } from './ordonnanceur';
+import type { EtatOrdonnanceur, RaisonArretSynchro } from './ordonnanceur';
 import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../config/amis';
 import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, proposerTri, type Preferences } from './tri';
 
@@ -20,6 +20,7 @@ const CLE_DERNIERE_SYNCHRO = 'derniereSynchro';
 const CLE_BAIL_SYNCHRO = 'bailSynchro';
 const CLE_ETAT_SYNCHRO = 'etatSynchro';
 const CLE_ARRET_SYNCHRO = 'arretSynchro';
+const CLE_STATUT_SYNCHRO = 'statutSynchro';
 
 /** Version de l’enveloppe du journal stocké. */
 export const VERSION_JOURNAL = 1;
@@ -39,6 +40,7 @@ export const CLES_STOCKAGE = {
   bailSynchro: CLE_BAIL_SYNCHRO,
   etatSynchro: CLE_ETAT_SYNCHRO,
   arretSynchro: CLE_ARRET_SYNCHRO,
+  statutSynchro: CLE_STATUT_SYNCHRO,
 } as const;
 
 function illisible(detail: string): Error {
@@ -213,6 +215,75 @@ export function ecouterArretSynchro(rappel: () => void): () => void {
   const ecouteur = (changements: Record<string, chrome.storage.StorageChange>, zone: string): void => {
     const changement = changements[CLE_ARRET_SYNCHRO];
     if (zone === 'local' && changement && horodatageValide(changement.newValue)) rappel();
+  };
+  chrome.storage.onChanged.addListener(ecouteur);
+  return () => chrome.storage.onChanged.removeListener(ecouteur);
+}
+
+/**
+ * Statut détaillé de la dernière synchronisation automatique, pour l’interface : écrit par le content
+ * script, lu par la page de gestion. Uniquement des nombres et des codes fixes (aucun secret, aucun
+ * corps de réponse, aucun nom venu du site).
+ */
+export interface StatutSynchro {
+  version: 1;
+  etat: 'en-cours' | 'termine' | 'arret';
+  /** Page en cours de lecture (à partir de 1), ou `null` tant qu’elle n’est pas connue. */
+  page: number | null;
+  pages: number | null;
+  raison: RaisonArretSynchro | null;
+  /** Code HTTP de l’arrêt (100 à 599), ou `null`. */
+  codeHttp: number | null;
+  /** Horodatage de la dernière mise à jour. */
+  le: number;
+  ajoutees: number;
+  etiquettes: number;
+  prix: number;
+}
+
+const ETATS_STATUT = ['en-cours', 'termine', 'arret'];
+const RAISONS_STATUT = ['manuel', 'code-http', 'echecs'];
+
+function validerStatutSynchro(brut: unknown): StatutSynchro | null {
+  if (!estObjet(brut) || brut.version !== 1) return null;
+  const { etat, page, pages, raison, codeHttp, le, ajoutees, etiquettes, prix } = brut;
+  if (typeof etat !== 'string' || !ETATS_STATUT.includes(etat)) return null;
+  if (!nullOuEntier(page) || !nullOuEntier(pages)) return null;
+  if (raison !== null && (typeof raison !== 'string' || !RAISONS_STATUT.includes(raison))) return null;
+  if (codeHttp !== null && !(typeof codeHttp === 'number' && Number.isSafeInteger(codeHttp) && codeHttp >= 100 && codeHttp <= 599)) return null;
+  if (!horodatageValide(le) || !horodatageValide(ajoutees) || !horodatageValide(etiquettes) || !horodatageValide(prix)) return null;
+  return {
+    version: 1,
+    etat: etat as StatutSynchro['etat'],
+    page,
+    pages,
+    raison: raison as RaisonArretSynchro | null,
+    codeHttp,
+    le,
+    ajoutees,
+    etiquettes,
+    prix,
+  };
+}
+
+/** `null` si jamais écrit ou illisible : l’interface retombe alors sur l’état sans détail. */
+export async function chargerStatutSynchro(): Promise<StatutSynchro | null> {
+  const contenu = await chrome.storage.local.get(CLE_STATUT_SYNCHRO);
+  return validerStatutSynchro(contenu[CLE_STATUT_SYNCHRO]);
+}
+
+export async function enregistrerStatutSynchro(statut: StatutSynchro): Promise<void> {
+  const valide = validerStatutSynchro(statut);
+  if (valide === null) throw new Error('Statut de synchronisation invalide.');
+  await chrome.storage.local.set({ [CLE_STATUT_SYNCHRO]: valide });
+}
+
+const CLES_SYNCHRO_AUTO = [CLE_SYNC_AUTO, CLE_STATUT_SYNCHRO, CLE_BAIL_SYNCHRO, CLE_DERNIERE_SYNCHRO];
+
+/** Prévient la page de gestion dès que l’option, le statut, le bail ou la date de synchro change. */
+export function ecouterSynchroAuto(rappel: () => void): () => void {
+  const ecouteur = (changements: Record<string, chrome.storage.StorageChange>, zone: string): void => {
+    if (zone === 'local' && CLES_SYNCHRO_AUTO.some((cle) => cle in changements)) rappel();
   };
   chrome.storage.onChanged.addListener(ecouteur);
   return () => chrome.storage.onChanged.removeListener(ecouteur);

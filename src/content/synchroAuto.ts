@@ -18,7 +18,10 @@ import {
   enregistrerCollection,
   enregistrerDerniereSynchro,
   enregistrerEtatSynchro,
+  enregistrerStatutSynchro,
+  type StatutSynchro,
 } from '../lib/stockage';
+import { analyserStats } from '../lib/lectureApi';
 import { proposerTri, type Preferences } from '../lib/tri';
 
 /** Délai minimal entre deux synchronisations, et période du minuteur tant que l'onglet est visible. */
@@ -37,6 +40,8 @@ export interface DependancesSynchroAuto {
   enregistrerEtat: (etat: EtatOrdonnanceur) => Promise<void>;
   bail: Bail;
   chargerPreferences: () => Promise<Preferences>;
+  /** Statut détaillé pour l'interface (page en cours, cause d'arrêt) ; une erreur d'écriture est sans effet. */
+  noterStatut?: (statut: StatutSynchro) => Promise<void>;
   journal?: (message: string) => void;
 }
 
@@ -72,6 +77,11 @@ function fusionner(stockee: Collection, produite: Collection, depart: ReadonlyMa
   return { version: VERSION_SCHEMA, cartes: [...parId.values()] };
 }
 
+const CARTES_PAR_PAGE = 50;
+
+/** Étiquettes distinctes lues sur le site (noms seulement, comptés, jamais conservés). */
+const compterEtiquettes = (collection: Collection): number => new Set(collection.cartes.flatMap((c) => c.etiquettesSite)).size;
+
 export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
   const journal = deps.journal ?? (() => undefined);
   let enCours = false;
@@ -94,9 +104,39 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
       const depart = new Map(collection.cartes.map((c) => [c.id, c]));
       dernierEssai = maintenant;
 
+      // Statut pour l'interface : écrit à la première requête réelle (une pause ou un bail tenu n'écrasent rien).
+      let pages: number | null = null;
+      const noter = (partiel: Partial<StatutSynchro> & Pick<StatutSynchro, 'etat'>): Promise<void> =>
+        (deps.noterStatut?.({
+          version: 1,
+          page: null,
+          pages,
+          raison: null,
+          codeHttp: null,
+          le: deps.horloge.now(),
+          ajoutees: 0,
+          etiquettes: 0,
+          prix: 0,
+          ...partiel,
+        }) ?? Promise.resolve()).catch(() => undefined);
+      const transport = async (chemin: string): Promise<ReponseApi> => {
+        const page = /[?&]page=(\d+)/.exec(chemin);
+        if (page) await noter({ etat: 'en-cours', page: pages === null ? Number(page[1]) + 1 : Math.min(Number(page[1]) + 1, pages) });
+        else await noter({ etat: 'en-cours' });
+        const reponse = await deps.transport(chemin);
+        if (!page && chemin.startsWith('/api/my-collection/stats')) {
+          const total = reponse.statut === 200 ? analyserStats(reponse.json)?.total : undefined;
+          if (total !== undefined) {
+            pages = Math.ceil(total / CARTES_PAR_PAGE);
+            await noter({ etat: 'en-cours' });
+          }
+        }
+        return reponse;
+      };
+
       const resultat = await synchroniser({
         horloge: deps.horloge,
-        transport: deps.transport,
+        transport,
         collection,
         etat,
         bail: deps.bail,
@@ -112,6 +152,13 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         },
       });
       if (resultat.complete) await deps.noterDerniereSynchro(deps.horloge.now());
+      if (resultat.requetes > 0) {
+        const ajoutees = resultat.collection.cartes.filter((c) => !depart.has(c.id)).length;
+        const comptes = { ajoutees, etiquettes: compterEtiquettes(resultat.collection), prix: resultat.prixReleves };
+        if (resultat.issue === 'arret') await noter({ etat: 'arret', raison: resultat.raison, codeHttp: resultat.codeHttp, ...comptes });
+        else if (resultat.complete) await noter({ etat: 'termine', ...comptes });
+        else await noter({ etat: 'arret', raison: 'echecs', ...comptes });
+      }
       return resultat;
     } catch {
       // Stockage illisible ou indisponible (extension rechargée) : aucune requête, aucun détail ne sort.
@@ -175,6 +222,7 @@ const synchroDuNavigateur = (): SynchroAuto =>
     enregistrerEtat: enregistrerEtatSynchro,
     bail: { lire: chargerBailSynchro, ecrire: enregistrerBailSynchro },
     chargerPreferences,
+    noterStatut: enregistrerStatutSynchro,
   });
 
 const visibiliteDuNavigateur = (): SourceVisibilite => ({
