@@ -1,0 +1,17 @@
+{
+  "preferences": {
+    "version": 2,
+    "mesThemes": [],
+    "amis": [
+      { "nom": "Léa", "themes": ["chien"] },
+      { "nom": "Hugo", "themes": ["pont", "barrage"] }
+    ]
+  },
+  "cartes": [
+    { "id": "C|Chien de berger fictif", "titre": "Chien de berger fictif", "rarete": "C", "description": "un chien fictif qui garde des moutons imaginaires", "quantite": 2, "idsSite": ["fic-chien-1", "fic-chien-2"], "statut": "echanger" },
+    { "id": "C|Pont suspendu fictif", "titre": "Pont suspendu fictif", "rarete": "C", "description": "un pont imaginaire au-dessus d’une rivière fictive", "quantite": 1, "idsSite": ["fic-pont-1"], "statut": "echanger" },
+    { "id": "R|Moine fictif du Tibet", "titre": "Moine fictif du Tibet", "rarete": "R", "description": "un moine imaginaire dans un monastère du Tibet", "quantite": 1, "idsSite": ["fic-tibet-1"], "statut": "echanger" },
+    { "id": "R|Boulangère fictive d’Ukraine", "titre": "Boulangère fictive d’Ukraine", "rarete": "R", "description": "une boulangère imaginaire en Ukraine", "quantite": 1, "idsSite": ["fic-ukraine-1"], "statut": "echanger" },
+    { "id": "C|Barrage fictif", "titre": "Barrage fictif", "rarete": "C", "description": "un barrage hydroélectrique imaginaire", "quantite": 1, "idsSite": ["fic-barrage-1"], "statut": "echanger" }
+  ]
+}
