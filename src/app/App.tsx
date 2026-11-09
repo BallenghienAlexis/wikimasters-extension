@@ -62,6 +62,8 @@ const App: React.FC = () => {
   const [executionIllisible, setExecutionIllisible] = useState(false);
   // Tant que la lecture initiale du stockage n’est pas finie, l’aperçu du lot n’est pas proposé (D-18).
   const [stockageSynchroLu, setStockageSynchroLu] = useState(false);
+  // Les amis fixent les étiquettes d’échange de l’aperçu : il attend aussi la lecture des préférences.
+  const [preferencesLues, setPreferencesLues] = useState(false);
   const champFichier = useRef<HTMLInputElement>(null);
 
   // Lit le registre et l’état d’exécution ; un échec est signalé à l’aperçu, jamais avalé.
@@ -93,7 +95,9 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    void chargerPreferences().then(setPreferences);
+    void chargerPreferences()
+      .then(setPreferences)
+      .finally(() => setPreferencesLues(true));
     void chargerSynchro().then(setSynchro);
     void lireStockageSynchro().then(appliquerStockageSynchro);
     return ecouterSynchro(setSynchro);
@@ -230,7 +234,8 @@ const App: React.FC = () => {
           <Synchronisation
             collection={collection}
             registre={registre}
-            chargement={!stockageSynchroLu}
+            preferences={preferences}
+            chargement={!stockageSynchroLu || !preferencesLues}
             registreIllisible={registreIllisible}
             executionIllisible={executionIllisible}
             nbOnglets={0}
