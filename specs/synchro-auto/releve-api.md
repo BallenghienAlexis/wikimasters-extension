@@ -23,8 +23,9 @@ Constats :
 - Une page au-delà de la dernière renvoie 200 avec `collection: []` (fin de parcours fiable).
 - Le site appelle aussi `/api/notifications` et `/api/trades?active=1` à chaque chargement.
 
-## Prix du marché : **bloqué**
-- Le site lit l'historique des ventes par `GET /api/marketplace/cards/<card_id>/sales`.
-- Ce point renvoie **403** `pro_required` (« La vue du marché est réservée aux comptes PRO ») pour le compte d'Alexis. Un seul appel a été fait ; il ne doit pas être répété (403 = arrêt immédiat de la file).
-- La « valeur marchande » affichée dans la fenêtre « Mettre aux enchères » vient donc d'une autre source, **non relevée** (la fenêtre n'a pas été ouverte : elle ne se consulte pas sans geste sur le site). À relever avec un relevé réseau pendant l'ouverture de cette fenêtre.
-- Si la valeur n'est lisible que par un compte PRO, la synchro du prix du marché est impossible sans PRO : l'extension garde alors la saisie à la main et le repli par rareté (`src/config/prix.ts`).
+## Prix du marché : **débloqué** (relevé du 2026-11-09, fenêtre « Mettre aux enchères » ouverte puis annulée)
+- Source : `GET /api/marketplace/cards/<card_id>/sales?scope=summary` (un appel par **carte**, `card_id` et non l'identifiant d'exemplaire ; la fenêtre l'émet à l'ouverture, avec `GET /api/marketplace/mine`).
+- Réponse : `{ wikipedia_title, summary: { <rareté>: { average: number } }, isPro: boolean }`. Exemple de forme : `summary: { L: { average: 276 } }`. `average` est la valeur marchande de la fenêtre.
+- **Sans PRO, `scope=summary` répond 200** ; la même route sans `scope=summary` répond 403 `pro_required` (historique complet). L'extension n'utilise donc que `?scope=summary`.
+- Plusieurs raretés possibles dans `summary` : le validateur lit la clé de la rareté de l'exemplaire et ignore le reste.
+- Coût : une requête par carte (6 668 cartes distinctes) ; à 6 s l'une, impossible en une fois. Le relevé se fait par ordre de priorité (cartes à vendre ou à décider d'abord, valeur absente ou périmée), jamais en rafale.

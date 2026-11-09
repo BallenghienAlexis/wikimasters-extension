@@ -14,7 +14,7 @@
 ## 0 bis. Relevé du 2026-11-09 (voir `releve-api.md`)
 - L'API `/api/` s'authentifie par **cookies de même origine** : la lecture n'a pas besoin du jeton. Le service worker resterait inutilisable (hôte non autorisé dans le manifeste), l'option A tient.
 - Les **étiquettes** sont déjà dans `my-collection` (`tags`) et `stats` (`tagOptions`) : pas de lecture Supabase, pas de requête en plus.
-- Le **prix du marché** est bloqué : `/api/marketplace/cards/<id>/sales` exige un compte PRO (403). Source de la valeur affichée dans « Mettre aux enchères » inconnue.
+- Le **prix du marché** vient de `GET /api/marketplace/cards/<card_id>/sales?scope=summary` (`summary.<rareté>.average`), lisible **sans compte PRO**. Une requête par carte : relevé progressif et priorisé.
 - Une lecture complète = 134 pages ≈ 14 min à 6 s la requête.
 
 ## 1. Goals
@@ -43,7 +43,7 @@
 - Fusion dans la collection locale par le même chemin que la lecture visuelle (`fusionnerDansStockage`), sans jamais écraser une décision `decidePar: 'moi'`.
 - Interrupteur « Synchronisation automatique » (désactivée par défaut), état et dernière synchro dans l'interface, entrées au journal.
 
-- **Prix du marché** : relevé automatique de la valeur marchande, par carte, pour alimenter l'assistant de tri et la file de vente. **Bloqué tant que la source n'est pas relevée** (SC-011) : `/sales` exige un compte PRO ; sinon l'extension garde la saisie à la main. Seulement pour les cartes dont la valeur est inconnue ou plus ancienne que N jours, à la même cadence fixe ; jamais en rafale.
+- **Prix du marché** : relevé automatique de la valeur marchande, par carte, pour alimenter l'assistant de tri et la file de vente. Source relevée (SC-011) : `GET /api/marketplace/cards/<card_id>/sales?scope=summary`, sans PRO. Une requête par carte, donc priorité : cartes à vendre ou à décider, valeur absente ou périmée ; une valeur saisie à la main reste prioritaire. Jamais la route sans `scope=summary` (403 PRO). Seulement pour les cartes dont la valeur est inconnue ou plus ancienne que N jours, à la même cadence fixe ; jamais en rafale.
 - **Étiquettes** : relecture des étiquettes du site **via `my-collection` et `stats`** (aucune requête de plus, aucun appel à l'hôte Supabase) pour que l'extension reflète ce qui est réellement posé (Statut · …, Ami · …, Thème · …) et détecte les écarts, y compris après une modification faite à la main sur le site. 
 - Les trois synchros partagent un seul ordonnanceur : collection d'abord, puis étiquettes, puis prix du marché ; une seule requête en vol, une seule file, un budget de requêtes par fenêtre commun.
 
@@ -65,7 +65,7 @@
 | SC-007 | Option désactivée (défaut) : aucune requête n'est émise. | e2e |
 | SC-008 | Une décision `decidePar: 'moi'` n'est jamais modifiée par la synchro. | unitaire |
 | SC-009 | Le jeton n'apparaît ni dans le stockage, ni dans le journal, ni dans l'interface ; seul `jeton.ts` le lit. | unitaire existant étendu |
-| SC-011 | **Relevé préalable prix** : endpoint, forme de la réponse et clé de la valeur marchande par carte, écrits dans `contrat-api.md` d'après les captures d'Alexis. | manuel |
+| SC-011 | ~~Relevé préalable prix~~ **Fait le 2026-11-09** (`releve-api.md`) : endpoint, forme de la réponse et clé de la valeur marchande par carte, écrits dans `contrat-api.md` d'après les captures d'Alexis. | manuel |
 | SC-012 | Les étiquettes (`tags` de chaque exemplaire, `tagOptions`) sont stockées à chaque lecture de page, sans requête supplémentaire. | unitaire |
 | SC-013 | Option activée : une valeur marchande inconnue ou périmée est relevée seule ; une valeur saisie à la main n'est jamais écrasée sans être signalée ; le budget commun de requêtes (SC-005) vaut pour les trois synchros ensemble. | unitaire |
 | SC-014 | Une étiquette modifiée ou retirée à la main sur le site est détectée à la synchro suivante et affichée comme écart dans l'interface ; la synchro ne corrige rien sur le site. | unitaire + e2e |
