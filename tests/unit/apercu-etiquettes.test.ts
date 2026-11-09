@@ -11,6 +11,7 @@ import { dureeMinutesApercu, regrouperEtiquettes, texteDureeLongue } from '../..
 
 const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
   id,
+  etiquettesSite: [],
   titre: `Carte ${id}`,
   rarete: 'commune',
   description: '',
