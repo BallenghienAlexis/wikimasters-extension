@@ -30,6 +30,7 @@ const carte = (surcharge: Partial<Carte> = {}): Carte => ({
   url: null,
   favori: false,
   idsSite: null,
+  etiquettesSite: [],
   description: '',
   ami: null,
   valeurMarchande: null,
@@ -91,19 +92,19 @@ describe('fusionnerImport', () => {
   });
 
   it('met à jour les données du jeu sans perdre l’édition locale', () => {
-    const avant = { version: 2 as const, cartes: [carte({ statut: 'vendre', prixCible: 50, note: 'à garder en tête' })] };
+    const avant = { version: 3 as const, cartes: [carte({ statut: 'vendre', prixCible: 50, note: 'à garder en tête' })] };
     const apres = fusionnerImport(avant, [{ id: 'c1', titre: 'Nouveau titre', rarete: null, quantite: 3, url: null }]);
     expect(apres.cartes[0]).toMatchObject({ titre: 'Nouveau titre', quantite: 3, statut: 'vendre', prixCible: 50, note: 'à garder en tête' });
   });
 
   it('applique l’édition fournie par le fichier', () => {
-    const avant = { version: 2 as const, cartes: [carte({ statut: 'vendre' })] };
+    const avant = { version: 3 as const, cartes: [carte({ statut: 'vendre' })] };
     const apres = fusionnerImport(avant, [{ id: 'c1', titre: 'T', rarete: null, quantite: 1, url: null, statut: 'garder' }]);
     expect(apres.cartes[0]?.statut).toBe('garder');
   });
 
   it('garde les cartes absentes du fichier', () => {
-    const avant = { version: 2 as const, cartes: [carte()] };
+    const avant = { version: 3 as const, cartes: [carte()] };
     const apres = fusionnerImport(avant, [{ id: 'c2', titre: 'B', rarete: null, quantite: 1, url: null }]);
     expect(apres.cartes.map((c) => c.id)).toEqual(['c1', 'c2']);
   });
@@ -111,7 +112,7 @@ describe('fusionnerImport', () => {
 
 describe('appliquerEdition', () => {
   it('ne modifie que la carte visée, sans muter l’original', () => {
-    const avant = { version: 2 as const, cartes: [carte(), carte({ id: 'c2' })] };
+    const avant = { version: 3 as const, cartes: [carte(), carte({ id: 'c2' })] };
     const apres = appliquerEdition(avant, 'c2', { statut: 'echanger' });
     expect(apres.cartes[1]?.statut).toBe('echanger');
     expect(apres.cartes[0]?.statut).toBe('a-trier');
@@ -156,8 +157,8 @@ describe('doublons et résumé', () => {
 
 describe('terminerEnchere', () => {
   const base = (quantite: number): Collection => ({
-    version: 2,
-    cartes: [{ id: 'C|x', titre: 'x', rarete: 'C', description: '', quantite, url: null, favori: false, idsSite: null, statut: 'en-vente', prixCible: 5, note: 'n', ami: 'a', valeurMarchande: 20, decidePar: 'moi' }],
+    version: 3,
+    cartes: [{ id: 'C|x', titre: 'x', rarete: 'C', description: '', quantite, url: null, favori: false, idsSite: null, etiquettesSite: [], statut: 'en-vente', prixCible: 5, note: 'n', ami: 'a', valeurMarchande: 20, decidePar: 'moi' }],
   });
   it('retire la carte quand il n’y a qu’un exemplaire', () => {
     expect(terminerEnchere(base(1), 'C|x').cartes).toHaveLength(0);
@@ -173,7 +174,7 @@ describe('terminerEnchere', () => {
   });
 });
 
-const col = (...cartes: Carte[]): Collection => ({ version: 2, cartes });
+const col = (...cartes: Carte[]): Collection => ({ version: 3, cartes });
 const v1 = (cartes: Record<string, unknown>[]) => ({ version: 1, cartes });
 const CARTE_V1 = {
   id: 'Rare|Loutre fictive',
@@ -193,25 +194,34 @@ const CARTE_V1 = {
 const LONG = 'x'.repeat(201);
 
 describe('schéma v2 : versions', () => {
-  it('SC-019 : VERSION_SCHEMA vaut 2 et VERSION_ECHANGE vaut 1', () => {
-    expect(VERSION_SCHEMA).toBe(2);
+  it('SC-019 : VERSION_SCHEMA vaut 3 et VERSION_ECHANGE vaut 1', () => {
+    expect(VERSION_SCHEMA).toBe(3);
     expect(VERSION_ECHANGE).toBe(1);
-    expect(collectionVide()).toEqual({ version: 2, cartes: [] });
+    expect(collectionVide()).toEqual({ version: 3, cartes: [] });
   });
 });
 
 describe('migrerCollection', () => {
   it('SC-019 : conserve chaque champ existant et met idsSite à null', () => {
     const r = migrerCollection(v1([CARTE_V1]));
-    expect(r.version).toBe(2);
+    expect(r.version).toBe(3);
     expect(r.cartes).toHaveLength(1);
     for (const [cle, valeur] of Object.entries(CARTE_V1)) {
       expect((r.cartes[0] as unknown as Record<string, unknown>)[cle], cle).toEqual(valeur);
     }
     expect(r.cartes[0]?.idsSite).toBeNull();
+    expect(r.cartes[0]?.etiquettesSite).toEqual([]);
   });
 
-  it('SC-019 : est idempotente (une v2 reste inchangée)', () => {
+  it('SC-012 : v2 → v3 garde tous les champs et ajoute etiquettesSite vide', () => {
+    const sans: Partial<Carte> = carte({ idsSite: ['a'], statut: 'vendre', prixCible: 12 });
+    delete sans.etiquettesSite;
+    const r = migrerCollection({ version: 2, cartes: [sans] });
+    expect(r.version).toBe(3);
+    expect(r.cartes[0]).toEqual({ ...sans, etiquettesSite: [] });
+  });
+
+  it('SC-012 : est idempotente (une v3 reste inchangée)', () => {
     const v2 = col(carte({ idsSite: ['a', 'b'] }), carte({ id: 'c2' }));
     expect(migrerCollection(v2)).toEqual(v2);
     const une = migrerCollection(v1([CARTE_V1]));
@@ -224,8 +234,9 @@ describe('analyserStockage', () => {
     const a = analyserStockage(v1([CARTE_V1]));
     expect(a.ok).toBe(true);
     if (a.ok) {
-      expect(a.collection.version).toBe(2);
+      expect(a.collection.version).toBe(3);
       expect(a.collection.cartes[0]?.idsSite).toBeNull();
+      expect(a.collection.cartes[0]?.etiquettesSite).toEqual([]);
       expect(a.collection.cartes[0]?.prixCible).toBe(40);
     }
     const b = analyserStockage(col(carte({ idsSite: ['x1'] })));
@@ -234,15 +245,32 @@ describe('analyserStockage', () => {
   });
 
   it('SC-019 : refuse une version inconnue ou un contenu illisible sans lever d’exception', () => {
-    expect(analyserStockage({ version: 3, cartes: [] }).ok).toBe(false);
+    expect(analyserStockage({ version: 4, cartes: [] }).ok).toBe(false);
     expect(analyserStockage('texte').ok).toBe(false);
-    expect(analyserStockage({ version: 2 }).ok).toBe(false);
-    expect(analyserStockage({ version: 2, cartes: [{ titre: 'sans id' }] }).ok).toBe(false);
+    expect(analyserStockage({ version: 3 }).ok).toBe(false);
+    expect(analyserStockage({ version: 3, cartes: [{ titre: 'sans id' }] }).ok).toBe(false);
   });
 
-  it('SC-024 : refuse un idsSite vide, en double ou invalide en v2', () => {
+  it('SC-012 : accepte une v2 (migrée avec etiquettesSite vide) et une v3 avec étiquettes', () => {
+    const sans: Partial<Carte> = carte();
+    delete sans.etiquettesSite;
+    const a = analyserStockage({ version: 2, cartes: [sans] });
+    expect(a.ok).toBe(true);
+    if (a.ok) expect(a.collection.cartes[0]?.etiquettesSite).toEqual([]);
+    const b = analyserStockage(col(carte({ etiquettesSite: ['Statut · Garder', 'Ami · Léa'] })));
+    expect(b.ok).toBe(true);
+    if (b.ok) expect(b.collection.cartes[0]?.etiquettesSite).toEqual(['Statut · Garder', 'Ami · Léa']);
+  });
+
+  it('SC-012 : refuse des étiquettes du site invalides en v3', () => {
+    for (const etiquettesSite of ['texte', [3], [''], [LONG.repeat(2)], Array.from({ length: 101 }, (_, i) => `e${i}`)]) {
+      expect(analyserStockage({ version: 3, cartes: [{ ...CARTE_V1, etiquettesSite }] }).ok, JSON.stringify(etiquettesSite).slice(0, 40)).toBe(false);
+    }
+  });
+
+  it('SC-024 : refuse un idsSite vide, en double ou invalide en v3', () => {
     for (const idsSite of [[], ['a', 'a'], [''], [LONG], [3]]) {
-      expect(analyserStockage({ version: 2, cartes: [{ ...CARTE_V1, idsSite }] }).ok, JSON.stringify(idsSite)).toBe(false);
+      expect(analyserStockage({ version: 3, cartes: [{ ...CARTE_V1, idsSite }] }).ok, JSON.stringify(idsSite)).toBe(false);
     }
   });
 });
@@ -265,9 +293,17 @@ describe('fusionnerImport et idsSite', () => {
     expect(f.cartes[0]?.titre).toBe('Nouveau titre');
   });
 
-  it('SC-019 : une carte nouvelle reçoit idsSite null, la version reste 2', () => {
+  it('SC-012 : conserve etiquettesSite de la carte existante, une nouvelle carte en a une liste vide', () => {
+    const r = analyserImport({ version: 1, cartes: [{ id: 'c1', titre: 'T' }, { id: 'c2', titre: 'U' }] });
+    if (!r.ok) throw new Error('import refusé');
+    const f = fusionnerImport(col(carte({ etiquettesSite: ['Ami · Léa'] })), r.cartes);
+    expect(f.cartes.find((c) => c.id === 'c1')?.etiquettesSite).toEqual(['Ami · Léa']);
+    expect(f.cartes.find((c) => c.id === 'c2')?.etiquettesSite).toEqual([]);
+  });
+
+  it('SC-019 : une carte nouvelle reçoit idsSite null, la version est 3', () => {
     const f = fusionnerImport(collectionVide(), [{ id: 'n', titre: 'N', rarete: null, quantite: 1, url: null }]);
-    expect(f.version).toBe(2);
+    expect(f.version).toBe(3);
     expect(f.cartes[0]?.idsSite).toBeNull();
   });
 
@@ -339,12 +375,12 @@ describe('stockage : migration à la lecture (faux chrome.storage)', () => {
   };
   afterEach(() => vi.unstubAllGlobals());
 
-  it('SC-019 : migre une v1 stockée en v2 à la lecture, sans perte', async () => {
+  it('SC-019 : migre une v1 stockée en v3 à la lecture, sans perte', async () => {
     installer({ collection: v1([CARTE_V1]) });
     const { chargerCollection } = await import('../../src/lib/stockage');
     const c = await chargerCollection();
-    expect(c.version).toBe(2);
-    expect(c.cartes[0]).toMatchObject({ ...CARTE_V1, idsSite: null });
+    expect(c.version).toBe(3);
+    expect(c.cartes[0]).toMatchObject({ ...CARTE_V1, idsSite: null, etiquettesSite: [] });
   });
 
   it('SC-019 : relit une v2 avec ses idsSite', async () => {
@@ -353,10 +389,10 @@ describe('stockage : migration à la lecture (faux chrome.storage)', () => {
     expect((await chargerCollection()).cartes[0]?.idsSite).toEqual(['s1']);
   });
 
-  it('SC-019 : une collection absente donne une collection vide v2', async () => {
+  it('SC-019 : une collection absente donne une collection vide v3', async () => {
     installer({});
     const { chargerCollection } = await import('../../src/lib/stockage');
-    expect(await chargerCollection()).toEqual({ version: 2, cartes: [] });
+    expect(await chargerCollection()).toEqual({ version: 3, cartes: [] });
   });
 
   it('SC-019 : une donnée illisible lève une erreur et n’est jamais écrasée', async () => {

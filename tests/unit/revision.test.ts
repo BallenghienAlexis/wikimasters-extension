@@ -13,6 +13,7 @@ const config: Config = { maxVentesSimultanees: 5, longueurMaxEtiquette: null, no
 
 const carte = (extra: Partial<Carte> = {}): Carte => ({
   id: 'commune|Chat',
+  etiquettesSite: [],
   titre: 'Chat',
   rarete: 'commune',
   description: '',
@@ -29,7 +30,7 @@ const carte = (extra: Partial<Carte> = {}): Carte => ({
   ...extra,
 })
 
-const coll = (...cartes: Carte[]): Collection => ({ version: 2, cartes })
+const coll = (...cartes: Carte[]): Collection => ({ version: 3, cartes })
 const reg = (couples: Registre['couples'] = [], etiquettes: Registre['etiquettes'] = {}): Registre => ({
   version: 1,
   etiquettes,

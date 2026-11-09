@@ -14,6 +14,9 @@ const CLE_REGISTRE = 'registre';
 const CLE_JOURNAL = 'journal';
 const CLE_EXECUTION = 'execution';
 const CLE_SIGNAL = 'signalSynchro';
+const CLE_SYNC_AUTO = 'syncAuto';
+const CLE_DERNIERE_SYNCHRO = 'derniereSynchro';
+const CLE_BAIL_SYNCHRO = 'bailSynchro';
 
 /** Version de l’enveloppe du journal stocké. */
 export const VERSION_JOURNAL = 1;
@@ -28,6 +31,9 @@ export const CLES_STOCKAGE = {
   journal: CLE_JOURNAL,
   execution: CLE_EXECUTION,
   signalSynchro: CLE_SIGNAL,
+  syncAuto: CLE_SYNC_AUTO,
+  derniereSynchro: CLE_DERNIERE_SYNCHRO,
+  bailSynchro: CLE_BAIL_SYNCHRO,
 } as const;
 
 function illisible(detail: string): Error {
@@ -106,6 +112,42 @@ export async function chargerSignalSynchro(): Promise<number | null> {
 export async function enregistrerSignalSynchro(horodatage: number): Promise<void> {
   await chrome.storage.local.set({ [CLE_SIGNAL]: horodatage });
 }
+
+const horodatageValide = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
+
+/** Synchronisation automatique : désactivée par défaut, toute valeur illisible vaut « désactivée ». */
+export async function chargerSyncAuto(): Promise<boolean> {
+  const contenu = await chrome.storage.local.get(CLE_SYNC_AUTO);
+  return contenu[CLE_SYNC_AUTO] === true;
+}
+
+export async function enregistrerSyncAuto(actif: boolean): Promise<void> {
+  if (typeof actif !== 'boolean') throw new Error('Préférence de synchronisation invalide.');
+  await chrome.storage.local.set({ [CLE_SYNC_AUTO]: actif });
+}
+
+async function chargerHorodatage(cle: string): Promise<number | null> {
+  const contenu = await chrome.storage.local.get(cle);
+  const brut = contenu[cle];
+  return horodatageValide(brut) ? brut : null;
+}
+
+async function enregistrerHorodatage(cle: string, valeur: number | null): Promise<void> {
+  if (valeur === null) {
+    await chrome.storage.local.remove(cle);
+    return;
+  }
+  if (!horodatageValide(valeur)) throw new Error('Horodatage invalide.');
+  await chrome.storage.local.set({ [cle]: valeur });
+}
+
+/** Horodatage (ms) de la dernière synchronisation terminée, ou `null`. */
+export const chargerDerniereSynchro = (): Promise<number | null> => chargerHorodatage(CLE_DERNIERE_SYNCHRO);
+export const enregistrerDerniereSynchro = (horodatage: number | null): Promise<void> => enregistrerHorodatage(CLE_DERNIERE_SYNCHRO, horodatage);
+
+/** Horodatage (ms) d’expiration du bail qui empêche deux synchronisations simultanées, ou `null`. */
+export const chargerBailSynchro = (): Promise<number | null> => chargerHorodatage(CLE_BAIL_SYNCHRO);
+export const enregistrerBailSynchro = (expiration: number | null): Promise<void> => enregistrerHorodatage(CLE_BAIL_SYNCHRO, expiration);
 
 function lireContenu(brut: unknown): Collection {
   if (brut === undefined) return collectionVide();

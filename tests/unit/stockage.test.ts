@@ -14,6 +14,12 @@ import {
   chargerJournal,
   chargerRegistre,
   chargerSignalSynchro,
+  chargerSyncAuto,
+  chargerDerniereSynchro,
+  chargerBailSynchro,
+  enregistrerSyncAuto,
+  enregistrerDerniereSynchro,
+  enregistrerBailSynchro,
   effacerExecution,
   enregistrerCollection,
   enregistrerExecution,
@@ -104,7 +110,9 @@ afterEach(() => {
 
 describe('CLES_STOCKAGE', () => {
   it('AC4 : énumère exactement les clés locales de l’extension', () => {
-    expect([...cles()].sort()).toEqual(['amisInitiaux', 'collection', 'execution', 'journal', 'preferences', 'registre', 'signalSynchro', 'synchro']);
+    expect([...cles()].sort()).toEqual([
+      'amisInitiaux', 'bailSynchro', 'collection', 'derniereSynchro', 'execution', 'journal', 'preferences', 'registre', 'signalSynchro', 'syncAuto', 'synchro',
+    ]);
   });
 
   it('AC4 : aucune clé ne ressemble à un jeton, un cookie ou une session', () => {
@@ -125,7 +133,7 @@ describe('CLES_STOCKAGE', () => {
 
   it('AC1 : registre, journal et exécution restent absents de l’export JSON', async () => {
     const carte: Carte = {
-      id: 'c1', titre: 'Loutre', rarete: 'Rare', quantite: 1, url: null, favori: false, idsSite: null,
+      id: 'c1', titre: 'Loutre', rarete: 'Rare', quantite: 1, url: null, favori: false, idsSite: null, etiquettesSite: [],
       description: '', ami: null, valeurMarchande: null, decidePar: null, statut: 'vendre', prixCible: 50, note: '',
     };
     await enregistrerRegistre(registreRempli());
@@ -363,5 +371,80 @@ describe('amis initiaux (SC-024)', () => {
       readdirSync(d).flatMap((f) => (statSync(join(d, f)).isDirectory() ? parcourir(join(d, f)) : [join(d, f)]));
     const importeurs = parcourir('src').filter((f) => /config\/amis|AMIS_INITIAUX/.test(readFileSync(f, 'utf-8')));
     expect(importeurs.map((f) => f.replaceAll('\\', '/')).sort()).toEqual(['src/config/amis.ts', 'src/lib/stockage.ts']);
+  });
+});
+
+describe('T-202 : migration de la collection stockée', () => {
+  it('SC-012 : une collection v2 stockée est lue en v3 avec etiquettesSite vide', async () => {
+    const v2: Record<string, unknown> = {
+      id: 'c1', titre: 'Loutre', rarete: 'Rare', quantite: 1, url: null, favori: false, idsSite: ['s1'], etiquettesSite: [],
+      description: '', statut: 'garder', prixCible: null, note: '', ami: null, valeurMarchande: 12, decidePar: 'moi',
+    };
+    delete v2.etiquettesSite;
+    faux.donnees.set('collection', { version: 2, cartes: [v2] });
+    const c = await chargerCollection();
+    expect(c.version).toBe(3);
+    expect(c.cartes[0]).toEqual({ ...v2, etiquettesSite: [] });
+  });
+
+  it('SC-012 : une collection vide a la version 3', async () => {
+    expect((await chargerCollection()).version).toBe(3);
+  });
+
+  it('SC-012 : les étiquettes du site font l’aller-retour', async () => {
+    const c = collectionVide();
+    await enregistrerCollection({ ...c, cartes: [{ id: 'c1', titre: 'L', rarete: null, quantite: 1, url: null, favori: false, idsSite: null, etiquettesSite: ['Thème · Mer'], description: '', statut: 'a-trier', prixCible: null, note: '', ami: null, valeurMarchande: null, decidePar: null }] });
+    expect((await chargerCollection()).cartes[0]?.etiquettesSite).toEqual(['Thème · Mer']);
+  });
+});
+
+describe('T-202 : état de la synchronisation automatique', () => {
+  it('SC-007 : valeurs par défaut (désactivée, aucune synchro, aucun bail)', async () => {
+    expect(await chargerSyncAuto()).toBe(false);
+    expect(await chargerDerniereSynchro()).toBeNull();
+    expect(await chargerBailSynchro()).toBeNull();
+  });
+
+  it('SC-007 : les valeurs écrites sont relues', async () => {
+    await enregistrerSyncAuto(true);
+    await enregistrerDerniereSynchro(1700000000000);
+    await enregistrerBailSynchro(1700000600000);
+    expect(await chargerSyncAuto()).toBe(true);
+    expect(await chargerDerniereSynchro()).toBe(1700000000000);
+    expect(await chargerBailSynchro()).toBe(1700000600000);
+  });
+
+  it('SC-009 : null efface la dernière synchro et le bail', async () => {
+    await enregistrerDerniereSynchro(1700000000000);
+    await enregistrerBailSynchro(1700000600000);
+    await enregistrerDerniereSynchro(null);
+    await enregistrerBailSynchro(null);
+    expect(await chargerDerniereSynchro()).toBeNull();
+    expect(await chargerBailSynchro()).toBeNull();
+  });
+
+  it('SC-007 : une valeur stockée invalide vaut la valeur par défaut, sans exception', async () => {
+    for (const invalide of ['oui', 1, null, {}, []]) {
+      faux.donnees.set('syncAuto', invalide);
+      expect(await chargerSyncAuto(), JSON.stringify(invalide)).toBe(false);
+    }
+    for (const invalide of ['12', -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, true, {}]) {
+      faux.donnees.set('derniereSynchro', invalide);
+      faux.donnees.set('bailSynchro', invalide);
+      expect(await chargerDerniereSynchro(), String(invalide)).toBeNull();
+      expect(await chargerBailSynchro(), String(invalide)).toBeNull();
+    }
+  });
+
+  it('SC-007 : refuse d’écrire une valeur invalide', async () => {
+    await expect(enregistrerSyncAuto('oui' as unknown as boolean)).rejects.toThrow();
+    await expect(enregistrerDerniereSynchro(-1)).rejects.toThrow();
+    await expect(enregistrerBailSynchro(Number.NaN)).rejects.toThrow();
+    expect(faux.set).not.toHaveBeenCalled();
+  });
+
+  it('SC-007 : l’interrupteur écrit seulement sa propre clé', async () => {
+    await enregistrerSyncAuto(true);
+    expect(faux.set).toHaveBeenCalledWith({ syncAuto: true });
   });
 });

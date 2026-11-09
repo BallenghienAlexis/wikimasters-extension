@@ -1,9 +1,11 @@
 // Modèle de la collection et logique pure, sans dépendance à chrome.*.
 
-// Schéma de stockage (v2 : identifiants d’exemplaires du site). Le fichier d’échange garde sa propre version.
-export const VERSION_SCHEMA = 2;
+// Schéma de stockage (v2 : identifiants d’exemplaires du site ; v3 : étiquettes lues sur le site). Le fichier d’échange garde sa propre version.
+export const VERSION_SCHEMA = 3;
 export const VERSION_ECHANGE = 1;
 const MAX_ID_SITE = 200;
+const MAX_ETIQUETTES_SITE = 100;
+const MAX_ETIQUETTE_SITE = 300;
 export const MAX_CARTES = 50_000;
 export const MAX_NOTE = 2_000;
 const MAX_TITRE = 300;
@@ -33,6 +35,8 @@ export interface Carte {
   favori: boolean;
   // Identifiants d’exemplaires sur le site (`user_card_id`) ; null = inconnu, jamais un tableau vide.
   idsSite: string[] | null;
+  // Noms des étiquettes posées sur la carte sur le site (lecture seule, jamais envoyée) ; [] = aucune ou inconnu.
+  etiquettesSite: string[];
   // Édition locale : jamais envoyée au site.
   statut: Statut;
   prixCible: number | null;
@@ -52,7 +56,7 @@ export interface Collection {
 export type EditionCarte = Partial<Pick<Carte, 'statut' | 'prixCible' | 'note' | 'ami' | 'decidePar' | 'valeurMarchande'>>;
 
 // Une carte importée : l'édition n'est présente que si le fichier la fournit.
-export type CarteImportee = Omit<Carte, 'idsSite' | 'statut' | 'prixCible' | 'note' | 'favori' | 'description' | 'ami' | 'decidePar' | 'valeurMarchande'> &
+export type CarteImportee = Omit<Carte, 'idsSite' | 'etiquettesSite' | 'statut' | 'prixCible' | 'note' | 'favori' | 'description' | 'ami' | 'decidePar' | 'valeurMarchande'> &
   EditionCarte & { favori?: boolean; description?: string };
 
 export type ResultatImport = { ok: true; cartes: CarteImportee[] } | { ok: false; erreur: string };
@@ -68,16 +72,20 @@ export const estIdSiteValide = (v: unknown): v is string => typeof v === 'string
 
 const idsSiteValides = (ids: unknown[]): boolean => ids.length > 0 && ids.every(estIdSiteValide) && new Set(ids).size === ids.length;
 
+const etiquettesSiteValides = (v: unknown): v is string[] =>
+  Array.isArray(v) && v.length <= MAX_ETIQUETTES_SITE && v.every((e) => typeof e === 'string' && e.trim() !== '' && e.length <= MAX_ETIQUETTE_SITE);
+
 interface CarteLue {
   carte: CarteImportee;
   idsSite: string[] | null;
+  etiquettesSite: string[];
 }
 
 function analyserCarte(brut: unknown, rang: number, avecIds: boolean): CarteLue | string {
   const position = `Carte n° ${rang + 1}`;
   if (!estObjet(brut)) return `${position} : format invalide.`;
 
-  const { id, titre, rarete, description, quantite, url, favori, statut, prixCible, note, ami, decidePar, valeurMarchande, idsSite } = brut;
+  const { id, titre, rarete, description, quantite, url, favori, statut, prixCible, note, ami, decidePar, valeurMarchande, idsSite, etiquettesSite } = brut;
   if (typeof id !== 'string' || id.trim() === '') return `${position} : identifiant manquant.`;
   if (typeof titre !== 'string' || titre.trim() === '') return `${position} : titre manquant.`;
   if (titre.length > MAX_TITRE) return `${position} : titre trop long.`;
@@ -102,6 +110,11 @@ function analyserCarte(brut: unknown, rang: number, avecIds: boolean): CarteLue 
     if (!Array.isArray(idsSite) || !idsSiteValides(idsSite)) return `${position} : identifiants du site invalides.`;
     ids = idsSite as string[];
   }
+  let etiquettes: string[] = [];
+  if (avecIds && etiquettesSite !== undefined) {
+    if (!etiquettesSiteValides(etiquettesSite)) return `${position} : étiquettes du site invalides.`;
+    etiquettes = etiquettesSite;
+  }
 
   const carte: CarteImportee = {
     id,
@@ -118,7 +131,7 @@ function analyserCarte(brut: unknown, rang: number, avecIds: boolean): CarteLue 
   if (ami !== undefined) carte.ami = ami as string | null;
   if (decidePar !== undefined) carte.decidePar = decidePar as DecidePar;
   if (valeurMarchande !== undefined) carte.valeurMarchande = valeurMarchande as number | null;
-  return { carte, idsSite: ids };
+  return { carte, idsSite: ids, etiquettesSite: etiquettes };
 }
 
 function analyserCartes(brut: Record<string, unknown>, avecIds: boolean): CarteLue[] | string {
@@ -146,19 +159,20 @@ export function analyserImport(brut: unknown): ResultatImport {
   return { ok: true, cartes: lues.map((l) => l.carte) };
 }
 
-// v1 → v2 : chaque carte garde ses champs et reçoit `idsSite: null`. Une v2 (ou un contenu inconnu) passe telle quelle.
+// v1 → v3 et v2 → v3 : chaque carte garde ses champs et reçoit `idsSite: null` (v1) et `etiquettesSite: []`. Une v3 (ou un contenu inconnu) passe telle quelle.
 export function migrerCollection(brut: unknown): Collection {
-  if (estObjet(brut) && brut.version === 1 && Array.isArray(brut.cartes)) {
-    return { version: VERSION_SCHEMA, cartes: brut.cartes.map((c: unknown) => (estObjet(c) ? { idsSite: null, ...c } : c)) as Carte[] };
+  if (estObjet(brut) && (brut.version === 1 || brut.version === 2) && Array.isArray(brut.cartes)) {
+    const defauts = brut.version === 1 ? { idsSite: null, etiquettesSite: [] } : { etiquettesSite: [] };
+    return { version: VERSION_SCHEMA, cartes: brut.cartes.map((c: unknown) => (estObjet(c) ? { ...defauts, ...c } : c)) as Carte[] };
   }
   return brut as Collection;
 }
 
-// Valide le contenu stocké (v1 migrée ou v2). Ne lève jamais : l'appelant décide quoi faire d'une erreur.
+// Valide le contenu stocké (v1 et v2 migrées, ou v3). Ne lève jamais : l'appelant décide quoi faire d'une erreur.
 export function analyserStockage(brut: unknown): ResultatStockage {
   if (!estObjet(brut)) return { ok: false, erreur: 'Le contenu doit être un objet JSON.' };
-  if (brut.version !== 1 && brut.version !== VERSION_SCHEMA) {
-    return { ok: false, erreur: `Version de stockage non prise en charge (attendue : 1 ou ${VERSION_SCHEMA}).` };
+  if (brut.version !== 1 && brut.version !== 2 && brut.version !== VERSION_SCHEMA) {
+    return { ok: false, erreur: `Version de stockage non prise en charge (attendue : 1, 2 ou ${VERSION_SCHEMA}).` };
   }
   const migre = migrerCollection(brut) as unknown as Record<string, unknown>;
   const lues = analyserCartes(migre, true);
@@ -167,8 +181,11 @@ export function analyserStockage(brut: unknown): ResultatStockage {
     collectionVide(),
     lues.map((l) => l.carte),
   );
-  const ids = new Map(lues.map((l) => [l.carte.id, l.idsSite]));
-  return { ok: true, collection: { version: VERSION_SCHEMA, cartes: base.cartes.map((c) => ({ ...c, idsSite: ids.get(c.id) ?? null })) } };
+  const ids = new Map(lues.map((l) => [l.carte.id, l]));
+  return {
+    ok: true,
+    collection: { version: VERSION_SCHEMA, cartes: base.cartes.map((c) => ({ ...c, idsSite: ids.get(c.id)?.idsSite ?? null, etiquettesSite: ids.get(c.id)?.etiquettesSite ?? [] })) },
+  };
 }
 
 // Les données du jeu viennent de l'import ; l'édition locale existante est gardée
@@ -180,6 +197,7 @@ export function fusionnerImport(collection: Collection, importees: CarteImportee
     parId.set(importee.id, {
       favori: existante?.favori ?? false,
       idsSite: existante?.idsSite ?? null,
+      etiquettesSite: existante?.etiquettesSite ?? [],
       description: existante?.description ?? '',
       ami: existante?.ami ?? null,
       decidePar: existante?.decidePar ?? null,
