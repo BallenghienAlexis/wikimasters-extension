@@ -71,6 +71,9 @@ export interface ExemplaireAttendu {
   etiquettes: string[]
 }
 
+/** Même ordre que `localeCompare(…, 'fr')`, sans recréer le collateur à chaque comparaison. */
+const COLLATEUR_FR = new Intl.Collator('fr')
+
 const comparer = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
 
 const STATUTS_ETIQUETES = new Set<Statut>(['garder', 'echanger', 'vendre', 'en-vente'])
@@ -81,10 +84,22 @@ const PREFIXE_STATUT = 'Statut · '
 const NB_ANCETRES: Record<string, number> = Object.fromEntries(DEFINITIONS_THEMES.map((t) => [t.id, t.parents?.length ?? 0]))
 
 /** Thèmes de la carte, sauf `autres`, du plus précis au plus général puis par libellé (H5). */
-function themesOrdonnes(carte: Carte): string[] {
-  return themesDeCarte(carte)
+function themesOrdonnes(ids: readonly string[]): string[] {
+  return ids
     .filter((id) => id !== THEME_AUTRES)
-    .sort((a, b) => (NB_ANCETRES[b] ?? 0) - (NB_ANCETRES[a] ?? 0) || (LIBELLES_THEMES[a] ?? a).localeCompare(LIBELLES_THEMES[b] ?? b, 'fr'))
+    .sort((a, b) => (NB_ANCETRES[b] ?? 0) - (NB_ANCETRES[a] ?? 0) || COLLATEUR_FR.compare(LIBELLES_THEMES[a] ?? a, LIBELLES_THEMES[b] ?? b))
+}
+
+/** Clés de comparaison des noms d’amis, mémorisées : la même liste revient pour chaque carte. */
+const clesNoms = new Map<string, string>()
+function cleNom(net: string): string {
+  let cle = clesNoms.get(net)
+  if (cle === undefined) {
+    if (clesNoms.size >= 10_000) clesNoms.clear()
+    cle = normaliser(net)
+    clesNoms.set(net, cle)
+  }
+  return cle
 }
 
 /** Étiquettes d’échange (SC-021) : l’ami de la carte, puis chaque ami de la liste qui suit un thème de la carte. */
@@ -93,7 +108,7 @@ function etiquettesEchange(carte: Carte, themes: readonly string[], amis: readon
   const vus = new Set<string>()
   const ajouter = (nom: string): void => {
     const net = nom.trim()
-    const cle = normaliser(net)
+    const cle = cleNom(net)
     if (net !== '' && !vus.has(cle)) {
       vus.add(cle)
       noms.push(net)
@@ -115,7 +130,7 @@ export function etiquettesDeCarte(carte: Carte, config?: Pick<Config, 'amis' | '
   const themes = themesDeCarte(carte)
   const prioritaires = [`${PREFIXE_STATUT}${LIBELLES_STATUT[carte.statut]}`]
   if (carte.statut === 'echanger') prioritaires.push(...etiquettesEchange(carte, themes, config?.amis ?? []))
-  const libellesThemes = themesOrdonnes(carte).map((id) => LIBELLES_THEMES[id] ?? id)
+  const libellesThemes = themesOrdonnes(themes).map((id) => LIBELLES_THEMES[id] ?? id)
   const tous = [...prioritaires, ...libellesThemes]
   const limite = config?.limiteParExemplaire
   if (limite === null || limite === undefined || !Number.isFinite(limite) || limite < prioritaires.length) {
@@ -163,7 +178,7 @@ function nomsAuDelaDeLaLimite(
   const rang = (nom: string): number => (nom.startsWith(PREFIXE_STATUT) || nom.startsWith(PREFIXE_ECHANGE) ? 1 : 2)
   const nouveaux = [...compte.keys()]
     .filter((nom) => !dansRegistre.has(nom))
-    .sort((a, b) => rang(a) - rang(b) || (rang(a) === 2 ? (compte.get(b) ?? 0) - (compte.get(a) ?? 0) : 0) || a.localeCompare(b, 'fr'))
+    .sort((a, b) => rang(a) - rang(b) || (rang(a) === 2 ? (compte.get(b) ?? 0) - (compte.get(a) ?? 0) : 0) || COLLATEUR_FR.compare(a, b))
   const places = Math.max(0, Math.floor(limiteNoms) - dansRegistre.size)
   return new Set(nouveaux.slice(places))
 }
