@@ -1,0 +1,226 @@
+// Synchronisation automatique, côté content script : lit la collection du joueur par l'API interne du site.
+// Seul fichier de `src/content` qui appelle `fetch` (autorisé par eslint.config.mjs, contrôlé par
+// tests/unit/synchro-auto-lint.test.ts). Lecture seule : requêtes GET vers l'origine du site, authentifiées
+// par les cookies de même origine du navigateur ; aucun en-tête ajouté, aucun jeton ni cookie lu.
+// Le plan de lecture, la cadence et les arrêts sont dans `src/lib/ordonnanceur.ts`.
+import { VERSION_SCHEMA, type Carte, type Collection } from '../lib/collection';
+import type { Horloge } from '../lib/file';
+import { etatInitial, synchroniser, type Bail, type EtatOrdonnanceur, type ReponseApi, type ResultatSynchro } from '../lib/ordonnanceur';
+import {
+  chargerBailSynchro,
+  chargerCollection,
+  chargerDerniereSynchro,
+  chargerEtatSynchro,
+  chargerPreferences,
+  chargerSyncAuto,
+  ecouterArretSynchro,
+  enregistrerBailSynchro,
+  enregistrerCollection,
+  enregistrerDerniereSynchro,
+  enregistrerEtatSynchro,
+} from '../lib/stockage';
+import { proposerTri, type Preferences } from '../lib/tri';
+
+/** Délai minimal entre deux synchronisations, et période du minuteur tant que l'onglet est visible. */
+export const DELAI_SYNCHRO_MS = 30 * 60_000;
+
+export interface DependancesSynchroAuto {
+  horloge: Horloge;
+  /** `GET` même origine : reçoit un chemin relatif, ne renvoie que le statut et le JSON. */
+  transport: (chemin: string) => Promise<ReponseApi>;
+  actif: () => Promise<boolean>;
+  derniereSynchro: () => Promise<number | null>;
+  noterDerniereSynchro: (horodatage: number) => Promise<void>;
+  chargerCollection: () => Promise<Collection>;
+  enregistrerCollection: (collection: Collection) => Promise<void>;
+  chargerEtat: () => Promise<EtatOrdonnanceur | null>;
+  enregistrerEtat: (etat: EtatOrdonnanceur) => Promise<void>;
+  bail: Bail;
+  chargerPreferences: () => Promise<Preferences>;
+  journal?: (message: string) => void;
+}
+
+export interface SynchroAuto {
+  /** Lance une synchronisation si l'option est active et la dernière a plus de 30 min ; sinon `null`, sans requête. */
+  declencher: () => Promise<ResultatSynchro | null>;
+  /** Arrêt immédiat : plus aucune requête n'est émise après celle en vol. */
+  arreter: () => void;
+}
+
+/**
+ * Applique le résultat sur la collection **actuellement stockée**, pour ne pas écraser ce que le joueur
+ * a modifié pendant la synchro : seuls les faits du site sont repris, et la valeur marchande seulement si
+ * la synchro l'a changée et que le joueur n'y a pas touché. Une carte classée par l'assistant est reclassée
+ * comme le fait `enregistrerValeur`.
+ */
+function fusionner(stockee: Collection, produite: Collection, depart: ReadonlyMap<string, Carte>, preferences: Preferences | null): Collection {
+  const parId = new Map(stockee.cartes.map((c) => [c.id, c]));
+  for (const p of produite.cartes) {
+    const s = parId.get(p.id);
+    if (!s) {
+      parId.set(p.id, p);
+      continue;
+    }
+    let carte: Carte = { ...s, quantite: p.quantite, favori: p.favori, idsSite: p.idsSite, etiquettesSite: p.etiquettesSite };
+    const avant = depart.get(p.id)?.valeurMarchande ?? null;
+    if (p.valeurMarchande !== avant && s.valeurMarchande === avant) {
+      carte = { ...carte, valeurMarchande: p.valeurMarchande };
+      if (carte.decidePar === 'assistant' && preferences !== null) carte = { ...carte, ...proposerTri(carte, preferences) };
+    }
+    parId.set(p.id, carte);
+  }
+  return { version: VERSION_SCHEMA, cartes: [...parId.values()] };
+}
+
+export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
+  const journal = deps.journal ?? (() => undefined);
+  let enCours = false;
+  let arretDemande = false;
+  let dernierEssai: number | null = null;
+
+  async function declencher(): Promise<ResultatSynchro | null> {
+    if (enCours) return null;
+    enCours = true;
+    arretDemande = false;
+    try {
+      if (!(await deps.actif())) return null;
+      const maintenant = deps.horloge.now();
+      if (dernierEssai !== null && maintenant - dernierEssai < DELAI_SYNCHRO_MS) return null;
+      const derniere = await deps.derniereSynchro();
+      if (derniere !== null && maintenant - derniere < DELAI_SYNCHRO_MS) return null;
+
+      const etat = (await deps.chargerEtat()) ?? etatInitial();
+      const collection = await deps.chargerCollection();
+      const depart = new Map(collection.cartes.map((c) => [c.id, c]));
+      dernierEssai = maintenant;
+
+      const resultat = await synchroniser({
+        horloge: deps.horloge,
+        transport: deps.transport,
+        collection,
+        etat,
+        bail: deps.bail,
+        journal,
+        arretDemande: () => arretDemande,
+        enregistrer: async (produite, courant) => {
+          const stockee = await deps.chargerCollection();
+          const valeurChangee = produite.cartes.some((c) => c.valeurMarchande !== (depart.get(c.id)?.valeurMarchande ?? null));
+          const preferences = valeurChangee ? await deps.chargerPreferences() : null;
+          const fusion = fusionner(stockee, produite, depart, preferences);
+          if (JSON.stringify(fusion) !== JSON.stringify(stockee)) await deps.enregistrerCollection(fusion);
+          await deps.enregistrerEtat(courant);
+        },
+      });
+      if (resultat.complete) await deps.noterDerniereSynchro(deps.horloge.now());
+      return resultat;
+    } catch {
+      // Stockage illisible ou indisponible (extension rechargée) : aucune requête, aucun détail ne sort.
+      return null;
+    } finally {
+      enCours = false;
+    }
+  }
+
+  return {
+    declencher,
+    arreter: () => {
+      arretDemande = true;
+    },
+  };
+}
+
+export interface SourceVisibilite {
+  visible: () => boolean;
+  /** Renvoie la fonction qui retire l'écouteur. */
+  ecouter: (rappel: () => void) => () => void;
+}
+
+export interface OptionsDemarrage {
+  synchro: SynchroAuto;
+  visibilite: SourceVisibilite;
+  /** Demande d'arrêt venue de l'interface. */
+  ecouterArret: (rappel: () => void) => () => void;
+}
+
+const horlogeReelle: Horloge = {
+  now: () => Date.now(),
+  attendreJusqua: (echeance) =>
+    new Promise<void>((resolve) => {
+      const attendre = (): void => {
+        const reste = echeance - Date.now();
+        if (reste <= 0) resolve();
+        else setTimeout(attendre, reste);
+      };
+      attendre();
+    }),
+};
+
+// Même origine que la page ; ni méthode, ni corps, ni en-tête : un simple GET.
+const transportSite = async (chemin: string): Promise<ReponseApi> => {
+  const reponse = await fetch(chemin, { credentials: 'same-origin' });
+  const json: unknown = await reponse.json().catch(() => null);
+  return { statut: reponse.status, json };
+};
+
+const synchroDuNavigateur = (): SynchroAuto =>
+  creerSynchroAuto({
+    horloge: horlogeReelle,
+    transport: transportSite,
+    actif: chargerSyncAuto,
+    derniereSynchro: chargerDerniereSynchro,
+    noterDerniereSynchro: enregistrerDerniereSynchro,
+    chargerCollection,
+    enregistrerCollection,
+    chargerEtat: chargerEtatSynchro,
+    enregistrerEtat: enregistrerEtatSynchro,
+    bail: { lire: chargerBailSynchro, ecrire: enregistrerBailSynchro },
+    chargerPreferences,
+  });
+
+const visibiliteDuNavigateur = (): SourceVisibilite => ({
+  visible: () => document.visibilityState === 'visible',
+  ecouter: (rappel) => {
+    document.addEventListener('visibilitychange', rappel);
+    return () => document.removeEventListener('visibilitychange', rappel);
+  },
+});
+
+/**
+ * Branche les déclencheurs : chargement de la page, puis toutes les 30 min tant que l'onglet est visible
+ * (et à son retour au premier plan). Rien ne part si l'option est désactivée : `declencher` le vérifie.
+ * Renvoie la fonction qui retire minuteur et écouteurs.
+ */
+export function demarrerSynchroAuto(options: Partial<OptionsDemarrage> = {}): () => void {
+  const synchro = options.synchro ?? synchroDuNavigateur();
+  const visibilite = options.visibilite ?? visibiliteDuNavigateur();
+  const ecouterArret = options.ecouterArret ?? ecouterArretSynchro;
+
+  const lancer = (): void => void synchro.declencher().catch(() => undefined);
+  let minuteur: ReturnType<typeof setInterval> | undefined;
+  const armer = (): void => {
+    if (minuteur === undefined && visibilite.visible()) minuteur = setInterval(lancer, DELAI_SYNCHRO_MS);
+  };
+  const desarmer = (): void => {
+    clearInterval(minuteur);
+    minuteur = undefined;
+  };
+
+  const retirerVisibilite = visibilite.ecouter(() => {
+    if (visibilite.visible()) {
+      armer();
+      lancer();
+    } else {
+      desarmer();
+    }
+  });
+  const retirerArret = ecouterArret(() => synchro.arreter());
+
+  armer();
+  lancer();
+
+  return () => {
+    desarmer();
+    retirerVisibilite();
+    retirerArret();
+  };
+}
