@@ -83,7 +83,7 @@ function convertirExemplaire(brut: unknown): CarteLue | null {
   };
 }
 
-// Dates d’ajout lisibles (au moins 2) et non croissantes : l’ordre « plus récent d’abord » est confirmé.
+// Dates d’ajout lisibles (au moins 1 ; une page d’un seul exemplaire ne peut pas contredire l’ordre) et non croissantes : l’ordre « plus récent d’abord » est confirmé.
 function dateDecroissante(brut: unknown[]): boolean {
   const dates: number[] = [];
   for (const e of brut) {

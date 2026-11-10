@@ -467,7 +467,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     await synchroniser(b.deps);
     for (const d of b.departs) {
       expect(d.chemin).toMatch(
-        /^\/api\/(my-collection\/stats\?sort=added|my-collection\?sort=added&page=\d+&stats=0|marketplace\/cards\/[A-Za-z0-9_-]+\/sales\?scope=summary)$/,
+        /^\/api\/(my-collection\/stats\?sort=added|my-collection\?sort=(?:added|rarity)&page=\d+&stats=0|marketplace\/cards\/[A-Za-z0-9_-]+\/sales\?scope=summary)$/,
       );
     }
   });
