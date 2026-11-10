@@ -4,7 +4,7 @@ Entrées : `spec.refined.md`, `design.md`, `releve-api.md`.
 
 ## Architecture
 - **Approche (option A)** : un exécuteur dans le content script, sur toute page `wiki-masters.com`, lit l'API en `GET` même origine (`fetch(url, { credentials: 'same-origin' })`), sans en-tête ajouté et **sans lire le jeton** (`jeton.ts` n'est pas concerné). Ordre : `stats` → pages de `my-collection` → `sales?scope=summary` par carte à relever.
-- **Incrémental** : si `stats.total` et le nombre d'étiquettes sont inchangés depuis la dernière synchro complète, seule la requête `stats` part. Sinon on relit les pages ; l'arrêt anticipé n'est retenu que si les tests montrent un tri stable (sinon relecture complète, ≈ 14 min pour 134 pages).
+- **Incrémental** : si `stats.total` et le nombre d'étiquettes sont inchangés depuis la dernière synchro complète, seule la requête `stats` part. Sinon on relit les pages ; les pages sont lues en `sort=added` (plus récent d'abord) avec arrêt anticipé quand seules de nouvelles cartes arrivent ; sinon relecture complète (≈ 14 min pour 134 pages).
 - **Données** : `my-collection` fournit déjà `id` (exemplaire), `card_id`, `starred`, `count`, `tags` ; `stats.tagOptions` fournit la liste des étiquettes. Rien d'autre à lire pour les étiquettes.
 - **Prix** : `sales?scope=summary` → `summary.<rareté>.average` → `valeurMarchande` ; jamais la route sans `scope=summary` (403 PRO).
 - **Ordonnanceur unique** : une file, une requête en vol, 6 s entre deux requêtes, 10 par fenêtre de 60 s (constantes de `file.ts`), arrêt immédiat sur 401/403/429, 3 échecs, aucune reprise avant 30 min. Un bail dans `chrome.storage.local` (horodatage, expiration) évite deux synchros dans deux onglets.
@@ -43,7 +43,7 @@ Entrées : `spec.refined.md`, `design.md`, `releve-api.md`.
 | Lot | Risque | Probabilité | Impact | Mitigation |
 |---|---|---|---|---|
 | L3/L5 | Bannissement lié à une lecture automatique (`/api/` en `Disallow`) | moyenne | élevé | Risque assumé par Alexis ; option désactivée par défaut ; cadence fixe ; arrêt immédiat sur 401/403/429 ; budget commun |
-| L3 | Tri instable entre deux lectures : une page décalée fait rater une carte | moyenne | moyen | Relecture complète si le total change ; arrêt anticipé seulement si prouvé stable |
+| L3 | Tri instable entre deux lectures : une page décalée fait rater une carte | moyenne | moyen | Relecture complète si le total change ; arrêt anticipé seulement si le total a augmenté, les étiquettes sont inchangées et l'écart est expliqué par la lecture |
 | L5 | Un seul onglet à la fois, onglet en arrière-plan ralenti par Chrome | élevée | faible | Bail, minuteur tolérant, état « en attente » affiché |
 | L1 | Forme des réponses modifiée par le site | moyenne | moyen | Validation stricte, carte ignorée et journalisée (SC-010) |
 | L3 | 6 668 prix à relever, trop long | élevée | moyen | Priorité (à décider, valeur absente ou périmée), reprise à la synchro suivante |

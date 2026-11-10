@@ -192,24 +192,40 @@ describe('ordonnanceur — critère 2 : pages dans l’ordre jusqu’à collecti
     expect(r.etat.derniereComplete).not.toBeNull();
   });
 
-  it('arrêt anticipé : seules de nouvelles cartes (mêmes étiquettes) → s’arrête à la première page identique', async () => {
-    const premier = banc(siteFictif(200));
-    const r1 = await synchroniser({ ...premier.deps, maxPrix: 0 });
-    // 200 cartes déjà connues ; le site en compte 220 (20 récentes d’abord) : page 0 nouvelle, page 1 identique → arrêt.
-    const recents = Array.from({ length: 20 }, (_, i) => exemplaire(1000 + i));
+  /** Site dont les exemplaires sont déjà dans l’ordre « plus récent d’abord ». */
+  const siteTrie = (exemplaires: Array<ReturnType<typeof exemplaire>>, total: number, unique: number) => (chemin: string): ReponseApi => {
+    if (chemin.startsWith('/api/my-collection/stats')) return { statut: 200, json: statsJson(total, unique) };
+    const p = Number(/page=(\d+)/.exec(chemin)![1]);
+    const datees = exemplaires.map((e, i) => ({ ...e, obtained_at: new Date(Date.UTC(2026, 5, 1) - i * 60_000).toISOString() }));
+    return { statut: 200, json: { collection: datees.slice(p * 50, (p + 1) * 50) } };
+  };
+  const cheminsPages = (b: { departs: Array<{ chemin: string }> }) => b.departs.filter((d) => d.chemin.includes('page=')).map((d) => d.chemin);
+
+  it('arrêt anticipé : 20 nouvelles cartes en tête, mêmes étiquettes → s’arrête à la première page identique', async () => {
     const connus = Array.from({ length: 200 }, (_, i) => exemplaire(i + 1));
-    const tous = [...recents, ...connus];
-    const site = (chemin: string): ReponseApi => {
-      if (chemin.startsWith('/api/my-collection/stats')) return { statut: 200, json: statsJson(220) };
-      const p = Number(/page=(\d+)/.exec(chemin)![1]);
-      return { statut: 200, json: { collection: tous.slice(p * 50, (p + 1) * 50) } };
-    };
-    // exemplaire(1..) a des dates décroissantes ; recents sont plus anciens ici : on impose l’ordre voulu.
-    tous.forEach((e, i) => ((e as { obtained_at: string }).obtained_at = new Date(Date.UTC(2026, 5, 1) - i * 60_000).toISOString()));
-    const b = banc(site, r1.collection, { ...r1.etat, total: 200 });
+    const r1 = await synchroniser({ ...banc(siteTrie(connus, 200, 200)).deps, maxPrix: 0 });
+    const recents = Array.from({ length: 20 }, (_, i) => exemplaire(1000 + i));
+    const b = banc(siteTrie([...recents, ...connus], 220, 220), r1.collection, r1.etat);
     await synchroniser({ ...b.deps, maxPrix: 0 });
-    const pages = b.departs.filter((d) => d.chemin.includes('page=')).map((d) => d.chemin);
-    expect(pages).toEqual(['/api/my-collection?sort=added&page=0&stats=0', '/api/my-collection?sort=added&page=1&stats=0']);
+    expect(cheminsPages(b)).toEqual(['/api/my-collection?sort=added&page=0&stats=0', '/api/my-collection?sort=added&page=1&stats=0']);
+  });
+
+  it('total en baisse, étiquettes inchangées : lecture complète', async () => {
+    const connus = Array.from({ length: 200 }, (_, i) => exemplaire(i + 1));
+    const r1 = await synchroniser({ ...banc(siteTrie(connus, 200, 200)).deps, maxPrix: 0 });
+    const b = banc(siteTrie(connus.slice(5), 195, 195), r1.collection, r1.etat);
+    await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(cheminsPages(b).length).toBe(5); // 4 pages + page vide
+  });
+
+  it('doublon par count sur une carte ancienne : pas d’arrêt anticipé, quantité corrigée', async () => {
+    const connus = Array.from({ length: 200 }, (_, i) => exemplaire(i + 1));
+    const r1 = await synchroniser({ ...banc(siteTrie(connus, 200, 200)).deps, maxPrix: 0 });
+    const modifie = connus.map((e, i) => (i === 150 ? { ...e, count: 2 } : e));
+    const b = banc(siteTrie(modifie, 201, 200), r1.collection, r1.etat);
+    const r2 = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(cheminsPages(b).length).toBe(5);
+    expect(r2.collection.cartes.find((c) => c.id === idCarte(151))!.quantite).toBe(2);
   });
 
   it('étiquettes modifiées : pas d’arrêt anticipé, lecture complète', async () => {

@@ -274,9 +274,19 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         stats.totalUnique === etat.totalUnique &&
         signature(stats) === etat.signatureEtiquettes;
 
-      // Arrêt anticipé seulement si rien d’autre que de nouvelles cartes n’a changé : mêmes étiquettes (nombre par étiquette).
-      const nouveautesSeulement = stats !== null && etat.derniereComplete !== null && signature(stats) === etat.signatureEtiquettes;
-      if (!inchange) complet = (await lirePages(stats?.total ?? null, nouveautesSeulement)) && complet;
+      // Arrêt anticipé seulement si le site n’a fait que gagner des exemplaires (total en hausse, cartes distinctes non en baisse)
+      // avec les mêmes étiquettes ; la lecture doit ensuite retrouver exactement cet écart avant de s’arrêter.
+      const gain =
+        stats !== null &&
+        etat.derniereComplete !== null &&
+        etat.total !== null &&
+        etat.totalUnique !== null &&
+        stats.total > etat.total &&
+        stats.totalUnique >= etat.totalUnique &&
+        signature(stats) === etat.signatureEtiquettes
+          ? { exemplaires: stats.total - etat.total, cartes: stats.totalUnique - etat.totalUnique }
+          : null;
+      if (!inchange) complet = (await lirePages(stats?.total ?? null, gain)) && complet;
       if (complet && stats !== null) {
         etat.total = stats.total;
         etat.totalUnique = stats.totalUnique;
@@ -308,11 +318,14 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   }
 
   /** Vrai si toutes les pages ont été lues sans échec. */
-  async function lirePages(total: number | null, arretAnticipePermis: boolean): Promise<boolean> {
+  async function lirePages(total: number | null, gain: { exemplaires: number; cartes: number } | null): Promise<boolean> {
     let ok = true;
     let tri: TriSite = 'added';
     // Tant que l’ordre « plus récent d’abord » n’est pas confirmé par la page 0, aucun arrêt anticipé.
     let ordreConfirme = false;
+    // Exemplaires et cartes gagnés par rapport au local, cumulés page après page.
+    let exemplairesGagnes = 0;
+    let cartesGagnees = 0;
     // Plafond : pages attendues + marge ; au-delà, arrêt propre (lecture jugée incomplète).
     const maxPages = total === null ? MAX_PAGES_SANS_TOTAL : Math.ceil(total / CARTES_PAR_PAGE) + PAGES_DE_MARGE;
     for (let page = PREMIERE_PAGE; ; page++) {
@@ -351,6 +364,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       for (const c of lue.cartes) {
         etat.cardIds[c.id] = c.cardId;
         const locale = parId.get(c.id);
+        exemplairesGagnes += c.quantite - (locale?.quantite ?? 0);
+        if (!locale) cartesGagnees += 1;
         if (!locale) {
           parId.set(c.id, nouvelleCarte(c));
           continue;
@@ -359,7 +374,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         parId.set(c.id, { ...locale, quantite: c.quantite, favori: c.favori, idsSite: c.idsSite, etiquettesSite: c.etiquettesSite });
       }
       await deps.enregistrer(instantane(), etat);
-      if (arretAnticipePermis && ordreConfirme && toutIdentique) return ok;
+      // Une page identique au local ne suffit pas : tout l’écart de total doit être expliqué par ce qui a été lu.
+      if (gain !== null && ordreConfirme && toutIdentique && exemplairesGagnes === gain.exemplaires && cartesGagnees === gain.cartes) return ok;
     }
   }
 
