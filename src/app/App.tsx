@@ -62,6 +62,7 @@ const App: React.FC = () => {
   const [registreIllisible, setRegistreIllisible] = useState(false);
   const [executionIllisible, setExecutionIllisible] = useState(false);
   const [confirmerReinit, setConfirmerReinit] = useState(false);
+  const [echecRecuperation, setEchecRecuperation] = useState<string | null>(null);
   // Tant que la lecture initiale du stockage n’est pas finie, l’aperçu du lot n’est pas proposé (D-18).
   const [stockageSynchroLu, setStockageSynchroLu] = useState(false);
   // Les amis fixent les étiquettes d’échange de l’aperçu : il attend aussi la lecture des préférences.
@@ -169,7 +170,9 @@ const App: React.FC = () => {
             type="button"
             className={CLASSE_BOUTON}
             onClick={() => {
-              void lireCollectionBrute().then((brut) => telecharger(JSON.stringify(brut ?? null, null, 2), 'wm-collection-brute.json', 'application/json'));
+              lireCollectionBrute()
+                .then((brut) => telecharger(JSON.stringify(brut ?? null, null, 2), 'wm-collection-brute.json', 'application/json'))
+                .catch(() => setEchecRecuperation('Téléchargement impossible.'));
             }}
           >
             Télécharger les données brutes
@@ -179,15 +182,18 @@ const App: React.FC = () => {
               <button
                 type="button"
                 className={CLASSE_BOUTON}
+                autoFocus
                 onClick={() => {
-                  void reinitialiserCollection().then(() => {
-                    setBlocage(null);
-                    setCollection(collectionVide());
-                    setChargee(true);
-                  });
+                  reinitialiserCollection()
+                    .then(() => {
+                      setBlocage(null);
+                      setCollection(collectionVide());
+                      setChargee(true);
+                    })
+                    .catch(() => setEchecRecuperation('Réinitialisation impossible : rien n’a été effacé.'));
                 }}
               >
-                Oui, tout effacer
+                Oui, effacer la collection
               </button>
               <button type="button" className={CLASSE_BOUTON} onClick={() => setConfirmerReinit(false)}>
                 Annuler
@@ -199,6 +205,7 @@ const App: React.FC = () => {
             </button>
           )}
         </div>
+        {echecRecuperation && <p role="status" className="mt-3">{echecRecuperation}</p>}
       </main>
     );
   }

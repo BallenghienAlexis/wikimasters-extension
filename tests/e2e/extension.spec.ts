@@ -136,7 +136,7 @@ test.describe('collection illisible', () => {
     expect((await telechargement).suggestedFilename()).toBe('wm-collection-brute.json');
 
     await pageCollection.getByRole('button', { name: 'Réinitialiser la collection' }).click();
-    await pageCollection.getByRole('button', { name: 'Oui, tout effacer' }).click();
+    await pageCollection.getByRole('button', { name: 'Oui, effacer la collection' }).click();
     await expect(pageCollection.getByText('Votre collection est vide')).toBeVisible();
   });
 });
