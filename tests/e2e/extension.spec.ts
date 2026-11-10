@@ -123,3 +123,20 @@ test.describe('captures responsive', () => {
     }
   }
 });
+
+test.describe('collection illisible', () => {
+  test('propose de sauvegarder puis de réinitialiser, sans impasse', async ({ pageCollection }) => {
+    const contenu = { version: 99, cartes: [{ id: 'Rare|Loutre de démonstration' }] };
+    await pageCollection.evaluate((v) => chrome.storage.local.set({ collection: v }), contenu);
+    await pageCollection.reload();
+    await expect(pageCollection.getByRole('alert')).toContainText('Données stockées illisibles');
+
+    const telechargement = pageCollection.waitForEvent('download');
+    await pageCollection.getByRole('button', { name: 'Télécharger les données brutes' }).click();
+    expect((await telechargement).suggestedFilename()).toBe('wm-collection-brute.json');
+
+    await pageCollection.getByRole('button', { name: 'Réinitialiser la collection' }).click();
+    await pageCollection.getByRole('button', { name: 'Oui, effacer la collection' }).click();
+    await expect(pageCollection.getByText('Votre collection est vide')).toBeVisible();
+  });
+});
