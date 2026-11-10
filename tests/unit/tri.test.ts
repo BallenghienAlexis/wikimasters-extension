@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { ConfigPrix } from '../../src/config/prix';
 import { CONFIG_PRIX } from '../../src/config/prix';
 import type { Carte } from '../../src/lib/collection';
-import { apercuTri, appliquerTri, fileDeVente, lirePreferences, preferencesParDefaut, prixDepart, proposerTri, valeurDeCarte, type Preferences } from '../../src/lib/tri';
+import { amisConcernes, apercuTri, appliquerTri, fusionnerAmisInitiaux, fileDeVente, lirePreferences, preferencesParDefaut, prixDepart, proposerTri, valeurDeCarte, type Preferences } from '../../src/lib/tri';
 
 const carte = (surcharge: Partial<Carte> = {}): Carte => ({
   id: 'c1',
+  etiquettesSite: [],
   titre: 'Carte fictive',
   rarete: 'C',
   description: 'agrume',
@@ -141,17 +142,17 @@ describe('fileDeVente', () => {
 
 describe('appliquerTri', () => {
   it('ne remplace jamais une décision prise à la main', () => {
-    const collection = { version: 2 as const, cartes: [carte({ statut: 'vendre', decidePar: 'moi' })] };
+    const collection = { version: 3 as const, cartes: [carte({ statut: 'vendre', decidePar: 'moi' })] };
     expect(appliquerTri(collection, prefs({ mesThemes: ['gastronomie'] }), CONFIG).cartes[0]?.statut).toBe('vendre');
   });
 
   it('peut revoir une décision de l’assistant et efface le prix devenu inutile', () => {
-    const collection = { version: 2 as const, cartes: [carte({ statut: 'vendre', prixCible: 60, decidePar: 'assistant' })] };
+    const collection = { version: 3 as const, cartes: [carte({ statut: 'vendre', prixCible: 60, decidePar: 'assistant' })] };
     expect(appliquerTri(collection, prefs({ mesThemes: ['gastronomie'] }), CONFIG).cartes[0]).toMatchObject({ statut: 'garder', prixCible: null });
   });
 
   it('ne modifie pas la collection d’origine', () => {
-    const collection = { version: 2 as const, cartes: [carte()] };
+    const collection = { version: 3 as const, cartes: [carte()] };
     appliquerTri(collection, prefs(), CONFIG);
     expect(collection.cartes[0]?.statut).toBe('a-trier');
   });
@@ -160,7 +161,7 @@ describe('appliquerTri', () => {
 describe('apercuTri', () => {
   it('compte par statut et limite les exemples', () => {
     const cartes = Array.from({ length: 7 }, (_, i) => carte({ id: `c${i}`, titre: `T${i}`, valeurMarchande: 1 }));
-    const apercu = apercuTri({ version: 2, cartes }, prefs(), CONFIG, 5);
+    const apercu = apercuTri({ version: 3, cartes }, prefs(), CONFIG, 5);
     expect(apercu.defausser.nombre).toBe(7);
     expect(apercu.defausser.exemples).toHaveLength(5);
   });
@@ -185,5 +186,112 @@ describe('matrice des prix réelle', () => {
     for (const tranche of CONFIG_PRIX.matricePrixDepart) {
       expect(tranche.prixDepart).toBeLessThan(tranche.valeurMin);
     }
+  });
+});
+
+describe('cohérence tri et thèmes précis (SC-007)', () => {
+  const chien = carte({ titre: 'Berger allemand', description: 'race de chien' });
+
+  it('(a) un thème précis à moi donne garder', () => {
+    expect(propose(chien, prefs({ mesThemes: ['chien'] })).statut).toBe('garder');
+  });
+
+  it('(b) un ami qui suit le parent reçoit la carte', () => {
+    const p = propose(chien, prefs({ amis: [{ nom: 'Léa', themes: ['animaux'] }] }));
+    expect(p).toMatchObject({ statut: 'echanger', ami: 'Léa' });
+  });
+
+  it('(c) garder l’emporte sur échanger', () => {
+    const p = propose(chien, prefs({ mesThemes: ['chien'], amis: [{ nom: 'Léa', themes: ['chien'] }] }));
+    expect(p.statut).toBe('garder');
+  });
+
+  it('(d) deux amis concernés : le premier de la liste', () => {
+    const p = propose(chien, prefs({ amis: [{ nom: 'Hugo', themes: ['nature'] }, { nom: 'Léa', themes: ['chien'] }] }));
+    expect(p.ami).toBe('Hugo');
+  });
+
+  it('(e) favori : garder, et une décision manuelle n’est jamais remplacée', () => {
+    expect(propose({ ...chien, favori: true }, prefs({ amis: [{ nom: 'Léa', themes: ['chien'] }] })).statut).toBe('garder');
+    const manuel = carte({ ...chien, statut: 'vendre', decidePar: 'moi' });
+    const apres = appliquerTri({ version: 3, cartes: [manuel] } as never, prefs({ mesThemes: ['chien'] }), CONFIG);
+    expect(apres.cartes[0]?.statut).toBe('vendre');
+  });
+
+  it('(f) relit des préférences version 2 à l’identique', () => {
+    const brut = { version: 2, mesThemes: ['chien'], amis: [{ nom: 'Léa', themes: ['pont'] }] };
+    expect(lirePreferences(brut)).toEqual(brut);
+  });
+});
+
+describe('amisConcernes (H13)', () => {
+  const amis = [
+    { nom: 'Léa', themes: ['animaux'] },
+    { nom: 'Hugo', themes: ['pont'] },
+    { nom: 'Zoé', themes: ['animaux', 'nature'] },
+  ];
+
+  it('renvoie tous les amis concernés, dans l’ordre de la liste', () => {
+    expect(amisConcernes(['chien', 'animaux', 'nature'], amis).map((a) => a.nom)).toEqual(['Léa', 'Zoé']);
+  });
+
+  it('renvoie une liste vide si aucun thème ne correspond', () => {
+    expect(amisConcernes(['volcan'], amis)).toEqual([]);
+    expect(amisConcernes([], amis)).toEqual([]);
+  });
+
+  it('proposerTri utilise le premier ami renvoyé', () => {
+    const c = carte({ description: 'race de chien' });
+    expect(propose(c, prefs({ amis })).ami).toBe('Léa');
+  });
+
+  it('couvre barrage, tibet et ukraine pour des amis fictifs', () => {
+    const p = prefs({ amis: [{ nom: 'Léa', themes: ['barrage', 'tibet'] }, { nom: 'Hugo', themes: ['ukraine'] }] });
+    expect(propose(carte({ titre: 'Barrage hydroélectrique', description: 'centrale' }), p)).toMatchObject({ statut: 'echanger', ami: 'Léa' });
+    expect(propose(carte({ titre: 'Lhassa', description: 'capitale du Tibet' }), p)).toMatchObject({ ami: 'Léa' });
+    expect(propose(carte({ titre: 'Kiev', description: 'capitale de l’Ukraine' }), p)).toMatchObject({ ami: 'Hugo' });
+  });
+});
+
+describe('fusionnerAmisInitiaux (SC-024)', () => {
+  const initiaux = [
+    { nom: 'Benji', themes: ['barrage', 'tibet'] },
+    { nom: 'Anna', themes: ['ukraine'] },
+  ];
+
+  it('ajoute les amis absents', () => {
+    const r = fusionnerAmisInitiaux(prefs(), initiaux);
+    expect(r.amis).toEqual(initiaux);
+  });
+
+  it('ajoute les thèmes manquants à un ami présent, sans rien retirer', () => {
+    const r = fusionnerAmisInitiaux(prefs({ amis: [{ nom: 'Benji', themes: ['pont', 'barrage'] }, { nom: 'Léa', themes: ['chien'] }] }), initiaux);
+    expect(r.amis).toEqual([
+      { nom: 'Benji', themes: ['pont', 'barrage', 'tibet'] },
+      { nom: 'Léa', themes: ['chien'] },
+      { nom: 'Anna', themes: ['ukraine'] },
+    ]);
+  });
+
+  it('compare les noms sans casse ni accents', () => {
+    const r = fusionnerAmisInitiaux(prefs({ amis: [{ nom: ' anna ', themes: [] }] }), initiaux);
+    expect(r.amis.filter((a) => a.nom.trim().toLowerCase() === 'anna')).toHaveLength(1);
+    expect(r.amis.find((a) => a.nom.trim() === 'anna')?.themes).toEqual(['ukraine']);
+  });
+
+  it('fusionne un ami initial saisi en minuscules sans le dupliquer', () => {
+    const r = fusionnerAmisInitiaux(prefs({ amis: [{ nom: 'benji', themes: ['pont'] }] }), initiaux)
+    expect(r.amis.filter((a) => a.nom.trim().toLowerCase() === 'benji')).toHaveLength(1)
+    expect(r.amis.find((a) => a.nom === 'benji')?.themes).toEqual(['pont', 'barrage', 'tibet'])
+    expect(r.amis.map((a) => a.nom)).toEqual(['benji', 'Anna'])
+  })
+
+  it('conserve mesThemes, est idempotente et ne mute pas l’entrée', () => {
+    const entree = prefs({ mesThemes: ['chien'], amis: [{ nom: 'Benji', themes: ['pont'] }] });
+    const copie = JSON.stringify(entree);
+    const une = fusionnerAmisInitiaux(entree, initiaux);
+    expect(JSON.stringify(entree)).toBe(copie);
+    expect(une.mesThemes).toEqual(['chien']);
+    expect(fusionnerAmisInitiaux(une, initiaux)).toEqual(une);
   });
 });

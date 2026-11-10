@@ -3,9 +3,21 @@ import type { EtatExecution, Registre } from '../../src/lib/actions';
 import { collectionVide, type Carte } from '../../src/lib/collection';
 import { versCsv, versJson } from '../../src/lib/exports';
 import { ouvrirEntree, type Journal } from '../../src/lib/journal';
+import { DEFINITIONS_THEMES } from '../../src/lib/themes';
+import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../../src/config/amis';
+
+// Noms fictifs : le test ne dépend pas des vrais amis du fichier de réglages.
+vi.mock('../../src/config/amis', () => ({
+  VERSION_AMIS_INITIAUX: 1,
+  AMIS_INITIAUX: [
+    { nom: 'Benji', themes: ['barrage', 'tibet'] },
+    { nom: 'Anna', themes: ['ukraine'] },
+  ],
+}));
 import { poserCouple, enregistrerEtiquette, registreVide } from '../../src/lib/registre';
 import {
   CLES_STOCKAGE,
+  chargerPreferences,
   VERSION_JOURNAL,
   chargerCollection,
   chargerExecution,
@@ -14,12 +26,27 @@ import {
   chargerSignalSynchro,
   lireCollectionBrute,
   reinitialiserCollection,
+  chargerSyncAuto,
+  chargerDerniereSynchro,
+  chargerBailSynchro,
+  enregistrerSyncAuto,
+  enregistrerDerniereSynchro,
+  enregistrerBailSynchro,
   effacerExecution,
   enregistrerCollection,
   enregistrerExecution,
   enregistrerJournal,
+  enregistrerPreferences,
   enregistrerRegistre,
   enregistrerSignalSynchro,
+  chargerEtatSynchro,
+  enregistrerEtatSynchro,
+  enregistrerArretSynchro,
+  ecouterArretSynchro,
+  chargerStatutSynchro,
+  enregistrerStatutSynchro,
+  ecouterSynchroAuto,
+  type StatutSynchro,
 } from '../../src/lib/stockage';
 
 const MOTIF_SENSIBLE = /jeton|token|cookie|session|auth/i;
@@ -30,12 +57,16 @@ interface FauxStockage {
   set: ReturnType<typeof vi.fn>;
   remove: ReturnType<typeof vi.fn>;
   echecEcriture: Error | null;
+  ajoutes: unknown[];
+  retires: unknown[];
 }
 
 const installerFauxChrome = (): FauxStockage => {
   const faux: FauxStockage = {
     donnees: new Map(),
     echecEcriture: null,
+    ajoutes: [],
+    retires: [],
     get: vi.fn(),
     set: vi.fn(),
     remove: vi.fn(),
@@ -57,7 +88,7 @@ const installerFauxChrome = (): FauxStockage => {
   (globalThis as unknown as { chrome: unknown }).chrome = {
     storage: {
       local: { get: faux.get, set: faux.set, remove: faux.remove },
-      onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      onChanged: { addListener: vi.fn((f: unknown) => faux.ajoutes.push(f)), removeListener: vi.fn((f: unknown) => faux.retires.push(f)) },
     },
   };
   return faux;
@@ -103,7 +134,9 @@ afterEach(() => {
 
 describe('CLES_STOCKAGE', () => {
   it('AC4 : énumère exactement les clés locales de l’extension', () => {
-    expect([...cles()].sort()).toEqual(['collection', 'execution', 'journal', 'preferences', 'registre', 'signalSynchro', 'synchro']);
+    expect([...cles()].sort()).toEqual([
+      'amisInitiaux', 'arretSynchro', 'bailSynchro', 'collection', 'derniereSynchro', 'etatSynchro', 'execution', 'journal', 'preferences', 'registre', 'signalSynchro', 'statutSynchro', 'syncAuto', 'synchro',
+    ]);
   });
 
   it('AC4 : aucune clé ne ressemble à un jeton, un cookie ou une session', () => {
@@ -124,7 +157,7 @@ describe('CLES_STOCKAGE', () => {
 
   it('AC1 : registre, journal et exécution restent absents de l’export JSON', async () => {
     const carte: Carte = {
-      id: 'c1', titre: 'Loutre', rarete: 'Rare', quantite: 1, url: null, favori: false, idsSite: null,
+      id: 'c1', titre: 'Loutre', rarete: 'Rare', quantite: 1, url: null, favori: false, idsSite: null, etiquettesSite: [],
       description: '', ami: null, valeurMarchande: null, decidePar: null, statut: 'vendre', prixCible: 50, note: '',
     };
     await enregistrerRegistre(registreRempli());
@@ -290,6 +323,269 @@ describe('signal de synchro', () => {
   it('AC2 : un échec d’écriture est remonté', async () => {
     faux.echecEcriture = new Error('écriture impossible');
     await expect(enregistrerSignalSynchro(1)).rejects.toThrow('écriture impossible');
+  });
+});
+
+describe('amis initiaux (SC-024)', () => {
+  const lire = async () => (await chargerPreferences()).amis;
+
+  it('AC1 : le fichier de réglages porte les thèmes barrage, tibet et ukraine, tous connus', async () => {
+    const reel = await vi.importActual<typeof import('../../src/config/amis')>('../../src/config/amis');
+    const themes = reel.AMIS_INITIAUX.flatMap((a) => a.themes);
+    for (const t of ['barrage', 'tibet', 'ukraine']) expect(themes).toContain(t);
+    const connus = new Set(DEFINITIONS_THEMES.map((d) => d.id));
+    for (const t of themes) expect(connus.has(t)).toBe(true);
+    expect(reel.VERSION_AMIS_INITIAUX).toBe(1);
+  });
+
+  it('AC2 : sans préférence stockée, les amis initiaux sont inscrits avec le drapeau, en une écriture', async () => {
+    const p = await chargerPreferences();
+    expect(p.mesThemes).toEqual([]);
+    expect(p.amis).toEqual(AMIS_INITIAUX);
+    expect(faux.set).toHaveBeenCalledTimes(1);
+    expect(faux.donnees.get('amisInitiaux')).toBe(VERSION_AMIS_INITIAUX);
+    expect(faux.donnees.get('preferences')).toEqual(p);
+  });
+
+  it('AC2 : avec des préférences déjà stockées, Benji et Anna sont ajoutés sans rien retirer', async () => {
+    await enregistrerPreferences({ version: 2, mesThemes: ['chien'], amis: [{ nom: 'Benji', themes: ['pont'] }, { nom: 'Léa', themes: ['lac'] }] });
+    faux.set.mockClear();
+    const p = await chargerPreferences();
+    expect(p.mesThemes).toEqual(['chien']);
+    expect(p.amis).toEqual([
+      { nom: 'Benji', themes: ['pont', 'barrage', 'tibet'] },
+      { nom: 'Léa', themes: ['lac'] },
+      { nom: 'Anna', themes: ['ukraine'] },
+    ]);
+    expect(faux.set).toHaveBeenCalledTimes(1);
+  });
+
+  it('AC3 : une fois le drapeau posé, un thème décoché n’est pas rajouté', async () => {
+    await chargerPreferences();
+    const apres = (await chargerPreferences());
+    await enregistrerPreferences({ ...apres, amis: apres.amis.map((a) => (a.nom === 'Benji' ? { ...a, themes: ['barrage'] } : a)) });
+    faux.set.mockClear();
+    const p = await chargerPreferences();
+    expect(p.amis.find((a) => a.nom === 'Benji')?.themes).toEqual(['barrage']);
+    expect(faux.set).not.toHaveBeenCalled();
+  });
+
+  it('AC3 : un drapeau périmé relance la fusion', async () => {
+    faux.donnees.set('preferences', { version: 2, mesThemes: [], amis: [] });
+    faux.donnees.set('amisInitiaux', 0);
+    expect((await lire()).map((a) => a.nom)).toEqual(['Benji', 'Anna']);
+  });
+
+  it('AC4 : des préférences illisibles ne sont ni écrasées ni fusionnées', async () => {
+    faux.donnees.set('preferences', { version: 99, amis: 'x' });
+    const p = await chargerPreferences();
+    expect(p).toEqual({ version: 2, mesThemes: [], amis: [] });
+    expect(faux.set).not.toHaveBeenCalled();
+    expect(faux.donnees.get('preferences')).toEqual({ version: 99, amis: 'x' });
+  });
+
+  it('AC5 : un échec d’écriture renvoie quand même les amis fusionnés, sans poser le drapeau', async () => {
+    faux.echecEcriture = new Error('écriture impossible');
+    const p = await chargerPreferences();
+    expect(p.amis).toEqual(AMIS_INITIAUX);
+    expect(faux.donnees.has('amisInitiaux')).toBe(false);
+  });
+
+  it('AC6 : AMIS_INITIAUX n’est importé que par stockage.ts et les tests', async () => {
+    const { readdirSync, readFileSync, statSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const parcourir = (d: string): string[] =>
+      readdirSync(d).flatMap((f) => (statSync(join(d, f)).isDirectory() ? parcourir(join(d, f)) : [join(d, f)]));
+    const importeurs = parcourir('src').filter((f) => /config\/amis|AMIS_INITIAUX/.test(readFileSync(f, 'utf-8')));
+    expect(importeurs.map((f) => f.replaceAll('\\', '/')).sort()).toEqual(['src/config/amis.ts', 'src/lib/stockage.ts']);
+  });
+});
+
+describe('T-202 : migration de la collection stockée', () => {
+  it('SC-012 : une collection v2 stockée est lue en v3 avec etiquettesSite vide', async () => {
+    const v2: Record<string, unknown> = {
+      id: 'c1', titre: 'Loutre', rarete: 'Rare', quantite: 1, url: null, favori: false, idsSite: ['s1'], etiquettesSite: [],
+      description: '', statut: 'garder', prixCible: null, note: '', ami: null, valeurMarchande: 12, decidePar: 'moi',
+    };
+    delete v2.etiquettesSite;
+    faux.donnees.set('collection', { version: 2, cartes: [v2] });
+    const c = await chargerCollection();
+    expect(c.version).toBe(3);
+    expect(c.cartes[0]).toEqual({ ...v2, etiquettesSite: [] });
+  });
+
+  it('SC-012 : une collection vide a la version 3', async () => {
+    expect((await chargerCollection()).version).toBe(3);
+  });
+
+  it('SC-012 : les étiquettes du site font l’aller-retour', async () => {
+    const c = collectionVide();
+    await enregistrerCollection({ ...c, cartes: [{ id: 'c1', titre: 'L', rarete: null, quantite: 1, url: null, favori: false, idsSite: null, etiquettesSite: ['Thème · Mer'], description: '', statut: 'a-trier', prixCible: null, note: '', ami: null, valeurMarchande: null, decidePar: null }] });
+    expect((await chargerCollection()).cartes[0]?.etiquettesSite).toEqual(['Thème · Mer']);
+  });
+});
+
+describe('T-202 : état de la synchronisation automatique', () => {
+  it('SC-007 : valeurs par défaut (désactivée, aucune synchro, aucun bail)', async () => {
+    expect(await chargerSyncAuto()).toBe(false);
+    expect(await chargerDerniereSynchro()).toBeNull();
+    expect(await chargerBailSynchro()).toBeNull();
+  });
+
+  it('SC-007 : les valeurs écrites sont relues', async () => {
+    await enregistrerSyncAuto(true);
+    await enregistrerDerniereSynchro(1700000000000);
+    await enregistrerBailSynchro(1700000600000);
+    expect(await chargerSyncAuto()).toBe(true);
+    expect(await chargerDerniereSynchro()).toBe(1700000000000);
+    expect(await chargerBailSynchro()).toBe(1700000600000);
+  });
+
+  it('SC-009 : null efface la dernière synchro et le bail', async () => {
+    await enregistrerDerniereSynchro(1700000000000);
+    await enregistrerBailSynchro(1700000600000);
+    await enregistrerDerniereSynchro(null);
+    await enregistrerBailSynchro(null);
+    expect(await chargerDerniereSynchro()).toBeNull();
+    expect(await chargerBailSynchro()).toBeNull();
+  });
+
+  it('SC-007 : une valeur stockée invalide vaut la valeur par défaut, sans exception', async () => {
+    for (const invalide of ['oui', 1, null, {}, []]) {
+      faux.donnees.set('syncAuto', invalide);
+      expect(await chargerSyncAuto(), JSON.stringify(invalide)).toBe(false);
+    }
+    for (const invalide of ['12', -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, true, {}]) {
+      faux.donnees.set('derniereSynchro', invalide);
+      faux.donnees.set('bailSynchro', invalide);
+      expect(await chargerDerniereSynchro(), String(invalide)).toBeNull();
+      expect(await chargerBailSynchro(), String(invalide)).toBeNull();
+    }
+  });
+
+  it('SC-007 : refuse d’écrire une valeur invalide', async () => {
+    await expect(enregistrerSyncAuto('oui' as unknown as boolean)).rejects.toThrow();
+    await expect(enregistrerDerniereSynchro(-1)).rejects.toThrow();
+    await expect(enregistrerBailSynchro(Number.NaN)).rejects.toThrow();
+    expect(faux.set).not.toHaveBeenCalled();
+  });
+
+  it('SC-007 : l’interrupteur écrit seulement sa propre clé', async () => {
+    await enregistrerSyncAuto(true);
+    expect(faux.set).toHaveBeenCalledWith({ syncAuto: true });
+  });
+});
+
+describe('T-205 : état de l’ordonnanceur et demande d’arrêt', () => {
+  const etat = () => ({
+    version: 1 as const,
+    total: 3,
+    totalUnique: 3,
+    signatureEtiquettes: 't0:1',
+    derniereComplete: 1700000000000,
+    arretJusqua: null,
+    requetes: [1700000000000],
+    cardIds: { 'R|Carte 1': 'card-1' },
+    prix: { 'R|Carte 1': { valeur: 120, releveLe: 1700000000000 } },
+  });
+
+  it('aucun état stocké : null', async () => {
+    expect(await chargerEtatSynchro()).toBeNull();
+  });
+
+  it('l’état écrit est relu à l’identique', async () => {
+    await enregistrerEtatSynchro(etat());
+    expect(await chargerEtatSynchro()).toEqual(etat());
+    expect(faux.set).toHaveBeenCalledWith({ etatSynchro: etat() });
+  });
+
+  it('un état illisible est refusé sans être écrasé', async () => {
+    for (const invalide of ['x', 1, [], { version: 2 }, { ...etat(), total: -1 }, { ...etat(), requetes: ['a'] }, { ...etat(), cardIds: { a: 1 } }, { ...etat(), prix: { a: { valeur: 'x', releveLe: 1 } } }]) {
+      faux.donnees.set('etatSynchro', invalide);
+      await expect(chargerEtatSynchro(), JSON.stringify(invalide)).rejects.toThrow(/illisibles/);
+    }
+    await expect(enregistrerEtatSynchro({ ...etat(), total: -1 })).rejects.toThrow();
+  });
+
+  it('la demande d’arrêt écrit un horodatage et prévient les écouteurs', async () => {
+    await enregistrerArretSynchro(1700000000000);
+    expect(faux.set).toHaveBeenCalledWith({ arretSynchro: 1700000000000 });
+    const rappel = vi.fn();
+    const stop = ecouterArretSynchro(rappel);
+    const ecouteur = faux.ajoutes[0] as (c: Record<string, unknown>, zone: string) => void;
+    ecouteur({ arretSynchro: { newValue: 1700000000001 } }, 'local');
+    ecouteur({ arretSynchro: { newValue: 1700000000002 } }, 'sync');
+    ecouteur({ autre: { newValue: 1 } }, 'local');
+    ecouteur({ arretSynchro: { newValue: 'x' } }, 'local');
+    expect(rappel).toHaveBeenCalledTimes(1);
+    stop();
+    expect(faux.retires).toHaveLength(1);
+  });
+});
+
+describe('T-206 : statut détaillé de la synchronisation', () => {
+  const statut = (surcharge: Partial<StatutSynchro> = {}): StatutSynchro => ({
+    version: 1,
+    etat: 'en-cours',
+    page: 3,
+    pages: 10,
+    raison: null,
+    codeHttp: null,
+    le: 1700000000000,
+    ajoutees: 0,
+    etiquettes: 0,
+    prix: 0,
+    ...surcharge,
+  });
+
+  it('renvoie null quand rien n’est écrit', async () => {
+    expect(await chargerStatutSynchro()).toBeNull();
+  });
+
+  it('relit ce qui a été écrit', async () => {
+    await enregistrerStatutSynchro(statut({ etat: 'arret', raison: 'code-http', codeHttp: 403, page: null, pages: null }));
+    expect(await chargerStatutSynchro()).toEqual(statut({ etat: 'arret', raison: 'code-http', codeHttp: 403, page: null, pages: null }));
+  });
+
+  it('traite une valeur illisible comme absente, sans lever d’erreur', async () => {
+    for (const brut of [
+      'x',
+      { ...statut(), version: 2 },
+      { ...statut(), etat: 'autre' },
+      { ...statut(), page: -1 },
+      { ...statut(), page: 1.5 },
+      { ...statut(), codeHttp: 99 },
+      { ...statut(), raison: 'inconnue' },
+      { ...statut(), le: 'hier' },
+      { ...statut(), prix: null },
+    ]) {
+      faux.donnees.set('statutSynchro', brut);
+      expect(await chargerStatutSynchro()).toBeNull();
+    }
+  });
+
+  it('refuse d’écrire un statut invalide et n’écrit que les champs listés', async () => {
+    await expect(enregistrerStatutSynchro({ ...statut(), etat: 'x' } as unknown as StatutSynchro)).rejects.toThrow();
+    await enregistrerStatutSynchro({ ...statut(), cookie: 'secret' } as unknown as StatutSynchro);
+    expect(Object.keys(faux.donnees.get('statutSynchro') as object).sort()).toEqual(
+      ['ajoutees', 'codeHttp', 'etat', 'etiquettes', 'le', 'page', 'pages', 'prix', 'raison', 'version'],
+    );
+  });
+
+  it('prévient pour syncAuto, statutSynchro, bailSynchro et derniereSynchro, pas pour le reste', () => {
+    const rappel = vi.fn();
+    const stop = ecouterSynchroAuto(rappel);
+    const ecouteur = faux.ajoutes[0] as (c: Record<string, unknown>, zone: string) => void;
+    ecouteur({ syncAuto: { newValue: true } }, 'local');
+    ecouteur({ statutSynchro: { newValue: statut() } }, 'local');
+    ecouteur({ bailSynchro: { newValue: 1 } }, 'local');
+    ecouteur({ derniereSynchro: { newValue: 1 } }, 'local');
+    expect(rappel).toHaveBeenCalledTimes(4);
+    ecouteur({ collection: { newValue: 1 } }, 'local');
+    ecouteur({ syncAuto: { newValue: false } }, 'sync');
+    expect(rappel).toHaveBeenCalledTimes(4);
+    stop();
+    expect(faux.retires).toHaveLength(1);
   });
 });
 

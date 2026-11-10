@@ -1,7 +1,7 @@
 import { VERSION_ECHANGE, type Carte, type Collection } from './collection';
 import { LIBELLES_THEMES, themesDeCarte } from './themes';
 
-type ColonneCarte = Exclude<keyof Carte, 'idsSite'>;
+type ColonneCarte = Exclude<keyof Carte, 'idsSite' | 'etiquettesSite'>;
 const COLONNES: ColonneCarte[] = ['id', 'titre', 'rarete', 'quantite', 'statut', 'prixCible', 'note', 'url', 'favori', 'description', 'ami', 'valeurMarchande'];
 const SEPARATEUR = ';';
 const BOM = String.fromCharCode(0xfeff);
@@ -21,11 +21,12 @@ export function versCsv(cartes: Carte[]): string {
   return `${BOM}${[[...COLONNES, 'themes'].join(SEPARATEUR), ...lignes].join('\r\n')}\r\n`;
 }
 
-// Fichier d’échange : version 1, sans les identifiants du site.
+// Fichier d’échange : version 1, sans les identifiants ni les étiquettes du site.
 export const versJson = (collection: Collection): string => {
   const cartes = collection.cartes.map((carte) => {
     const reste: Partial<Carte> = { ...carte };
     delete reste.idsSite;
+    delete reste.etiquettesSite;
     return reste;
   });
   return `${JSON.stringify({ version: VERSION_ECHANGE, cartes }, null, 2)}\n`;

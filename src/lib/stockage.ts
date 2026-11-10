@@ -3,15 +3,24 @@ import type { EtatExecution, Registre } from './actions';
 import { validerJournal, type Journal } from './journal';
 import { registreVide, validerRegistre } from './registre';
 import { lireSynchro, noterPage, type Pagination, type Synchro } from './synchro';
-import { lirePreferences, proposerTri, type Preferences } from './tri';
+import type { EtatOrdonnanceur, RaisonArretSynchro } from './ordonnanceur';
+import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../config/amis';
+import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, proposerTri, type Preferences } from './tri';
 
 const CLE = 'collection';
 const CLE_SYNCHRO = 'synchro';
 const CLE_PREFERENCES = 'preferences';
+const CLE_AMIS_INITIAUX = 'amisInitiaux';
 const CLE_REGISTRE = 'registre';
 const CLE_JOURNAL = 'journal';
 const CLE_EXECUTION = 'execution';
 const CLE_SIGNAL = 'signalSynchro';
+const CLE_SYNC_AUTO = 'syncAuto';
+const CLE_DERNIERE_SYNCHRO = 'derniereSynchro';
+const CLE_BAIL_SYNCHRO = 'bailSynchro';
+const CLE_ETAT_SYNCHRO = 'etatSynchro';
+const CLE_ARRET_SYNCHRO = 'arretSynchro';
+const CLE_STATUT_SYNCHRO = 'statutSynchro';
 
 /** Version de l’enveloppe du journal stocké. */
 export const VERSION_JOURNAL = 1;
@@ -21,10 +30,17 @@ export const CLES_STOCKAGE = {
   collection: CLE,
   synchro: CLE_SYNCHRO,
   preferences: CLE_PREFERENCES,
+  amisInitiaux: CLE_AMIS_INITIAUX,
   registre: CLE_REGISTRE,
   journal: CLE_JOURNAL,
   execution: CLE_EXECUTION,
   signalSynchro: CLE_SIGNAL,
+  syncAuto: CLE_SYNC_AUTO,
+  derniereSynchro: CLE_DERNIERE_SYNCHRO,
+  bailSynchro: CLE_BAIL_SYNCHRO,
+  etatSynchro: CLE_ETAT_SYNCHRO,
+  arretSynchro: CLE_ARRET_SYNCHRO,
+  statutSynchro: CLE_STATUT_SYNCHRO,
 } as const;
 
 function illisible(detail: string): Error {
@@ -104,6 +120,175 @@ export async function enregistrerSignalSynchro(horodatage: number): Promise<void
   await chrome.storage.local.set({ [CLE_SIGNAL]: horodatage });
 }
 
+const horodatageValide = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
+
+/** Synchronisation automatique : désactivée par défaut, toute valeur illisible vaut « désactivée ». */
+export async function chargerSyncAuto(): Promise<boolean> {
+  const contenu = await chrome.storage.local.get(CLE_SYNC_AUTO);
+  return contenu[CLE_SYNC_AUTO] === true;
+}
+
+export async function enregistrerSyncAuto(actif: boolean): Promise<void> {
+  if (typeof actif !== 'boolean') throw new Error('Préférence de synchronisation invalide.');
+  await chrome.storage.local.set({ [CLE_SYNC_AUTO]: actif });
+}
+
+async function chargerHorodatage(cle: string): Promise<number | null> {
+  const contenu = await chrome.storage.local.get(cle);
+  const brut = contenu[cle];
+  return horodatageValide(brut) ? brut : null;
+}
+
+async function enregistrerHorodatage(cle: string, valeur: number | null): Promise<void> {
+  if (valeur === null) {
+    await chrome.storage.local.remove(cle);
+    return;
+  }
+  if (!horodatageValide(valeur)) throw new Error('Horodatage invalide.');
+  await chrome.storage.local.set({ [cle]: valeur });
+}
+
+/** Horodatage (ms) de la dernière synchronisation terminée, ou `null`. */
+export const chargerDerniereSynchro = (): Promise<number | null> => chargerHorodatage(CLE_DERNIERE_SYNCHRO);
+export const enregistrerDerniereSynchro = (horodatage: number | null): Promise<void> => enregistrerHorodatage(CLE_DERNIERE_SYNCHRO, horodatage);
+
+/** Horodatage (ms) d’expiration du bail qui empêche deux synchronisations simultanées, ou `null`. */
+export const chargerBailSynchro = (): Promise<number | null> => chargerHorodatage(CLE_BAIL_SYNCHRO);
+export const enregistrerBailSynchro = (expiration: number | null): Promise<void> => enregistrerHorodatage(CLE_BAIL_SYNCHRO, expiration);
+
+const MAX_ENTREES_ETAT = 100_000;
+const estObjet = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const nullOuHorodatage = (v: unknown): v is number | null => v === null || horodatageValide(v);
+const nullOuEntier = (v: unknown): v is number | null => v === null || (typeof v === 'number' && Number.isSafeInteger(v) && v >= 0);
+
+function validerEtatSynchro(brut: unknown): EtatOrdonnanceur | null {
+  if (!estObjet(brut) || brut.version !== 1) return null;
+  const { total, totalUnique, signatureEtiquettes, derniereComplete, arretJusqua, requetes, cardIds, prix } = brut;
+  if (!nullOuEntier(total) || !nullOuEntier(totalUnique)) return null;
+  if (signatureEtiquettes !== null && typeof signatureEtiquettes !== 'string') return null;
+  if (!nullOuHorodatage(derniereComplete) || !nullOuHorodatage(arretJusqua)) return null;
+  if (!Array.isArray(requetes) || requetes.length > MAX_ENTREES_ETAT || !requetes.every(horodatageValide)) return null;
+  if (!estObjet(cardIds) || Object.keys(cardIds).length > MAX_ENTREES_ETAT) return null;
+  if (!Object.values(cardIds).every((v) => typeof v === 'string')) return null;
+  if (!estObjet(prix) || Object.keys(prix).length > MAX_ENTREES_ETAT) return null;
+  const releves: EtatOrdonnanceur['prix'] = {};
+  for (const [id, r] of Object.entries(prix)) {
+    if (!estObjet(r) || !nullOuEntier(r.valeur) || !horodatageValide(r.releveLe)) return null;
+    releves[id] = { valeur: r.valeur, releveLe: r.releveLe };
+  }
+  return {
+    version: 1,
+    total,
+    totalUnique,
+    signatureEtiquettes,
+    derniereComplete,
+    arretJusqua,
+    requetes: [...requetes],
+    cardIds: { ...(cardIds as Record<string, string>) },
+    prix: releves,
+  };
+}
+
+/** État de l’ordonnanceur (aucun secret) ; `null` si jamais écrit, erreur s’il est illisible. */
+export async function chargerEtatSynchro(): Promise<EtatOrdonnanceur | null> {
+  const contenu = await chrome.storage.local.get(CLE_ETAT_SYNCHRO);
+  const brut = contenu[CLE_ETAT_SYNCHRO];
+  if (brut === undefined) return null;
+  const etat = validerEtatSynchro(brut);
+  if (etat === null) throw illisible('L’état de la synchronisation est invalide.');
+  return etat;
+}
+
+export async function enregistrerEtatSynchro(etat: EtatOrdonnanceur): Promise<void> {
+  if (validerEtatSynchro(etat) === null) throw new Error('État de synchronisation invalide.');
+  await chrome.storage.local.set({ [CLE_ETAT_SYNCHRO]: etat });
+}
+
+/** Demande d’arrêt de l’interface : un horodatage, aucune autre donnée. */
+export async function enregistrerArretSynchro(horodatage: number): Promise<void> {
+  if (!horodatageValide(horodatage)) throw new Error('Horodatage invalide.');
+  await chrome.storage.local.set({ [CLE_ARRET_SYNCHRO]: horodatage });
+}
+
+/** Ne signale que les demandes faites pendant l’écoute (une ancienne demande ne bloque rien). */
+export function ecouterArretSynchro(rappel: () => void): () => void {
+  const ecouteur = (changements: Record<string, chrome.storage.StorageChange>, zone: string): void => {
+    const changement = changements[CLE_ARRET_SYNCHRO];
+    if (zone === 'local' && changement && horodatageValide(changement.newValue)) rappel();
+  };
+  chrome.storage.onChanged.addListener(ecouteur);
+  return () => chrome.storage.onChanged.removeListener(ecouteur);
+}
+
+/**
+ * Statut détaillé de la dernière synchronisation automatique, pour l’interface : écrit par le content
+ * script, lu par la page de gestion. Uniquement des nombres et des codes fixes (aucun secret, aucun
+ * corps de réponse, aucun nom venu du site).
+ */
+export interface StatutSynchro {
+  version: 1;
+  etat: 'en-cours' | 'termine' | 'arret';
+  /** Page en cours de lecture (à partir de 1), ou `null` tant qu’elle n’est pas connue. */
+  page: number | null;
+  pages: number | null;
+  raison: RaisonArretSynchro | null;
+  /** Code HTTP de l’arrêt (100 à 599), ou `null`. */
+  codeHttp: number | null;
+  /** Horodatage de la dernière mise à jour. */
+  le: number;
+  ajoutees: number;
+  etiquettes: number;
+  prix: number;
+}
+
+const ETATS_STATUT = ['en-cours', 'termine', 'arret'];
+const RAISONS_STATUT = ['manuel', 'code-http', 'echecs'];
+
+function validerStatutSynchro(brut: unknown): StatutSynchro | null {
+  if (!estObjet(brut) || brut.version !== 1) return null;
+  const { etat, page, pages, raison, codeHttp, le, ajoutees, etiquettes, prix } = brut;
+  if (typeof etat !== 'string' || !ETATS_STATUT.includes(etat)) return null;
+  if (!nullOuEntier(page) || !nullOuEntier(pages)) return null;
+  if (raison !== null && (typeof raison !== 'string' || !RAISONS_STATUT.includes(raison))) return null;
+  if (codeHttp !== null && !(typeof codeHttp === 'number' && Number.isSafeInteger(codeHttp) && codeHttp >= 100 && codeHttp <= 599)) return null;
+  if (!horodatageValide(le) || !horodatageValide(ajoutees) || !horodatageValide(etiquettes) || !horodatageValide(prix)) return null;
+  return {
+    version: 1,
+    etat: etat as StatutSynchro['etat'],
+    page,
+    pages,
+    raison: raison as RaisonArretSynchro | null,
+    codeHttp,
+    le,
+    ajoutees,
+    etiquettes,
+    prix,
+  };
+}
+
+/** `null` si jamais écrit ou illisible : l’interface retombe alors sur l’état sans détail. */
+export async function chargerStatutSynchro(): Promise<StatutSynchro | null> {
+  const contenu = await chrome.storage.local.get(CLE_STATUT_SYNCHRO);
+  return validerStatutSynchro(contenu[CLE_STATUT_SYNCHRO]);
+}
+
+export async function enregistrerStatutSynchro(statut: StatutSynchro): Promise<void> {
+  const valide = validerStatutSynchro(statut);
+  if (valide === null) throw new Error('Statut de synchronisation invalide.');
+  await chrome.storage.local.set({ [CLE_STATUT_SYNCHRO]: valide });
+}
+
+const CLES_SYNCHRO_AUTO = [CLE_SYNC_AUTO, CLE_STATUT_SYNCHRO, CLE_BAIL_SYNCHRO, CLE_DERNIERE_SYNCHRO];
+
+/** Prévient la page de gestion dès que l’option, le statut, le bail ou la date de synchro change. */
+export function ecouterSynchroAuto(rappel: () => void): () => void {
+  const ecouteur = (changements: Record<string, chrome.storage.StorageChange>, zone: string): void => {
+    if (zone === 'local' && CLES_SYNCHRO_AUTO.some((cle) => cle in changements)) rappel();
+  };
+  chrome.storage.onChanged.addListener(ecouteur);
+  return () => chrome.storage.onChanged.removeListener(ecouteur);
+}
+
 function lireContenu(brut: unknown): Collection {
   if (brut === undefined) return collectionVide();
 
@@ -133,9 +318,26 @@ export async function enregistrerCollection(collection: Collection): Promise<voi
   await chrome.storage.local.set({ [CLE]: collection });
 }
 
+/**
+ * Préférences stockées, avec les amis initiaux de `src/config/amis.ts` fusionnés une seule fois par version
+ * (drapeau `amisInitiaux`). Des préférences illisibles ne sont ni fusionnées ni écrasées. Si l'écriture
+ * échoue, les préférences fusionnées sont rendues quand même et le drapeau n'est pas posé.
+ */
 export async function chargerPreferences(): Promise<Preferences> {
-  const contenu = await chrome.storage.local.get(CLE_PREFERENCES);
-  return lirePreferences(contenu[CLE_PREFERENCES]);
+  const contenu = await chrome.storage.local.get([CLE_PREFERENCES, CLE_AMIS_INITIAUX]);
+  const brut = contenu[CLE_PREFERENCES];
+  const lues = lirePreferences(brut);
+  const illisible = brut !== undefined && JSON.stringify(lues) !== JSON.stringify(brut) && JSON.stringify(lues) === JSON.stringify(preferencesParDefaut());
+  if (illisible) return lues;
+  const version = contenu[CLE_AMIS_INITIAUX];
+  if (typeof version === 'number' && version >= VERSION_AMIS_INITIAUX) return lues;
+  const fusionnees = fusionnerAmisInitiaux(lues, AMIS_INITIAUX);
+  try {
+    await chrome.storage.local.set({ [CLE_PREFERENCES]: fusionnees, [CLE_AMIS_INITIAUX]: VERSION_AMIS_INITIAUX });
+  } catch {
+    /* le drapeau n'est pas posé : la fusion sera retentée au prochain chargement */
+  }
+  return fusionnees;
 }
 
 export async function enregistrerPreferences(preferences: Preferences): Promise<void> {

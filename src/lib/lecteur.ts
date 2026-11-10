@@ -2,7 +2,7 @@
 import type { CarteImportee } from './collection';
 import { analyserPagination, type Pagination } from './synchro';
 
-const RARETES = ['L', 'UR', 'SR', 'R', 'PC', 'C'];
+export const RARETES = ['L', 'UR', 'SR', 'R', 'PC', 'C'];
 const MAX_TITRE = 300;
 const STATISTIQUE = /^[\d\s]+$/;
 const MAX_DESCRIPTION = 1000;

@@ -41,10 +41,9 @@ export function reverifierAction(
   action: Action,
   collection: Collection,
   registre: Registre,
-  // Réservé : les réglages du lot ne changent aucune règle de revérification pour l’instant.
+  // Amis et limites du site : l’étiquette doit être attendue selon la même `Config` que le lot (H12).
   config: Config,
 ): 'ok' | 'passee' {
-  void config
   if (action.type === 'lecture') return 'ok'
   const carte = collection.cartes.find((c) => c.id === action.idCarte)
   if (!carte || carte.favori) return 'passee'
@@ -57,13 +56,13 @@ export function reverifierAction(
       if (carte.statut !== 'defausser' || carte.quantite < 1) return 'passee'
       return carte.idsSite?.includes(action.idExemplaire) ? 'ok' : 'passee'
     case 'creation-etiquette':
-      return exemplairesAttendus(carte).some((e) => e.etiquettes.includes(action.nomEtiquette)) ? 'ok' : 'passee'
+      return exemplairesAttendus(carte, config).some((e) => e.etiquettes.includes(action.nomEtiquette)) ? 'ok' : 'passee'
     case 'pose-etiquette': {
-      const attendu = exemplairesAttendus(carte).find((e) => e.idExemplaire === action.idExemplaire)
+      const attendu = exemplairesAttendus(carte, config).find((e) => e.idExemplaire === action.idExemplaire)
       return attendu?.etiquettes.includes(action.nomEtiquette) ? 'ok' : 'passee'
     }
     case 'retrait-etiquette': {
-      const attendu = exemplairesAttendus(carte).find((e) => e.idExemplaire === action.idExemplaire)
+      const attendu = exemplairesAttendus(carte, config).find((e) => e.idExemplaire === action.idExemplaire)
       if (!attendu || attendu.etiquettes.includes(action.nomEtiquette)) return 'passee'
       const pose = registre.couples.some((c) => c.ex === action.idExemplaire && c.nom === action.nomEtiquette)
       return pose ? 'ok' : 'passee'

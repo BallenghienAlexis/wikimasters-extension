@@ -22,6 +22,7 @@ import type { Registre } from '../lib/actions';
 import { registreVide } from '../lib/registre';
 import AssistantTri from './AssistantTri';
 import Synchronisation from './Synchronisation';
+import SynchroAuto from './SynchroAuto';
 import FileVente from './FileVente';
 import CarteLigne from './CarteLigne';
 
@@ -61,6 +62,10 @@ const App: React.FC = () => {
   const [registreIllisible, setRegistreIllisible] = useState(false);
   const [executionIllisible, setExecutionIllisible] = useState(false);
   const [confirmerReinit, setConfirmerReinit] = useState(false);
+  // Tant que la lecture initiale du stockage n’est pas finie, l’aperçu du lot n’est pas proposé (D-18).
+  const [stockageSynchroLu, setStockageSynchroLu] = useState(false);
+  // Les amis fixent les étiquettes d’échange de l’aperçu : il attend aussi la lecture des préférences.
+  const [preferencesLues, setPreferencesLues] = useState(false);
   const champFichier = useRef<HTMLInputElement>(null);
 
   // Lit le registre et l’état d’exécution ; un échec est signalé à l’aperçu, jamais avalé.
@@ -83,6 +88,7 @@ const App: React.FC = () => {
     setRegistreIllisible(etat.registre === null);
     setExecutionEnCours(etat.executionEnCours);
     setExecutionIllisible(etat.executionIllisible);
+    setStockageSynchroLu(true);
   };
   const relireStockageSynchro = async (): Promise<Registre | null> => {
     const etat = await lireStockageSynchro();
@@ -91,7 +97,9 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    void chargerPreferences().then(setPreferences);
+    void chargerPreferences()
+      .then(setPreferences)
+      .finally(() => setPreferencesLues(true));
     void chargerSynchro().then(setSynchro);
     void lireStockageSynchro().then(appliquerStockageSynchro);
     return ecouterSynchro(setSynchro);
@@ -263,9 +271,13 @@ const App: React.FC = () => {
             onTerminee={(id) => appliquer(terminerEnchere(collection, id))}
           />
 
+          <SynchroAuto collection={collection} preferences={preferences} />
+
           <Synchronisation
             collection={collection}
             registre={registre}
+            preferences={preferences}
+            chargement={!stockageSynchroLu || !preferencesLues}
             registreIllisible={registreIllisible}
             executionIllisible={executionIllisible}
             nbOnglets={0}

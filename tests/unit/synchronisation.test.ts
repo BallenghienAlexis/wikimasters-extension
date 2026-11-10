@@ -1,13 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import type { Action, CarteEcartee, Registre, TypeAction } from '../../src/lib/actions'
 import type { Carte, Collection } from '../../src/lib/collection'
+import type { EtatFile } from '../../src/lib/file'
 import {
+  AVERTISSEMENT_AMIS,
   CADENCE_TEXTE,
+  actionsRetrait,
+  contientAmi,
   detailsDuLot,
   dureeMinutes,
+  libelleCause,
+  libelleErreurLancement,
+  libelleLigne,
   libelleRaison,
   libelleType,
   lignesNonIncluses,
+  nombreCartes,
+  pourcentage,
   preparerLot,
   texteLotVide,
   pageActions,
@@ -15,6 +24,9 @@ import {
   regrouperEcartees,
   separerDisponibles,
   texteDuree,
+  texteEnCours,
+  texteFin,
+  texteInterrompu,
   texteTotaux,
   titreApercu,
   totauxParType,
@@ -24,6 +36,7 @@ const NB = ' '
 
 const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
   id,
+  etiquettesSite: [],
   titre: `Carte ${id}`,
   rarete: 'R',
   description: '',
@@ -240,6 +253,116 @@ describe('cartes non incluses', () => {
   it('regroupe aussi les obsolètes au-delà de 50', () => {
     const obs = Array.from({ length: 60 }, (_, i) => ({ idCarte: `c${i}`, titre: 't', idExemplaire: 'x', nomEtiquette: 'n' }))
     const g = regrouperEcartees(lignesNonIncluses([], obs))
-    expect(g).toEqual({ type: 'groupes', groupes: [{ raison: 'etiquette-obsolete', nombre: 60 }] })
+    expect(g).toEqual({ type: 'groupes', groupes: [{ raison: 'etiquette-obsolete', nombre: 60, nomEtiquette: 'n' }] })
+  })
+})
+
+describe('cartes non incluses : cartes et non lignes (D-17)', () => {
+  const ecart = (idCarte: string, raison: CarteEcartee['raison']): CarteEcartee => ({ idCarte, titre: idCarte, raison })
+  it('compte une carte à deux raisons une seule fois', () => {
+    const l = lignesNonIncluses([ecart('a', 'non-reliee'), ecart('a', 'action-non-disponible'), ecart('b', 'non-reliee')], [])
+    expect(l).toHaveLength(3)
+    expect(nombreCartes(l)).toBe(2)
+  })
+  it('garde le nom des étiquettes obsolètes dans les groupes, un groupe par nom', () => {
+    const obs = (n: number, nomEtiquette: string) =>
+      Array.from({ length: n }, (_, i) => ({ idCarte: `${nomEtiquette}${i}`, titre: 't', idExemplaire: 'x', nomEtiquette }))
+    const g = regrouperEcartees(lignesNonIncluses([], [...obs(30, 'favori'), ...obs(30, 'Ami · Léa')]))
+    expect(g).toEqual({
+      type: 'groupes',
+      groupes: [
+        { raison: 'etiquette-obsolete', nombre: 30, nomEtiquette: 'favori' },
+        { raison: 'etiquette-obsolete', nombre: 30, nomEtiquette: 'Ami · Léa' },
+      ],
+    })
+  })
+  it('compte des cartes distinctes par groupe', () => {
+    const e = Array.from({ length: 60 }, (_, i) => ecart(`c${i % 30}`, i < 30 ? 'non-reliee' : 'action-non-disponible'))
+    const g = regrouperEcartees(lignesNonIncluses(e, []))
+    expect(g).toEqual({
+      type: 'groupes',
+      groupes: [
+        { raison: 'non-reliee', nombre: 30 },
+        { raison: 'action-non-disponible', nombre: 30 },
+      ],
+    })
+  })
+  it('écrit la raison en toutes lettres, avec le compte de places et le nom d’étiquette', () => {
+    expect(libelleLigne('en-attente-place', { places: { occupees: 5, max: 5 } })).toBe('en attente d’une place libre (5 / 5)')
+    expect(libelleLigne('en-attente-place')).toBe('en attente d’une place libre')
+    expect(libelleLigne('etiquette-obsolete', { nomEtiquette: 'favori' })).toBe(`étiquette obsolète conservée${NB}: favori`)
+    expect(libelleLigne('non-reliee')).toBe('non reliée au site')
+  })
+})
+
+describe('avertissement de visibilité des étiquettes d’amis (H34, D-13)', () => {
+  it('détecte une étiquette « Ami · … » dans le lot', () => {
+    expect(contientAmi([pose('a', 'Statut · Garder'), pose('b', 'Ami · Léa')])).toBe(true)
+    expect(contientAmi([pose('a', 'Statut · Garder'), defausse('b', '1')])).toBe(false)
+    expect(contientAmi([])).toBe(false)
+  })
+  it('écrit la phrase du design', () => {
+    expect(AVERTISSEMENT_AMIS).toBe(`Les étiquettes sont visibles des autres joueurs${NB}: les noms d’amis y apparaîtront.`)
+  })
+})
+
+describe('retrait d’étiquette', () => {
+  const reg: Registre = { version: 1, etiquettes: {}, couples: [{ ex: '1', nom: 'Statut · Garder' }, { ex: '2', nom: 'Statut · Garder' }, { ex: '9', nom: 'Autre' }] }
+  const col: Collection = { version: 3, cartes: [carte('a', { idsSite: ['1', '2'] })] }
+  const couple = { idCarte: 'a', nomEtiquette: 'Statut · Garder' }
+  it('produit un retrait par exemplaire de la carte portant ce nom', () => {
+    expect(actionsRetrait(couple, col, reg, true).map((a) => [a.type, 'idExemplaire' in a ? a.idExemplaire : null])).toEqual([
+      ['retrait-etiquette', '1'],
+      ['retrait-etiquette', '2'],
+    ])
+  })
+  it('ne produit rien si le retrait n’est pas disponible, même si le couple existe', () => {
+    expect(actionsRetrait(couple, col, reg, false)).toEqual([])
+  })
+  it('ne produit rien pour une carte inconnue ou un nom absent du registre', () => {
+    expect(actionsRetrait({ idCarte: 'zz', nomEtiquette: 'Statut · Garder' }, col, reg, true)).toEqual([])
+    expect(actionsRetrait({ idCarte: 'a', nomEtiquette: 'Inconnu' }, col, reg, true)).toEqual([])
+  })
+})
+
+describe('exécution : libellés fixes (D-22, D-41)', () => {
+  const etat = (e: Partial<EtatFile>): EtatFile => ({ version: 1, idLot: 'l', etat: 'arretee', traitees: 0, total: 0, raison: null, ...e })
+  const bilan = { reussies: 0, passees: 0, erreurs: 0, dernierCode: null, dernierInconnu: false }
+
+  it('donne une cause fixe, jamais un texte du site', () => {
+    expect(libelleCause(null, null)).toBe('arrêt demandé')
+    expect(libelleCause('echecs', null)).toBe('3 erreurs')
+    expect(libelleCause('code-http', 429)).toBe('réponse 429')
+    expect(libelleCause('code-http', 500)).toBe('le site a refusé la requête')
+    expect(libelleCause('code-http', null)).toBe('le site a refusé la requête')
+    expect(libelleCause('echecs', null, true)).toBe('l’onglet WikiMasters s’est déconnecté')
+  })
+  it('écrit la progression avec accords', () => {
+    expect(texteEnCours(4, 12, 0)).toBe(`En cours${NB}: 4 / 12 · 0 erreur`)
+    expect(texteEnCours(4, 12, 2)).toBe(`En cours${NB}: 4 / 12 · 2 erreurs`)
+  })
+  it('borne le pourcentage', () => {
+    expect(pourcentage(0, 0)).toBe(0)
+    expect(pourcentage(1, 3)).toBe(33)
+    expect(pourcentage(5, 3)).toBe(100)
+  })
+  it('écrit la fin d’un lot terminé en une phrase (D-22)', () => {
+    const t = texteFin(etat({ etat: 'terminee', traitees: 5, total: 5 }), { ...bilan, reussies: 3, passees: 1, erreurs: 1 }, false)
+    expect(t).toEqual({ titre: 'Lot terminé', detail: '3 réussies, 1 passée, 1 échouée' })
+  })
+  it('écrit la fin d’un lot arrêté avec le nombre d’actions non envoyées', () => {
+    const t = texteFin(etat({ traitees: 2, total: 5, raison: 'echecs' }), bilan, false)
+    expect(t).toEqual({ titre: `Lot arrêté${NB}: 3 erreurs`, detail: '3 actions n’ont pas été envoyées.' })
+    expect(texteFin(etat({ traitees: 4, total: 5, raison: 'manuel' }), bilan, false).detail).toBe('1 action n’a pas été envoyée.')
+  })
+  it('écrit la phrase du lot interrompu (D-22)', () => {
+    expect(texteInterrompu()).toBe(
+      `Lot interrompu${NB}: la page ou l’onglet a été fermé ou rechargé. L’exécution ne reprend pas toute seule.`,
+    )
+  })
+  it('n’affiche jamais le message d’une exception inconnue au lancement', () => {
+    expect(libelleErreurLancement(new Error('<b>corps brut du site</b>'))).toBe('le lot n’a pas pu être lancé.')
+    expect(libelleErreurLancement('x')).toBe('le lot n’a pas pu être lancé.')
+    expect(libelleErreurLancement(new Error('Une exécution est déjà en cours.'))).toBe('Une exécution est déjà en cours.')
   })
 })

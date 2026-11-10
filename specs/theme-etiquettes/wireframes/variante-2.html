@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Variante 2 — Aperçu du lot : une ligne par carte, étiquettes en pastilles</title>
+<style>
+  :root { --ink:#fbf8f2; --ink2:#f1ece2; --paper:#1b1815; --muted:#635c52; --line:#d8d1c4; --garder:#0f6b45; --echanger:#1f4fb8; --vendre:#8a5a00; --defausser:#a8321f; color-scheme: light dark; }
+  @media (prefers-color-scheme: dark) { :root { --ink:#13110f; --ink2:#1c1916; --paper:#ede8df; --muted:#a39c91; --line:#3a352f; --garder:#52d69a; --echanger:#7ba4ff; --vendre:#f4c356; --defausser:#ff9a8b; } }
+  body { margin:0; background:var(--ink); color:var(--paper); font:16px/1.45 system-ui, sans-serif; }
+  main { max-width:1100px; margin:0 auto; padding:16px; }
+  .note { font-size:.85rem; color:var(--muted); border:1px dashed var(--line); padding:8px; margin-bottom:12px; }
+  section { border:1px solid var(--line); background:var(--ink2); border-radius:4px; padding:16px; }
+  h2 { margin:0 0 8px; font-size:1.1rem; }
+  .muted { color:var(--muted); font-size:.9rem; }
+  ul.cartes { list-style:none; padding:0; margin:0; }
+  ul.cartes li { border-bottom:1px solid var(--line); padding:10px 0; }
+  .pastille { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:2px 10px; margin:2px 4px 2px 0; font-size:.85rem; }
+  .s-garder { border-color:var(--garder); color:var(--garder); }
+  .s-echanger { border-color:var(--echanger); color:var(--echanger); }
+  .t { border-style:dashed; }
+  .retrait { text-decoration:line-through; color:var(--muted); }
+  button { min-height:44px; padding:0 16px; border:1px solid var(--line); background:transparent; color:var(--muted); border-radius:4px; font:inherit; }
+</style>
+</head>
+<body>
+<main>
+  <p class="note">Variante 2 : chaque carte de l’aperçu montre toutes ses étiquettes attendues en pastilles (statut, ami, thèmes). Les pastilles pointillées sont « prévues, non disponibles ». Plus détaillé, mais long pour une grande collection (paginé à 50 cartes).</p>
+  <section aria-labelledby="t2">
+    <h2 id="t2">Étiquettes attendues par carte (envoi pas encore possible)</h2>
+    <p class="muted">Peut-être visibles des autres joueurs : non vérifié.</p>
+    <ul class="cartes">
+      <li><strong>[R] Titre fictif A</strong> · 2 exemplaires<br>
+        <span class="pastille s-garder t">Statut · Garder</span><span class="pastille t">Thème · Chien</span><span class="pastille t">Thème · Pont</span>
+        <span class="muted">+1 thème au-delà du plafond</span></li>
+      <li><strong>[C] Titre fictif B</strong> · 1 exemplaire<br>
+        <span class="pastille s-echanger t">Statut · Échanger</span><span class="pastille s-echanger t">Ami · Léa</span><span class="pastille t">Thème · Cheval</span>
+        <span class="pastille retrait">Thème · Chat (à retirer)</span></li>
+      <li><strong>[C] Titre fictif C</strong> · favori<br><span class="muted">Aucune étiquette : carte protégée.</span></li>
+    </ul>
+    <p class="muted">… et 47 autres cartes · Page 1 / 3</p>
+    <p><button disabled>Lancer les 0 action</button></p>
+  </section>
+</main>
+</body>
+</html>

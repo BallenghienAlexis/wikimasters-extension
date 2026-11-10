@@ -10,11 +10,19 @@ WM Collection est une extension Chrome personnelle pour préparer le tri, l'éch
 
 **« Édition » désigne donc l'édition locale** : statut, prix cible et note de chaque carte, stockés dans l'extension. Rien n'est modifié sur le site.
 
-**Lecture du site** : quand le joueur ouvre `/collection`, le content script lit les cartes affichées et y pose un repère avec sa décision. Il ne clique pas, ne change pas de page et ne fait aucune requête : le joueur tourne les pages et agit lui-même. Les règles ne parlent pas explicitement du scraping : c'est une zone grise, assumée par Alexis, avec un risque non nul.
+**Lecture du site** : quand le joueur ouvre `/collection`, le content script lit les cartes affichées et y pose un repère avec sa décision. Il ne clique pas, ne change pas de page et ne fait aucune requête (hors synchronisation automatique, désactivée par défaut, décrite plus bas) : le joueur tourne les pages et agit lui-même. Les règles ne parlent pas explicitement du scraping : c'est une zone grise, assumée par Alexis, avec un risque non nul.
 
 **Pas de verrou réseau** (levé par Alexis le 2026-11-07, il limitait trop les fonctionnalités) : la CSP n'interdit plus `connect-src`, le lint n'interdit plus `fetch`. Le risque de bannissement est assumé. Restent en place : permission `storage` seule, pas d'`eval` ni de code distant, et `click`, `submit`, `dispatchEvent`, `focus` interdits dans le code exécuté sur le site tant qu'une spec n'a pas décidé explicitement d'agir à la place du joueur. Les repères insérés dans la page laissent une empreinte (`wm-*`) que le site pourrait détecter : choix assumé par Alexis.
 
 La règle qui interdisait de masquer une automatisation a été retirée par Alexis le 2026-11-07 : chaque spec décide de ses limites (celle de `synchro-complete` garde une cadence fixe et aucun en-tête falsifié).
+
+**Lecture automatique de l’API (décision d’Alexis du 2026-11-09)** : Alexis autorise, pour la fonction « Synchronisation automatique » (spec `synchro-auto`), des requêtes `GET` en lecture seule vers `/api/` malgré le `Disallow` du `robots.txt` : `my-collection` et `my-collection/stats` (collection et étiquettes), puis `marketplace/cards/<id>/sales?scope=summary` (prix du marché, jamais la route sans `scope=summary`). Le risque de bannissement est rappelé et assumé. Garde-fous :
+- Les requêtes partent du content script, vers l’origine du site, avec les cookies de session de même origine envoyés par le navigateur. Cette fonction ne lit **aucun** jeton ni cookie (`jeton.ts` n’est pas importé), n’ajoute aucun en-tête et ne stocke rien de la session.
+- Un onglet WikiMasters doit être ouvert ; le service worker n’appelle jamais le site.
+- Fonction **désactivée par défaut** (interrupteur dans la page de gestion). Cadence fixe de 6 s entre deux requêtes, 10 au plus par minute, une seule requête en vol, une seule synchro à la fois (bail dans `chrome.storage.local`).
+- Arrêt immédiat sur 401, 403 ou 429, ou après 3 échecs ; aucune reprise avant 30 min.
+- Les décisions manuelles (`decidePar: 'moi'`) et les valeurs saisies à la main ne sont jamais écrasées ; les étiquettes du site ne servent qu’à afficher des écarts, sans rien corriger sur le site.
+- Toute autre route de `/api/`, et toute écriture, restent soumises à la règle ci-dessous.
 
 Tout code qui clique, envoie un formulaire ou appelle l'API interne du site à la place du joueur exige une décision explicite d'Alexis, écrite dans la spec de la feature, avec le risque de bannissement rappelé. Si WikiMasters ouvre une API ou donne un accord écrit, ce cadre est à mettre à jour ici.
 
@@ -53,9 +61,12 @@ Charger l'extension : `chrome://extensions` › mode développeur › « Charger
 - `src/lib/exports.ts` : export CSV et JSON. Logique pure.
 - `src/lib/themes.ts` : thèmes déduits du titre et de la description par mots-clés, recalculés sans être stockés.
 - `src/lib/tri.ts` et `src/app/AssistantTri.tsx` : assistant de tri (mes thèmes, thèmes des amis, aperçu). Règles dans l'ordre : favori ou thème à moi → garder ; thème d'un ami → échanger ; valeur inconnue → à trier ; valeur sous le seuil → défausser ; sinon → vendre au prix de la matrice. Propositions locales uniquement, sans jamais remplacer une décision manuelle (`decidePar: 'moi'`).
+- `src/lib/lot.ts`, `src/lib/registre.ts` et `src/lib/apercuEtiquettes.ts` : étiquettes attendues par exemplaire, dans l'ordre « Statut · … », « #À échanger <nom> » (carte `echanger` : l'ami de la carte, puis chaque ami qui suit un thème de la carte ; remplace « Ami · <nom> »), puis les thèmes du plus précis au plus général, avec les limites du site (par exemplaire, par compte). Le registre (v2) ne retient que les étiquettes posées par l'extension : seules celles-là peuvent être retirées. `apercuEtiquettes.ts` regroupe les étiquettes prévues, les totaux et la durée pour l'aperçu. À ce jour, aucune étiquette n'est envoyée : le contrat des étiquettes n'est pas relevé (à mettre à jour avec `specs/synchro-complete/contrat-api.md`).
+- `src/config/amis.ts` : amis initiaux et leurs thèmes, fusionnés une seule fois dans les préférences déjà enregistrées par `stockage.ts` (sans jamais rien retirer).
 - `src/app/FileVente.tsx` : ventes à lancer selon les places libres, de la plus chère à la moins chère. Le joueur indique lui-même ce qu'il a mis aux enchères.
 - `src/config/prix.ts` : **réglages à renseigner par Alexis** : seuil de défausse, limite d'enchères simultanées, valeur de repli par rareté, matrice valeur marchande → prix de départ.
 - **Valeur marchande** : moyenne affichée dans la fenêtre « Mettre aux enchères », propre à chaque carte. Relevée quand le joueur ouvre cette fenêtre, ou saisie à la main.
+- **Synchronisation automatique** (lecture seule, voir le cadre d’usage) : `src/lib/lectureApi.ts` valide et convertit les réponses de l’API (stats, pages, prix), liste blanche des champs, forme inattendue ignorée. `src/lib/ordonnanceur.ts` est la logique pure du plan incrémental (`stats` → pages → prix), cadence, budget, arrêts, bail ; horloge et transport injectés. `src/lib/ecarts.ts` calcule les écarts entre étiquettes attendues et étiquettes lues sur le site. `src/content/synchroAuto.ts` est l’exécuteur du content script, **seul** fichier de `src/content` qui appelle `fetch`. `src/app/SynchroAuto.tsx` est la section de la page de gestion (interrupteur, état, écarts).
 - `src/lib/stockage.ts` : **seul** module de `src/lib` qui touche à `chrome.storage.local`.
 - **Données** : elles entrent par la lecture de `/collection` (identifiant `rareté|titre`, le site n'en expose pas d'autre) ou par import d'un fichier JSON (`{ "version": 1, "cartes": [...] }`). La quantité ne compte que les exemplaires présents sur la même page.
 - Le schéma de stockage porte un numéro de version : tout changement fournit une migration.
@@ -84,6 +95,13 @@ Repris de LifeLog. Artefacts par feature dans `specs/<feature>/` : `spec.md` →
 - Boucle dev ↔ revue : 3 itérations au plus, puis escalade (issue `sdd-escalade`).
 - Fin de run sans intervention : les hypothèses non bloquantes de `refine` sont adoptées par défaut ; les points mineurs des revues passent par une tâche `T-9xx retouches` (ou sont déclinés avec leur raison) ; puis vérification, merge sur `main` avec le même gate, et suppression des branches et worktrees du run. Les PR de documents de l'orchestrateur passent par la CI et `security-reviewer`, sans `reviewer`. Alexis n'intervient qu'à la validation de la spec, en cas d'escalade, ou si GitHub refuse réellement une opération.
 - **Dépôt** : `BallenghienAlexis/wikimasters-extension`, privé. Seul le commit initial a été poussé directement sur `main`, car la branche n'existait pas encore.
+
+### Suivi et communication (Alexis ne cherche jamais)
+
+- Alexis ne va **jamais** chercher l'état d'avancement d'un fil, d'une PR ou d'un agent, ni ce qu'on attend de lui : tout passe par le coordinateur, qui le relaie dans le chat du projet.
+- Chaque fil (session de travail) termine **chaque réponse** par un bloc « Ce dont j'ai besoin d'Alexis » : questions numérotées, ou « Rien ». Une demande noyée dans le texte ne compte pas.
+- Un point reporté (mineur de revue, retouche) est écrit **avec son détail** (fichier:ligne, point) dans `specs/<feature>/retouches.md` § « À reprendre », commité. Une PR ne dit jamais « non traité » sans renvoyer à cette liste (section « Reste à faire » du modèle de PR).
+- Si un fil ne retrouve pas ce qu'on lui demande, il le dit au coordinateur avec ce qu'il a cherché, sans renvoyer Alexis fouiller.
 
 ### Definition of Done (une tâche)
 
