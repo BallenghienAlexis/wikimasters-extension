@@ -27,6 +27,16 @@ const element = (surcharge: Record<string, unknown> = {}, carte: Record<string, 
 
 const page = (collection: unknown[]) => ({ collection, total: null, rarityCounts: {}, tagOptions: [], pendingTradeCardIds: [] });
 
+describe('analyserPage : ordre par date d’ajout', () => {
+  it('confirme « plus récent d’abord » quand les dates décroissent', () => {
+    const a = element({ id: 'e1', card_id: 'c-a', obtained_at: '2026-03-02T00:00:00Z' });
+    const b = element({ id: 'e2', card_id: 'c-b', obtained_at: '2026-03-01T00:00:00Z' });
+    expect(analyserPage(page([a, b]))?.recentDabord).toBe(true);
+    expect(analyserPage(page([b, a]))?.recentDabord).toBe(false);
+    expect(analyserPage(page([a, { ...b, obtained_at: undefined }]))?.recentDabord).toBe(false);
+  });
+});
+
 describe('analyserStats', () => {
   it('SC-012 : renvoie total, totalUnique et étiquettes converties', () => {
     const r = analyserStats({
@@ -76,7 +86,7 @@ describe('analyserPage', () => {
   });
 
   it('SC-013 : collection vide = fin du parcours', () => {
-    expect(analyserPage(page([]))).toEqual({ cartes: [], ignorees: 0, fin: true });
+    expect(analyserPage(page([]))).toEqual({ cartes: [], ignorees: 0, fin: true, recentDabord: false });
   });
 
   it('SC-010 : réponse sans tableau collection → null', () => {

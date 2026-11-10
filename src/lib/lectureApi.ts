@@ -34,6 +34,8 @@ export interface PageLue {
   cartes: CarteLue[];
   ignorees: number;
   fin: boolean;
+  /** Vrai si les dates d’ajout (`obtained_at`) de la page sont lisibles et du plus récent au plus ancien. */
+  recentDabord: boolean;
 }
 
 type Objet = Record<string, unknown>;
@@ -81,11 +83,23 @@ function convertirExemplaire(brut: unknown): CarteLue | null {
   };
 }
 
+// Dates d’ajout lisibles (au moins 2) et non croissantes : l’ordre « plus récent d’abord » est confirmé.
+function dateDecroissante(brut: unknown[]): boolean {
+  const dates: number[] = [];
+  for (const e of brut) {
+    if (!estObjet(e) || typeof e.obtained_at !== 'string') return false;
+    const t = Date.parse(e.obtained_at);
+    if (Number.isNaN(t)) return false;
+    dates.push(t);
+  }
+  return dates.length >= 1 && dates.every((t, i) => i === 0 || dates[i - 1]! >= t);
+}
+
 // Lecture d'une page de `/api/my-collection`. `collection: []` signale la fin du parcours.
 // Les exemplaires d'une même carte (même identifiant local) sont regroupés.
 export function analyserPage(json: unknown): PageLue | null {
   if (!estObjet(json) || !Array.isArray(json.collection)) return null;
-  if (json.collection.length === 0) return { cartes: [], ignorees: 0, fin: true };
+  if (json.collection.length === 0) return { cartes: [], ignorees: 0, fin: true, recentDabord: false };
 
   const parId = new Map<string, CarteLue>();
   let ignorees = 0;
@@ -105,7 +119,7 @@ export function analyserPage(json: unknown): PageLue | null {
     existante.quantite += lue.quantite;
     existante.favori = existante.favori || lue.favori;
   }
-  return { cartes: [...parId.values()], ignorees, fin: false };
+  return { cartes: [...parId.values()], ignorees, fin: false, recentDabord: dateDecroissante(json.collection) };
 }
 
 // Lecture de `/api/marketplace/cards/<card_id>/sales?scope=summary` : valeur marchande de la rareté demandée.

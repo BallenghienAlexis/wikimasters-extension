@@ -29,3 +29,8 @@ Constats :
 - **Sans PRO, `scope=summary` répond 200** ; la même route sans `scope=summary` répond 403 `pro_required` (historique complet). L'extension n'utilise donc que `?scope=summary`.
 - Plusieurs raretés possibles dans `summary` : le validateur lit la clé de la rareté de l'exemplaire et ignore le reste.
 - Coût : une requête par carte (6 668 cartes distinctes) ; à 6 s l'une, impossible en une fois. Le relevé se fait par ordre de priorité (cartes à vendre ou à décider d'abord, valeur absente ou périmée), jamais en rafale.
+
+## Tri par date d'ajout : relevé du 2026-11-10
+- Le sélecteur de tri de `/collection` (Rareté par défaut, Nom, Favoris, Date d'ajout) émet `GET /api/my-collection/stats?sort=added` et `GET /api/my-collection?sort=added&page=0&stats=0`. Valeurs : `rarity` (défaut), `added`.
+- Vérifié sur la page 0 : `obtained_at` décroît d'un exemplaire à l'autre (plus récent d'abord).
+- Usage : l'ordonnanceur lit en `sort=added` et s'arrête à la première page identique au local, seulement si les étiquettes sont inchangées (seules de nouvelles cartes sont arrivées). Si la page 0 n'a pas des dates lisibles et décroissantes, repli : relecture complète en `sort=rarity`.

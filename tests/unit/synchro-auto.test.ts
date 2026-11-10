@@ -32,6 +32,7 @@ function horlogeSimulee(): Horloge & { t: number } {
 const exemplaire = (n: number) => ({
   id: `ex-${n}`,
   card_id: `card-${n}`,
+  obtained_at: new Date(Date.UTC(2026, 0, 1) - n * 60_000).toISOString(),
   count: 1,
   starred: false,
   tags: [],
@@ -148,8 +149,8 @@ describe('T-205 AC1 : déclenchement', () => {
     const b = banc();
     const resultat = await creerSynchroAuto(b.deps).declencher();
     expect(resultat?.issue).toBe('termine');
-    expect(b.chemins[0]).toBe('/api/my-collection/stats?sort=rarity');
-    expect(b.chemins[1]).toBe('/api/my-collection?sort=rarity&page=0&stats=0');
+    expect(b.chemins[0]).toBe('/api/my-collection/stats?sort=added');
+    expect(b.chemins[1]).toBe('/api/my-collection?sort=added&page=0&stats=0');
     expect(b.chemins.some((c) => c.endsWith('/sales?scope=summary'))).toBe(true);
     expect(b.stockage.collection.cartes.map((c) => c.id).sort()).toEqual(['R|Carte 1', 'R|Carte 2']);
     expect(b.stockage.etat?.derniereComplete).not.toBeNull();
