@@ -43,7 +43,7 @@ Aucun SC en ❌.
 
 ## Mineurs
 - `src/content/synchroAuto.ts:218` : le libellé « stockage indisponible » est trop précis (le `catch` couvre aussi un stockage illisible ou une erreur inattendue). Hors périmètre de cette PR ; à reprendre dans une retouche.
-- Déclinés à T-901 (voir `STATUS.md`) : `couleur` des étiquettes non validée ; `analyserPrix` ignore `isPro` ; assertion sur les thèmes absente de `ecarts.test.ts` .
+- Déclinés à T-901 (voir `STATUS.md`) : `couleur` des étiquettes non validée ; `analyserPrix` ignore `isPro` ; assertion sur les thèmes absente de `ecarts.test.ts`.
 
 ## Captures
 `specs/synchro-auto/captures/T-206/synchro-auto-{light,dark}-{mobile,tablet,desktop}.png` (6 captures, régénérées par `synchro-auto-ui.spec.ts`).
