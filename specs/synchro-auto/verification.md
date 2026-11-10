@@ -21,7 +21,7 @@ L’arbre de travail reste propre après les e2e (captures identiques à celles 
 | SC-001 | — (manuel) | `releve-api.md` | Relevé du 2026-11-09 : authentification par cookies de même origine, formes de `my-collection` et de `stats`, page hors limites → 200 avec `collection: []`. **Les formes d’erreur 401 et 429 ne sont pas relevées** (le code se fonde sur le seul numéro de statut). | ⚠️ partiel |
 | SC-002 | T-205, T-207 | `tests/e2e/synchro-auto.spec.ts` › « activée sans synchro récente : stats puis pages jusqu’à la fin… (SC-002) » ; `tests/unit/synchro-auto.test.ts` › « première synchro : lit stats, pages et prix… » | e2e : `✓ 56 … (SC-002) (18.6s)` ; ordonnanceur : `1 + 2` requêtes pour 2 cartes (`stats`, page 1, page vide) | ✅ |
 | SC-003 | T-203, T-207 | `tests/unit/ordonnanceur.test.ts` › « ne fait que `stats` quand total, doublons et étiquettes sont inchangés » ; e2e › « total inchangé… une seule requête, stats (SC-003) » | unitaire : `['/api/my-collection/stats?sort=rarity']` ; e2e `✓ 57` | ✅ |
-| SC-004 | T-203 | `tests/unit/ordonnanceur.test.ts` › « avec tri stable : s’arrête dès la première page identique au local » ; « sans tri stable : relecture complète… » | Le mécanisme existe (`ordonnanceur.ts:347`) et est prouvé en unitaire (1 page lue sur 200 cartes). **Il n’est jamais activé en production** : `triStable` n’est passé par aucun appelant (`grep triStable src` : définition et test seulement), car la stabilité du tri n’a pas été prouvée sur le site. Une carte ajoutée relit donc toutes les pages. La spec admet cette variante (« selon le relevé »). | ⚠️ partiel |
+| SC-004 | T-203 | `tests/unit/ordonnanceur.test.ts` › « arrêt anticipé : 20 nouvelles cartes en tête… » ; « total en baisse… » ; « doublon par count… » ; « tri par date non confirmé : repli… » | Activé le 2026-11-10 (PR #54) : pages lues en `sort=added` (plus récent d’abord), arrêt à la première page identique seulement si le total a augmenté, les étiquettes sont inchangées et l’écart de total est expliqué par la lecture ; sinon lecture complète. Repli en `sort=rarity` si la page 0 n’a pas de dates décroissantes. | ✅ |
 | SC-005 | T-203 | `ordonnanceur.test.ts` › « sépare deux requêtes d’au moins 6 s, au plus 10 par 60 s, une seule en vol » ; « respecte la fenêtre de 60 s même quand des requêtes récentes viennent d’une exécution précédente » ; « ne fait rien si un bail non expiré est tenu » ; « deux synchros simultanées : la seconde est refusée » | `npx vitest run` : tests verts, horloge simulée ; bail partagé par `chrome.storage` pour plusieurs onglets | ✅ |
 | SC-006 | T-203, T-205, T-207 | `ordonnanceur.test.ts` › « arrêt après 3 échecs… » ; `synchro-auto.test.ts` › « un arrêt du site (403) n’est pas retenté et ne note pas de synchro terminée » ; e2e › « réponse 403 : arrêt immédiat… (SC-006) » ; « T-206 D-03 : événements dans le journal » | e2e `✓ 58` ; journal : « 3 échecs : cause “3 échecs” » | ✅ |
 | SC-007 | T-202, T-205, T-207 | `synchro-auto.test.ts` › « T-205 AC3 / G6 : option désactivée = 0 requête » ; e2e › « option désactivée : aucune requête vers /api/ (SC-007) » | e2e `✓ 55 … (8.8s)` (puis activation de la préférence : les requêtes partent) | ✅ |
@@ -37,13 +37,13 @@ L’arbre de travail reste propre après les e2e (captures identiques à celles 
 | SC | Constat | Tâche à rouvrir |
 |---|---|---|
 | SC-001 | Les formes de réponse des erreurs 401 et 429 ne sont pas figées dans `releve-api.md`. Le code ne dépend que du statut HTTP, donc aucun effet fonctionnel constaté. | Aucune (relevé à compléter si Alexis en capture un). |
-| SC-004 | L’arrêt « dès la première page identique » n’est pas activé en production (`triStable` jamais passé). Une carte ajoutée relit toutes les pages (≈ 14 min pour 134 pages). Déclaré non activé à la revue T-901 (« sûr par défaut »). | Aucune pour l’instant ; décision d’Alexis : relever la stabilité du tri puis activer `triStable`. |
+| SC-004 | Résolu le 2026-11-10 : arrêt anticipé activé par le tri `sort=added` (voir `releve-api.md`). | Aucune. |
 
 Aucun SC en ❌.
 
 ## Mineurs
 - `src/content/synchroAuto.ts:218` : le libellé « stockage indisponible » est trop précis (le `catch` couvre aussi un stockage illisible ou une erreur inattendue). Hors périmètre de cette PR ; à reprendre dans une retouche.
-- Déclinés à T-901 (voir `STATUS.md`) : `couleur` des étiquettes non validée ; `analyserPrix` ignore `isPro` ; assertion sur les thèmes absente de `ecarts.test.ts` ; `triStable` jamais prouvé en réel.
+- Déclinés à T-901 (voir `STATUS.md`) : `couleur` des étiquettes non validée ; `analyserPrix` ignore `isPro` ; assertion sur les thèmes absente de `ecarts.test.ts`.
 
 ## Captures
 `specs/synchro-auto/captures/T-206/synchro-auto-{light,dark}-{mobile,tablet,desktop}.png` (6 captures, régénérées par `synchro-auto-ui.spec.ts`).

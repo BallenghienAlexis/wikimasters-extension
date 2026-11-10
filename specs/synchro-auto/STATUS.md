@@ -40,7 +40,7 @@ Statuts : à-faire · tests-écrits · en-revue · changements-demandés · merg
 | #52 | `src/lib/lectureApi.ts` | `couleur` des étiquettes non validée | Décliné : champ non affiché, donc sans effet. |
 | #52 | `src/lib/lectureApi.ts` | `analyserPrix` ignore `isPro` | Décliné : inutile sans compte PRO. |
 | #52 | `tests/unit/ecarts.test.ts` | Assertion sur les thèmes absente | Décliné : couvert par d'autres tests. |
-| #52 | `src/lib/ordonnanceur.ts:347` | `triStable` jamais prouvé en réel (SC-004 partiel) | Décliné : optimisation non activée, sûre par défaut ; à activer si Alexis relève la stabilité du tri. |
+| #52 | `src/lib/ordonnanceur.ts:347` | `triStable` jamais prouvé en réel (SC-004 partiel) | Résolu le 2026-11-10 (PR #54) : arrêt anticipé activé par `sort=added`, avec repli sur la lecture complète. |
 | #52 | `AGENTS.md`, `README.md`, `releve-api.md`, e2e, `lecteur.ts`, `ordonnanceur.ts`, `synchroAuto.ts` | Retouches 1 à 7 | Reprises dans T-901 (`RARETES` exportée depuis `lecteur.ts`). |
 | vérif. | `src/content/synchroAuto.ts:218` | Libellé « stockage indisponible » trop précis | Non repris : hors périmètre de la PR de vérification ; à prévoir dans une prochaine retouche. |
 | vérif. | `specs/synchro-auto/releve-api.md` | Formes d'erreur 401 et 429 non relevées (SC-001) | Non repris : aucun effet, le code lit le statut seul. |
