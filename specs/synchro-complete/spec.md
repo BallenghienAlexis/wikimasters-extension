@@ -24,6 +24,8 @@ Décision prise par Alexis le 2026-11-07, en réponse aux questions du premier p
 
 **Demande refusée.** Alexis a aussi demandé des délais aléatoires et le retrait de la règle d'AGENTS.md qui les interdit. Cette demande n'est **pas** retenue : des délais aléatoires servent à éviter la détection, ce qu'AGENTS.md interdit (« Aucun code ne cherche à masquer une automatisation »). Changer cette règle relève d'une modification d'AGENTS.md par Alexis lui-même, hors de cette spec.
 
+**Complément du 2026-11-10 (étiquettes).** Alexis autorise l’écriture des étiquettes sur l’hôte Supabase du site (`/rest/v1`), avec le jeton de session et l’en-tête `apikey` public, vers cet hôte seul (AGENTS.md amendé). Les étiquettes sont supposées visibles des autres joueurs (avertissement dans l’aperçu). Le relevé de l’hôte, des noms d’en-têtes, du filtre `DELETE` et de l’emplacement du jeton reste à fournir avant T-024.
+
 **Réponses retenues.**
 
 | # | Question | Réponse d'Alexis |

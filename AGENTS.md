@@ -24,6 +24,8 @@ La règle qui interdisait de masquer une automatisation a été retirée par Ale
 - Les décisions manuelles (`decidePar: 'moi'`) et les valeurs saisies à la main ne sont jamais écrasées ; les étiquettes du site ne servent qu’à afficher des écarts, sans rien corriger sur le site.
 - Toute autre route de `/api/`, et toute écriture, restent soumises à la règle ci-dessous.
 
+**Écriture des étiquettes sur le site (décision d’Alexis du 2026-11-10)** : Alexis autorise la spec `synchro-complete` (T-019 à T-026) à poser, créer et retirer des étiquettes via `POST /rest/v1/tags`, `POST /rest/v1/user_card_tags` et `DELETE /rest/v1/user_card_tags`, y compris sur l’hôte Supabase du site (exception ciblée à « serveur tiers » : cet hôte seul, jamais un autre). Le jeton de session et l’en-tête `apikey` public du site peuvent être envoyés à cet hôte seulement, lus en mémoire au moment de la requête, jamais stockés ni journalisés. Les étiquettes sont **supposées visibles des autres joueurs** : l’aperçu l’indique. Le risque de bannissement est rappelé et assumé. Tant que l’hôte, les en-têtes (noms), le filtre du `DELETE` et l’emplacement du jeton ne sont pas relevés dans `contrat-api.md`, aucun code d’émission n’est écrit (type « non disponible »). Enchères et défausse restent soumises à la règle ci-dessous.
+
 Tout code qui clique, envoie un formulaire ou appelle l'API interne du site à la place du joueur exige une décision explicite d'Alexis, écrite dans la spec de la feature, avec le risque de bannissement rappelé. Si WikiMasters ouvre une API ou donne un accord écrit, ce cadre est à mettre à jour ici.
 
 ## Stack
