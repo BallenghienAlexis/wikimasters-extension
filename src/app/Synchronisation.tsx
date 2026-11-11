@@ -322,7 +322,7 @@ const CAUSES_ARRET: Record<RaisonArret, string> = {
 export function libelleCause(raison: RaisonArret | null, codeHttp: number | null, deconnecte = false): string {
   if (deconnecte) return 'l’onglet WikiMasters s’est déconnecté';
   if (raison === null) return CAUSES_ARRET.manuel;
-  if (raison === 'code-http' && codeHttp === CODE_CONFLIT) return 'réponse 409 : le site signale un conflit (limite d’enchères, carte déjà en vente ou action refusée)';
+  if (raison === 'code-http' && codeHttp === CODE_CONFLIT) return 'réponse 409 : le site signale un conflit (limite d’enchères, carte déjà en vente, identifiant d’exemplaire périmé après une annulation : relancer la synchronisation avant de réessayer)';
   if (raison === 'code-http' && codeHttp !== null && CODES_ARRET.includes(codeHttp)) return `réponse ${codeHttp}`;
   return CAUSES_ARRET[raison];
 }
