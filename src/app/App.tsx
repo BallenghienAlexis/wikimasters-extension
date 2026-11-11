@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   LIBELLES_STATUT,
   STATUTS,
@@ -110,10 +110,10 @@ const App: React.FC = () => {
   }, []);
 
   // La surcouche des thèmes est posée avant l'état : les rendus qui suivent lisent déjà le nouveau cache.
-  const appliquerCacheWiki = (cache: CacheWikipedia): void => {
+  const appliquerCacheWiki = useCallback((cache: CacheWikipedia): void => {
     definirThemesWikipedia(themesParTitre(cache));
     setCacheWiki(cache);
-  };
+  }, []);
 
   useEffect(() => {
     void chargerCacheWikipedia().then((c) => {
@@ -301,7 +301,7 @@ const App: React.FC = () => {
 
           <SynchroAuto collection={collection} preferences={preferences} cacheWiki={cacheWiki} />
 
-          <VerificationWikipedia titres={titresConsultes} cache={cacheWiki} onCache={appliquerCacheWiki} />
+          <VerificationWikipedia titres={titresConsultes} onCache={appliquerCacheWiki} />
 
           <Synchronisation
             collection={collection}

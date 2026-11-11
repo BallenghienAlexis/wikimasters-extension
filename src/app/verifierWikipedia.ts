@@ -1,6 +1,6 @@
 // Exécuteur de la vérification Wikipédia : seul fichier de l'application qui appelle `fetch` vers Wikipédia.
 // GET en lecture seule vers fr.wikipedia.org, un titre de carte par requête, sans cookie ni en-tête ajouté.
-import { ajouterEntree, lireReponse, themesDepuisCategories, urlRequete, type CacheWikipedia } from '../lib/wikipedia';
+import { ajouterEntree, lireReponse, themesDepuisCategories, titresAVerifier, urlRequete, type CacheWikipedia } from '../lib/wikipedia';
 
 export type Transport = (url: string, signal: AbortSignal) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
@@ -77,4 +77,102 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
     await attendre(PAUSE_MS, signal);
   }
   return { verifiees, arret: null, codeHttp: null };
+}
+
+export interface EtatPlanificateur {
+  enCours: boolean;
+  /** Message d'arrêt tant que la vérification est suspendue (jusqu'au rechargement de la page). */
+  suspendue: string | null;
+  faites: number;
+  total: number;
+}
+
+export interface OptionsPlanificateur {
+  chargerCache: () => Promise<CacheWikipedia>;
+  /** Appelé avec le cache à jour après chaque page lue (à enregistrer et à afficher). */
+  surCache: (cache: CacheWikipedia) => void | Promise<void>;
+  maintenant?: () => number;
+  attendre?: (ms: number, signal: AbortSignal) => Promise<void>;
+  transport?: Transport;
+}
+
+export interface Planificateur {
+  /** Met en file les titres jamais tentés depuis le chargement de la page ; sans effet si c'est suspendu. */
+  demander: (titres: string[]) => void;
+  etat: () => EtatPlanificateur;
+  abonner: (rappel: () => void) => () => void;
+}
+
+const MESSAGE_CODE = (code: number | null): string => `Wikipédia a refusé (${code ?? '?'}) : vérification suspendue jusqu’au rechargement de la page.`;
+const MESSAGE_ECHECS = 'Vérification suspendue : trop d’échecs de lecture. Elle reprendra au rechargement de la page.';
+
+/**
+ * File unique des vérifications : une seule exécution à la fois, un titre jamais redemandé dans la session,
+ * suspension définitive (jusqu'au rechargement) sur 403/429 ou 3 échecs de suite. À créer une seule fois par page.
+ */
+export function creerPlanificateur(options: OptionsPlanificateur): Planificateur {
+  const { chargerCache, surCache, maintenant = Date.now, attendre, transport } = options;
+  const file: string[] = [];
+  const tentes = new Set<string>();
+  const ecouteurs = new Set<() => void>();
+  let etat: EtatPlanificateur = { enCours: false, suspendue: null, faites: 0, total: 0 };
+  let cache: CacheWikipedia | null = null;
+
+  const changer = (suite: Partial<EtatPlanificateur>): void => {
+    etat = { ...etat, ...suite };
+    ecouteurs.forEach((rappel) => rappel());
+  };
+
+  async function boucle(): Promise<void> {
+    changer({ enCours: true, faites: 0, total: file.length });
+    let echecs = 0;
+    try {
+      cache ??= await chargerCache();
+      const signal = new AbortController().signal;
+      while (file.length > 0) {
+        const titre = file.shift() as string;
+        if (titresAVerifier([titre], cache, maintenant()).length === 0) continue;
+        const r = await verifierTitres({
+          titres: [titre],
+          cache,
+          signal,
+          maintenant,
+          ...(attendre ? { attendre } : {}),
+          ...(transport ? { transport } : {}),
+          surProgres: async (nouveau) => {
+            cache = nouveau;
+            await surCache(nouveau);
+          },
+        });
+        if (r.arret === 'code-http') return void changer({ suspendue: MESSAGE_CODE(r.codeHttp) });
+        // Aucune page lue et aucun arrêt : réponse illisible ou erreur réseau.
+        echecs = r.verifiees === 0 ? echecs + 1 : 0;
+        if (echecs >= 3) return void changer({ suspendue: MESSAGE_ECHECS });
+        changer({ faites: etat.faites + 1, total: etat.faites + 1 + file.length });
+      }
+    } catch {
+      changer({ suspendue: 'Enregistrement du cache Wikipédia impossible : vérification suspendue.' });
+    } finally {
+      file.length = 0;
+      changer({ enCours: false });
+    }
+  }
+
+  return {
+    demander(titres) {
+      if (etat.suspendue !== null) return;
+      for (const titre of titres) {
+        if (tentes.has(titre)) continue;
+        tentes.add(titre);
+        file.push(titre);
+      }
+      if (!etat.enCours && file.length > 0) void boucle();
+      else if (etat.enCours) changer({ total: etat.faites + file.length });
+    },
+    etat: () => etat,
+    abonner(rappel) {
+      ecouteurs.add(rappel);
+      return () => ecouteurs.delete(rappel);
+    },
+  };
 }
