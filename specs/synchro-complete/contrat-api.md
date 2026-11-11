@@ -45,4 +45,4 @@ Origine de l'onglet : `https://www.wiki-masters.com`.
 - **Toujours non relevé** : limites de nombre et de longueur, code d'erreur d'un nom en double, cookie lisible par `document.cookie` (à confirmer au premier essai). Visibilité : supposée visible des autres joueurs (décision d'Alexis du 2026-11-11).
 
 ## Reste à relever (SC-001)
-En-têtes de requête exigés de `/rest/v1`, emplacement du jeton, mode d'authentification de `/api/`, lien `card_id` ↔ `user_card_id`, limites et visibilité des étiquettes, bornes de `base_amount`, forme des erreurs (401, 403, 429), réponses de création (identifiants renvoyés).
+Mode d'authentification de `/api/` (étiquettes : relevées le 2026-11-11), bornes de `base_amount`, forme des erreurs (401, 403, 429), limites de nombre et de longueur des étiquettes.

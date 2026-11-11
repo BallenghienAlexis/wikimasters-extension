@@ -58,7 +58,8 @@ Décision d'Alexis : `apikey` publique **en dur** dans une constante unique de `
 
 ## À reprendre (revue de la PR de la pose des étiquettes, 2026-11-11)
 
-- T-018 et T-026 : e2e « 0 requête avant Lancer » puis e2e complet avec un site fictif qui sert aussi l'hôte REST (`page.route`, toute autre requête bloquée). Non livrés ; l'e2e local ne tourne pas dans le conteneur (navigateur absent), la CI les exécute.
+- T-018, T-020 et T-026 (à livrer avant le premier lot réel : l'ordre imposé voulait T-018 avant le module réseau) : T-020 = test de chaîne complète `non-fuite-jeton.test.ts` (AC1 à AC4) ; e2e « 0 requête avant Lancer » puis e2e complet avec un site fictif qui sert aussi l'hôte REST (`page.route`, toute autre requête bloquée). Non livrés ; l'e2e local ne tourne pas dans le conteneur (navigateur absent), la CI les exécute.
 - `src/lib/reseau.ts` et `src/lib/lot.ts:388` : une création en délai dépassé ou « inconnu » a peut-être réussi sur le site ; une étiquette du site de même nom absente du registre sera recréée (doublon ou erreur). Le code d'erreur d'un nom en double n'est pas relevé. Piste : relire les étiquettes du site (`stats`) avant un lot et rattacher l'identifiant par nom.
 - `src/config/synchro.ts` : `LONGUEUR_MAX_ETIQUETTE` absent (limites non relevées, `lot.ts` garde sa limite).
 - Cookie de session lisible par `document.cookie` (non HttpOnly) : à confirmer au premier essai réel.
+- `src/lib/reseau.ts:86-87` : 401, 403, 429 portent le libellé « action non disponible » ; prévoir un libellé propre (« refus du site ») dans `CAUSES_RESULTAT`.
