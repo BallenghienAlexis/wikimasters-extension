@@ -9,7 +9,7 @@ Vagues : V1 : T-001 [P], T-002 [P], T-003 [P] · V2 : T-004 [P], T-005 [P], T-00
 - **G3** : le jeton ne part que vers `https://www.wiki-masters.com` **et** l'hôte REST de `src/config/synchro.ts` (`jeton.ts`, `reseau.ts` seuls). **G4** : délai variable, 6 s minimum plus 0 à 4 s tirées hors de `file.ts` (T-011 AC8 levé) ; en-têtes : `Content-Type`, `Accept`, `apikey`, `Content-Profile`, `Authorization`, plus `Prefer` pour la création.
 - **T-019** : `fetch` avec `credentials: 'omit'` et `redirect: 'error'` (jeton explicite, aucun cookie), délai de 15 s ; 401, 403, 429 sont classés `echec` avec leur code (la file s'arrête via `CODES_ARRET`), une réponse 2xx hors contrat est `inconnu` (la file s'arrête).
 - **Listes de fichiers étendues** : `src/lib/actions.ts`, `src/lib/messages.ts`, `src/lib/contrat.ts`, `src/lib/registre.ts`, `src/app/Synchronisation.tsx`, `src/content/index.ts`, `src/config/synchro.ts`, `src/lib/jeton.ts`, `src/lib/reseau.ts`, `src/lib/file.ts` (écart assumé : `idEtiquette`, session lue à l'envoi, branchement du délai).
-- **T-018, T-020, T-026** (e2e complet avec site fictif servant l'hôte REST) restent à faire : voir `retouches.md` § « À reprendre ».
+- **T-018, T-020, T-026** : couverts par `tests/e2e/synchro-ecriture.spec.ts` (site et hôte REST fictifs), voir `retouches.md`.
 
 ## Ordre imposé par Alexis
 
