@@ -28,7 +28,7 @@ La règle qui interdisait de masquer une automatisation a été retirée par Ale
 - **Délais variables** : un délai aléatoire (gigue de 0 à 6 s, `src/lib/gigue.ts`) s’ajoute à l’intervalle minimal de 6 s entre deux requêtes, en lecture comme en écriture, pour éviter erreurs et sanctions. La gigue n’allonge jamais l’attente ; plafond de 10 requêtes par minute et arrêt sur 401, 403, 429 ou 3 échecs inchangés.
 - **Synchronisation automatique activée par défaut** (le joueur peut la couper) ; ce qui reste *non livré* tant que son contrat n’est pas relevé : `specs/synchro-complete/releves-a-faire.md`.
 - Les routes d’écriture se décrivent dans `src/lib/contrat/*` ; une route non relevée reste « action non disponible » et n’est jamais devinée.
-- Les relevés réseau (authentification d’écriture, hôte Supabase) sont faits par Claude, sur le PC d’Alexis, sans manipulation de sa part.
+- Les relevés réseau (authentification d’écriture, hôte Supabase) sont faits par Claude, sur le PC d’Alexis, sans manipulation de sa part, sauf l’accord préalable d’Alexis sur chaque écriture de test (carte ou étiquette choisie par lui, enchère annulée par lui) : voir `specs/synchro-complete/releves-a-faire.md`.
 
 Tout code qui clique, envoie un formulaire ou appelle l'API interne du site à la place du joueur exige une décision explicite d'Alexis, écrite dans la spec de la feature, avec le risque de bannissement rappelé. Si WikiMasters ouvre une API ou donne un accord écrit, ce cadre est à mettre à jour ici.
 

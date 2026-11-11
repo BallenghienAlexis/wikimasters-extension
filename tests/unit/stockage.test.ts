@@ -475,7 +475,7 @@ describe('T-202 : état de la synchronisation automatique', () => {
     expect(await chargerBailSynchro()).toBeNull();
   });
 
-  it('SC-007 : une valeur stockée invalide vaut la valeur par défaut, sans exception', async () => {
+  it('SC-007 : une valeur stockée illisible vaut désactivée, sans exception', async () => {
     for (const invalide of ['oui', 1, null, {}, []]) {
       faux.donnees.set('syncAuto', invalide);
       expect(await chargerSyncAuto(), JSON.stringify(invalide)).toBe(false);
