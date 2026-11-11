@@ -148,7 +148,7 @@ describe('enchères : prix, tri et départage (AC2)', () => {
 })
 
 describe('enchères : cartes écartées (AC3)', () => {
-  it('valeur marchande absente : le repli par rareté ne suffit pas', () => {
+  it('valeur marchande absente : aucune enchère', () => {
     const l = lot(coll(carte('a', { valeurMarchande: null, prixCible: 5 })))
     expect(encheres(l.actions)).toEqual([])
     expect(raisons(l, 'a')).toEqual(['valeur-absente'])

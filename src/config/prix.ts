@@ -9,7 +9,6 @@ export interface TranchePrix {
 export interface ConfigPrix {
   seuilDefausse: number;
   maxVentesSimultanees: number;
-  valeurParRarete: Record<string, number | null>;
   matricePrixDepart: TranchePrix[];
 }
 
@@ -19,17 +18,6 @@ export const CONFIG_PRIX: ConfigPrix = {
 
   // Nombre d'enchères que le site autorise en même temps.
   maxVentesSimultanees: 5,
-
-  // Valeur de repli par rareté, pour une carte dont la moyenne du marché n'a pas encore été relevée.
-  // null : valeur inconnue, la carte reste « À trier » et n'est ni vendue ni défaussée.
-  valeurParRarete: {
-    L: null,
-    UR: null,
-    SR: null,
-    R: null,
-    PC: null,
-    C: null,
-  },
 
   // Matrice valeur marchande → prix de départ. La tranche la plus haute atteinte s'applique.
   // Lecture : une carte vendue au marché entre 15 et 25 se met aux enchères à 1, etc.
