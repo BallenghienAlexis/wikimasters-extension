@@ -80,5 +80,5 @@ void chargerCollection().then(afficherReperes);
 planifierLecture();
 // Pilotage depuis la page de gestion : aucune requête tant qu'aucune action n'est branchée.
 demarrerExecutant({ emettre: creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: location.origin }) });
-// Lecture automatique de la collection par l'API du site : désactivée par défaut, 0 requête tant que l'option est coupée.
+// Lecture automatique de la collection par l'API du site : activée par défaut, 0 requête si le joueur coupe l'option.
 demarrerSynchroAuto();

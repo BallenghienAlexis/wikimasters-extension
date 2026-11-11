@@ -89,3 +89,7 @@
 - H5 — Décisions d'Alexis du 2026-11-09 : risque lié à `/api/` assumé, onglet WikiMasters ouvert accepté.
 - H4 — Les prix et les étiquettes passent par le même mécanisme (option A, onglet ouvert) ; leurs endpoints ne sont pas encore relevés, donc rien n'est deviné.
 - H3 — Périodicité par défaut : 30 min, minimum 10 min.
+
+
+## Avenant du 2026-11-11
+Décision d’Alexis (voir AGENTS.md) : synchronisation automatique **activée par défaut**, `GET /api/marketplace/mine` ajouté au périmètre de lecture, délai variable (gigue de 0 à 6 s) ajouté à l’intervalle de 6 s. L’écriture sur le site est autorisée ; ses contrats attendent les relevés de `specs/synchro-complete/releves-a-faire.md`. En cas d’écart avec le texte ci-dessus, AGENTS.md prime.

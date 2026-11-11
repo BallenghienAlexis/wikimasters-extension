@@ -11,8 +11,8 @@ import type { Collection } from './collection'
 import { construireLot, etiquettesDeCarte, type Config, type EtiquetteNonPosee } from './lot'
 import { DEFINITIONS_THEMES, LIBELLES_THEMES } from './themes'
 
-/** Cadence fixe de l’exécution, en secondes par requête (même valeur que la synchronisation). */
-const SECONDES_PAR_REQUETE = 6
+/** Secondes par requête en moyenne : 6 s minimales plus une gigue de 0 à 6 s (moyenne 3 s). */
+const SECONDES_PAR_REQUETE = 9
 
 /** Nombre maximal de lignes rendues par l’aperçu (DT-05). */
 export const LIGNES_MAX = 100

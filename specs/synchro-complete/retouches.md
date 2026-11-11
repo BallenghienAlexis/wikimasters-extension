@@ -43,6 +43,8 @@ Chaque point dit ce qu’il attend. Source : revues de T-015 (#21) et T-017 (#23
 - **T-017 code 1** (`ZoneExecution`) : décompte « prochaine action dans N s » (D-20), hors région live. Attend un changement de `src/lib/file.ts` : la file doit exposer l’échéance de la prochaine action (aujourd’hui interne à `attendre`), avec son test. `file.ts` n’est pas dans le périmètre de cette retouche ; tâche de logique à créer, puis branchement dans `ZoneExecution`.
 - **T-017 code 5** (`tests/unit/dialogue-defausse.test.ts:18-21`) : le test du focus initial vérifie la constante `BOUTON_FOCUS_INITIAL`, pas `document.activeElement`. Attend l’e2e de **T-018**.
 - **T-015 code 6 bis** : captures `specs/synchro-complete/captures/T-015/*.png` hors liste fermée : exception acceptée, rien à faire.
+
+- **PR #60, `ventesSite`** (`src/lib/ordonnanceur.ts`, `src/lib/stockage.ts`) : enchères en cours lues sur `marketplace/mine`, stockées mais encore non affichées. À brancher sur les places libres de `src/app/FileVente.tsx` (et sur la limite du lot d’enchères) quand l’écriture sera livrée.
 - **Cohérence documentaire** : `spec.refined.md` (lignes 88, 253, 301) et `tasks.md` (ligne 333) citent encore « la valeur de repli par rareté ne suffit pas ». Ce repli a été supprimé (PR #61) ; sans effet sur le code (`lot-encheres` exige déjà `valeurMarchande`, H13). À reformuler à la prochaine reprise de la spec.
 
 ## Suite de la pose réelle des étiquettes (2026-11-11)

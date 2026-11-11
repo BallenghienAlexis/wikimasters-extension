@@ -469,8 +469,8 @@ describe('T-202 : migration de la collection stockée', () => {
 });
 
 describe('T-202 : état de la synchronisation automatique', () => {
-  it('SC-007 : valeurs par défaut (désactivée, aucune synchro, aucun bail)', async () => {
-    expect(await chargerSyncAuto()).toBe(false);
+  it('SC-007 : valeurs par défaut (activée, aucune synchro, aucun bail)', async () => {
+    expect(await chargerSyncAuto()).toBe(true);
     expect(await chargerDerniereSynchro()).toBeNull();
     expect(await chargerBailSynchro()).toBeNull();
   });
@@ -493,7 +493,7 @@ describe('T-202 : état de la synchronisation automatique', () => {
     expect(await chargerBailSynchro()).toBeNull();
   });
 
-  it('SC-007 : une valeur stockée invalide vaut la valeur par défaut, sans exception', async () => {
+  it('SC-007 : une valeur stockée illisible vaut désactivée, sans exception', async () => {
     for (const invalide of ['oui', 1, null, {}, []]) {
       faux.donnees.set('syncAuto', invalide);
       expect(await chargerSyncAuto(), JSON.stringify(invalide)).toBe(false);
@@ -534,6 +534,13 @@ describe('T-205 : état de l’ordonnanceur et demande d’arrêt', () => {
 
   it('aucun état stocké : null', async () => {
     expect(await chargerEtatSynchro()).toBeNull();
+  });
+
+  it('ventesSite : valeur valide conservée, invalide ignorée sans exception', async () => {
+    await enregistrerEtatSynchro({ ...etat(), ventesSite: { enCours: 2, max: 5, releveLe: 1700000000000 } });
+    expect((await chargerEtatSynchro())?.ventesSite).toEqual({ enCours: 2, max: 5, releveLe: 1700000000000 });
+    faux.donnees.set('etatSynchro', { ...etat(), ventesSite: { enCours: -1, max: 'x', releveLe: 1 } });
+    expect((await chargerEtatSynchro())?.ventesSite).toBeUndefined();
   });
 
   it('l’état écrit est relu à l’identique', async () => {

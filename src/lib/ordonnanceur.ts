@@ -6,8 +6,8 @@
  * chemin relatif (`GET` même origine) et ne renvoie que le statut et le JSON.
  *
  * Plan incrémental : `stats` → pages de `my-collection` (seulement si quelque chose a changé)
- * → prix du marché (`sales?scope=summary`, jamais la route sans `scope`). Cadence fixe
- * (constantes de `file.ts`), une requête en vol, aucune valeur aléatoire.
+ * → prix du marché (`sales?scope=summary`, jamais la route sans `scope`). Intervalle minimal
+ * (constantes de `file.ts`) allongé par un délai variable injecté, une requête en vol.
  *
  * Le module ne modifie jamais les champs d’édition d’une carte (statut, prix cible, note, ami,
  * `decidePar`) ; il met à jour les faits du site (quantité, favori, identifiants, étiquettes) et,
@@ -15,7 +15,7 @@
  */
 import { CODES_ARRET, FENETRE_MS, INTERVALLE_MS, MAX_ECHECS, MAX_PAR_FENETRE, type Horloge } from './file';
 import { VERSION_SCHEMA, type Carte, type Collection } from './collection';
-import { analyserPage, analyserPrix, analyserStats, type CarteLue, type StatsLues } from './lectureApi';
+import { analyserPage, analyserPrix, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
 
 /** Aucune reprise automatique avant ce délai après un arrêt (401, 403, 429 ou échecs). */
 export const PAUSE_APRES_ARRET_MS = 30 * 60_000;
@@ -58,6 +58,8 @@ export interface EtatOrdonnanceur {
   cardIds: Record<string, string>;
   /** Dernier relevé de prix par identifiant local. */
   prix: Record<string, PrixReleve>;
+  /** Enchères du joueur lues sur le site (`marketplace/mine`), pour les places libres. */
+  ventesSite?: { enCours: number; max: number; releveLe: number } | null;
 }
 
 export const etatInitial = (): EtatOrdonnanceur => ({
@@ -90,6 +92,8 @@ export interface DependancesSynchro {
   arretDemande?: () => boolean;
   /** Plafond de prix par exécution (défaut : MAX_PRIX_PAR_EXECUTION). */
   maxPrix?: number;
+  /** Millisecondes ajoutées à l’intervalle minimal entre deux requêtes (délai variable). Absent : 0. */
+  gigue?: () => number;
 }
 
 export type RaisonArretSynchro = 'manuel' | 'code-http' | 'echecs';
@@ -120,6 +124,7 @@ export interface ResultatSynchro {
 type TriSite = 'added' | 'rarity';
 const cheminStats = (): string => '/api/my-collection/stats?sort=added';
 const cheminPage = (n: number, tri: TriSite): string => `/api/my-collection?sort=${tri}&page=${n}&stats=0`;
+const cheminVentes = (): string => '/api/marketplace/mine';
 const cheminPrix = (cardId: string): string => `/api/marketplace/cards/${encodeURIComponent(cardId)}/sales?scope=summary`;
 
 const signature = (stats: StatsLues): string =>
@@ -225,13 +230,18 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
 
   // ---------------------------------------------------------------------------------------------
 
-  async function requete(chemin: string): Promise<ReponseApi | null> {
+  function gigue(): number {
+    const g = deps.gigue?.() ?? 0;
+    return Number.isFinite(g) ? Math.max(0, g) : 0;
+  }
+
+  async function requete(chemin: string, tolerant = false): Promise<ReponseApi | null> {
     if (deps.arretDemande?.()) throw new Interruption('manuel', null);
     // Cadence : 6 s depuis la dernière requête, 10 au plus par fenêtre de 60 s (budget commun).
     const t = horloge.now();
     const recentes = etat.requetes.filter((x) => x > t - FENETRE_MS);
     const derniere = recentes.at(-1);
-    let echeance = derniere === undefined ? t : derniere + INTERVALLE_MS;
+    let echeance = derniere === undefined ? t : derniere + INTERVALLE_MS + gigue();
     const dixieme = recentes.at(-MAX_PAR_FENETRE);
     if (recentes.length >= MAX_PAR_FENETRE && dixieme !== undefined) echeance = Math.max(echeance, dixieme + FENETRE_MS);
     await horloge.attendreJusqua(echeance);
@@ -245,13 +255,13 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     try {
       reponse = await deps.transport(chemin);
     } catch {
-      return echec('Requête impossible (réseau).');
+      return tolerant ? null : echec('Requête impossible (réseau).');
     }
     if (CODES_ARRET.includes(reponse.statut)) {
       journal(`Arrêt : le site a répondu ${reponse.statut}.`);
       throw new Interruption('code-http', reponse.statut);
     }
-    if (reponse.statut !== 200) return echec(`Réponse ${reponse.statut} inattendue.`);
+    if (reponse.statut !== 200) return tolerant ? null : echec(`Réponse ${reponse.statut} inattendue.`);
     return reponse;
   }
 
@@ -298,6 +308,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       resultat.complete = complet && echecs === 0;
       await deps.enregistrer(instantane(), etat);
       await relevePrix();
+      await releveVentes();
     } catch (e) {
       if (!(e instanceof Interruption)) throw e;
       resultat.issue = 'arret';
@@ -400,6 +411,16 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     }
     perimees.sort((a, b) => anciennete(a) - anciennete(b));
     return [...aDecider, ...absentes, ...perimees];
+  }
+
+  /** Enchères en cours sur le site : une requête, sans effet sur le compteur d'échecs. */
+  async function releveVentes(): Promise<void> {
+    const r = await requete(cheminVentes(), true);
+    if (r === null) return;
+    const lues = analyserVentes(r.json);
+    if (lues === null) return;
+    etat.ventesSite = { ...lues, releveLe: horloge.now() };
+    await deps.enregistrer(instantane(), etat);
   }
 
   async function relevePrix(): Promise<void> {

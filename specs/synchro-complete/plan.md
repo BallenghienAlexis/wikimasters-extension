@@ -241,3 +241,7 @@ Conflits de fichiers à surveiller dans `tasks` : `reseau.ts` (A6, B1, B5), `esl
 
 - **Quick wins** (utiles même si une action tombe au gate) : migration v2 et séparation stockage / échange (A1) ; resserrement du lint réseau et stockage du site (A2), qui rétablit un garde-fou retiré le 2026-11-07 et prépare le confinement du jeton ; construction du lot et aperçu avec raisons d'écart (A3, A8), qui rendent visibles les cartes mal renseignées ; la défausse, dont le contrat est le plus simple (aucun corps), peut être la première action branchée de bout en bout si `/api/` s'authentifie par cookies de même origine.
 - **Long terme** (chacun exige une nouvelle spec) : lecture de `GET /api/marketplace/mine` pour compter les places libres (aujourd'hui exclu du Scope) ; relevé automatique de la fin d'enchère ; réutilisation du lot comme liste guidée d'actions manuelles pour les actions arrêtées par SC-002 ; mise à jour du cadre d'usage d'AGENTS.md si WikiMasters ouvre une API publique ou donne un accord écrit.
+
+
+## Avenant du 2026-11-11
+Décision d’Alexis (voir AGENTS.md) : synchronisation automatique **activée par défaut**, `GET /api/marketplace/mine` ajouté au périmètre de lecture, délai variable (gigue de 0 à 6 s) ajouté à l’intervalle de 6 s. L’écriture sur le site est autorisée ; ses contrats attendent les relevés de `specs/synchro-complete/releves-a-faire.md`. En cas d’écart avec le texte ci-dessus, AGENTS.md prime.

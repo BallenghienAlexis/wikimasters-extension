@@ -53,6 +53,11 @@ const carte = (surcharge: object): object => ({
   ...surcharge,
 });
 
+// La synchronisation automatique est activée par défaut : ces tests vérifient la seule lecture de la page, sans requête vers /api/.
+test.beforeEach(async ({ serviceWorker }) => {
+  await serviceWorker.evaluate(() => chrome.storage.local.set({ syncAuto: false }));
+});
+
 test.describe('lecture de la page Collection', () => {
   test('ajoute les cartes affichées, avec exemplaires et favoris', async ({ context, serviceWorker }) => {
     await ouvrirSite(context);

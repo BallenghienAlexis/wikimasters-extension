@@ -17,3 +17,7 @@ Entrées : `spec.refined.md`. Tokens existants uniquement (`ink`, `paper`, `mute
 
 ## Responsive et accessibilité
 - 375, 768 et 1280 px, thèmes clair et sombre ; contrastes AA ; `prefers-reduced-motion` coupe l'animation de progression.
+
+
+## Avenant du 2026-11-11
+Décision d’Alexis (voir AGENTS.md) : synchronisation automatique **activée par défaut**, `GET /api/marketplace/mine` ajouté au périmètre de lecture, délai variable (gigue de 0 à 6 s) ajouté à l’intervalle de 6 s. L’écriture sur le site est autorisée ; ses contrats attendent les relevés de `specs/synchro-complete/releves-a-faire.md`. En cas d’écart avec le texte ci-dessus, AGENTS.md prime.
