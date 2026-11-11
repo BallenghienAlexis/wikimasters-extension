@@ -1,5 +1,5 @@
 // Déduit les thèmes d'une carte à partir de son titre et de sa description.
-// Calcul local par mots-clés : aucun service externe, et le résultat n'est jamais stocké.
+// Calcul local par mots-clés, complété par les catégories Wikipédia mises en cache (voir wikipedia.ts) ; le résultat n'est jamais stocké.
 // Le libellé de chaque thème est l'étiquette à poser dans le jeu : c'est ici qu'on en ajoute.
 import { normaliser, type Carte } from './collection';
 
@@ -12,6 +12,8 @@ interface DefinitionTheme {
   // Les motifs précis peuvent aussi être de petites expressions : `(?![a-z0-9])` vise le mot entier,
   // `(?<!…)` exclut un contexte. Elles restent sans quantificateur imbriqué (calcul linéaire).
   motifs: string[];
+  // Motifs en plus quand le texte est un nom de catégorie Wikipédia (court et classificatoire : « Barrage en France »).
+  motifsCategories?: string[];
   // Une carte #Rock reçoit aussi #Musique.
   parents?: string[];
 }
@@ -114,7 +116,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'chateau', libelle: '#Château', motifs: ['chateau', 'forteresse', 'citadelle'], parents: ['architecture', 'arts'] },
   { id: 'cathedrale', libelle: '#Cathédrale', motifs: ['cathedrale', 'basilique', 'abbaye'], parents: ['architecture', 'arts'] },
   { id: 'phare', libelle: '#Phare', motifs: ['phare de ', 'phare du ', "phare d'", 'phares(?![a-z0-9])', 'gardien de phare'], parents: ['architecture', 'arts'] },
-  { id: 'barrage', libelle: '#Barrage', motifs: ['barrage hydroelectrique', 'barrages hydroelectriques', 'barrage-voute', 'barrage-poids', 'grands? barrages?', "retenue d'eau", '(?<!match(?:s)? de )barrages(?![a-z0-9])(?! de (?:ligue|promotion|relegation))'], parents: ['architecture', 'arts'] },
+  { id: 'barrage', libelle: '#Barrage', motifsCategories: ['(?<!match(?:s)? de )(?<!play-offs? de )barrage(?![a-z0-9])'], motifs: ['barrage hydroelectrique', 'barrages hydroelectriques', 'barrage-voute', 'barrage-poids', 'grands? barrages?', "retenue d'eau", '(?<!match(?:s)? de )barrages(?![a-z0-9])(?! de (?:ligue|promotion|relegation))'], parents: ['architecture', 'arts'] },
   { id: 'gratteciel', libelle: '#Gratte-ciel', motifs: ['gratte-ciel'], parents: ['architecture', 'arts'] },
 
   // Géographie
@@ -182,14 +184,35 @@ const REGLES = DEFINITIONS_THEMES.map(({ id, motifs, parents = [] }) => ({
   motif: new RegExp(`(^|[^a-z0-9])(${motifs.join('|')})`),
 }));
 
-export function themesDeCarte(carte: Pick<Carte, 'titre' | 'description'>): string[] {
-  const texte = `${normaliser(carte.titre)} ${normaliser(carte.description)} `.replaceAll('’', "'");
+const REGLES_CATEGORIES = DEFINITIONS_THEMES.map(({ id, motifs, motifsCategories = [], parents = [] }) => ({
+  id,
+  parents,
+  motif: new RegExp(`(^|[^a-z0-9])(${[...motifs, ...motifsCategories].join('|')})`),
+}));
+
+/** Thèmes (parents compris) trouvés dans un texte libre ; liste vide s'il n'y en a aucun. */
+export function themesDeTexte(texte: string, categories = false): string[] {
+  const normalise = `${normaliser(texte)} `.replaceAll('’', "'");
   const themes = new Set<string>();
-  for (const { id, parents, motif } of REGLES) {
-    if (!motif.test(texte)) continue;
+  for (const { id, parents, motif } of categories ? REGLES_CATEGORIES : REGLES) {
+    if (!motif.test(normalise)) continue;
     themes.add(id);
     for (const parent of parents) themes.add(parent);
   }
+  return [...themes];
+}
+
+// Thèmes vérifiés sur Wikipédia (titre de carte → identifiants de thèmes), chargés depuis le cache local.
+// Surcouche en mémoire : elle s'ajoute aux mots-clés, ne remplace rien et n'est jamais écrite ici.
+let themesWikipedia: ReadonlyMap<string, readonly string[]> = new Map();
+
+export function definirThemesWikipedia(themes: ReadonlyMap<string, readonly string[]>): void {
+  themesWikipedia = themes;
+}
+
+export function themesDeCarte(carte: Pick<Carte, 'titre' | 'description'>): string[] {
+  const themes = new Set(themesDeTexte(`${carte.titre} ${carte.description}`));
+  for (const id of themesWikipedia.get(carte.titre) ?? []) themes.add(id);
   return themes.size > 0 ? [...themes] : [THEME_AUTRES];
 }
 

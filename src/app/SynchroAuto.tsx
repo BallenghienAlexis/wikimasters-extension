@@ -11,6 +11,7 @@ import {
   enregistrerSyncAuto,
   type StatutSynchro,
 } from '../lib/stockage';
+import type { CacheWikipedia } from '../lib/wikipedia';
 import type { Preferences } from '../lib/tri';
 
 /** Espace insécable : typographie française avant « : » et autour de « h ». */
@@ -197,10 +198,11 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
 interface Props {
   collection: Collection;
   preferences: Preferences;
+  cacheWiki: CacheWikipedia;
 }
 
 /** Section « Synchronisation automatique » : lit l’état dans le stockage, écrit seulement la préférence et la demande d’arrêt. */
-const SynchroAuto: React.FC<Props> = ({ collection, preferences }) => {
+const SynchroAuto: React.FC<Props> = ({ collection, preferences, cacheWiki }) => {
   const [actif, setActif] = useState(false);
   const [statut, setStatut] = useState<StatutSynchro | null>(null);
   const [bail, setBail] = useState<number | null>(null);
@@ -232,7 +234,9 @@ const SynchroAuto: React.FC<Props> = ({ collection, preferences }) => {
     };
   }, [relire]);
 
-  const ecarts = useMemo(() => calculerEcarts(collection.cartes, { amis: preferences.amis }), [collection.cartes, preferences.amis]);
+  const ecarts = useMemo(() => calculerEcarts(collection.cartes, { amis: preferences.amis }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `cacheWiki` change les thèmes lus par `themesDeCarte`.
+    [collection.cartes, preferences.amis, cacheWiki]);
 
   const basculer = (suivant: boolean): void => {
     setErreur(null);

@@ -11,6 +11,7 @@ import {
   chargerCollection,
   chargerDerniereSynchro,
   chargerEtatSynchro,
+  chargerCacheWikipedia,
   chargerPreferences,
   chargerSyncAuto,
   ecouterArretSynchro,
@@ -29,6 +30,8 @@ import {
 import { gigueAleatoire } from '../lib/gigue';
 import { analyserStats } from '../lib/lectureApi';
 import { completerEntree, ouvrirEntree } from '../lib/journal';
+import { definirThemesWikipedia } from '../lib/themes';
+import { themesParTitre } from '../lib/wikipedia';
 import { extraireHorodatages, routeMarcheValide } from '../lib/affluence';
 import { CONFIG_AFFLUENCE } from '../config/affluence';
 import { proposerTri, type Preferences } from '../lib/tri';
@@ -348,7 +351,11 @@ const synchroDuNavigateur = (): SynchroAuto =>
     chargerEtat: chargerEtatSynchro,
     enregistrerEtat: enregistrerEtatSynchro,
     bail: { lire: chargerBailSynchro, ecrire: enregistrerBailSynchro },
-    chargerPreferences,
+    // Les thèmes Wikipédia en cache font partie de la proposition de tri : on les charge avec les préférences.
+    chargerPreferences: async () => {
+      definirThemesWikipedia(themesParTitre(await chargerCacheWikipedia()));
+      return chargerPreferences();
+    },
     noterStatut: enregistrerStatutSynchro,
     journaliser: (evenement) => ecrireEvenementJournal(evenement),
     routeMarche: CONFIG_AFFLUENCE.routeMarche,
