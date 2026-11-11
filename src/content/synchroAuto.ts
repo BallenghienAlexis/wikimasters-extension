@@ -5,7 +5,7 @@
 // Le plan de lecture, la cadence et les arrêts sont dans `src/lib/ordonnanceur.ts`.
 import { VERSION_SCHEMA, type Carte, type Collection } from '../lib/collection';
 import type { Horloge } from '../lib/file';
-import { etatInitial, synchroniser, type Bail, type EtatOrdonnanceur, type ReponseApi, type ResultatSynchro } from '../lib/ordonnanceur';
+import { DUREE_BAIL_MS, PAUSE_APRES_ARRET_MS, etatInitial, synchroniser, type Bail, type EtatOrdonnanceur, type ReponseApi, type ResultatSynchro } from '../lib/ordonnanceur';
 import {
   chargerBailSynchro,
   chargerCollection,
@@ -21,14 +21,20 @@ import {
   enregistrerJournal,
   chargerJournal,
   enregistrerStatutSynchro,
+  noterAffluenceSite,
+  chargerReleveMarche,
+  enregistrerReleveMarche,
   type StatutSynchro,
 } from '../lib/stockage';
 import { analyserStats } from '../lib/lectureApi';
 import { completerEntree, ouvrirEntree } from '../lib/journal';
+import { extraireHorodatages, routeMarcheValide } from '../lib/affluence';
+import { CONFIG_AFFLUENCE } from '../config/affluence';
 import { proposerTri, type Preferences } from '../lib/tri';
 
 /** Délai minimal entre deux synchronisations, et période du minuteur tant que l'onglet est visible. */
 export const DELAI_SYNCHRO_MS = 30 * 60_000;
+const MAX_ECHECS_RELEVE = 3;
 
 export interface DependancesSynchroAuto {
   horloge: Horloge;
@@ -48,6 +54,12 @@ export interface DependancesSynchroAuto {
   /** Événements fixes (début, fin, arrêt et cause) pour le journal existant ; une erreur d'écriture est sans effet. */
   journaliser?: (evenement: EvenementSynchro) => Promise<void>;
   journal?: (message: string) => void;
+  /** Relevé d’affluence : route du listing du marché (`null` : désactivé) et enregistrement des horodatages lus. */
+  routeMarche?: string | null;
+  champsHorodatage?: readonly string[];
+  noterAffluence?: (horodatages: number[]) => Promise<void>;
+  /** Dernier relevé et échecs consécutifs, partagés entre onglets. */
+  releve?: { lire: () => Promise<{ le: number | null; echecs: number }>; ecrire: (r: { le: number | null; echecs: number }) => Promise<void> };
 }
 
 export interface SynchroAuto {
@@ -133,6 +145,61 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
   let arretDemande = false;
   let dernierEssai: number | null = null;
 
+  /**
+   * Une requête `GET` vers le listing du marché, seulement après une synchro terminée, hors pause, bail pris,
+   * 6 s après la précédente et au plus toutes les 30 min (horodatage commun aux onglets). Seuls les horodatages
+   * des annonces sont conservés. 401, 403, 429 ou 3 échecs consécutifs : pause de 30 min.
+   */
+  async function releverMarche(): Promise<void> {
+    const journaliser = (e: EvenementSynchro): Promise<void> => (deps.journaliser?.(e) ?? Promise.resolve()).catch(() => undefined);
+    const route = deps.routeMarche ?? null;
+    if (!routeMarcheValide(route) || !deps.noterAffluence || !deps.releve || arretDemande) return;
+    let bailPris = false;
+    try {
+      const maintenant = deps.horloge.now();
+      const precedent = await deps.releve.lire();
+      if (precedent.le !== null && maintenant - precedent.le < DELAI_SYNCHRO_MS) return;
+      const etatAvant = (await deps.chargerEtat()) ?? etatInitial();
+      if (etatAvant.arretJusqua !== null && maintenant < etatAvant.arretJusqua) return;
+      const tenu = await deps.bail.lire();
+      if (tenu !== null && tenu > maintenant) return;
+      await deps.bail.ecrire(maintenant + DUREE_BAIL_MS);
+      bailPris = true;
+      // Cadence commune : 6 s après la dernière requête de l’état, 10 au plus par minute.
+      const recentes = etatAvant.requetes.filter((t) => maintenant - t < 60_000);
+      if (recentes.length >= 10) return;
+      const derniere = etatAvant.requetes.reduce((m, t) => Math.max(m, t), 0);
+      await deps.horloge.attendreJusqua(Math.max(deps.horloge.now(), derniere + 6_000));
+      if (arretDemande) return;
+      const debut = deps.horloge.now();
+      const reponse = await deps.transport(route);
+      const refus = [401, 403, 429].includes(reponse.statut);
+      const echec = !refus && reponse.statut !== 200;
+      const echecs = echec ? precedent.echecs + 1 : 0;
+      const pause = refus || echecs >= MAX_ECHECS_RELEVE;
+      const etat = (await deps.chargerEtat()) ?? etatInitial();
+      await deps.enregistrerEtat({
+        ...etat,
+        requetes: [...etat.requetes, debut].slice(-100),
+        arretJusqua: pause ? deps.horloge.now() + PAUSE_APRES_ARRET_MS : etat.arretJusqua,
+      });
+      await deps.releve.ecrire({ le: debut, echecs: pause ? 0 : echecs });
+      if (pause) {
+        await journaliser({
+          titre: 'Relevé d’affluence : arrêt',
+          parametre: refus ? 'le site a refusé' : '3 échecs consécutifs',
+          resultat: 'interrompue',
+          codeHttp: refus ? reponse.statut : null,
+        });
+      }
+      if (reponse.statut === 200) await deps.noterAffluence(extraireHorodatages(reponse.json, deps.champsHorodatage));
+    } catch {
+      deps.journal?.('Relevé d’affluence interrompu.');
+    } finally {
+      if (bailPris) await deps.bail.ecrire(null).catch(() => undefined);
+    }
+  }
+
   async function declencher(): Promise<ResultatSynchro | null> {
     if (enCours) return null;
     enCours = true;
@@ -211,6 +278,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         else await noter({ etat: 'arret', raison: 'echecs', ...comptes });
         await journaliser(evenementFinal(resultat, pages));
       }
+      if (resultat.issue === 'termine') await releverMarche();
       return resultat;
     } catch {
       // Stockage illisible ou indisponible (extension rechargée) : message générique, jamais le contenu
@@ -278,6 +346,12 @@ const synchroDuNavigateur = (): SynchroAuto =>
     chargerPreferences,
     noterStatut: enregistrerStatutSynchro,
     journaliser: (evenement) => ecrireEvenementJournal(evenement),
+    routeMarche: CONFIG_AFFLUENCE.routeMarche,
+    champsHorodatage: CONFIG_AFFLUENCE.champsHorodatage,
+    releve: { lire: chargerReleveMarche, ecrire: enregistrerReleveMarche },
+    noterAffluence: async (h) => {
+      await noterAffluenceSite(h);
+    },
   });
 
 const visibiliteDuNavigateur = (): SourceVisibilite => ({

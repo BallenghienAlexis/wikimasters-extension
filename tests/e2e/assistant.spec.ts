@@ -62,9 +62,14 @@ test('la file de vente suit les places libres', async ({ pageCollection: page })
   const file = page.getByTestId('file-vente');
   await expect(file).toContainText('0 en cours sur 5, 5 places libres');
   await expect(file).toContainText('Athlète fictif · valeur 100');
+  await expect(file).toContainText(/heure forte|temps libre|attendre une heure forte/);
+  await expect(file).toContainText('Heures fortes par défaut (0 observation)');
 
   await file.getByRole('button', { name: 'Je l’ai mise aux enchères' }).click();
   await expect(file).toContainText('1 en cours sur 5, 4 places libres');
+  await expect
+    .poll(() => page.evaluate(async () => ((await chrome.storage.local.get('ventes')).ventes as { evenements: { type: string }[] }).evenements.map((e) => e.type)))
+    .toEqual(['debut']);
 
   await file.getByRole('button', { name: 'Enchère terminée' }).click();
   await expect(page.getByLabel('Statut de Athlète fictif')).toHaveCount(0);
@@ -87,4 +92,28 @@ test('filtre la liste par thème déduit', async ({ pageCollection: page }) => {
   await page.getByLabel('Filtrer par thème').selectOption('sport');
   await expect(page.locator('main li')).toHaveCount(1);
   await expect(page.getByText('Athlète fictif')).toBeVisible();
+});
+
+test.describe('captures de la file de vente (affluence)', () => {
+  const BREAKPOINTS = [
+    { name: 'mobile', width: 375, height: 812 },
+    { name: 'tablet', width: 768, height: 1024 },
+    { name: 'desktop', width: 1280, height: 800 },
+  ];
+  for (const colorScheme of ['light', 'dark'] as const) {
+    for (const { name, width, height } of BREAKPOINTS) {
+      test(`${colorScheme} ${name}`, async ({ pageCollection: page }) => {
+        await page.emulateMedia({ colorScheme });
+        await page.setViewportSize({ width, height });
+        await page.getByRole('button', { name: OUVRIR }).click();
+        for (let i = 0; i < 2; i += 1) await page.getByRole('button', { name: 'Suivant' }).click();
+        await page.getByRole('button', { name: 'Appliquer ce tri' }).click();
+        const file = page.getByTestId('file-vente');
+        await expect(file).toContainText(/heure forte|temps libre|attendre une heure forte/);
+        const debordement = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+        expect(debordement).toBeLessThanOrEqual(0);
+        await file.screenshot({ path: `test-results/captures/affluence-${colorScheme}-${name}.png` });
+      });
+    }
+  }
 });

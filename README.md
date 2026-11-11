@@ -33,7 +33,7 @@ Pour l’activer :
 
 ## Régler les prix
 
-Tout se trouve dans [src/config/prix.ts](src/config/prix.ts) : seuil de défausse, limite d'enchères, valeur de repli par rareté, matrice valeur marchande → prix de départ. Après une modification, lancez `npm run build` puis rechargez l'extension.
+Tout se trouve dans [src/config/prix.ts](src/config/prix.ts) : seuil de défausse, limite d'enchères, matrice valeur marchande → prix de départ. Après une modification, lancez `npm run build` puis rechargez l'extension.
 
 ## Démarrer
 

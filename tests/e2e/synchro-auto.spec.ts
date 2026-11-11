@@ -15,8 +15,8 @@ const PAGE_VIDE = lire('api/page-vide.json');
 const PRIX = lire('api/prix.json');
 
 const ID_CARTE = 'UR|Loutre fictive';
-const CHEMIN_STATS = '/api/my-collection/stats?sort=rarity';
-const CHEMIN_PAGE = (n: number): string => `/api/my-collection?sort=rarity&page=${n}&stats=0`;
+const CHEMIN_STATS = '/api/my-collection/stats?sort=added';
+const CHEMIN_PAGE = (n: number): string => `/api/my-collection?sort=added&page=${n}&stats=0`;
 const CHEMIN_PRIX = '/api/marketplace/cards/carte-fictive-1/sales?scope=summary';
 const CHEMINS_AUTORISES = [CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_PAGE(1), CHEMIN_PRIX];
 // Attente plus longue qu'une cadence (6 s) pour prouver qu'aucune autre requête ne part.

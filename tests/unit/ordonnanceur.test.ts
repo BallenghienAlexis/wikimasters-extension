@@ -32,6 +32,7 @@ function horlogeSimulee(): Horloge & { t: number } {
 const exemplaire = (n: number, extra: { tags?: string[]; count?: number; starred?: boolean } = {}) => ({
   id: `ex-${n}`,
   card_id: `card-${n}`,
+  obtained_at: new Date(Date.UTC(2026, 0, 1) - n * 60_000).toISOString(),
   count: extra.count ?? 1,
   starred: extra.starred ?? false,
   tags: (extra.tags ?? []).map((nom, i) => ({ id: `t${i}`, name: nom })),
@@ -154,7 +155,7 @@ describe('ordonnanceur — critère 1 : total inchangé, une seule requête', ()
     second.horloge.t = T0 + 1000 * 60 * 60;
     const r2 = await synchroniser({ ...second.deps, maxPrix: 0 });
     expect(r2.issue).toBe('termine');
-    expect(second.departs.map((d) => d.chemin)).toEqual(['/api/my-collection/stats?sort=rarity']);
+    expect(second.departs.map((d) => d.chemin)).toEqual(['/api/my-collection/stats?sort=added']);
   });
 
   it('relit les pages si une étiquette change de effectif malgré un total identique', async () => {
@@ -191,25 +192,69 @@ describe('ordonnanceur — critère 2 : pages dans l’ordre jusqu’à collecti
     expect(r.etat.derniereComplete).not.toBeNull();
   });
 
-  it('sans tri stable : relecture complète même si la première page est identique au local', async () => {
-    const site = siteFictif(120);
-    const premier = banc(site);
-    const r1 = await synchroniser({ ...premier.deps, maxPrix: 0 });
-    const etat = { ...r1.etat, total: 119 }; // simule un total différent
-    const b = banc(site, r1.collection, etat);
+  /** Site dont les exemplaires sont déjà dans l’ordre « plus récent d’abord ». */
+  const siteTrie = (exemplaires: Array<ReturnType<typeof exemplaire>>, total: number, unique: number) => (chemin: string): ReponseApi => {
+    if (chemin.startsWith('/api/my-collection/stats')) return { statut: 200, json: statsJson(total, unique) };
+    const p = Number(/page=(\d+)/.exec(chemin)![1]);
+    const datees = exemplaires.map((e, i) => ({ ...e, obtained_at: new Date(Date.UTC(2026, 5, 1) - i * 60_000).toISOString() }));
+    return { statut: 200, json: { collection: datees.slice(p * 50, (p + 1) * 50) } };
+  };
+  const cheminsPages = (b: { departs: Array<{ chemin: string }> }) => b.departs.filter((d) => d.chemin.includes('page=')).map((d) => d.chemin);
+
+  it('arrêt anticipé : 20 nouvelles cartes en tête, mêmes étiquettes → s’arrête à la première page identique', async () => {
+    const connus = Array.from({ length: 200 }, (_, i) => exemplaire(i + 1));
+    const r1 = await synchroniser({ ...banc(siteTrie(connus, 200, 200)).deps, maxPrix: 0 });
+    const recents = Array.from({ length: 20 }, (_, i) => exemplaire(1000 + i));
+    const b = banc(siteTrie([...recents, ...connus], 220, 220), r1.collection, r1.etat);
     await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(b.departs.filter((d) => d.chemin.includes('page=')).length).toBe(4); // 3 pages + page vide
+    expect(cheminsPages(b)).toEqual(['/api/my-collection?sort=added&page=0&stats=0', '/api/my-collection?sort=added&page=1&stats=0']);
   });
 
-  it('avec tri stable : s’arrête dès la première page identique au local', async () => {
-    const site = siteFictif(200);
-    const premier = banc(site);
-    const r1 = await synchroniser({ ...premier.deps, maxPrix: 0 });
-    // une carte ajoutée en fin : seule la dernière page change ; tri stable déclaré → arrêt dès la page identique
-    const etat = { ...r1.etat, total: 199 };
-    const b = banc(site, r1.collection, etat, { triStable: true });
+  it('total en baisse, étiquettes inchangées : lecture complète', async () => {
+    const connus = Array.from({ length: 200 }, (_, i) => exemplaire(i + 1));
+    const r1 = await synchroniser({ ...banc(siteTrie(connus, 200, 200)).deps, maxPrix: 0 });
+    const b = banc(siteTrie(connus.slice(5), 195, 195), r1.collection, r1.etat);
     await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(b.departs.filter((d) => d.chemin.includes('page=')).length).toBe(1);
+    expect(cheminsPages(b).length).toBe(5); // 4 pages + page vide
+  });
+
+  it('doublon par count sur une carte ancienne : pas d’arrêt anticipé, quantité corrigée', async () => {
+    const connus = Array.from({ length: 200 }, (_, i) => exemplaire(i + 1));
+    const r1 = await synchroniser({ ...banc(siteTrie(connus, 200, 200)).deps, maxPrix: 0 });
+    const modifie = connus.map((e, i) => (i === 150 ? { ...e, count: 2 } : e));
+    const b = banc(siteTrie(modifie, 201, 200), r1.collection, r1.etat);
+    const r2 = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(cheminsPages(b).length).toBe(5);
+    expect(r2.collection.cartes.find((c) => c.id === idCarte(151))!.quantite).toBe(2);
+  });
+
+  it('étiquettes modifiées : pas d’arrêt anticipé, lecture complète', async () => {
+    const premier = banc(siteFictif(120));
+    const r1 = await synchroniser({ ...premier.deps, maxPrix: 0 });
+    const b = banc(siteFictif(120, { tags: [['Nouvelle', 3]] }), r1.collection, { ...r1.etat, total: 119 });
+    await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(b.departs.filter((d) => d.chemin.includes('page=')).length).toBe(4);
+  });
+
+  it('tri par date non confirmé : repli sur la lecture complète par rareté', async () => {
+    const base = siteFictif(120);
+    const sansDates = (chemin: string): ReponseApi => {
+      const r = base(chemin);
+      if (chemin.includes('page=')) {
+        const j = r.json as { collection: Array<Record<string, unknown>> };
+        j.collection = j.collection.map((e) => ({ ...e, obtained_at: undefined }));
+      }
+      return r;
+    };
+    const premier = banc(siteFictif(120));
+    const r1 = await synchroniser({ ...premier.deps, maxPrix: 0 });
+    const b = banc(sansDates, r1.collection, { ...r1.etat, total: 119 });
+    await synchroniser({ ...b.deps, maxPrix: 0 });
+    const pages = b.departs.filter((d) => d.chemin.includes('page=')).map((d) => d.chemin);
+    expect(pages[0]).toBe('/api/my-collection?sort=added&page=0&stats=0');
+    expect(pages[1]).toBe('/api/my-collection?sort=rarity&page=0&stats=0');
+    expect(pages.length).toBe(5); // page 0 par date, puis 3 pages + page vide par rareté
+    expect(b.journal.join('\n')).toMatch(/non confirmé/);
   });
 
   it('ignore une carte de forme inattendue, continue et le note au journal', async () => {
@@ -229,7 +274,7 @@ describe('ordonnanceur — pages : départ à 0 et plafond', () => {
   it('demande la page 0 en premier', async () => {
     const b = banc(siteFictif(2));
     await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(b.departs[1]?.chemin).toBe('/api/my-collection?sort=rarity&page=0&stats=0');
+    expect(b.departs[1]?.chemin).toBe('/api/my-collection?sort=added&page=0&stats=0');
   });
 
   it('plafonne les pages à ceil(total / 50) + 2 si le site ne renvoie jamais de page vide', async () => {
@@ -438,7 +483,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     await synchroniser(b.deps);
     for (const d of b.departs) {
       expect(d.chemin).toMatch(
-        /^\/api\/(my-collection\/stats\?sort=rarity|my-collection\?sort=rarity&page=\d+&stats=0|marketplace\/cards\/[A-Za-z0-9_-]+\/sales\?scope=summary)$/,
+        /^\/api\/(my-collection\/stats\?sort=added|my-collection\?sort=(?:added|rarity)&page=\d+&stats=0|marketplace\/cards\/[A-Za-z0-9_-]+\/sales\?scope=summary)$/,
       );
     }
   });
