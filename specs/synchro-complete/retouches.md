@@ -58,8 +58,9 @@ Décision d'Alexis : `apikey` publique **en dur** dans une constante unique de `
 
 ## À reprendre (revue de la PR de la pose des étiquettes, 2026-11-11)
 
-- T-018, T-020 et T-026 : **traités** le 2026-11-11 par `tests/e2e/synchro-ecriture.spec.ts` (site et hôte REST fictifs, 0 requête avant « Lancer », création puis pose avec les en-têtes attendus, arrêt sur 401, arrêt sans session, non-fuite du jeton et du jeton de rafraîchissement dans le stockage, la console et les pages). Reste hors périmètre : les retraits d'étiquettes ne sont pas couverts en e2e.
+- T-018, T-020 et T-026 : **traités** le 2026-11-11 par `tests/e2e/synchro-ecriture.spec.ts` (site et hôte REST fictifs, 0 requête avant « Lancer », création puis pose avec les en-têtes attendus, arrêt sur 401, arrêt sans session, non-fuite du jeton et du jeton de rafraîchissement dans le stockage, la console et les pages).
 - `src/lib/reseau.ts` et `src/lib/lot.ts:388` : une création en délai dépassé ou « inconnu » a peut-être réussi sur le site ; une étiquette du site de même nom absente du registre sera recréée (doublon ou erreur). Le code d'erreur d'un nom en double n'est pas relevé. Piste : relire les étiquettes du site (`stats`) avant un lot et rattacher l'identifiant par nom.
 - `src/config/synchro.ts` : `LONGUEUR_MAX_ETIQUETTE` absent (limites non relevées, `lot.ts` garde sa limite).
 - Cookie de session lisible par `document.cookie` (non HttpOnly) : à confirmer au premier essai réel.
 - `src/lib/reseau.ts:86-87` : 401, 403, 429 portent le libellé « action non disponible » ; prévoir un libellé propre (« refus du site ») dans `CAUSES_RESULTAT`.
+- `tests/e2e/synchro-ecriture.spec.ts` : le retrait d'étiquette (`DELETE user_card_tags`) n'est pas couvert en e2e ; ajouter un cas avec une carte dont le statut a changé et un registre amorcé. Les requêtes du site fictif hors navigation ne sont pas comptées (seul l'hôte REST l'est).

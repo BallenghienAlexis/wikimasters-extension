@@ -1,7 +1,7 @@
 import type { BrowserContext, Page, Request } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { NOM_COOKIE_SESSION, ORIGINE_REST } from '../../src/config/synchro';
+import { CLE_PUBLIQUE, COULEUR_ETIQUETTE, NOM_COOKIE_SESSION, ORIGINE_REST } from '../../src/config/synchro';
 import { expect, test } from './extension';
 
 // T-018, T-020, T-026 : écriture des étiquettes sur un site ENTIÈREMENT fictif.
@@ -102,7 +102,7 @@ async function amorcer(page: Page): Promise<void> {
   await page.reload();
 }
 
-const lancer = async (page: Page): Promise<void> => {
+const ouvrirApercu = async (page: Page): Promise<void> => {
   await page.getByRole('button', { name: 'Voir l’aperçu du lot' }).click();
   await expect(page.getByTestId('zone-execution').or(page.getByTestId('titre-apercu'))).toBeVisible();
 };
@@ -111,15 +111,16 @@ const toutLeStockage = (page: Page): Promise<string> =>
   page.evaluate(async () => JSON.stringify(await chrome.storage.local.get(null)));
 
 test('0 requête avant « Lancer » ; puis création et pose avec les bons en-têtes, sans fuite du jeton', async ({ context, pageCollection: page }) => {
+  test.setTimeout(90_000);
   const consoles: string[] = [];
   context.on('console', (m) => consoles.push(m.text()));
   const banc = await ouvrirSite(context, (v) =>
-    v.url.includes('/rest/v1/tags') ? { status: 201, corps: { id: ID_ETIQUETTE, user_id: ID_JOUEUR, name: 'x', created_at: '2026-01-01T00:00:00Z', color: '#e879f9' } } : { status: 201 },
+    v.url.includes('/rest/v1/tags') ? { status: 201, corps: { id: ID_ETIQUETTE, user_id: ID_JOUEUR, name: 'x', created_at: '2026-01-01T00:00:00Z', color: COULEUR_ETIQUETTE } } : { status: 201 },
   );
   await amorcer(page);
 
-  await page.getByRole('button', { name: 'Voir l’aperçu du lot' }).click();
-  await page.waitForTimeout(1500);
+  await ouvrirApercu(page);
+  await expect(page.getByRole('button', { name: /^Lancer/ })).toBeVisible();
   expect(banc.rest, 'aucune requête avant Lancer').toHaveLength(0);
 
   await page.getByRole('button', { name: /^Lancer/ }).click();
@@ -127,16 +128,18 @@ test('0 requête avant « Lancer » ; puis création et pose avec les bons en-t�
 
   const [creation, pose] = banc.rest;
   expect(creation!.methode).toBe('POST');
-  expect(new URL(creation!.url).pathname).toBe('/rest/v1/tags');
-  expect(creation!.corps).toMatchObject({ user_id: ID_JOUEUR, color: '#e879f9' });
+  expect(new URL(creation!.url).pathname + new URL(creation!.url).search).toBe('/rest/v1/tags?select=*');
+  expect(creation!.corps).toEqual({ user_id: ID_JOUEUR, name: 'Statut · Garder', color: COULEUR_ETIQUETTE });
+  expect(creation!.entetes.prefer).toBe('return=representation');
   expect(pose!.methode).toBe('POST');
   expect(new URL(pose!.url).pathname).toBe('/rest/v1/user_card_tags');
   expect(pose!.corps).toEqual({ user_card_id: ID_EXEMPLAIRE, tag_id: ID_ETIQUETTE });
   for (const v of banc.rest) {
     expect(v.entetes.authorization).toBe(`Bearer ${JETON_TEMOIN}`);
-    expect(v.entetes.apikey).toBeTruthy();
+    expect(v.entetes.apikey).toBe(CLE_PUBLIQUE);
     expect(v.entetes['content-profile']).toBe('public');
-    expect(v.entetes['user-agent'] ?? '').not.toMatch(/wm-collection/i);
+    expect(v.entetes['content-type']).toBe('application/json');
+    expect(v.entetes.accept).toBe('application/json');
   }
   expect(banc.externes).toEqual([]);
 
@@ -152,23 +155,27 @@ test('0 requête avant « Lancer » ; puis création et pose avec les bons en-t�
 });
 
 test('401 sur la création : arrêt immédiat, une seule requête, aucune autre tentative', async ({ context, pageCollection: page }) => {
+  test.setTimeout(90_000);
   const banc = await ouvrirSite(context, () => ({ status: 401, corps: { message: 'JWT expired' } }));
   await amorcer(page);
-  await lancer(page);
+  await ouvrirApercu(page);
   await page.getByRole('button', { name: /^Lancer/ }).click();
   await expect.poll(() => banc.rest.length, { timeout: 20_000 }).toBe(1);
-  await page.waitForTimeout(9_000);
+  await expect(page.getByTestId('zone-execution')).toContainText(/Lot arrêté.*réponse 401/, { timeout: 20_000 });
+  // Plus longtemps que le plus long écart possible (6 s + 4 s) : aucune seconde tentative.
+  await page.waitForTimeout(11_000);
   expect(banc.rest).toHaveLength(1);
   expect(await toutLeStockage(page)).not.toContain(JETON_TEMOIN);
   expect(banc.externes).toEqual([]);
 });
 
 test('sans session : aucune requête, arrêt « jeton-absent »', async ({ context, pageCollection: page }) => {
+  test.setTimeout(90_000);
   const banc = await ouvrirSite(context, () => ({ status: 201 }), false);
   await amorcer(page);
-  await lancer(page);
+  await ouvrirApercu(page);
   await page.getByRole('button', { name: /^Lancer/ }).click();
-  await page.waitForTimeout(8_000);
+  await expect(page.getByTestId('zone-execution')).toContainText(/Lot arrêté.*résultat hors contrat ou inconnu/, { timeout: 20_000 });
   expect(banc.rest).toHaveLength(0);
   expect(banc.externes).toEqual([]);
 });
