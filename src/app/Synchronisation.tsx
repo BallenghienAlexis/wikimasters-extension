@@ -323,7 +323,7 @@ const CAUSES_ARRET: Record<RaisonArret, string> = {
 export function libelleCause(raison: RaisonArret | null, codeHttp: number | null, deconnecte = false): string {
   if (deconnecte) return 'l’onglet WikiMasters s’est déconnecté';
   if (raison === null) return CAUSES_ARRET.manuel;
-  if (raison === 'code-http' && codeHttp === CODE_CONFLIT) return 'réponse 409 : le site signale un conflit (limite d’enchères, carte déjà en vente ou refus)';
+  if (raison === 'code-http' && codeHttp === CODE_CONFLIT) return 'réponse 409 : le site signale un conflit (limite d’enchères, carte déjà en vente ou action refusée)';
   if (raison === 'code-http' && codeHttp !== null && CODES_ARRET.includes(codeHttp)) return `réponse ${codeHttp}`;
   return CAUSES_ARRET[raison];
 }
@@ -437,8 +437,7 @@ function contexteExecution(): ContexteExecution {
     },
     reverifier: async (action) => {
       const [collection, registre, preferences] = await Promise.all([chargerCollection(), chargerRegistre(), chargerPreferences()]);
-      const etatSynchro = await chargerEtatSynchro().catch(() => null);
-      return reverifierAction(action, collection, registre, configDuLot(preferences, etatSynchro?.ventesSite ?? null));
+      return reverifierAction(action, collection, registre, configDuLot(preferences));
     },
     appliquer: async (action, resultat) => {
       const [collection, registre] = await Promise.all([chargerCollection(), chargerRegistre()]);
