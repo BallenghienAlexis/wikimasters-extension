@@ -297,7 +297,7 @@ describe('fusionnerAmisInitiaux (SC-024)', () => {
 });
 
 describe('themesAimesDesFavoris', () => {
-  it('compte les thèmes des seuls favoris, sans « autres », du plus fréquent au plus rare', () => {
+  it('compte les thèmes les plus précis des seuls favoris, du plus fréquent au plus rare', () => {
     const cartes = [
       carte({ id: 'a', titre: 'Tibet', description: '', favori: true }),
       carte({ id: 'b', titre: 'Barrage des Trois-Gorges', description: '', favori: true }),
@@ -305,10 +305,14 @@ describe('themesAimesDesFavoris', () => {
       carte({ id: 'd', titre: 'Ukraine', description: '', favori: false }),
       carte({ id: 'e', titre: 'Xyzzy', description: '', favori: true }),
     ];
-    const r = themesAimesDesFavoris(cartes);
-    expect(r).toContainEqual({ theme: 'tibet', nombre: 2 });
-    expect(r.map((x) => x.theme)).not.toContain('ukraine');
-    expect(r.map((x) => x.theme)).not.toContain('autres');
+    const themes = themesAimesDesFavoris(cartes);
+    expect(themes[0]).toEqual({ theme: 'tibet', nombre: 2 });
+    expect(themes.map((x) => x.theme)).not.toContain('ukraine');
+    expect(themes.map((x) => x.theme)).not.toContain('autres');
+  });
+  it('ne suggère pas le thème parent d’un thème trouvé sur la même carte', () => {
+    const themes = themesAimesDesFavoris([carte({ titre: 'Tibet', description: '', favori: true })]);
+    expect(themes).toEqual([{ theme: 'tibet', nombre: 1 }]);
   });
   it('renvoie une liste vide sans favori', () => {
     expect(themesAimesDesFavoris([carte()])).toEqual([]);

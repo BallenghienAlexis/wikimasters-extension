@@ -3,7 +3,7 @@
 import { CONFIG_PRIX, type ConfigPrix } from '../config/prix';
 import type { Carte, Collection, Statut } from './collection';
 import { normaliser } from './collection';
-import { THEME_AUTRES, themesDeCarte } from './themes';
+import { DEFINITIONS_THEMES, THEME_AUTRES, themesDeCarte } from './themes';
 
 export interface Ami {
   nom: string;
@@ -46,8 +46,12 @@ export function themesAimesDesFavoris(cartes: readonly Carte[]): { theme: string
   const compte = new Map<string, number>();
   for (const carte of cartes) {
     if (!carte.favori) continue;
-    for (const theme of themesDeCarte(carte)) {
-      if (theme === THEME_AUTRES) continue;
+    // Seuls les thèmes les plus précis : un parent déjà couvert par un thème de la carte est écarté,
+    // sinon « Tibet » ferait cocher toute la géographie.
+    const themes = themesDeCarte(carte);
+    const parents = new Set(DEFINITIONS_THEMES.filter((d) => themes.includes(d.id)).flatMap((d) => d.parents ?? []));
+    for (const theme of themes) {
+      if (theme === THEME_AUTRES || parents.has(theme)) continue;
       compte.set(theme, (compte.get(theme) ?? 0) + 1);
     }
   }

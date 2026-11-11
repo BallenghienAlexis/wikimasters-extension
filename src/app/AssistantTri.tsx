@@ -62,19 +62,19 @@ const AssistantTri: React.FC<Props> = ({ collection, preferencesInitiales, onApp
           {aimesDesFavoris.length > 0 && (
             <div className="mt-4 rounded border border-line p-3">
               <p>
-                Vos cartes favorites évoquent : {aimesDesFavoris.slice(0, 8).map((a) => `${LIBELLES_THEMES[a.theme]} (${a.nombre})`).join(', ')}.
+                Vos cartes favorites évoquent : {aimesDesFavoris.map((a) => `${LIBELLES_THEMES[a.theme]} (${a.nombre})`).join(', ')}.
               </p>
               <button
                 type="button"
                 className={`${CLASSE_BOUTON} mt-2`}
                 onClick={() =>
-                  setPreferences({
-                    ...preferences,
-                    mesThemes: [...new Set([...preferences.mesThemes, ...aimesDesFavoris.map((a) => a.theme)])],
-                  })
+                  setPreferences((p) => ({
+                    ...p,
+                    mesThemes: [...new Set([...p.mesThemes, ...aimesDesFavoris.map((a) => a.theme)])],
+                  }))
                 }
               >
-                Cocher les thèmes de mes favoris
+                Cocher les thèmes de vos favoris
               </button>
             </div>
           )}
