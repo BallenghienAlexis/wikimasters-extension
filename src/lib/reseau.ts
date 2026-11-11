@@ -39,22 +39,27 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
     const entree: EntreeContrat | undefined = deps.table[ordre.type]
     if (entree === undefined) return NON_DISPONIBLE
 
-    const session = (deps.session ?? sessionCourante)()
+    // Validation sans toucher à la session : chemin, corps et origine d'abord.
     let chemin: string
-    let corps: unknown
     try {
       chemin = entree.construireChemin(ordre)
-      corps = entree.construireCorps(ordre, { idJoueur: session?.idJoueur ?? '', couleurEtiquette: COULEUR_ETIQUETTE })
+      const essai = entree.construireCorps(ordre, { idJoueur: '', couleurEtiquette: COULEUR_ETIQUETTE })
+      if (essai === null && entree.methode !== 'DELETE' && entree.methode !== 'GET') return NON_DISPONIBLE
     } catch {
       return NON_DISPONIBLE
     }
-    if (entree.methode !== 'DELETE' && entree.methode !== 'GET' && corps === null) return NON_DISPONIBLE
-
     const url = `${ORIGINE_REST}${chemin}`
-    const jeton = entree.auth
-      ? enteteAuthentification(url, deps.origineOnglet, 'Authorization', () => (session ? `Bearer ${session.jeton}` : null))
+    if (entree.auth && enteteAuthentification(url, deps.origineOnglet, 'Authorization', () => 'x') === null) {
+      return { classe: 'arret', codeHttp: null, cause: 'jeton-absent' }
+    }
+
+    // Seule lecture du jeton : juste avant l'envoi, et seulement si l'entrée l'exige.
+    const session = entree.auth ? (deps.session ?? sessionCourante)() : null
+    if (entree.auth && session === null) return { classe: 'arret', codeHttp: null, cause: 'jeton-absent' }
+    const corps = entree.construireCorps(ordre, { idJoueur: session?.idJoueur ?? '', couleurEtiquette: COULEUR_ETIQUETTE })
+    const jeton = entree.auth && session
+      ? enteteAuthentification(url, deps.origineOnglet, 'Authorization', () => `Bearer ${session.jeton}`)
       : null
-    if (entree.auth && jeton === null) return { classe: 'arret', codeHttp: null, cause: 'jeton-absent' }
 
     const entetes: Record<string, string> = {
       Accept: 'application/json',

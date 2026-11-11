@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Action } from '../../src/lib/actions'
 import { TABLE_CONTRAT } from '../../src/lib/contrat'
 import { creerEmetteur } from '../../src/lib/reseau'
+import { avecIdEtiquette, registreVide, enregistrerEtiquette } from '../../src/lib/registre'
 
 const ORIGINE = 'https://www.wiki-masters.com'
 const EX = '11111111-1111-4111-8111-111111111111'
@@ -77,5 +78,42 @@ describe('reseau : émetteur des étiquettes', () => {
     expect((await emetteur((async () => { throw new TypeError('x') }) as unknown as typeof fetch)(pose)).cause).toBe('erreur réseau')
     const abandon = (async () => { throw new DOMException('x', 'AbortError') }) as unknown as typeof fetch
     expect((await emetteur(abandon)(pose)).cause).toBe('délai dépassé')
+  })
+
+  it('ne lit la session qu’après les contrôles : jamais pour un type absent, une origine étrangère ou un identifiant invalide', async () => {
+    const session = vi.fn(() => SESSION)
+    const f = vi.fn()
+    const e = (origine: string) => creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: origine, session, fetchImpl: f as unknown as typeof fetch })
+    await e(ORIGINE)({ type: 'defausse', idCarte: 'R|T', idExemplaire: EX })
+    await e('https://exemple.test')(pose)
+    await e(ORIGINE)({ ...pose, idEtiquette: 'a&b' } as Action)
+    expect(session).not.toHaveBeenCalled()
+    expect(f).not.toHaveBeenCalled()
+  })
+
+  it('non-fuite : le jeton témoin n’apparaît ni dans le résultat, ni dans la console, même si le serveur le renvoie', async () => {
+    const espions = (['log', 'info', 'warn', 'error', 'debug'] as const).map((m) => vi.spyOn(console, m).mockImplementation(() => {}))
+    const r = await emetteur((async () => reponse(500, `erreur ${SESSION.jeton}`)) as unknown as typeof fetch)(pose)
+    const r2 = await emetteur((async () => reponse(201, JSON.stringify({ id: ET, note: SESSION.jeton }))) as unknown as typeof fetch)(creation)
+    expect(JSON.stringify([r, r2])).not.toContain(SESSION.jeton)
+    for (const s of espions) expect(s).not.toHaveBeenCalled()
+    espions.forEach((s) => s.mockRestore())
+  })
+})
+
+describe('avecIdEtiquette : enrichissement au moment d’envoyer', () => {
+  const registre = enregistrerEtiquette(registreVide(), 'Garder', ET)
+  it('ajoute l’identifiant du registre, y compris pour une étiquette créée plus tôt dans le lot', () => {
+    expect(avecIdEtiquette({ ...pose, idEtiquette: undefined } as typeof pose, registre)?.idEtiquette).toBe(ET)
+  })
+  it('renvoie null si le nom est absent ou hérité du prototype', () => {
+    expect(avecIdEtiquette({ ...pose, nomEtiquette: 'Autre' }, registre)).toBeNull()
+    for (const nom of ['__proto__', 'constructor', 'toString']) expect(avecIdEtiquette({ ...pose, nomEtiquette: nom }, registre)).toBeNull()
+  })
+  it('création puis pose : le résultat de la création alimente le registre, la pose le retrouve', async () => {
+    const { appliquerResultat } = await import('../../src/lib/revision')
+    const collection = { version: 2, cartes: [] } as never
+    const suivant = appliquerResultat(collection, registreVide(), creation, { classe: 'reussie', codeHttp: 201, cause: 'action réussie', idEtiquette: ET })
+    expect(avecIdEtiquette(pose, suivant.registre)?.idEtiquette).toBe(ET)
   })
 })

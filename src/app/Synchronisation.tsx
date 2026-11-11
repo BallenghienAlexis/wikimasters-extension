@@ -31,6 +31,7 @@ import {
 import { preferencesParDefaut, type Preferences } from '../lib/tri';
 import DialogueDefausse from './DialogueDefausse';
 import EtiquettesPrevues from './EtiquettesPrevues';
+import { avecIdEtiquette } from '../lib/registre';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
 import Journal, { type CoupleRetrait } from './Journal';
 
@@ -412,10 +413,9 @@ function contexteExecution(): ContexteExecution {
     transport: async (ordre) => {
       if (ordre.type !== 'pose-etiquette' && ordre.type !== 'retrait-etiquette') return execution.transport(ordre);
       // L’identifiant d’étiquette du site vient du registre, au moment d’envoyer (la création précède la pose).
-      const { etiquettes } = await chargerRegistre();
-      const idEtiquette = Object.prototype.hasOwnProperty.call(etiquettes, ordre.nomEtiquette) ? etiquettes[ordre.nomEtiquette] : undefined;
-      if (!idEtiquette) return { classe: 'echec', codeHttp: null, cause: 'action non disponible' };
-      return execution.transport({ ...ordre, idEtiquette });
+      const complete = avecIdEtiquette(ordre, await chargerRegistre());
+      if (complete === null) return { classe: 'echec', codeHttp: null, cause: 'action non disponible' };
+      return execution.transport(complete);
     },
     confirmer: (action) => {
       if (!pont.confirmer) throw new Error('Confirmation indisponible.');

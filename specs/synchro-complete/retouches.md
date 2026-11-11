@@ -55,3 +55,10 @@ Décision d'Alexis : `apikey` publique **en dur** dans une constante unique de `
 - `src/lib/reseau.ts` (à créer, seul importeur de `jeton.ts` et seul module à appeler `fetch` pour l'écriture) : en-têtes `apikey`, `Authorization: Bearer`, `Content-Profile: public`, `Content-Type`, `Accept`; arrêt sur 401, 403, 429 ; délai de 15 s par requête.
 - `src/lib/contrat/etiquettes.ts` : `pose-etiquette` (`POST /rest/v1/user_card_tags`, 201 sans corps), `retrait-etiquette` (`DELETE …?user_card_id=eq.…&tag_id=eq.…`, 204). `creation-etiquette` est disponible depuis le relevé de sa réponse (2026-11-11) ; `user_id` vient du champ `sub` du jeton.
 - Tests à prévoir : `tests/unit/reseau.test.ts`, `tests/unit/contrat-etiquettes.test.ts`, extension de `jeton.test.ts`, `messages.test.ts`, `confinement-jeton.test.ts` (origine Supabase) ; e2e T-026 avec site fictif servant aussi l'hôte REST (aucune requête réelle, G1).
+
+## À reprendre (revue de la PR de la pose des étiquettes, 2026-11-11)
+
+- T-018 et T-026 : e2e « 0 requête avant Lancer » puis e2e complet avec un site fictif qui sert aussi l'hôte REST (`page.route`, toute autre requête bloquée). Non livrés ; l'e2e local ne tourne pas dans le conteneur (navigateur absent), la CI les exécute.
+- `src/lib/reseau.ts` et `src/lib/lot.ts:388` : une création en délai dépassé ou « inconnu » a peut-être réussi sur le site ; une étiquette du site de même nom absente du registre sera recréée (doublon ou erreur). Le code d'erreur d'un nom en double n'est pas relevé. Piste : relire les étiquettes du site (`stats`) avant un lot et rattacher l'identifiant par nom.
+- `src/config/synchro.ts` : `LONGUEUR_MAX_ETIQUETTE` absent (limites non relevées, `lot.ts` garde sa limite).
+- Cookie de session lisible par `document.cookie` (non HttpOnly) : à confirmer au premier essai réel.
