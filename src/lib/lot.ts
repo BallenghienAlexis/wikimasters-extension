@@ -29,7 +29,7 @@ export interface Config {
   /** Noms d’étiquettes déjà connus sur le site (dont ceux du joueur). */
   nomsExistants: readonly string[]
   /**
-   * Le lien `card_id` ↔ `user_card_id` est relevé : l’enchère peut viser un exemplaire (H45).
+   * L’identifiant attendu par l’enchère est relevé (identifiant de l’exemplaire) : l’enchère peut viser un exemplaire (H45).
    * Absent ou `false` : le type « enchère » reste non disponible.
    */
   lienCardId?: boolean
