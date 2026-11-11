@@ -26,7 +26,6 @@ const carte = (surcharge: Partial<Carte> = {}): Carte => ({
 const CONFIG: ConfigPrix = {
   seuilDefausse: 15,
   maxVentesSimultanees: 5,
-  valeurParRarete: { C: null, L: 500 },
   matricePrixDepart: [
     { valeurMin: 15, prixDepart: 20 },
     { valeurMin: 50, prixDepart: 60 },
@@ -85,11 +84,11 @@ describe('proposerTri', () => {
 });
 
 describe('valeurDeCarte', () => {
-  it('préfère la valeur de la carte à celle de sa rareté', () => {
-    expect(valeurDeCarte(carte({ rarete: 'L', valeurMarchande: 7 }), CONFIG)).toBe(7);
+  it('renvoie la valeur marchande de la carte', () => {
+    expect(valeurDeCarte(carte({ rarete: 'L', valeurMarchande: 7 }))).toBe(7);
   });
-  it('se replie sur la rareté', () => {
-    expect(valeurDeCarte(carte({ rarete: 'L', valeurMarchande: null }), CONFIG)).toBe(500);
+  it('renvoie null quand la valeur marchande est inconnue (plus de repli par rareté)', () => {
+    expect(valeurDeCarte(carte({ rarete: 'L', valeurMarchande: null }))).toBeNull();
   });
 });
 
