@@ -32,5 +32,17 @@ Origine de l'onglet : `https://www.wiki-masters.com`.
 - `/api/...` : mécanisme **non relevé** (cookies de même origine ou jeton).
 - Décision d'Alexis (option B, 2026-11-07) : lecture en mémoire du jeton de session autorisée dans un seul module, au moment d'émettre la requête, sans jamais le stocker, le journaliser, l'afficher ni l'envoyer hors de l'origine du site (AGENTS.md « Ne jamais faire »).
 
+## Étiquettes — relevé du 2026-11-11 (captures d'Alexis, en-têtes de réponse seulement)
+- **Hôte** : `https://cyrxjeppjqsxxjayfrur.supabase.co/rest/v1/` (projet Supabase du site, **autre origine** que `https://www.wiki-masters.com`). Réponses derrière Cloudflare, `Content-Profile: public`.
+- **CORS** : `Access-Control-Allow-Origin: https://www.wiki-masters.com` : un `fetch` depuis un onglet du site est accepté ; l'origine de l'extension ne le serait pas.
+- **Pose** : `POST /rest/v1/user_card_tags` → `201 Created`, `Content-Length: 0` (**corps de réponse vide** : rien à valider ni à lire).
+- **Retrait** : `DELETE /rest/v1/user_card_tags?user_card_id=eq.<user_card_id>&tag_id=eq.<tag_id>` → `204 No Content`. **Filtre relevé** : les deux conditions `eq.`, valeurs encodées.
+- **Lecture vue au passage** : `GET /rest/v1/cards?select=summary&id=eq.<card_id>` → 200, `{"summary":null}` (format PostgREST, `application/vnd.pgrst.object+json`). Non utilisée par l'extension.
+- Le jeton est un JWT signé ES256 émis par `…/auth/v1` (en-têtes `Sb-Jwt-*` de la réponse).
+- **En-têtes de requête du `POST user_card_tags` (noms, relevé du 2026-11-11)** : `apikey` (clé anonyme publique du projet), `authorization: Bearer <jeton de session>` (JWT expirant en environ 1 h : 401 attendu à l'expiration), `content-profile: public`, `content-type: application/json`, `accept`. **Corps confirmé** : `{ user_card_id: <uuid>, tag_id: <uuid> }`, rien d'autre.
+- **Session (relevé du 2026-11-11, noms et forme seulement)** : cookie `sb-cyrxjeppjqsxxjayfrur-auth-token`, **découpé en deux morceaux** `….0` et `….1` à concaténer ; valeur = préfixe `base64-` puis JSON encodé en base64 avec les champs `access_token`, `token_type`, `expires_in`, `expires_at`, `refresh_token`, `user`. L'extension n'extrait que `access_token` (jamais `refresh_token` ni `user`) ; expiration ≈ 1 h : jeton expiré, arrêt propre sans rafraîchissement. À vérifier : le cookie est-il lisible par `document.cookie` (pas HttpOnly) ?
+- **Création d'étiquette (relevé du 2026-11-11, noms seulement)** : réponse = un objet avec les champs `id` (UUID de l'étiquette), `user_id`, `name`, `created_at`, `color` (`#rrggbb`). Le corps de requête `{ user_id, name, color }` a été relevé le 2026-11-07. L'en-tête `Prefer: return=representation` et la forme exacte (objet ou tableau d'un élément) sont à confirmer au premier essai ; une réponse hors contrat arrête le lot.
+- **Toujours non relevé** : limites de nombre et de longueur, code d'erreur d'un nom en double, cookie lisible par `document.cookie` (à confirmer au premier essai). Visibilité : supposée visible des autres joueurs (décision d'Alexis du 2026-11-11).
+
 ## Reste à relever (SC-001)
-Hôte et en-têtes exigés de `/rest/v1`, mode d'authentification de `/api/`, filtre du `DELETE user_card_tags`, lien `card_id` ↔ `user_card_id`, limites et visibilité des étiquettes, bornes de `base_amount`, forme des erreurs (401, 403, 429), réponses de création (identifiants renvoyés).
+Mode d'authentification de `/api/` (étiquettes : relevées le 2026-11-11), bornes de `base_amount`, forme des erreurs (401, 403, 429), limites de nombre et de longueur des étiquettes.

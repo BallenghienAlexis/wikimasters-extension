@@ -44,3 +44,22 @@ Chaque point dit ce qu’il attend. Source : revues de T-015 (#21) et T-017 (#23
 - **T-017 code 5** (`tests/unit/dialogue-defausse.test.ts:18-21`) : le test du focus initial vérifie la constante `BOUTON_FOCUS_INITIAL`, pas `document.activeElement`. Attend l’e2e de **T-018**.
 - **T-015 code 6 bis** : captures `specs/synchro-complete/captures/T-015/*.png` hors liste fermée : exception acceptée, rien à faire.
 - **Cohérence documentaire** : `spec.refined.md` (lignes 88, 253, 301) et `tasks.md` (ligne 333) citent encore « la valeur de repli par rareté ne suffit pas ». Ce repli a été supprimé (PR #61) ; sans effet sur le code (`lot-encheres` exige déjà `valeurMarchande`, H13). À reformuler à la prochaine reprise de la spec.
+
+## Suite de la pose réelle des étiquettes (2026-11-11)
+
+Décision d'Alexis : `apikey` publique **en dur** dans une constante unique de `src/config/synchro.ts` ; jamais de jeton de session ni de `refresh_token` dans le dépôt. Écart découvert en préparant T-019/T-024 : le protocole actuel ne permet pas d'émettre une pose ou un retrait, car il manque l'identifiant d'étiquette du site.
+
+- `src/lib/actions.ts:44-54` : `ActionPoseEtiquette` et `ActionRetraitEtiquette` ne portent que `nomEtiquette`. Le corps `{ user_card_id, tag_id }` exige l'identifiant d'étiquette : ajouter `idEtiquette` (rempli depuis `registre.etiquettes` à l'exécution).
+- `src/lib/messages.ts:84-95` (`validerOrdre`) : `cles()` exige la liste exacte de champs ; autoriser `idEtiquette`. `ResultatAction` (`actions.ts:98`) ne renvoie pas l'identifiant créé : ajouter `idEtiquette?` validé (UUID) au message de résultat pour que `revision.ts:107` enregistre la création dans le registre.
+- `src/lib/jeton.ts:14-35` : `enteteAuthentification` refuse toute origine autre que le site ; autoriser l'hôte Supabase relevé (une seule origine, ajoutée à `src/config/synchro.ts`). Ajouter la lecture du cookie de session en deux morceaux (`.0` + `.1`, préfixe `base64-`), en n'extrayant que `access_token` et en refusant un jeton expiré.
+- `src/lib/reseau.ts` (à créer, seul importeur de `jeton.ts` et seul module à appeler `fetch` pour l'écriture) : en-têtes `apikey`, `Authorization: Bearer`, `Content-Profile: public`, `Content-Type`, `Accept`; arrêt sur 401, 403, 429 ; délai de 15 s par requête.
+- `src/lib/contrat/etiquettes.ts` : `pose-etiquette` (`POST /rest/v1/user_card_tags`, 201 sans corps), `retrait-etiquette` (`DELETE …?user_card_id=eq.…&tag_id=eq.…`, 204). `creation-etiquette` est disponible depuis le relevé de sa réponse (2026-11-11) ; `user_id` vient du champ `sub` du jeton.
+- Tests à prévoir : `tests/unit/reseau.test.ts`, `tests/unit/contrat-etiquettes.test.ts`, extension de `jeton.test.ts`, `messages.test.ts`, `confinement-jeton.test.ts` (origine Supabase) ; e2e T-026 avec site fictif servant aussi l'hôte REST (aucune requête réelle, G1).
+
+## À reprendre (revue de la PR de la pose des étiquettes, 2026-11-11)
+
+- T-018, T-020 et T-026 (à livrer avant le premier lot réel : l'ordre imposé voulait T-018 avant le module réseau) : T-020 = test de chaîne complète `non-fuite-jeton.test.ts` (AC1 à AC4) ; e2e « 0 requête avant Lancer » puis e2e complet avec un site fictif qui sert aussi l'hôte REST (`page.route`, toute autre requête bloquée). Non livrés ; l'e2e local ne tourne pas dans le conteneur (navigateur absent), la CI les exécute.
+- `src/lib/reseau.ts` et `src/lib/lot.ts:388` : une création en délai dépassé ou « inconnu » a peut-être réussi sur le site ; une étiquette du site de même nom absente du registre sera recréée (doublon ou erreur). Le code d'erreur d'un nom en double n'est pas relevé. Piste : relire les étiquettes du site (`stats`) avant un lot et rattacher l'identifiant par nom.
+- `src/config/synchro.ts` : `LONGUEUR_MAX_ETIQUETTE` absent (limites non relevées, `lot.ts` garde sa limite).
+- Cookie de session lisible par `document.cookie` (non HttpOnly) : à confirmer au premier essai réel.
+- `src/lib/reseau.ts:86-87` : 401, 403, 429 portent le libellé « action non disponible » ; prévoir un libellé propre (« refus du site ») dans `CAUSES_RESULTAT`.

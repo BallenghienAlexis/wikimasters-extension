@@ -24,12 +24,12 @@ const entreeFictive: EntreeContrat = {
 }
 
 describe('table du contrat', () => {
-  it('est livrée vide : aucun type disponible (SC-020)', () => {
-    expect(Object.keys(TABLE_CONTRAT)).toHaveLength(0)
-    expect(typesDisponibles().size).toBe(0)
-    for (const e of [ENTREES_DEFAUSSE, ENTREES_ENCHERE, ENTREES_ETIQUETTES, ENTREES_LECTURE]) {
+  it('ne rend disponibles que les types relevés : les trois étiquettes (SC-020)', () => {
+    expect([...typesDisponibles()].sort()).toEqual(['creation-etiquette', 'pose-etiquette', 'retrait-etiquette'])
+    for (const e of [ENTREES_DEFAUSSE, ENTREES_ENCHERE, ENTREES_LECTURE]) {
       expect(Object.keys(e)).toHaveLength(0)
     }
+    expect(Object.keys(ENTREES_ETIQUETTES)).toHaveLength(3)
   })
 
   it('ne renvoie que les types présents dans une table injectée', () => {
@@ -63,7 +63,7 @@ describe('table du contrat', () => {
     ]
     expect(sources.length).toBeGreaterThan(1)
     for (const source of sources) {
-      for (const interdit of ['/api/', '/rest/', 'https://', 'http://', 'authorization', 'apikey']) {
+      for (const interdit of ['/api/', 'https://', 'http://', 'authorization', 'apikey']) {
         expect(source.toLowerCase(), interdit).not.toContain(interdit)
       }
     }

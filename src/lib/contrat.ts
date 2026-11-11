@@ -12,6 +12,12 @@ import { ENTREES_ENCHERE } from './contrat/enchere'
 import { ENTREES_ETIQUETTES } from './contrat/etiquettes'
 import { ENTREES_LECTURE } from './contrat/lecture'
 
+/** Données de session utiles à une requête, fournies par `reseau.ts` (jamais le jeton). */
+export interface ContexteRequete {
+  idJoueur: string
+  couleurEtiquette: string
+}
+
 export interface EntreeContrat {
   methode: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   /** Modèle de chemin, pour documentation et validation. */
@@ -19,8 +25,12 @@ export interface EntreeContrat {
   /** Reçoit des identifiants déjà validés ; chaque segment est encodé avec `encodeURIComponent`. */
   construireChemin: (action: Action) => string
   /** Corps JSON de la requête, ou `null` s’il n’y en a pas. */
-  construireCorps: (action: Action) => unknown
-  /** Nom de l’en-tête d’authentification exigé, ou `null`. Jamais une valeur. */
+  construireCorps: (action: Action, contexte: ContexteRequete) => unknown
+  /** En-têtes fixes propres à l’entrée (jamais d’authentification ni de valeur de session). */
+  entetes?: Readonly<Record<string, string>>
+  /** Identifiant d’étiquette lu dans une réponse de création déjà jugée conforme. */
+  lireIdEtiquette?: (json: unknown) => string | null
+  /** `{ entete: 'session' }` si la requête exige le jeton de session (ajouté par `reseau.ts`), sinon `null`. */
   auth: { entete: string } | null
   validerReponse: (statut: number, json: unknown) => 'reussie' | 'hors-contrat'
 }

@@ -4,6 +4,13 @@ Vagues : V1 : T-001 [P], T-002 [P], T-003 [P] · V2 : T-004 [P], T-005 [P], T-00
 
 \* Tâches **bloquées par un relevé d'Alexis** (voir « Bloquée par »). Elles ne démarrent pas tant que le point de `contrat-api.md` « Reste à relever » qui les concerne n'est pas écrit. Un type d'action dont un paramètre n'est pas relevé reste « non disponible » (absent de la table du contrat) : il n'est jamais deviné.
 
+## Amendements du 2026-11-11 (décisions d'Alexis, PR de la pose des étiquettes)
+
+- **G3** : le jeton ne part que vers `https://www.wiki-masters.com` **et** l'hôte REST de `src/config/synchro.ts` (`jeton.ts`, `reseau.ts` seuls). **G4** : délai variable, 6 s minimum plus 0 à 4 s tirées hors de `file.ts` (T-011 AC8 levé) ; en-têtes : `Content-Type`, `Accept`, `apikey`, `Content-Profile`, `Authorization`, plus `Prefer` pour la création.
+- **T-019** : `fetch` avec `credentials: 'omit'` et `redirect: 'error'` (jeton explicite, aucun cookie), délai de 15 s ; 401, 403, 429 sont classés `echec` avec leur code (la file s'arrête via `CODES_ARRET`), une réponse 2xx hors contrat est `inconnu` (la file s'arrête).
+- **Listes de fichiers étendues** : `src/lib/actions.ts`, `src/lib/messages.ts`, `src/lib/contrat.ts`, `src/lib/registre.ts`, `src/app/Synchronisation.tsx`, `src/content/index.ts`, `src/config/synchro.ts`, `src/lib/jeton.ts`, `src/lib/reseau.ts`, `src/lib/file.ts` (écart assumé : `idEtiquette`, session lue à l'envoi, branchement du délai).
+- **T-018, T-020, T-026** (e2e complet avec site fictif servant l'hôte REST) restent à faire : voir `retouches.md` § « À reprendre ».
+
 ## Ordre imposé par Alexis
 
 1. **V1 à V6 : aucune tâche n'émet de requête.** Types, schéma, lint, table du contrat vide, registre, journal, messages, `jeton.ts` isolé (sans lecture réelle) et son test de confinement, construction du lot, file à cadence fixe 6 000 ms (transport injecté), exécution côté page, aperçu et confirmation de défausse, e2e « 0 requête ».
