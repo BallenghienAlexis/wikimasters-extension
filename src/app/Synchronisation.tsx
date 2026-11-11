@@ -12,7 +12,7 @@ import type {
 } from '../lib/actions';
 import type { Carte, Collection } from '../lib/collection';
 import { typesDisponibles } from '../lib/contrat';
-import { CODES_ARRET, SUPPLEMENT_MAX_MS, creerFile, type Decision, type EtatFile, type File as FileLot, type RaisonArret } from '../lib/file';
+import { CODES_ARRET, CODE_CONFLIT, SUPPLEMENT_MAX_MS, creerFile, type Decision, type EtatFile, type File as FileLot, type RaisonArret } from '../lib/file';
 import { regrouperEtiquettes, type ApercuEtiquettes } from '../lib/apercuEtiquettes';
 import { completerEntree, ouvrirEntree, passerEntree } from '../lib/journal';
 import { construireLot, type Config, type EtiquetteObsolete, type LotConstruit } from '../lib/lot';
@@ -226,13 +226,14 @@ export function texteLotVide(avecIndisponibles: boolean): string {
 export type ResultatLot = { lot: LotConstruit } | { erreur: string };
 
 /** Configuration du lot à partir des préférences (amis et thèmes suivis pour les étiquettes d’échange). */
-export function configDuLot(preferences: Preferences): Config {
+export function configDuLot(preferences: Preferences, ventesSite: { enCours: number; max: number } | null = null): Config {
   return {
     maxVentesSimultanees: CONFIG_PRIX.maxVentesSimultanees,
     longueurMaxEtiquette: null,
     nomsExistants: [],
     amis: preferences.amis,
     lienCardId: true,
+    ventesSite,
   };
 }
 
@@ -322,6 +323,7 @@ const CAUSES_ARRET: Record<RaisonArret, string> = {
 export function libelleCause(raison: RaisonArret | null, codeHttp: number | null, deconnecte = false): string {
   if (deconnecte) return 'l’onglet WikiMasters s’est déconnecté';
   if (raison === null) return CAUSES_ARRET.manuel;
+  if (raison === 'code-http' && codeHttp === CODE_CONFLIT) return 'réponse 409 : le site signale un conflit (limite d’enchères, carte déjà en vente ou action refusée)';
   if (raison === 'code-http' && codeHttp !== null && CODES_ARRET.includes(codeHttp)) return `réponse ${codeHttp}`;
   return CAUSES_ARRET[raison];
 }
@@ -702,6 +704,19 @@ const Synchronisation: React.FC<Props> = ({
   const [ongletsLive, setOngletsLive] = useState<number | null>(null);
   /** État d’exécution relu au montage : `null` tant que la page n’a pas vérifié. */
   const [enCoursStocke, setEnCoursStocke] = useState<boolean | null>(null);
+  // Enchères en cours sur le site (relevé de la synchronisation), pour ne pas dépasser le plafond du site.
+  const [ventesSiteLues, setVentesSiteLues] = useState<{ enCours: number; max: number } | null>(null);
+  useEffect(() => {
+    let actif = true;
+    void chargerEtatSynchro()
+      .then((e) => {
+        if (actif && e?.ventesSite) setVentesSiteLues({ enCours: e.ventesSite.enCours, max: e.ventesSite.max });
+      })
+      .catch(() => {});
+    return () => {
+      actif = false;
+    };
+  }, []);
   const [erreurLancement, setErreurLancement] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<ConfirmationOuverte | null>(null);
   const [entrees, setEntrees] = useState<EntreeJournal[]>([]);
@@ -808,7 +823,7 @@ const Synchronisation: React.FC<Props> = ({
   // Aperçu des étiquettes, figé avec le lot : mêmes collection, registre et préférences (H24).
   const [apercuEtiquettes, setApercuEtiquettes] = useState<ApercuEtiquettes | null>(null);
   const figer = (r: Registre | null): void => {
-    const config = configDuLot(preferences);
+    const config = configDuLot(preferences, ventesSiteLues);
     setEtat(preparerLot(collection, r, dispo, config));
     let apercu: ApercuEtiquettes | null = null;
     if (r !== null) {

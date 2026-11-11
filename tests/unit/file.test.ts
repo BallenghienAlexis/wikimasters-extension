@@ -284,6 +284,16 @@ describe('arrêts (AC4)', () => {
     expect(etat.etat).toBe('arretee');
   });
 
+  it('409 : arrête le lot pour une enchère ou une défausse, pas pour une étiquette', async () => {
+    const e = (n: number): Action => ({ type: 'enchere', idCarte: `Rare|Carte ${n}`, idExemplaire: 'x', prix: 5 });
+    for (const [fab, arrete] of [[e, true], [defausse, true], [pose, false]] as const) {
+      const b = banc({}, (n) => (n === 1 ? echec(409) : OK));
+      const etat = await creerFile(b.deps).demarrer(Array.from({ length: 4 }, (_, i) => fab(i + 1)), 'lot-409');
+      expect(b.requetes).toHaveLength(arrete ? 1 : 4);
+      expect(etat.etat).toBe(arrete ? 'arretee' : 'terminee');
+    }
+  });
+
   it('s’arrête quand l’écriture locale échoue (appliquer)', async () => {
     const b = banc({
       appliquer: () => {

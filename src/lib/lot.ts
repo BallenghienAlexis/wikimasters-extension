@@ -33,6 +33,8 @@ export interface Config {
    * Absent ou `false` : le type « enchère » reste non disponible.
    */
   lienCardId?: boolean
+  /** Enchères en cours et plafond relevés sur le site (`marketplace/mine`) ; le plus contraignant l’emporte sur le décompte local. */
+  ventesSite?: { enCours: number; max: number } | null
   /** Amis et thèmes qu’ils suivent, lus au moment où l’aperçu est figé (étiquettes d’échange). Absent : aucun ami. */
   amis?: readonly Ami[]
   /** Limite de nombre d’étiquettes par exemplaire relevée sur le site ; `null` ou absent = inconnue. */
@@ -251,7 +253,8 @@ export function construireEncheres(
   }
 
   valides.sort((a, b) => b.prix - a.prix || b.valeur - a.valeur || comparer(a.carte.id, b.carte.id))
-  const places = Math.max(0, Math.floor(config.maxVentesSimultanees - enVente))
+  const plafond = Math.min(config.maxVentesSimultanees, config.ventesSite?.max ?? Infinity)
+  const places = Math.max(0, Math.floor(plafond - Math.max(enVente, config.ventesSite?.enCours ?? 0)))
   const actions: Action[] = []
   valides.forEach(({ carte, prix, idExemplaire }, rang) => {
     if (rang < places) actions.push({ type: 'enchere', idCarte: carte.id, idExemplaire, prix })

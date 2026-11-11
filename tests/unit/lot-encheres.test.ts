@@ -264,3 +264,18 @@ describe('enchères : performance (AC5)', () => {
     expect(duree).toBeLessThan(500)
   })
 })
+
+describe('enchères : plafond relevé sur le site', () => {
+  it('le décompte du site réduit les places libres', () => {
+    const cartes = ['a', 'b', 'c'].map((id) => carte(id, { prixCible: 1, valeurMarchande: 40 }))
+    const sans = lot(coll(...cartes), config({ maxVentesSimultanees: 5 }))
+    expect(encheres(sans.actions)).toHaveLength(3)
+    const avec = lot(coll(...cartes), config({ maxVentesSimultanees: 5, ventesSite: { enCours: 4, max: 5 } }))
+    expect(encheres(avec.actions)).toHaveLength(1)
+    expect(raisons(avec, 'c')).toEqual(['en-attente-place'])
+    const plein = lot(coll(...cartes), config({ ventesSite: { enCours: 5, max: 5 } }))
+    expect(encheres(plein.actions)).toEqual([])
+    const maxBas = lot(coll(...cartes), config({ ventesSite: { enCours: 0, max: 2 } }))
+    expect(encheres(maxBas.actions)).toHaveLength(2)
+  })
+})
