@@ -71,6 +71,13 @@ const App: React.FC = () => {
   const [preferencesLues, setPreferencesLues] = useState(false);
   const champFichier = useRef<HTMLInputElement>(null);
 
+  // Note l’heure d’une mise en vente ou d’une fin d’enchère ; un échec est signalé, jamais avalé.
+  const noterVente = (type: EvenementVente['type']): void => {
+    noterEvenementVente({ type, at: Date.now() })
+      .then(setVentes)
+      .catch(() => setMessage('L’heure de cette vente n’a pas pu être notée (stockage indisponible).'));
+  };
+
   // Lit le registre et l’état d’exécution ; un échec est signalé à l’aperçu, jamais avalé.
   const lireStockageSynchro = async (): Promise<EtatStockageSynchro> => {
     const etat: EtatStockageSynchro = { registre: null, executionEnCours: false, executionIllisible: false };
@@ -280,11 +287,11 @@ const App: React.FC = () => {
             ventes={ventes}
             onMiseEnVente={(id) => {
               editer(id, { statut: 'en-vente', decidePar: 'moi' });
-              void noterEvenementVente({ type: 'debut', at: Date.now() }).then(setVentes).catch(() => undefined);
+              noterVente('debut');
             }}
             onTerminee={(id) => {
               appliquer(terminerEnchere(collection, id));
-              void noterEvenementVente({ type: 'fin', at: Date.now() }).then(setVentes).catch(() => undefined);
+              noterVente('fin');
             }}
           />
 

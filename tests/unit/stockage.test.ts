@@ -38,6 +38,8 @@ import {
   enregistrerJournal,
   enregistrerPreferences,
   enregistrerRegistre,
+  chargerVentes,
+  noterEvenementVente,
   enregistrerSignalSynchro,
   chargerEtatSynchro,
   enregistrerEtatSynchro,
@@ -130,6 +132,29 @@ beforeEach(() => {
 });
 afterEach(() => {
   delete (globalThis as { chrome?: unknown }).chrome;
+});
+
+describe('ventes (affluence)', () => {
+  it('lit une liste vide si absente, de version inconnue ou mal formée', async () => {
+    expect(await chargerVentes()).toEqual([]);
+    faux.donnees.set('ventes', { version: 2, evenements: [{ type: 'debut', at: 1 }] });
+    expect(await chargerVentes()).toEqual([]);
+    faux.donnees.set('ventes', { version: 1, evenements: 'x' });
+    expect(await chargerVentes()).toEqual([]);
+  });
+  it('écrit une enveloppe versionnée, bornée à 500, et ignore les entrées illisibles', async () => {
+    faux.donnees.set('ventes', { version: 1, evenements: [{ type: 'zzz', at: 1 }, { type: 'debut', at: 2 }] });
+    await noterEvenementVente({ type: 'fin', at: 3 });
+    expect(faux.donnees.get('ventes')).toEqual({ version: 1, evenements: [{ type: 'debut', at: 2 }, { type: 'fin', at: 3 }] });
+    const gros = Array.from({ length: 500 }, (_, i) => ({ type: 'debut', at: i }));
+    faux.donnees.set('ventes', { version: 1, evenements: gros });
+    const suite = await noterEvenementVente({ type: 'fin', at: 999 });
+    expect(suite).toHaveLength(500);
+  });
+  it('ne perd aucun évènement quand deux notes se suivent', async () => {
+    await Promise.all([noterEvenementVente({ type: 'debut', at: 1 }), noterEvenementVente({ type: 'fin', at: 2 })]);
+    expect(await chargerVentes()).toHaveLength(2);
+  });
 });
 
 describe('CLES_STOCKAGE', () => {

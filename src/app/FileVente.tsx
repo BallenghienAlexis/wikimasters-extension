@@ -21,6 +21,7 @@ const FileVente: React.FC<Props> = ({ cartes, ventes = [], onMiseEnVente, onTerm
     return () => clearInterval(t);
   }, []);
   const { enCours, placesLibres, prochaines, enAttente } = fileDeVente(cartes);
+  const nbObservations = observations(ventes);
   if (enCours.length === 0 && prochaines.length === 0 && enAttente === 0) return null;
 
   return (
@@ -62,7 +63,7 @@ const FileVente: React.FC<Props> = ({ cartes, ventes = [], onMiseEnVente, onTerm
 
       {prochaines.length > 0 && (
         <p className="mt-2 text-xs text-muted">
-          Heures fortes {observations(ventes) < CONFIG_AFFLUENCE.minObservations ? 'par défaut' : 'déduites de vos ventes'} ({observations(ventes)} {observations(ventes) > 1 ? 'mises en vente notées' : 'mise en vente notée'}).
+          Heures fortes {nbObservations < CONFIG_AFFLUENCE.minObservations ? 'par défaut' : 'déduites de vos ventes'} ({nbObservations} {nbObservations > 1 ? 'mises en vente notées' : 'mise en vente notée'}).
         </p>
       )}
 

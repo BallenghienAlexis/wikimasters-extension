@@ -46,3 +46,20 @@ describe('journal', () => {
     expect(ev).toHaveLength(MAX_EVENEMENTS);
   });
 });
+
+describe('cas limites', () => {
+  it('ignore une date hors plage de Date', () => {
+    expect(validerEvenements([{ type: 'debut', at: 9e15 }])).toEqual([]);
+  });
+  it('un créneau à une seule vente n’est jamais fort (égalités)', () => {
+    const ev: EvenementVente[] = [];
+    for (let i = 0; i < 20; i++) ev.push({ type: 'debut', at: new Date(2026, 10, 2 + (i % 5), 8 + i).getTime() });
+    expect(estHeureForte(new Date(2026, 10, 2, 8).getTime(), ev)).toBe(false);
+  });
+  it('les évènements fin comptent dans les heures fortes', () => {
+    const ev: EvenementVente[] = [];
+    for (let i = 0; i < 20; i++) ev.push({ type: 'debut', at: new Date(2026, 10, 2 + (i % 5), 8 + i % 3).getTime() });
+    for (let i = 0; i < 3; i++) ev.push({ type: 'fin', at: apresMidi });
+    expect(estHeureForte(apresMidi, ev)).toBe(true);
+  });
+});

@@ -408,8 +408,15 @@ export async function chargerVentes(): Promise<EvenementVente[]> {
   return validerEvenements((brut as { evenements?: unknown }).evenements);
 }
 
-export async function noterEvenementVente(e: EvenementVente): Promise<EvenementVente[]> {
-  const suite = ajouterEvenement(await chargerVentes(), e);
-  await chrome.storage.local.set({ [CLE_VENTES]: { version: VERSION_VENTES, evenements: suite } });
-  return suite;
+// Les écritures sont chaînées : deux clics rapprochés ne doivent pas perdre un évènement.
+let fileVentes: Promise<unknown> = Promise.resolve();
+
+export function noterEvenementVente(e: EvenementVente): Promise<EvenementVente[]> {
+  const tache = fileVentes.then(async () => {
+    const suite = ajouterEvenement(await chargerVentes(), e);
+    await chrome.storage.local.set({ [CLE_VENTES]: { version: VERSION_VENTES, evenements: suite } });
+    return suite;
+  });
+  fileVentes = tache.catch(() => undefined);
+  return tache;
 }

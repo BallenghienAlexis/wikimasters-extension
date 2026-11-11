@@ -8,6 +8,8 @@ export interface EvenementVente {
 
 export const VERSION_VENTES = 1;
 export const MAX_EVENEMENTS = 500;
+/** Plus grande date représentable par `Date` (ms) ; au-delà, `getDay()` renvoie NaN. */
+const DATE_MAX = 8.64e15;
 
 export type Histogramme = number[][]; // [jour 0-6][heure 0-23]
 
@@ -27,7 +29,7 @@ export function validerEvenements(brut: unknown): EvenementVente[] {
   for (const e of brut) {
     if (typeof e !== 'object' || e === null) continue;
     const o = e as Record<string, unknown>;
-    if ((o.type !== 'debut' && o.type !== 'fin') || typeof o.at !== 'number' || !Number.isSafeInteger(o.at) || o.at < 0) continue;
+    if ((o.type !== 'debut' && o.type !== 'fin') || typeof o.at !== 'number' || !Number.isSafeInteger(o.at) || o.at < 0 || o.at > DATE_MAX) continue;
     sortie.push({ type: o.type, at: o.at });
   }
   return sortie.slice(-MAX_EVENEMENTS);
@@ -53,7 +55,8 @@ export function estHeureForte(at: number, evenements: readonly EvenementVente[],
   const h = histogramme(evenements);
   const utilises = h.flat().filter((n) => n > 0).sort((a, b) => b - a);
   if (utilises.length === 0) return false;
-  const seuil = utilises[Math.max(0, Math.ceil(utilises.length / 4) - 1)]!;
+  // Un créneau à une seule vente n’est jamais « fort » : sans cela, les égalités rendraient tous les créneaux forts.
+  const seuil = Math.max(2, utilises[Math.max(0, Math.ceil(utilises.length / 4) - 1)]!);
   return h[d.getDay()]![d.getHours()]! >= seuil;
 }
 
