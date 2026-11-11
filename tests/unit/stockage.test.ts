@@ -630,9 +630,11 @@ describe('récupération d’une collection illisible', () => {
   it('réinitialise la seule clé de la collection', async () => {
     faux.donnees.set('collection', { version: 3 });
     faux.donnees.set('preferences', { a: 1 });
+    faux.donnees.set('ventes', { version: 1, evenements: [{ type: 'debut', at: 1 }] });
     await reinitialiserCollection();
     expect(faux.donnees.has('collection')).toBe(false);
     expect(faux.donnees.get('preferences')).toEqual({ a: 1 });
+    expect(faux.donnees.has('ventes')).toBe(true);
     expect(await chargerCollection()).toEqual(collectionVide());
   });
 });

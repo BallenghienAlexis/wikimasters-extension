@@ -110,7 +110,9 @@ const App: React.FC = () => {
     void chargerPreferences()
       .then(setPreferences)
       .finally(() => setPreferencesLues(true));
-    void chargerVentes().then(setVentes).catch(() => undefined);
+    void chargerVentes()
+      .then(setVentes)
+      .catch(() => setMessage('Le journal des ventes n’a pas pu être lu (stockage indisponible).'));
     void chargerSynchro().then(setSynchro);
     void lireStockageSynchro().then(appliquerStockageSynchro);
     return ecouterSynchro(setSynchro);

@@ -56,7 +56,8 @@ export function estHeureForte(at: number, evenements: readonly EvenementVente[],
   const utilises = h.flat().filter((n) => n > 0).sort((a, b) => b - a);
   if (utilises.length === 0) return false;
   // Un créneau à une seule vente n’est jamais « fort » : sans cela, les égalités rendraient tous les créneaux forts.
-  const seuil = Math.max(2, utilises[Math.max(0, Math.ceil(utilises.length / 4) - 1)]!);
+  const rangQuartile = Math.max(0, Math.ceil(utilises.length / 4) - 1);
+  const seuil = Math.max(2, utilises[rangQuartile]!);
   return h[d.getDay()]![d.getHours()]! >= seuil;
 }
 
