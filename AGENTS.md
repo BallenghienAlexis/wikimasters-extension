@@ -24,6 +24,11 @@ La règle qui interdisait de masquer une automatisation a été retirée par Ale
 - Les décisions manuelles (`decidePar: 'moi'`) et les valeurs saisies à la main ne sont jamais écrasées ; les étiquettes du site ne servent qu’à afficher des écarts, sans rien corriger sur le site.
 - Toute autre route de `/api/`, et toute écriture, restent soumises à la règle ci-dessous.
 
+**Vérification Wikipédia (décision d’Alexis du 2026-11-11)** : Alexis autorise des requêtes `GET` en lecture seule vers `https://fr.wikipedia.org/w/api.php` (catégories et indicateur d’homonymie de la page) pour affiner les thèmes des cartes. Il s’agit d’un service tiers public : seul le **titre de la carte** est envoyé, jamais une donnée du compte, un cookie ou un jeton (`credentials: 'omit'`). Garde-fous :
+- Déclenchée uniquement par le bouton « Vérifier avec Wikipédia » de la page de gestion (jamais automatique) ; `src/app/verifierWikipedia.ts` est le **seul** fichier de l’application qui appelle `fetch`, et `host_permissions` ne contient que `https://fr.wikipedia.org/*`.
+- Une requête à la fois, une par seconde ; arrêt sur 403 ou 429, ou après 3 échecs.
+- Résultats mis en cache dans `chrome.storage.local` (clé `wikipedia`, 30 jours) ; `themesDeCarte` ajoute ces thèmes aux mots-clés sans rien retirer ni écraser une décision manuelle (`decidePar: 'moi'`).
+
 Tout code qui clique, envoie un formulaire ou appelle l'API interne du site à la place du joueur exige une décision explicite d'Alexis, écrite dans la spec de la feature, avec le risque de bannissement rappelé. Si WikiMasters ouvre une API ou donne un accord écrit, ce cadre est à mettre à jour ici.
 
 ## Stack
@@ -51,7 +56,7 @@ Charger l'extension : `chrome://extensions` › mode développeur › « Charger
 
 ## Architecture
 
-- `public/manifest.json` : manifeste. Permission `storage` seulement, aucun `host_permissions` ; content script limité à WikiMasters.
+- `public/manifest.json` : manifeste. Permission `storage` seulement, `host_permissions` limité à `https://fr.wikipedia.org/*` (vérification Wikipédia) ; content script limité à WikiMasters.
 - `src/content/index.ts` : content script, construit à part (`vite.content.config.ts`). `public/repere.css` : style des repères.
 - `src/lib/lecteur.ts` : lecture du texte des cartes affichées. Toute carte de forme inattendue est ignorée.
 - `src/lib/synchro.ts` : suivi des pages lues et de la prochaine à ouvrir.
@@ -59,7 +64,7 @@ Charger l'extension : `chrome://extensions` › mode développeur › « Charger
 - `collection.html` + `src/app/` : page de gestion (React). Composants `React.FC` + export par défaut, un par fichier.
 - `src/lib/collection.ts` : modèle et logique pure (validation, édition, filtres, doublons). Sans `chrome.*`.
 - `src/lib/exports.ts` : export CSV et JSON. Logique pure.
-- `src/lib/themes.ts` : thèmes déduits du titre et de la description par mots-clés, recalculés sans être stockés.
+- `src/lib/themes.ts` : thèmes déduits du titre et de la description par mots-clés, recalculés sans être stockés, complétés par la surcouche Wikipédia. `src/lib/wikipedia.ts` (URL, lecture de la réponse, catégories → thèmes, cache) et `src/app/verifierWikipedia.ts` + `VerificationWikipedia.tsx` (exécuteur et bouton).
 - `src/lib/tri.ts` et `src/app/AssistantTri.tsx` : assistant de tri (mes thèmes, thèmes des amis, aperçu). Règles dans l'ordre : favori ou thème à moi → garder ; thème d'un ami → échanger ; valeur inconnue → à trier ; valeur sous le seuil → défausser ; sinon → vendre au prix de la matrice. Propositions locales uniquement, sans jamais remplacer une décision manuelle (`decidePar: 'moi'`).
 - `src/lib/lot.ts`, `src/lib/registre.ts` et `src/lib/apercuEtiquettes.ts` : étiquettes attendues par exemplaire, dans l'ordre « Statut · … », « #À échanger <nom> » (carte `echanger` : l'ami de la carte, puis chaque ami qui suit un thème de la carte ; remplace « Ami · <nom> »), puis les thèmes du plus précis au plus général, avec les limites du site (par exemplaire, par compte). Le registre (v2) ne retient que les étiquettes posées par l'extension : seules celles-là peuvent être retirées. `apercuEtiquettes.ts` regroupe les étiquettes prévues, les totaux et la durée pour l'aperçu. À ce jour, aucune étiquette n'est envoyée : le contrat des étiquettes n'est pas relevé (à mettre à jour avec `specs/synchro-complete/contrat-api.md`).
 - `src/config/amis.ts` : amis initiaux et leurs thèmes, fusionnés une seule fois dans les préférences déjà enregistrées par `stockage.ts` (sans jamais rien retirer).

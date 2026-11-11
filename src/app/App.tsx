@@ -14,9 +14,11 @@ import {
   type Filtres,
 } from '../lib/collection';
 import { versCsv, versJson } from '../lib/exports';
-import { chargerCollection, chargerExecution, chargerPreferences, chargerRegistre, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences, lireCollectionBrute, reinitialiserCollection } from '../lib/stockage';
+import { chargerCacheWikipedia, chargerCollection, chargerExecution, chargerPreferences, chargerRegistre, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences, lireCollectionBrute, reinitialiserCollection } from '../lib/stockage';
 import { progression, texteProgression, type Synchro } from '../lib/synchro';
-import { LIBELLES_THEMES, IDS_THEMES, themesDeCarte } from '../lib/themes';
+import { LIBELLES_THEMES, IDS_THEMES, definirThemesWikipedia, themesDeCarte } from '../lib/themes';
+import { cacheVide, themesParTitre, type CacheWikipedia } from '../lib/wikipedia';
+import VerificationWikipedia from './VerificationWikipedia';
 import { appliquerTri, preferencesParDefaut, type Preferences } from '../lib/tri';
 import type { Registre } from '../lib/actions';
 import { registreVide } from '../lib/registre';
@@ -54,6 +56,7 @@ const App: React.FC = () => {
   const [limite, setLimite] = useState(TAILLE_PAGE);
   const [filtres, setFiltres] = useState<Filtres>({ recherche: '', statut: 'tous', doublonsSeulement: false });
   const [theme, setTheme] = useState('tous');
+  const [cacheWiki, setCacheWiki] = useState<CacheWikipedia>(cacheVide);
   const [preferences, setPreferences] = useState<Preferences>(preferencesParDefaut);
   const [assistantOuvert, setAssistantOuvert] = useState(false);
   const [synchro, setSynchro] = useState<Synchro | null>(null);
@@ -106,6 +109,13 @@ const App: React.FC = () => {
     return ecouterSynchro(setSynchro);
   }, []);
 
+  // La surcouche est posée pendant le rendu : les enfants lisent `themesDeCarte` juste après.
+  definirThemesWikipedia(useMemo(() => themesParTitre(cacheWiki), [cacheWiki]));
+
+  useEffect(() => {
+    void chargerCacheWikipedia().then(setCacheWiki);
+  }, []);
+
   useEffect(() => {
     chargerCollection()
       .then((c) => {
@@ -119,7 +129,9 @@ const App: React.FC = () => {
 
   const visibles = useMemo(
     () => filtrerCartes(collection.cartes, filtres).filter((c) => theme === 'tous' || themesDeCarte(c).includes(theme)),
-    [collection.cartes, filtres, theme],
+    // `cacheWiki` change les thèmes lus par `themesDeCarte` (surcouche Wikipédia).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [collection.cartes, filtres, theme, cacheWiki],
   );
   const resume = useMemo(() => resumer(collection.cartes), [collection.cartes]);
 
@@ -279,6 +291,8 @@ const App: React.FC = () => {
           />
 
           <SynchroAuto collection={collection} preferences={preferences} />
+
+          <VerificationWikipedia cartes={collection.cartes} cache={cacheWiki} onCache={setCacheWiki} />
 
           <Synchronisation
             collection={collection}

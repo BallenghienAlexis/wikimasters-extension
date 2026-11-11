@@ -148,6 +148,11 @@ export default tseslint.config(
     rules: regles({ site: true, reseau: 'sauf-fetch', alea: true }),
   },
   {
+    // Seul fichier de l'application autorisé à appeler `fetch` : GET vers Wikipédia (voir AGENTS.md).
+    files: ['src/app/verifierWikipedia.ts'],
+    rules: regles({ reseau: 'sauf-fetch', alea: true }),
+  },
+  {
     // Aléatoire interdit dans la file (cadence fixe).
     files: ['src/lib/file.ts'],
     rules: regles({ site: true, alea: true }),
