@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { LIBELLES_STATUT, STATUTS, type Collection } from '../lib/collection';
+import type { CacheWikipedia } from '../lib/wikipedia';
 import { IDS_THEMES, LIBELLES_THEMES, compterThemes, themesDeCarte } from '../lib/themes';
 import { apercuTri, themesAimesDesFavoris, type Preferences } from '../lib/tri';
 
@@ -15,14 +16,18 @@ interface Props {
   preferencesInitiales: Preferences;
   onAppliquer: (preferences: Preferences) => void;
   onFermer: () => void;
+  /** Cache Wikipédia : change quand de nouveaux thèmes sont connus, pour recalculer les comptes. */
+  cacheWiki: CacheWikipedia;
 }
 
-const AssistantTri: React.FC<Props> = ({ collection, preferencesInitiales, onAppliquer, onFermer }) => {
+const AssistantTri: React.FC<Props> = ({ collection, preferencesInitiales, onAppliquer, onFermer, cacheWiki }) => {
   const [etape, setEtape] = useState(0);
   const [preferences, setPreferences] = useState(preferencesInitiales);
   const [nomAmi, setNomAmi] = useState('');
 
-  const comptes = useMemo(() => compterThemes(collection.cartes), [collection.cartes]);
+  const comptes = useMemo(() => compterThemes(collection.cartes),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `cacheWiki` change les thèmes lus par `themesDeCarte`.
+    [collection.cartes, cacheWiki]);
   const exemples = useMemo(() => {
     const parTheme: Record<string, string[]> = {};
     for (const carte of collection.cartes) {
@@ -32,7 +37,8 @@ const AssistantTri: React.FC<Props> = ({ collection, preferencesInitiales, onApp
       }
     }
     return parTheme;
-  }, [collection.cartes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `cacheWiki` change les thèmes lus par `themesDeCarte`.
+  }, [collection.cartes, cacheWiki]);
   const aimesDesFavoris = useMemo(() => themesAimesDesFavoris(collection.cartes), [collection.cartes]);
   const themesPresents = IDS_THEMES.filter((id) => (comptes[id] ?? 0) > 0);
   const apercu = useMemo(() => (etape === 2 ? apercuTri(collection, preferences) : null), [collection, preferences, etape]);

@@ -71,7 +71,7 @@ Cette feature n'ajoute aucun type d'action, aucun point d'accès ni aucune requ�
 - Un filtre « thèmes suivis seulement » pour les étiquettes de thème (réponse 1).
 - « #À échanger <nom> » sur une carte qui n'est pas au statut `echanger`.
 - L'arbre des thèmes et le choix thème par thème dans l'assistant (variante 3), ainsi que la vue par carte de l'aperçu (variante 2).
-- La détection des thèmes par un service externe ou un modèle : le calcul reste local, par mots-clés, et n'est jamais stocké.
+- La détection des thèmes par un modèle. Le calcul reste local, par mots-clés. **Exception décidée par Alexis le 2026-11-11** : les catégories de la page Wikipédia de la carte (GET en lecture seule, voir `AGENTS.md`) s’ajoutent aux mots-clés, avec un cache local de 30 jours, vérifiées automatiquement pour les cartes consultées (affichées).
 
 ## Taxonomie
 
