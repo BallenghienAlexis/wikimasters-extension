@@ -97,7 +97,10 @@ class Arret extends Error {
 
 export function creerFile(deps: DependancesFile): File {
   const { horloge, transport, confirmer, reverifier, appliquer, journal } = deps
-  const gigue = (): number => Math.max(0, deps.gigue?.() ?? 0)
+  const gigue = (): number => {
+    const g = deps.gigue?.() ?? 0
+    return Number.isFinite(g) ? Math.max(0, g) : 0
+  }
 
   let enCours = false
   let file: Action[] = []
@@ -147,7 +150,7 @@ export function creerFile(deps: DependancesFile): File {
     await journal.passer(id)
   }
 
-  /** Date de début autorisée : cadence de 6 s, réponse précédente, confirmation, fenêtre de 60 s. */
+  /** Date de début autorisée : intervalle de 6 s plus gigue, réponse précédente, confirmation, fenêtre de 60 s. */
   function debutAutorise(plancher: number): number {
     let debut = Math.max(dernierDebut + INTERVALLE_MS + gigue(), derniereReponse, plancher)
     const recents = debuts.filter((d) => d > debut - FENETRE_MS)

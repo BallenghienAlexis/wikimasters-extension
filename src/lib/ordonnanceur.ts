@@ -230,13 +230,18 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
 
   // ---------------------------------------------------------------------------------------------
 
+  function gigue(): number {
+    const g = deps.gigue?.() ?? 0;
+    return Number.isFinite(g) ? Math.max(0, g) : 0;
+  }
+
   async function requete(chemin: string, tolerant = false): Promise<ReponseApi | null> {
     if (deps.arretDemande?.()) throw new Interruption('manuel', null);
     // Cadence : 6 s depuis la dernière requête, 10 au plus par fenêtre de 60 s (budget commun).
     const t = horloge.now();
     const recentes = etat.requetes.filter((x) => x > t - FENETRE_MS);
     const derniere = recentes.at(-1);
-    let echeance = derniere === undefined ? t : derniere + INTERVALLE_MS + Math.max(0, deps.gigue?.() ?? 0);
+    let echeance = derniere === undefined ? t : derniere + INTERVALLE_MS + gigue();
     const dixieme = recentes.at(-MAX_PAR_FENETRE);
     if (recentes.length >= MAX_PAR_FENETRE && dixieme !== undefined) echeance = Math.max(echeance, dixieme + FENETRE_MS);
     await horloge.attendreJusqua(echeance);

@@ -563,5 +563,6 @@ describe('ordonnanceur — délai variable et enchères du site', () => {
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });
     expect(r.complete).toBe(true);
     expect(r.etat.ventesSite ?? null).toBeNull();
+    expect(b.journal.join('\n')).not.toMatch(/Échec/);
   });
 });

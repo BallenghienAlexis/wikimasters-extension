@@ -190,6 +190,12 @@ describe('délai variable (gigue)', () => {
     expect(ecarts).toEqual([6000, 9000, 6000, 7500]);
   });
 
+  it('ignore une gigue non finie (NaN)', async () => {
+    const b = banc({ gigue: () => Number.NaN });
+    await creerFile(b.deps).demarrer(lot(3), 'lot-1');
+    expect(b.departs.slice(1).map((d, k) => d - b.departs[k]!)).toEqual([6000, 6000]);
+  });
+
   it('respecte le plafond de 10 requêtes par 60 s malgré la gigue', async () => {
     const b = banc({ gigue: () => 500 });
     await creerFile(b.deps).demarrer(lot(30), 'lot-1');

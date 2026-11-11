@@ -148,7 +148,7 @@ export default tseslint.config(
     rules: regles({ site: true, reseau: 'sauf-fetch', alea: true }),
   },
   {
-    // Aléatoire interdit dans la file (cadence fixe).
+    // Aléatoire interdit dans la file : le délai variable est injecté (gigue.ts), intervalle minimal 6 s.
     files: ['src/lib/file.ts'],
     rules: regles({ site: true, alea: true }),
   },
