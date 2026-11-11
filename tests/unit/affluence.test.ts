@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ajouterEvenement, conseillerDelai, estHeureForte, histogramme, MAX_EVENEMENTS, validerEvenements, type EvenementVente } from '../../src/lib/affluence';
+import { extraireHorodatages, routeMarcheValide, ajouterEvenement, conseillerDelai, estHeureForte, histogramme, MAX_EVENEMENTS, validerEvenements, type EvenementVente } from '../../src/lib/affluence';
 
 // Mardi 2026-11-10 à 20 h locales, puis à 15 h.
 const soir = new Date(2026, 10, 10, 20, 0).getTime();
@@ -61,5 +61,34 @@ describe('cas limites', () => {
     for (let i = 0; i < 20; i++) ev.push({ type: 'debut', at: new Date(2026, 10, 2 + (i % 5), 8 + i % 3).getTime() });
     for (let i = 0; i < 3; i++) ev.push({ type: 'fin', at: apresMidi });
     expect(estHeureForte(apresMidi, ev)).toBe(true);
+  });
+});
+
+describe('extraireHorodatages', () => {
+  it('lit la liste à la racine ou dans un champ usuel, sans rien d’autre', () => {
+    const a = { created_at: '2026-11-10T20:00:00Z', seller: 'secret', amount: 9 };
+    expect(extraireHorodatages([a])).toEqual([Date.parse('2026-11-10T20:00:00Z')]);
+    expect(extraireHorodatages({ auctions: [a] })).toEqual([Date.parse('2026-11-10T20:00:00Z')]);
+  });
+  it('ignore les annonces illisibles et les formes inattendues', () => {
+    expect(extraireHorodatages([{ created_at: 'x' }, null, 3])).toEqual([]);
+    expect(extraireHorodatages({ autre: [] })).toEqual([]);
+    expect(extraireHorodatages('nope')).toEqual([]);
+    expect(extraireHorodatages([{ created_at: 9e15 }])).toEqual([]);
+    expect(extraireHorodatages([{ created_at: 1_700_000_000 }])).toEqual([]);
+  });
+});
+
+describe('routeMarcheValide', () => {
+  it.each(['/api/marketplace', '/api/marketplace?status=active&page=0', '/api/marketplace/cards/c/sales?scope=summary'])('accepte %s', (r) => expect(routeMarcheValide(r)).toBe(true));
+  it.each([null, '/api/my-collection', 'https://x.fr/api/marketplace', '/api/marketplace/../trades', '/api/marketplace/cards/c/sales', '/api/marketplaceX', '/api/marketplace-admin/x', '/api/marketplace/cards/c/sales?x=1&noscope=summary', '/api/marketplace/cards/c/sales?scope=summaryall'])('refuse %s', (r) => expect(routeMarcheValide(r)).toBe(false));
+});
+
+describe('relevés du site dans les heures fortes', () => {
+  it('comptent comme observations et déterminent les heures fortes', () => {
+    const ev: EvenementVente[] = [];
+    for (let i = 0; i < 25; i++) ev.push({ type: 'site', at: apresMidi });
+    expect(estHeureForte(apresMidi, ev)).toBe(true);
+    expect(estHeureForte(soir, ev)).toBe(false);
   });
 });

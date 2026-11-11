@@ -13,6 +13,10 @@ export interface ConfigAffluence {
   /** Créneaux par défaut, en attendant les données : [heure de début incluse, heure de fin exclue]. */
   creneauxSemaine: [number, number][];
   creneauxWeekend: [number, number][];
+  /** Route de listing du marché (GET, même origine), ex. '/api/marketplace?...'. `null` : relevé du site désactivé. À relever dans l’onglet Réseau de la page Marché. */
+  routeMarche: string | null;
+  /** Champs de chaque annonce qui portent son horodatage de création, par ordre de préférence. */
+  champsHorodatage: string[];
 }
 
 export const CONFIG_AFFLUENCE: ConfigAffluence = {
@@ -22,4 +26,6 @@ export const CONFIG_AFFLUENCE: ConfigAffluence = {
   minObservations: 20,
   creneauxSemaine: [[12, 14], [19, 23]],
   creneauxWeekend: [[10, 12], [15, 23]],
+  routeMarche: null,
+  champsHorodatage: ['created_at', 'createdAt', 'started_at', 'start_at'],
 };
