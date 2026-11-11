@@ -25,6 +25,17 @@ const resultatOk = {
   resultat: { classe: 'reussie', codeHttp: 200, cause: 'action réussie' },
 }
 
+describe('validerOrdre : idCardSite', () => {
+  const base = { type: 'enchere', idCarte: 'a|b', idExemplaire: 'e1', prix: 5 }
+  const UUID = '44444444-4444-4444-8444-444444444444'
+  it('accepte un uuid, une clé absente ; refuse un uuid invalide ou vide', () => {
+    expect(validerOrdre(messageOrdre({ ...base, idCardSite: UUID } as Action))).toEqual({ ...base, idCardSite: UUID })
+    expect(validerOrdre(messageOrdre(base as Action))).toEqual(base)
+    expect(validerOrdre(messageOrdre({ ...base, idCardSite: 'pas-un-uuid' } as Action))).toBeNull()
+    expect(validerOrdre(messageOrdre({ ...base, idCardSite: '' } as Action))).toBeNull()
+  })
+})
+
 describe('validerOrdre', () => {
   it('accepte un ordre valide de chaque type', () => {
     const ordres: Action[] = [

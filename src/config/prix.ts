@@ -12,6 +12,12 @@ export interface ConfigPrix {
   matricePrixDepart: TranchePrix[];
 }
 
+/**
+ * Plafond de sécurité de l'envoi réel d'une défausse (Alexis, 2026-11-11) : une carte dont la valeur
+ * marchande est inconnue ou supérieure à ce plafond n'est jamais défaussée par l'extension, même décidée à la main.
+ */
+export const PLAFOND_VALEUR_DEFAUSSE = 5;
+
 export const CONFIG_PRIX: ConfigPrix = {
   // Une carte qui n'intéresse personne et vaut moins que ce seuil est à défausser.
   seuilDefausse: 15,

@@ -57,14 +57,12 @@ describe('table du contrat', () => {
 
   it('ne contient ni URL ni nom d’en-tête dans contrat.ts ni dans contrat/ (AC3)', () => {
     const dossier = fileURLToPath(new URL('../../src/lib/contrat/', import.meta.url))
-    const sources = [
-      lireSource('../../src/lib/contrat.ts'),
-      ...readdirSync(dossier).map((f) => lireSource(`../../src/lib/contrat/${f}`)),
-    ]
+    const fichiers = ['contrat.ts', ...readdirSync(dossier).map((f) => `contrat/${f}`)]
+    const sources = fichiers.map((f) => lireSource(`../../src/lib/${f}`))
     expect(sources.length).toBeGreaterThan(1)
-    for (const source of sources) {
+    for (const [i, source] of sources.entries()) {
       // Seuls les chemins relatifs du site (enchère, défausse) contiennent « /api/ ».
-      const interdits = source.includes("hote: 'site'") ? ['https://', 'http://', 'authorization', 'apikey'] : ['/api/', 'https://', 'http://', 'authorization', 'apikey']
+      const interdits = ['contrat/enchere.ts', 'contrat/defausse.ts'].includes(fichiers[i]!) ? ['https://', 'http://', 'authorization', 'apikey'] : ['/api/', 'https://', 'http://', 'authorization', 'apikey']
       for (const interdit of interdits) {
         expect(source.toLowerCase(), interdit).not.toContain(interdit)
       }

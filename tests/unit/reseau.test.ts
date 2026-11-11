@@ -163,8 +163,12 @@ describe('reseau : enchère et défausse sur l’origine du site', () => {
     expect(f).not.toHaveBeenCalled()
   })
 
-  it('403 : échec sans réessai', async () => {
-    const f = vi.fn(async () => reponse(403))
-    expect((await emetteur(f as unknown as typeof fetch)(defausse)).codeHttp).toBe(403)
+  it.each([401, 403, 429])('%i sur enchère et défausse : échec avec le code, une seule requête chacune', async (code) => {
+    for (const ordre of [enchere, defausse]) {
+      const f = vi.fn(async () => reponse(code))
+      const r = await emetteur(f as unknown as typeof fetch)(ordre)
+      expect(r).toEqual({ classe: 'echec', codeHttp: code, cause: 'action non disponible' })
+      expect(f).toHaveBeenCalledTimes(1)
+    }
   })
 })

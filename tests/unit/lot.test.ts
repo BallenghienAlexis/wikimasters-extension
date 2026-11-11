@@ -47,7 +47,7 @@ const de = (a: Action[], type: TypeAction) => a.filter((x) => x.type === type)
 
 describe('garde-fous (SC-003, SC-004, SC-005)', () => {
   it('un favori ne produit aucune action, même avec une étiquette obsolète (SC-003)', () => {
-    const c = carte('a', { favori: true, statut: 'defausser' })
+    const c = carte('a', { favori: true, statut: 'defausser', valeurMarchande: 1 })
     const lot = construireLot(coll(c), registre([{ ex: 'ex-a', nom: 'Statut · Garder' }]), config(), TOUS)
     expect(lot.actions).toEqual([])
     expect(lot.ecartees).toEqual([])
@@ -85,8 +85,9 @@ describe('garde-fous (SC-003, SC-004, SC-005)', () => {
     expect(lot.actions).toEqual([
       { type: 'creation-etiquette', idCarte: 'a', nomEtiquette: 'Statut · Garder' },
       { type: 'pose-etiquette', idCarte: 'a', idExemplaire: 'ex-a', nomEtiquette: 'Statut · Garder' },
-      { type: 'defausse', idCarte: 'b', idExemplaire: 'ex-b' },
     ])
+    // Le statut stocké « défausser » est suivi (pas d’enchère), mais la valeur dépasse le plafond de défausse.
+    expect(lot.ecartees).toEqual([{ idCarte: 'b', titre: 'Carte b', raison: 'valeur-defausse-elevee' }])
   })
 
   it('ne modifie pas ses entrées', () => {
@@ -191,7 +192,7 @@ describe('étiquettes (SC-007 a à e, H16)', () => {
       { idExemplaire: 'x2', etiquettes: ['Statut · Échanger', '#À échanger Léa'] },
     ])
     expect(exemplairesAttendus(carte('a', { favori: true }))).toEqual([])
-    expect(exemplairesAttendus(carte('a', { statut: 'defausser' }))).toEqual([])
+    expect(exemplairesAttendus(carte('a', { statut: 'defausser', valeurMarchande: 1 }))).toEqual([])
     expect(exemplairesAttendus(carte('a', { idsSite: null }))).toEqual([])
   })
 })
@@ -224,7 +225,7 @@ describe('noms d’étiquette (AC8)', () => {
 
 describe('défausses (H19, H46)', () => {
   it('une action par exemplaire relié, dans l’ordre de idsSite, au plus la quantité', () => {
-    const lot = construireLot(coll(carte('a', { statut: 'defausser', quantite: 2, idsSite: ['z', 'y', 'x'] })), registre(), config(), TOUS)
+    const lot = construireLot(coll(carte('a', { statut: 'defausser', valeurMarchande: 1, quantite: 2, idsSite: ['z', 'y', 'x'] })), registre(), config(), TOUS)
     expect(lot.actions).toEqual([
       { type: 'defausse', idCarte: 'a', idExemplaire: 'z' },
       { type: 'defausse', idCarte: 'a', idExemplaire: 'y' },
@@ -232,21 +233,33 @@ describe('défausses (H19, H46)', () => {
   })
 
   it('les exemplaires non reliés sont signalés', () => {
-    const lot = construireLot(coll(carte('a', { statut: 'defausser', quantite: 3, idsSite: ['z'] })), registre(), config(), TOUS)
+    const lot = construireLot(coll(carte('a', { statut: 'defausser', valeurMarchande: 1, quantite: 3, idsSite: ['z'] })), registre(), config(), TOUS)
     expect(de(lot.actions, 'defausse')).toHaveLength(1)
     expect(lot.ecartees).toEqual([{ idCarte: 'a', titre: 'Carte a', raison: 'exemplaires-non-relies' }])
   })
 
   it('aucun retrait d’étiquette avant défausse (H19)', () => {
     const r = registre([{ ex: 'ex-a', nom: 'Statut · Garder' }], { 'Statut · Garder': 'e1' })
-    const lot = construireLot(coll(carte('a', { statut: 'defausser' })), r, config(), TOUS)
+    const lot = construireLot(coll(carte('a', { statut: 'defausser', valeurMarchande: 1 })), r, config(), TOUS)
     expect(lot.actions.map((a) => a.type)).toEqual(['defausse'])
+  })
+})
+
+describe('plafond de valeur de la défausse (Alexis, 2026-11-11)', () => {
+  it.each([[5, true], [1, true], [6, false], [100, false], [null, false]])('valeur %s : défausse envoyée = %s', (valeur, envoyee) => {
+    const lot = construireLot(coll(carte('a', { statut: 'defausser', valeurMarchande: valeur })), registre(), config(), TOUS)
+    expect(de(lot.actions, 'defausse')).toHaveLength(envoyee ? 1 : 0)
+    if (!envoyee) expect(lot.ecartees).toEqual([{ idCarte: 'a', titre: 'Carte a', raison: 'valeur-defausse-elevee' }])
+  })
+  it('même décidée à la main, une carte trop chère n’est pas défaussée', () => {
+    const lot = construireLot(coll(carte('a', { statut: 'defausser', decidePar: 'moi', valeurMarchande: 50 })), registre(), config(), TOUS)
+    expect(lot.actions).toEqual([])
   })
 })
 
 describe('types non disponibles', () => {
   it('une carte dont l’action n’est pas disponible est listée « action non disponible »', () => {
-    const lot = construireLot(coll(carte('a', { statut: 'defausser' }), carte('b')), registre(), config(), types())
+    const lot = construireLot(coll(carte('a', { statut: 'defausser', valeurMarchande: 1 }), carte('b')), registre(), config(), types())
     expect(lot.actions).toEqual([])
     expect(lot.ecartees.map((e) => [e.idCarte, e.raison])).toEqual([
       ['a', 'action-non-disponible'],
@@ -263,7 +276,7 @@ describe('types non disponibles', () => {
 
   it('génère les types disponibles et signale les autres', () => {
     const r = registre([], { 'Statut · Garder': 'e1' })
-    const lot = construireLot(coll(carte('a'), carte('b', { statut: 'defausser' })), r, config(), types('pose-etiquette'))
+    const lot = construireLot(coll(carte('a'), carte('b', { statut: 'defausser', valeurMarchande: 1 })), r, config(), types('pose-etiquette'))
     expect(lot.actions.map((a) => a.type)).toEqual(['pose-etiquette'])
     expect(lot.ecartees).toEqual([{ idCarte: 'b', titre: 'Carte b', raison: 'action-non-disponible' }])
   })
@@ -274,7 +287,7 @@ describe('ordre H9', () => {
     const r = registre([{ ex: 'ex-b', nom: 'Statut · Vendre' }], { 'Statut · Vendre': 'e2' })
     const lot = construireLot(
       coll(
-        carte('d', { statut: 'defausser', quantite: 2, idsSite: ['d2', 'd1'] }),
+        carte('d', { statut: 'defausser', valeurMarchande: 1, quantite: 2, idsSite: ['d2', 'd1'] }),
         carte('c'),
         carte('b', { statut: 'garder' }),
         carte('a', { statut: 'garder', idsSite: ['a2', 'a1'] }),

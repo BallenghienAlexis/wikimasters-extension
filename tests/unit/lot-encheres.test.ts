@@ -245,7 +245,7 @@ describe('enchères : étiquettes d’une carte à vendre (AC4, H16)', () => {
   })
 
   it('les enchères viennent après les poses et avant les défausses (H9)', () => {
-    const l = lot(coll(carte('a'), carte('z', { statut: 'defausser', idsSite: ['ex-z'] })))
+    const l = lot(coll(carte('a'), carte('z', { statut: 'defausser', valeurMarchande: 1, idsSite: ['ex-z'] })))
     const types = l.actions.map((a) => a.type)
     expect(types.lastIndexOf('pose-etiquette')).toBeLessThan(types.indexOf('enchere'))
     expect(types.indexOf('enchere')).toBeLessThan(types.indexOf('defausse'))

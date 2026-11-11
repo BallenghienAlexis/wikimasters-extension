@@ -32,6 +32,7 @@ import {
 import { preferencesParDefaut, type Preferences } from '../lib/tri';
 import DialogueDefausse from './DialogueDefausse';
 import EtiquettesPrevues from './EtiquettesPrevues';
+import { avecIdCardSite } from '../lib/idCardSite';
 import { avecIdEtiquette } from '../lib/registre';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
 import Journal, { type CoupleRetrait } from './Journal';
@@ -59,6 +60,7 @@ const RAISONS: Record<RaisonEcart, string> = {
   'nom-trop-long': 'nom d’étiquette trop long',
   homonyme: 'une étiquette du même nom existe déjà sur le site',
   'exemplaires-non-relies': 'exemplaires non reliés au site',
+  'valeur-defausse-elevee': 'valeur marchande inconnue ou supérieure au plafond de défausse (5)',
 };
 
 export const libelleRaison = (raison: RaisonEcart): string => RAISONS[raison];
@@ -282,7 +284,9 @@ export function detailsDuLot(actions: readonly Action[], cartes: ReadonlyMap<str
       case 'defausse': {
         const k = (rang.get(a.idCarte) ?? 0) + 1;
         rang.set(a.idCarte, k);
-        return `exemplaire ${k} sur ${totalDefausses.get(a.idCarte) ?? k}`;
+        const valeur = cartes.get(a.idCarte)?.valeurMarchande;
+        const exemplaire = `exemplaire ${k} sur ${totalDefausses.get(a.idCarte) ?? k}`;
+        return valeur == null ? exemplaire : `${exemplaire} · valeur marchande ${valeur}`;
       }
       case 'enchere': {
         const valeur = cartes.get(a.idCarte)?.valeurMarchande;
@@ -415,9 +419,9 @@ function contexteExecution(): ContexteExecution {
     transport: async (ordre) => {
       if (ordre.type === 'enchere') {
         // L’identifiant « card_id » du site vient de l’état de synchronisation, au moment d’envoyer.
-        const idCardSite = (await chargerEtatSynchro())?.cardIds[ordre.idCarte];
-        if (idCardSite === undefined) return { classe: 'echec', codeHttp: null, cause: 'action non disponible' };
-        return execution.transport({ ...ordre, idCardSite });
+        const complete = avecIdCardSite(ordre, (await chargerEtatSynchro())?.cardIds);
+        if (complete === null) return { classe: 'echec', codeHttp: null, cause: 'action non disponible' };
+        return execution.transport(complete);
       }
       if (ordre.type !== 'pose-etiquette' && ordre.type !== 'retrait-etiquette') return execution.transport(ordre);
       // L’identifiant d’étiquette du site vient du registre, au moment d’envoyer (la création précède la pose).

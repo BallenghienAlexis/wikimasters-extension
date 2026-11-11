@@ -9,8 +9,9 @@ export type SourceJeton = () => string | null;
 /** Source par défaut : ne lit rien. */
 export const SOURCE_NON_RELEVEE: SourceJeton = () => null;
 
-const ORIGINE_SITE = 'https://www.wiki-masters.com';
 /** Origines vers lesquelles l’en-tête d’authentification peut partir : le site et son hôte REST. */
+const ORIGINE_SITE = 'https://www.wiki-masters.com';
+
 const ORIGINES_AUTORISEES: readonly string[] = [ORIGINE_SITE, ORIGINE_REST];
 
 function origineDe(url: string): string | null {

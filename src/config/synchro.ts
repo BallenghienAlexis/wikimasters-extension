@@ -4,9 +4,10 @@
 // dans cette constante unique.
 
 /** Hôte REST des étiquettes (projet Supabase du site) : la seule origine, autre que le site, autorisée. */
+export const ORIGINE_REST = 'https://cyrxjeppjqsxxjayfrur.supabase.co'
+
 /** Origine du site : cible des écritures « enchère » et « défausse » (cookies du navigateur, aucun jeton lu). */
 export const ORIGINE_SITE = 'https://www.wiki-masters.com'
-export const ORIGINE_REST = 'https://cyrxjeppjqsxxjayfrur.supabase.co'
 
 /** Nom du cookie de session du site (découpé en `.0`, `.1`…). Le jeton n'est lu que dans `jeton.ts`. */
 export const NOM_COOKIE_SESSION = 'sb-cyrxjeppjqsxxjayfrur-auth-token'

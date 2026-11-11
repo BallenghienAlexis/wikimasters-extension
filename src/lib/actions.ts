@@ -86,6 +86,7 @@ export type RaisonEcart =
   | 'nom-trop-long'
   | 'homonyme'
   | 'exemplaires-non-relies'
+  | 'valeur-defausse-elevee'
 
 export interface CarteEcartee {
   idCarte: string
