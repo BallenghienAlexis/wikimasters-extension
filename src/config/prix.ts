@@ -19,17 +19,18 @@ export interface ConfigPrix {
 export const PLAFOND_VALEUR_DEFAUSSE = 5;
 
 export const CONFIG_PRIX: ConfigPrix = {
-  // Une carte qui n'intéresse personne et vaut moins que ce seuil est à défausser.
-  seuilDefausse: 15,
+  // Une carte qui n'intéresse personne et vaut moins que ce seuil (donc 5 ou moins) est à défausser.
+  // Aligné sur PLAFOND_VALEUR_DEFAUSSE (Alexis, 2026-11-11) : l'assistant ne propose rien que l'envoi refuserait.
+  seuilDefausse: PLAFOND_VALEUR_DEFAUSSE + 1,
 
   // Nombre d'enchères que le site autorise en même temps.
   maxVentesSimultanees: 5,
 
   // Matrice valeur marchande → prix de départ. La tranche la plus haute atteinte s'applique.
-  // Lecture : une carte vendue au marché entre 15 et 25 se met aux enchères à 1, etc.
+  // Lecture : une carte vendue au marché entre 6 et 25 se met aux enchères à 1, etc.
   // Au-delà de 200 : suite extrapolée (tranches doublées, prix toujours inférieur à la valeur du marché). À ajuster.
   matricePrixDepart: [
-    { valeurMin: 15, prixDepart: 1 }, // 15 à 25
+    { valeurMin: 6, prixDepart: 1 }, // 6 à 25 (abaissé de 15 à 6 le 2026-11-11 avec le seuil de défausse)
     { valeurMin: 26, prixDepart: 5 }, // 26 à 50
     { valeurMin: 51, prixDepart: 10 }, // 51 à 100
     { valeurMin: 101, prixDepart: 50 }, // 101 à 200

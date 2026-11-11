@@ -118,7 +118,7 @@ describe('enchères : places libres (AC1)', () => {
 describe('enchères : prix, tri et départage (AC2)', () => {
   it('prix = prixCible sinon prixDepart(valeurMarchande)', () => {
     const l = lot(
-      coll(carte('a', { prixCible: 7, valeurMarchande: VALEUR }), carte('b', { prixCible: null, valeurMarchande: VALEUR_DOUBLE })),
+      coll(carte('a', { prixCible: 7, valeurMarchande: VALEUR_DOUBLE }), carte('b', { prixCible: null, valeurMarchande: VALEUR_DOUBLE })),
     )
     const prix = Object.fromEntries(encheres(l.actions).map((e) => [e.idCarte, e.prix]))
     expect(prixDepart(VALEUR_DOUBLE)).not.toBeNull()
@@ -139,7 +139,7 @@ describe('enchères : prix, tri et départage (AC2)', () => {
 
   it('les cartes en attente de place sont les moins bien classées', () => {
     const l = lot(
-      coll(carte('a', { prixCible: 2 }), carte('b', { prixCible: 8 }), carte('c', { prixCible: 5 })),
+      coll(carte('a', { prixCible: 2, valeurMarchande: 40 }), carte('b', { prixCible: 8, valeurMarchande: 40 }), carte('c', { prixCible: 5, valeurMarchande: 40 })),
       config({ maxVentesSimultanees: 2 }),
     )
     expect(encheres(l.actions).map((e) => e.idCarte)).toEqual(['b', 'c'])
