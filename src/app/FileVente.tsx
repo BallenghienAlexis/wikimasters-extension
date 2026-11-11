@@ -1,17 +1,25 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { CONFIG_PRIX } from '../config/prix';
 import type { Carte } from '../lib/collection';
+import { conseillerDelai, observations, type EvenementVente } from '../lib/affluence';
+import { CONFIG_AFFLUENCE } from '../config/affluence';
 import { fileDeVente, valeurDeCarte } from '../lib/tri';
 
 const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded border border-line bg-ink px-4';
 
 interface Props {
   cartes: Carte[];
+  ventes?: EvenementVente[];
   onMiseEnVente: (id: string) => void;
   onTerminee: (id: string) => void;
 }
 
-const FileVente: React.FC<Props> = ({ cartes, onMiseEnVente, onTerminee }) => {
+const FileVente: React.FC<Props> = ({ cartes, ventes = [], onMiseEnVente, onTerminee }) => {
+  const [maintenant, setMaintenant] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setMaintenant(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
   const { enCours, placesLibres, prochaines, enAttente } = fileDeVente(cartes);
   if (enCours.length === 0 && prochaines.length === 0 && enAttente === 0) return null;
 
@@ -41,7 +49,7 @@ const FileVente: React.FC<Props> = ({ cartes, onMiseEnVente, onTerminee }) => {
             {prochaines.map((carte) => (
               <li key={carte.id} className="flex flex-wrap items-center justify-between gap-2">
                 <span className="min-w-0 break-words">
-                  {carte.titre} · valeur {valeurDeCarte(carte)} · départ {carte.prixCible ?? 'à définir'}
+                  {carte.titre} · valeur {valeurDeCarte(carte)} · départ {carte.prixCible ?? 'à définir'} · {conseillerDelai(valeurDeCarte(carte), maintenant, ventes).texte}
                 </span>
                 <button type="button" className={CLASSE_BOUTON} onClick={() => onMiseEnVente(carte.id)}>
                   Je l’ai mise aux enchères
@@ -50,6 +58,12 @@ const FileVente: React.FC<Props> = ({ cartes, onMiseEnVente, onTerminee }) => {
             ))}
           </ul>
         </>
+      )}
+
+      {prochaines.length > 0 && (
+        <p className="mt-2 text-xs text-muted">
+          Heures fortes {observations(ventes) < CONFIG_AFFLUENCE.minObservations ? 'par défaut' : 'déduites de vos ventes'} ({observations(ventes)} {observations(ventes) > 1 ? 'mises en vente notées' : 'mise en vente notée'}).
+        </p>
       )}
 
       {enAttente > 0 && <p className="mt-3 text-sm text-muted">{enAttente} {enAttente > 1 ? 'cartes en attente' : 'carte en attente'} d’une place libre.</p>}

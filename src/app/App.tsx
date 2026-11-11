@@ -14,11 +14,12 @@ import {
   type Filtres,
 } from '../lib/collection';
 import { versCsv, versJson } from '../lib/exports';
-import { chargerCollection, chargerExecution, chargerPreferences, chargerRegistre, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences, lireCollectionBrute, reinitialiserCollection } from '../lib/stockage';
+import { chargerCollection, chargerExecution, chargerPreferences, chargerRegistre, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences, chargerVentes, noterEvenementVente, lireCollectionBrute, reinitialiserCollection } from '../lib/stockage';
 import { progression, texteProgression, type Synchro } from '../lib/synchro';
 import { LIBELLES_THEMES, IDS_THEMES, themesDeCarte } from '../lib/themes';
 import { appliquerTri, preferencesParDefaut, type Preferences } from '../lib/tri';
 import type { Registre } from '../lib/actions';
+import type { EvenementVente } from '../lib/affluence';
 import { registreVide } from '../lib/registre';
 import AssistantTri from './AssistantTri';
 import Synchronisation from './Synchronisation';
@@ -56,6 +57,7 @@ const App: React.FC = () => {
   const [theme, setTheme] = useState('tous');
   const [preferences, setPreferences] = useState<Preferences>(preferencesParDefaut);
   const [assistantOuvert, setAssistantOuvert] = useState(false);
+  const [ventes, setVentes] = useState<EvenementVente[]>([]);
   const [synchro, setSynchro] = useState<Synchro | null>(null);
   const [registre, setRegistre] = useState<Registre>(registreVide);
   const [executionEnCours, setExecutionEnCours] = useState(false);
@@ -101,6 +103,7 @@ const App: React.FC = () => {
     void chargerPreferences()
       .then(setPreferences)
       .finally(() => setPreferencesLues(true));
+    void chargerVentes().then(setVentes).catch(() => undefined);
     void chargerSynchro().then(setSynchro);
     void lireStockageSynchro().then(appliquerStockageSynchro);
     return ecouterSynchro(setSynchro);
@@ -274,8 +277,15 @@ const App: React.FC = () => {
 
           <FileVente
             cartes={collection.cartes}
-            onMiseEnVente={(id) => editer(id, { statut: 'en-vente', decidePar: 'moi' })}
-            onTerminee={(id) => appliquer(terminerEnchere(collection, id))}
+            ventes={ventes}
+            onMiseEnVente={(id) => {
+              editer(id, { statut: 'en-vente', decidePar: 'moi' });
+              void noterEvenementVente({ type: 'debut', at: Date.now() }).then(setVentes).catch(() => undefined);
+            }}
+            onTerminee={(id) => {
+              appliquer(terminerEnchere(collection, id));
+              void noterEvenementVente({ type: 'fin', at: Date.now() }).then(setVentes).catch(() => undefined);
+            }}
           />
 
           <SynchroAuto collection={collection} preferences={preferences} />

@@ -5,6 +5,7 @@ import { registreVide, validerRegistre } from './registre';
 import { lireSynchro, noterPage, type Pagination, type Synchro } from './synchro';
 import type { EtatOrdonnanceur, RaisonArretSynchro } from './ordonnanceur';
 import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../config/amis';
+import { ajouterEvenement, validerEvenements, VERSION_VENTES, type EvenementVente } from './affluence';
 import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, proposerTri, type Preferences } from './tri';
 
 const CLE = 'collection';
@@ -21,6 +22,7 @@ const CLE_BAIL_SYNCHRO = 'bailSynchro';
 const CLE_ETAT_SYNCHRO = 'etatSynchro';
 const CLE_ARRET_SYNCHRO = 'arretSynchro';
 const CLE_STATUT_SYNCHRO = 'statutSynchro';
+const CLE_VENTES = 'ventes';
 
 /** Version de l’enveloppe du journal stocké. */
 export const VERSION_JOURNAL = 1;
@@ -41,6 +43,7 @@ export const CLES_STOCKAGE = {
   etatSynchro: CLE_ETAT_SYNCHRO,
   arretSynchro: CLE_ARRET_SYNCHRO,
   statutSynchro: CLE_STATUT_SYNCHRO,
+  ventes: CLE_VENTES,
 } as const;
 
 function illisible(detail: string): Error {
@@ -395,4 +398,18 @@ export function ecouterCollection(rappel: (collection: Collection) => void): () 
   };
   chrome.storage.onChanged.addListener(ecouteur);
   return () => chrome.storage.onChanged.removeListener(ecouteur);
+}
+
+/** Évènements de vente notés par le joueur (locaux, sans donnée du site). Valeur illisible : liste vide. */
+export async function chargerVentes(): Promise<EvenementVente[]> {
+  const contenu = await chrome.storage.local.get(CLE_VENTES);
+  const brut = contenu[CLE_VENTES];
+  if (typeof brut !== 'object' || brut === null || (brut as { version?: unknown }).version !== VERSION_VENTES) return [];
+  return validerEvenements((brut as { evenements?: unknown }).evenements);
+}
+
+export async function noterEvenementVente(e: EvenementVente): Promise<EvenementVente[]> {
+  const suite = ajouterEvenement(await chargerVentes(), e);
+  await chrome.storage.local.set({ [CLE_VENTES]: { version: VERSION_VENTES, evenements: suite } });
+  return suite;
 }
