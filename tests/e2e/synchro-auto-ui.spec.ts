@@ -31,17 +31,17 @@ const poser = async (page: import('@playwright/test').Page, valeurs: Record<stri
   await page.reload();
 };
 
-test('l’interrupteur est désactivé par défaut et s’active au clavier', async ({ pageCollection: page }) => {
+test('l’interrupteur est activé par défaut et se coupe au clavier', async ({ pageCollection: page }) => {
   await poser(page, { collection: COLLECTION });
   const interrupteur = page.getByRole('switch', { name: 'Synchronisation automatique' });
-  await expect(interrupteur).toHaveAttribute('aria-checked', 'false');
-  await expect(page.getByTestId('etat-synchro-auto')).toHaveText('Désactivée');
+  await expect(interrupteur).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByTestId('etat-synchro-auto')).toHaveText('En attente d’un onglet WikiMasters');
 
   await interrupteur.focus();
   await page.keyboard.press('Space');
-  await expect(interrupteur).toHaveAttribute('aria-checked', 'true');
-  await expect(page.getByTestId('etat-synchro-auto')).toHaveText('En attente d’un onglet WikiMasters');
-  await expect.poll(() => page.evaluate(async () => (await chrome.storage.local.get('syncAuto')).syncAuto)).toBe(true);
+  await expect(interrupteur).toHaveAttribute('aria-checked', 'false');
+  await expect(page.getByTestId('etat-synchro-auto')).toHaveText('Désactivée');
+  await expect.poll(() => page.evaluate(async () => (await chrome.storage.local.get('syncAuto')).syncAuto)).toBe(false);
 });
 
 test('« Arrêter » écrit la demande d’arrêt, et les écarts sont en lecture seule', async ({ pageCollection: page }) => {

@@ -8,7 +8,7 @@ Vagues : V1 : T-201 [P], T-202 [P] · V2 : T-203 [P], T-204 [P] · V3 : T-205 ·
 - **G3** Aucun en-tête ajouté (ni `Authorization`, ni jeton), `credentials: 'same-origin'`, aucune lecture de cookie ni du jeton ; `jeton.ts` n'est pas importé.
 - **G4** Cadence fixe 6 000 ms, 10 requêtes max par 60 s, une seule requête en vol, arrêt sur 401/403/429 et après 3 échecs, aucune reprise avant 30 min. Aucune valeur aléatoire.
 - **G5** `click`, `submit`, `requestSubmit`, `dispatchEvent`, `focus` interdits dans le code du site. Pas de `innerHTML`. Permission `storage` seule, aucun `host_permissions`.
-- **G6** Option désactivée par défaut : 0 requête tant qu'elle n'est pas activée.
+- **G6** Option activée par défaut depuis le 2026-11-11 (avenant) : 0 requête si le joueur la désactive.
 - **G7** Données fictives dans les tests ; jamais de contenu de `captures-site/`.
 - Code, commentaires, UI, commits en français. Commits `type(T-xxx): …`.
 
@@ -107,3 +107,7 @@ Vagues : V1 : T-201 [P], T-202 [P] · V2 : T-203 [P], T-204 [P] · V3 : T-205 ·
   6. Plafond de pages (400) quand `total` est inconnu, avec test.
   7. `catch` silencieux de `synchroAuto.ts` : message générique sans contenu de réponse, ou décliné avec raison.
 - **Vérifier** : `npm run check && npm run build && npx playwright test tests/e2e/synchro-auto.spec.ts --trace off`.
+
+
+## Avenant du 2026-11-11
+Décision d’Alexis (voir AGENTS.md) : synchronisation automatique **activée par défaut**, `GET /api/marketplace/mine` ajouté au périmètre de lecture, délai variable (gigue de 0 à 6 s) ajouté à l’intervalle de 6 s. L’écriture sur le site est autorisée ; ses contrats attendent les relevés de `specs/synchro-complete/releves-a-faire.md`. En cas d’écart avec le texte ci-dessus, AGENTS.md prime.

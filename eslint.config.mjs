@@ -10,7 +10,7 @@ const MSG_ACTION = 'Interdit par AGENTS.md : aucune action sur le site à la pla
 const MSG_RESEAU = 'Interdit : le réseau passe uniquement par src/lib/reseau.ts.';
 const MSG_STOCKAGE = 'Interdit : cookies et stockage du site uniquement en lecture, dans src/lib/jeton.ts.';
 const MSG_ECRITURE = 'Interdit : aucune écriture dans les cookies ni le stockage du site, même dans src/lib/jeton.ts.';
-const MSG_ALEA = 'Interdit : aucun aléatoire dans la file, le réseau et le jeton (cadence fixe).';
+const MSG_ALEA = 'Interdit : aucun aléatoire dans la file, le réseau et le jeton (l’aléa vient de gigue.ts, injecté).';
 const MSG_JETON = 'Interdit : seul src/lib/reseau.ts peut importer jeton.';
 
 const regle = (selector, message) => ({ selector, message });
@@ -145,7 +145,7 @@ export default tseslint.config(
   {
     // Seul fichier du content script autorisé à appeler `fetch` (GET même origine, voir synchro-auto-lint.test.ts).
     files: ['src/content/synchroAuto.ts'],
-    rules: regles({ site: true, reseau: 'sauf-fetch' }),
+    rules: regles({ site: true, reseau: 'sauf-fetch', alea: true }),
   },
   {
     // Aléatoire interdit dans la file (cadence fixe).

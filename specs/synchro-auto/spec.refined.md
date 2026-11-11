@@ -43,7 +43,7 @@
 - Déclencheurs : chargement d'une page du site, puis minuteur (périodicité à fixer, par défaut 30 min) tant que l'onglet reste ouvert ; pas de relance si une synchro a eu lieu depuis moins de N minutes (horodatage dans `chrome.storage.local`).
 - Mode incrémental : `GET /api/my-collection/stats` d'abord (une requête) ; si le total n'a pas bougé et qu'une synchro complète existe, on ne relit rien ; sinon relecture des pages (ou arrêt dès qu'une page est identique à celle déjà stockée, si le tri s'y prête : à vérifier au relevé).
 - Fusion dans la collection locale par le même chemin que la lecture visuelle (`fusionnerDansStockage`), sans jamais écraser une décision `decidePar: 'moi'`.
-- Interrupteur « Synchronisation automatique » (désactivée par défaut), état et dernière synchro dans l'interface, entrées au journal.
+- Interrupteur « Synchronisation automatique » (activée par défaut depuis l’avenant du 2026-11-11), état et dernière synchro dans l'interface, entrées au journal.
 
 - **Prix du marché** : relevé automatique de la valeur marchande, par carte, pour alimenter l'assistant de tri et la file de vente. Source relevée (SC-011) : `GET /api/marketplace/cards/<card_id>/sales?scope=summary`, sans PRO. Une requête par carte, donc priorité : cartes à vendre ou à décider, valeur absente ou périmée ; une valeur saisie à la main reste prioritaire. Jamais la route sans `scope=summary` (403 PRO). Seulement pour les cartes dont la valeur est inconnue ou plus ancienne que N jours, à la même cadence fixe ; jamais en rafale.
 - **Étiquettes** : relecture des étiquettes du site **via `my-collection` et `stats`** (aucune requête de plus, aucun appel à l'hôte Supabase) pour que l'extension reflète ce qui est réellement posé (Statut · …, Ami · …, Thème · …) et détecte les écarts, y compris après une modification faite à la main sur le site. 
@@ -64,7 +64,7 @@
 | SC-004 | Une carte ajoutée : seules les pages touchées sont relues (ou arrêt dès la première page identique, selon le relevé). | unitaire |
 | SC-005 | Deux requêtes sont toujours séparées d'au moins 6 s ; jamais plus de 10 par minute ; une seule synchro à la fois, même avec plusieurs onglets ouverts. | unitaire (horloge simulée) |
 | SC-006 | Réponse 401, 403 ou 429, ou 3 échecs : arrêt immédiat, aucune reprise automatique avant le prochain déclencheur espacé d'au moins 30 min ; entrée au journal. | unitaire |
-| SC-007 | Option désactivée (défaut) : aucune requête n'est émise. | e2e |
+| SC-007 | Option désactivée par le joueur : aucune requête n'est émise. | e2e |
 | SC-008 | Une décision `decidePar: 'moi'` n'est jamais modifiée par la synchro. | unitaire |
 | SC-009 | Le jeton n'apparaît ni dans le stockage, ni dans le journal, ni dans l'interface ; seul `jeton.ts` le lit. | unitaire existant étendu |
 | SC-011 | ~~Relevé préalable prix~~ **Fait le 2026-11-09** (`releve-api.md`) : endpoint, forme de la réponse et clé de la valeur marchande par carte, écrits dans `contrat-api.md` d'après les captures d'Alexis. | manuel |

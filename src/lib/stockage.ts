@@ -125,10 +125,12 @@ export async function enregistrerSignalSynchro(horodatage: number): Promise<void
 
 const horodatageValide = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
 
-/** Synchronisation automatique : activée par défaut (décision d’Alexis du 2026-11-11) ; seul `false` la désactive. */
+/** Synchronisation automatique : activée par défaut (décision d’Alexis du 2026-11-11) ; valeur absente = activée, toute valeur illisible = désactivée. */
 export async function chargerSyncAuto(): Promise<boolean> {
   const contenu = await chrome.storage.local.get(CLE_SYNC_AUTO);
-  return contenu[CLE_SYNC_AUTO] !== false;
+  // Absente : activée (décision d’Alexis) ; présente mais autre que `true` : désactivée.
+  const valeur = contenu[CLE_SYNC_AUTO];
+  return valeur === undefined || valeur === true;
 }
 
 export async function enregistrerSyncAuto(actif: boolean): Promise<void> {
@@ -181,7 +183,7 @@ function validerEtatSynchro(brut: unknown): EtatOrdonnanceur | null {
   }
   const vs = brut.ventesSite;
   const ventesSite =
-    estObjet(vs) && nullOuEntier(vs.enCours) && nullOuEntier(vs.max) && vs.enCours !== null && vs.max !== null && horodatageValide(vs.releveLe)
+    estObjet(vs) && horodatageValide(vs.enCours) && horodatageValide(vs.max) && horodatageValide(vs.releveLe)
       ? { enCours: vs.enCours, max: vs.max, releveLe: vs.releveLe }
       : null;
   return {

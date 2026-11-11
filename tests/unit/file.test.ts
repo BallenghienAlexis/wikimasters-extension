@@ -179,6 +179,26 @@ describe('cadence fixe (AC2)', () => {
   });
 });
 
+describe('délai variable (gigue)', () => {
+  it('ajoute la gigue à l’intervalle, sans jamais le raccourcir (gigue négative ignorée)', async () => {
+    const gigues = [1500, -4000, 3000, 0];
+    let i = 0;
+    const b = banc({ gigue: () => gigues[i++ % gigues.length]! });
+    await creerFile(b.deps).demarrer(lot(5), 'lot-1');
+    const ecarts = b.departs.slice(1).map((d, k) => d - b.departs[k]!);
+    for (const e of ecarts) expect(e).toBeGreaterThanOrEqual(6000);
+    expect(ecarts).toEqual([6000, 9000, 6000, 7500]);
+  });
+
+  it('respecte le plafond de 10 requêtes par 60 s malgré la gigue', async () => {
+    const b = banc({ gigue: () => 500 });
+    await creerFile(b.deps).demarrer(lot(30), 'lot-1');
+    for (let i = 0; i + 10 < b.departs.length; i++) {
+      expect(b.departs[i + 10]! - b.departs[i]!).toBeGreaterThanOrEqual(60_000);
+    }
+  });
+});
+
 describe('une seule exécution, une seule requête en vol (AC3)', () => {
   it('refuse un second demarrer tant qu’une exécution est en cours', async () => {
     const b = banc();
