@@ -1,78 +1,79 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import type { Carte } from '../lib/collection';
+import React, { useEffect, useRef, useState } from 'react';
 import { enregistrerCacheWikipedia } from '../lib/stockage';
 import { titresAVerifier, type CacheWikipedia } from '../lib/wikipedia';
 import { verifierTitres, type RaisonArret } from './verifierWikipedia';
 
 interface Props {
-  cartes: Carte[];
+  /** Titres des cartes consultées (affichées dans la liste). */
+  titres: string[];
   cache: CacheWikipedia;
   onCache: (cache: CacheWikipedia) => void;
 }
 
 const NB = ' ';
+/** Cartes interrogées d’un coup au plus ; les suivantes le sont quand le lot est fini. */
+const TAILLE_LOT = 25;
 
 function texteArret(arret: RaisonArret, codeHttp: number | null): string {
-  if (arret === 'manuel') return 'Vérification arrêtée par vous.';
-  if (arret === 'code-http') return `Wikipédia a refusé${NB}(${codeHttp ?? '?'}) : réessayez plus tard.`;
-  return 'Vérification arrêtée : trop d’échecs de lecture.';
+  if (arret === 'code-http') return `Wikipédia a refusé${NB}(${codeHttp ?? '?'}) : vérification suspendue jusqu’au rechargement de la page.`;
+  return 'Vérification suspendue : trop d’échecs de lecture. Elle reprendra au rechargement de la page.';
 }
 
-/** Vérifie les thèmes des cartes d’après les catégories de leur page Wikipédia. Action du joueur, jamais automatique. */
-const VerificationWikipedia: React.FC<Props> = ({ cartes, cache, onCache }) => {
-  const [enCours, setEnCours] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [faites, setFaites] = useState(0);
-  const [maintenant, setMaintenant] = useState(() => Date.now());
-  const [total, setTotal] = useState(0);
-  const controleur = useRef<AbortController | null>(null);
+/**
+ * Vérifie automatiquement, d’après les catégories de leur page Wikipédia, les thèmes des cartes consultées.
+ * Une requête à la fois, une par seconde, uniquement pour les cartes affichées et absentes du cache.
+ */
+const VerificationWikipedia: React.FC<Props> = ({ titres, cache, onCache }) => {
+  const [suspendue, setSuspendue] = useState<string | null>(null);
+  const [lot, setLot] = useState<{ faites: number; total: number } | null>(null);
+  const enCours = useRef(false);
+  const tentes = useRef(new Set<string>());
+  const arretee = useRef(false);
+  const cacheRef = useRef(cache);
 
-  const restantes = useMemo(() => titresAVerifier(cartes.map((c) => c.titre), cache, maintenant), [cartes, cache, maintenant]);
+  useEffect(() => {
+    cacheRef.current = cache;
+  }, [cache]);
 
-  useEffect(() => () => controleur.current?.abort(), []);
+  useEffect(() => {
+    const prochains = titresAVerifier(titres, cache, Date.now()).filter((t) => !tentes.current.has(t)).slice(0, TAILLE_LOT);
+    if (enCours.current || arretee.current || prochains.length === 0) return;
+    enCours.current = true;
+    prochains.forEach((t) => tentes.current.add(t));
+    const controleur = new AbortController();
+    // Le lot en cours n'est pas interrompu par un nouveau rendu : il s'arrête de lui-même (cadence, 403/429, échecs).
+    void (async () => {
+      try {
+        const r = await verifierTitres({
+          titres: prochains,
+          cache: cacheRef.current,
+          signal: controleur.signal,
+          surProgres: async (nouveau, faites) => {
+            cacheRef.current = nouveau;
+            setLot({ faites, total: prochains.length });
+            onCache(nouveau);
+            await enregistrerCacheWikipedia(nouveau);
+          },
+        });
+        if (r.arret === 'code-http' || r.arret === 'echecs') {
+          arretee.current = true;
+          setSuspendue(texteArret(r.arret, r.codeHttp));
+        }
+      } catch {
+        arretee.current = true;
+        setSuspendue('Enregistrement du cache Wikipédia impossible : vérification suspendue.');
+      } finally {
+        enCours.current = false;
+        setLot(null);
+      }
+    })();
+  }, [titres, cache, onCache]);
 
-  const lancer = (): void => {
-    const c = new AbortController();
-    setMaintenant(Date.now());
-    setTotal(restantes.length);
-    controleur.current = c;
-    setEnCours(true);
-    setMessage(null);
-    setFaites(0);
-    void verifierTitres({
-      titres: restantes,
-      cache,
-      signal: c.signal,
-      surProgres: async (nouveau, n) => {
-        setFaites(n);
-        onCache(nouveau);
-        await enregistrerCacheWikipedia(nouveau);
-      },
-    })
-      .then((r) => setMessage(r.arret === null ? `${r.verifiees} page${r.verifiees > 1 ? 's' : ''} vérifiée${r.verifiees > 1 ? 's' : ''}.` : texteArret(r.arret, r.codeHttp)))
-      .catch(() => setMessage('Enregistrement du cache impossible.'))
-      .finally(() => setEnCours(false));
-  };
-
+  if (suspendue === null && lot === null) return null;
   return (
-    <section className="mt-6" aria-labelledby="titre-wikipedia" data-testid="verification-wikipedia">
-      <h2 id="titre-wikipedia" className="text-lg font-semibold">Thèmes vérifiés sur Wikipédia</h2>
-      <p className="mt-1 text-sm text-muted">
-        Lit la page Wikipédia de chaque carte (une requête par seconde, titre de la carte seul) pour affiner ses thèmes. Les décisions que vous avez prises ne changent jamais.
-      </p>
-      <p className="mt-2 text-sm" aria-live="polite">
-        {enCours ? `Vérification en cours${NB}: ${faites} sur ${total}` : `${restantes.length} carte${restantes.length > 1 ? 's' : ''} à vérifier.`}
-        {message !== null && ` ${message}`}
-      </p>
-      <button
-        type="button"
-        className="mt-2 rounded border border-line px-3 py-1 text-sm disabled:opacity-50"
-        disabled={!enCours && restantes.length === 0}
-        onClick={enCours ? () => controleur.current?.abort() : lancer}
-      >
-        {enCours ? 'Arrêter' : 'Vérifier avec Wikipédia'}
-      </button>
-    </section>
+    <p className="mt-2 text-sm text-muted" aria-live="polite" data-testid="verification-wikipedia">
+      {suspendue ?? `Thèmes vérifiés sur Wikipédia${NB}: ${lot?.faites ?? 0} sur ${lot?.total ?? 0}`}
+    </p>
   );
 };
 

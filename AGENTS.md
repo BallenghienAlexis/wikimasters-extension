@@ -25,8 +25,8 @@ La règle qui interdisait de masquer une automatisation a été retirée par Ale
 - Toute autre route de `/api/`, et toute écriture, restent soumises à la règle ci-dessous.
 
 **Vérification Wikipédia (décision d’Alexis du 2026-11-11)** : Alexis autorise des requêtes `GET` en lecture seule vers `https://fr.wikipedia.org/w/api.php` (catégories et indicateur d’homonymie de la page) pour affiner les thèmes des cartes. Il s’agit d’un service tiers public : seul le **titre de la carte** est envoyé, jamais une donnée du compte, un cookie ou un jeton (`credentials: 'omit'`). Garde-fous :
-- Déclenchée uniquement par le bouton « Vérifier avec Wikipédia » de la page de gestion (jamais automatique) ; `src/app/verifierWikipedia.ts` est le **seul** fichier de l’application qui appelle `fetch`, et `host_permissions` ne contient que `https://fr.wikipedia.org/*`.
-- Une requête à la fois, une par seconde ; arrêt sur 403 ou 429, ou après 3 échecs.
+- Automatique (décision d’Alexis du 2026-11-11, plus de bouton) : quand une carte est consultée, c’est-à-dire affichée dans la liste de la page de gestion, son titre est vérifié s’il n’est pas déjà en cache. Seules les cartes affichées sont interrogées, par lots de 25. `src/app/verifierWikipedia.ts` est le **seul** fichier de l’application qui appelle `fetch`, et `host_permissions` ne contient que `https://fr.wikipedia.org/*`.
+- Une requête à la fois, une par seconde ; arrêt sur 403 ou 429, ou après 3 échecs ; la vérification reste alors suspendue jusqu’au rechargement de la page.
 - Résultats mis en cache dans `chrome.storage.local` (clé `wikipedia`, 30 jours) ; `themesDeCarte` ajoute ces thèmes aux mots-clés sans rien retirer ni écraser une décision manuelle (`decidePar: 'moi'`).
 
 Tout code qui clique, envoie un formulaire ou appelle l'API interne du site à la place du joueur exige une décision explicite d'Alexis, écrite dans la spec de la feature, avec le risque de bannissement rappelé. Si WikiMasters ouvre une API ou donne un accord écrit, ce cadre est à mettre à jour ici.

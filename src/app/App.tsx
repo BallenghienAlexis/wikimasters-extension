@@ -139,6 +139,8 @@ const App: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [collection.cartes, filtres, theme, cacheWiki],
   );
+  // Cartes consultées = cartes affichées dans la liste (les pages suivantes comptent quand on les ouvre).
+  const titresConsultes = useMemo(() => visibles.slice(0, limite).map((c) => c.titre), [visibles, limite]);
   const resume = useMemo(() => resumer(collection.cartes), [collection.cartes]);
 
   const appliquer = (suivante: Collection): void => {
@@ -299,7 +301,7 @@ const App: React.FC = () => {
 
           <SynchroAuto collection={collection} preferences={preferences} cacheWiki={cacheWiki} />
 
-          <VerificationWikipedia cartes={collection.cartes} cache={cacheWiki} onCache={appliquerCacheWiki} />
+          <VerificationWikipedia titres={titresConsultes} cache={cacheWiki} onCache={appliquerCacheWiki} />
 
           <Synchronisation
             collection={collection}
