@@ -540,3 +540,52 @@ describe('T-206 D-03 : écriture dans le journal existant', () => {
     expect(entrees[0]).toMatchObject({ resultat: 'reussie', codeHttp: null });
   });
 });
+
+describe('relevé d’affluence du marché', () => {
+  const ROUTE = '/api/marketplace?status=active';
+  const annonces = { items: [{ created_at: '2026-11-10T20:05:00Z', seller: 'x', amount: 5 }, { created_at: 'illisible' }] };
+  const reponseMarche = (chemin: string): ReponseApi =>
+    chemin === ROUTE ? { statut: 200, json: annonces } : siteFictif(2)(chemin);
+
+  it('sans route configurée : aucune requête vers le marché', async () => {
+    const b = banc({ reponse: reponseMarche });
+    b.deps.noterAffluence = async () => undefined;
+    await creerSynchroAuto(b.deps).declencher();
+    expect(b.chemins).not.toContain(ROUTE);
+  });
+
+  it('avec une route : un GET, 6 s après la précédente, et seuls les horodatages sont notés', async () => {
+    const b = banc({ reponse: reponseMarche });
+    const notes: number[][] = [];
+    b.deps.routeMarche = ROUTE;
+    b.deps.noterAffluence = async (h) => {
+      notes.push(h);
+    };
+    await creerSynchroAuto(b.deps).declencher();
+    expect(b.chemins.filter((c) => c === ROUTE)).toHaveLength(1);
+    expect(b.chemins[b.chemins.length - 1]).toBe(ROUTE);
+    expect(notes).toEqual([[Date.parse('2026-11-10T20:05:00Z')]]);
+  });
+
+  it('sur 403 : rien n’est noté et la reprise est repoussée de 30 min', async () => {
+    const b = banc({ reponse: (c) => (c === ROUTE ? { statut: 403, json: null } : siteFictif(2)(c)) });
+    const notes: number[][] = [];
+    b.deps.routeMarche = ROUTE;
+    b.deps.noterAffluence = async (h) => {
+      notes.push(h);
+    };
+    await creerSynchroAuto(b.deps).declencher();
+    expect(notes).toEqual([]);
+    expect(b.stockage.etat?.arretJusqua).toBe(b.horloge.t + 30 * 60_000);
+  });
+
+  it('refuse une route hors du marché ou l’historique complet des ventes', async () => {
+    for (const route of ['/api/my-collection', '/api/marketplace/cards/c1/sales', 'https://exemple.fr/api/marketplace']) {
+      const b = banc({ reponse: reponseMarche });
+      b.deps.routeMarche = route;
+      b.deps.noterAffluence = async () => undefined;
+      await creerSynchroAuto(b.deps).declencher();
+      expect(b.chemins).not.toContain(route);
+    }
+  });
+});

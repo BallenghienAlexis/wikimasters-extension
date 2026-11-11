@@ -14,7 +14,7 @@ import {
   type Filtres,
 } from '../lib/collection';
 import { versCsv, versJson } from '../lib/exports';
-import { chargerCollection, chargerExecution, chargerPreferences, chargerRegistre, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences, chargerVentes, noterEvenementVente, lireCollectionBrute, reinitialiserCollection } from '../lib/stockage';
+import { chargerCollection, chargerExecution, chargerPreferences, chargerRegistre, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences, chargerAffluenceSite, chargerVentes, noterEvenementVente, lireCollectionBrute, reinitialiserCollection } from '../lib/stockage';
 import { progression, texteProgression, type Synchro } from '../lib/synchro';
 import { LIBELLES_THEMES, IDS_THEMES, themesDeCarte } from '../lib/themes';
 import { appliquerTri, preferencesParDefaut, type Preferences } from '../lib/tri';
@@ -57,7 +57,9 @@ const App: React.FC = () => {
   const [theme, setTheme] = useState('tous');
   const [preferences, setPreferences] = useState<Preferences>(preferencesParDefaut);
   const [assistantOuvert, setAssistantOuvert] = useState(false);
-  const [ventes, setVentes] = useState<EvenementVente[]>([]);
+  const [ventesJoueur, setVentes] = useState<EvenementVente[]>([]);
+  const [releveSite, setReleveSite] = useState<EvenementVente[]>([]);
+  const ventes = useMemo(() => [...ventesJoueur, ...releveSite], [ventesJoueur, releveSite]);
   const [synchro, setSynchro] = useState<Synchro | null>(null);
   const [registre, setRegistre] = useState<Registre>(registreVide);
   const [executionEnCours, setExecutionEnCours] = useState(false);
@@ -113,6 +115,7 @@ const App: React.FC = () => {
     void chargerVentes()
       .then(setVentes)
       .catch(() => setMessage('Le journal des ventes n’a pas pu être lu (stockage indisponible).'));
+    void chargerAffluenceSite().then(setReleveSite).catch(() => undefined);
     void chargerSynchro().then(setSynchro);
     void lireStockageSynchro().then(appliquerStockageSynchro);
     return ecouterSynchro(setSynchro);

@@ -63,7 +63,7 @@ const FileVente: React.FC<Props> = ({ cartes, ventes = [], onMiseEnVente, onTerm
 
       {prochaines.length > 0 && (
         <p className="mt-2 text-xs text-muted">
-          Heures fortes {nbObservations < CONFIG_AFFLUENCE.minObservations ? 'par défaut' : 'déduites de vos ventes'} ({nbObservations} {nbObservations > 1 ? 'mises en vente notées' : 'mise en vente notée'}).
+          Heures fortes {nbObservations < CONFIG_AFFLUENCE.minObservations ? 'par défaut' : 'déduites des relevés et de vos ventes'} ({nbObservations} {nbObservations > 1 ? 'mises en vente notées' : 'mise en vente notée'}).
         </p>
       )}
 

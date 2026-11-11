@@ -39,6 +39,8 @@ import {
   enregistrerPreferences,
   enregistrerRegistre,
   chargerVentes,
+  chargerAffluenceSite,
+  noterAffluenceSite,
   noterEvenementVente,
   enregistrerSignalSynchro,
   chargerEtatSynchro,
@@ -157,10 +159,26 @@ describe('ventes (affluence)', () => {
   });
 });
 
+describe('affluenceSite', () => {
+  it('stocke des horodatages sans doublon, triés, bornés à 2 000, et ignore une valeur illisible', async () => {
+    expect(await chargerAffluenceSite()).toEqual([]);
+    await noterAffluenceSite([5, 3, 5]);
+    expect((await noterAffluenceSite([3, 9])).map((e) => e.at)).toEqual([3, 5, 9]);
+    const suite = await noterAffluenceSite(Array.from({ length: 2100 }, (_, i) => 100 + i));
+    expect(suite).toHaveLength(2000);
+    faux.donnees.set('affluenceSite', { version: 9, evenements: [] });
+    expect(await chargerAffluenceSite()).toEqual([]);
+  });
+  it('n’entre pas dans le journal des ventes du joueur', async () => {
+    await noterAffluenceSite([1]);
+    expect(await chargerVentes()).toEqual([]);
+  });
+});
+
 describe('CLES_STOCKAGE', () => {
   it('AC4 : énumère exactement les clés locales de l’extension', () => {
     expect([...cles()].sort()).toEqual([
-      'amisInitiaux', 'arretSynchro', 'bailSynchro', 'collection', 'derniereSynchro', 'etatSynchro', 'execution', 'journal', 'preferences', 'registre', 'signalSynchro', 'statutSynchro', 'syncAuto', 'synchro', 'ventes',
+      'affluenceSite', 'amisInitiaux', 'arretSynchro', 'bailSynchro', 'collection', 'derniereSynchro', 'etatSynchro', 'execution', 'journal', 'preferences', 'registre', 'signalSynchro', 'statutSynchro', 'syncAuto', 'synchro', 'ventes',
     ]);
   });
 

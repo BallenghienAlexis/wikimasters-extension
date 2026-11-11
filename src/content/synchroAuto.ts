@@ -21,10 +21,13 @@ import {
   enregistrerJournal,
   chargerJournal,
   enregistrerStatutSynchro,
+  noterAffluenceSite,
   type StatutSynchro,
 } from '../lib/stockage';
 import { analyserStats } from '../lib/lectureApi';
 import { completerEntree, ouvrirEntree } from '../lib/journal';
+import { extraireHorodatages, routeMarcheValide } from '../lib/affluence';
+import { CONFIG_AFFLUENCE } from '../config/affluence';
 import { proposerTri, type Preferences } from '../lib/tri';
 
 /** Délai minimal entre deux synchronisations, et période du minuteur tant que l'onglet est visible. */
@@ -48,6 +51,10 @@ export interface DependancesSynchroAuto {
   /** Événements fixes (début, fin, arrêt et cause) pour le journal existant ; une erreur d'écriture est sans effet. */
   journaliser?: (evenement: EvenementSynchro) => Promise<void>;
   journal?: (message: string) => void;
+  /** Relevé d’affluence : route du listing du marché (`null` : désactivé) et enregistrement des horodatages lus. */
+  routeMarche?: string | null;
+  champsHorodatage?: readonly string[];
+  noterAffluence?: (horodatages: number[]) => Promise<void>;
 }
 
 export interface SynchroAuto {
@@ -133,6 +140,31 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
   let arretDemande = false;
   let dernierEssai: number | null = null;
 
+  /**
+   * Une requête `GET` vers le listing du marché, après 6 s de pause depuis la précédente. Seuls les horodatages
+   * des annonces sont conservés. Sur 401, 403 ou 429 : pause de 30 min commune à la synchronisation.
+   */
+  async function releverMarche(): Promise<void> {
+    const route = deps.routeMarche ?? null;
+    if (!routeMarcheValide(route) || !deps.noterAffluence || arretDemande) return;
+    try {
+      await deps.horloge.attendreJusqua(deps.horloge.now() + 6_000);
+      if (arretDemande) return;
+      const debut = deps.horloge.now();
+      const reponse = await deps.transport(route);
+      const etat = (await deps.chargerEtat()) ?? etatInitial();
+      const refus = [401, 403, 429].includes(reponse.statut);
+      await deps.enregistrerEtat({
+        ...etat,
+        requetes: [...etat.requetes, debut].slice(-100),
+        arretJusqua: refus ? deps.horloge.now() + 30 * 60_000 : etat.arretJusqua,
+      });
+      if (reponse.statut === 200) await deps.noterAffluence(extraireHorodatages(reponse.json, deps.champsHorodatage));
+    } catch {
+      deps.journal?.('Relevé d’affluence interrompu.');
+    }
+  }
+
   async function declencher(): Promise<ResultatSynchro | null> {
     if (enCours) return null;
     enCours = true;
@@ -211,6 +243,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         else await noter({ etat: 'arret', raison: 'echecs', ...comptes });
         await journaliser(evenementFinal(resultat, pages));
       }
+      if (resultat.issue !== 'arret') await releverMarche();
       return resultat;
     } catch {
       // Stockage illisible ou indisponible (extension rechargée) : message générique, jamais le contenu
@@ -278,6 +311,11 @@ const synchroDuNavigateur = (): SynchroAuto =>
     chargerPreferences,
     noterStatut: enregistrerStatutSynchro,
     journaliser: (evenement) => ecrireEvenementJournal(evenement),
+    routeMarche: CONFIG_AFFLUENCE.routeMarche,
+    champsHorodatage: CONFIG_AFFLUENCE.champsHorodatage,
+    noterAffluence: async (h) => {
+      await noterAffluenceSite(h);
+    },
   });
 
 const visibiliteDuNavigateur = (): SourceVisibilite => ({
