@@ -12,7 +12,7 @@ import type {
 } from '../lib/actions';
 import type { Carte, Collection } from '../lib/collection';
 import { typesDisponibles } from '../lib/contrat';
-import { CODES_ARRET, creerFile, type Decision, type EtatFile, type File as FileLot, type RaisonArret } from '../lib/file';
+import { CODES_ARRET, SUPPLEMENT_MAX_MS, creerFile, type Decision, type EtatFile, type File as FileLot, type RaisonArret } from '../lib/file';
 import { regrouperEtiquettes, type ApercuEtiquettes } from '../lib/apercuEtiquettes';
 import { completerEntree, ouvrirEntree, passerEntree } from '../lib/journal';
 import { construireLot, type Config, type EtiquetteObsolete, type LotConstruit } from '../lib/lot';
@@ -407,6 +407,8 @@ function contexteExecution(): ContexteExecution {
     (await chargerCollection()).cartes.find((c) => c.id === idCarte)?.titre ?? idCarte;
   const file = creerFile({
     horloge: horlogeReelle,
+    // Délai variable entre les requêtes (décision d’Alexis du 2026-11-11), en plus des 6 s minimales.
+    delaiSupplementaire: () => Math.floor(Math.random() * (SUPPLEMENT_MAX_MS + 1)),
     transport: (ordre) => execution.transport(ordre),
     confirmer: (action) => {
       if (!pont.confirmer) throw new Error('Confirmation indisponible.');
