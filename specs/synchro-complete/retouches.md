@@ -71,3 +71,6 @@ Décision d'Alexis : `apikey` publique **en dur** dans une constante unique de `
 - ~~`src/lib/tri.ts:83` : seuil de proposition 15 contre plafond 5~~ : fait (Alexis, 2026-11-11), `seuilDefausse` = plafond + 1 = 6 et matrice abaissée à 6.
 - Enchères : le prix et la durée (1 h) par enchère ne sont pas confirmés une à une avant l'envoi ; l'aperçu affiche le prix de départ et la valeur marchande.
 - Première défausse réelle : l'authentification par cookies n'a pas été rejouée ; un 401 ou 403 arrête le lot. À tenter sur une carte de valeur ≤ 5 choisie par Alexis.
+
+## À reprendre (premier lot réel, 409 sur trois enchères, 2026-11-11)
+- Cause exacte du 409 non établie : `marketplace/mine` donne 0 enchère en cours pour un plafond de 5, donc ce n'est pas (seulement) la limite. Le libellé du refus du site n'est pas recopié ; `classerConflit` (`src/lib/reseau.ts`) ne distingue que « limite d'enchères atteinte » et « conflit signalé par le site ». À préciser avec le message affiché par le site pour une de ces trois cartes (Amy Santiago, Ouzbékistan, Primaire présidentielle socialiste française de 2026) mise aux enchères à la main.

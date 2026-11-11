@@ -374,3 +374,10 @@ describe('configDuLot', () => {
     expect(configDuLot(preferencesParDefaut()).lienCardId).toBe(true)
   })
 })
+
+describe('libelleCause : conflit 409', () => {
+  it('explique le conflit de l’enchère', () => {
+    expect(libelleCause('code-http', 409)).toContain('réponse 409')
+    expect(libelleCause('code-http', 429)).toBe('réponse 429')
+  })
+})

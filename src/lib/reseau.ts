@@ -32,6 +32,21 @@ async function lireJson(reponse: Response): Promise<unknown> {
   }
 }
 
+/**
+ * Cause fixe d’un conflit 409 de l’enchère ou de la défausse : on ne recopie jamais le corps, on choisit
+ * un libellé selon quelques mots du message d’erreur (limite d’enchères actives, sinon conflit générique).
+ */
+export function classerConflit(json: unknown): string {
+  const message =
+    typeof json === 'object' && json !== null
+      ? [(json as Record<string, unknown>).message, (json as Record<string, unknown>).error]
+          .filter((v): v is string => typeof v === 'string')
+          .join(' ')
+          .slice(0, 300)
+      : ''
+  return /actives?|simultan|concurrent|maximum|limite|limit/i.test(message) ? 'limite d’enchères atteinte' : 'conflit signalé par le site'
+}
+
 export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promise<ResultatAction> {
   const appel = deps.fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a))
 
@@ -90,6 +105,9 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
       const json = await lireJson(reponse)
       if (CODES_ARRET.includes(reponse.status)) {
         return { classe: 'echec', codeHttp: reponse.status, cause: 'action non disponible' }
+      }
+      if (siteSeul && reponse.status === 409) {
+        return { classe: 'echec', codeHttp: 409, cause: classerConflit(json) }
       }
       if (reponse.status < 200 || reponse.status > 299) {
         return { classe: 'echec', codeHttp: reponse.status, cause: 'erreur d’émission' }

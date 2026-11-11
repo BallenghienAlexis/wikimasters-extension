@@ -34,6 +34,8 @@ export const CAUSES_RESULTAT: readonly string[] = [
   'délai dépassé',
   'réponse hors contrat',
   'jeton-absent',
+  'limite d’enchères atteinte',
+  'conflit signalé par le site',
 ]
 
 const CLASSES: ReadonlyArray<ResultatAction['classe']> = ['reussie', 'echec', 'arret', 'inconnu']

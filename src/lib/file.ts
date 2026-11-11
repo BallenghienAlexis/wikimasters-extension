@@ -25,6 +25,10 @@ export const MAX_PAR_FENETRE = 10
 export const MAX_ECHECS = 3
 /** Codes HTTP qui arrêtent la file dès la première occurrence. */
 export const CODES_ARRET: readonly number[] = [401, 403, 429]
+/** Conflit (409) : arrête aussi le lot, mais seulement pour une enchère ou une défausse (premier lot réel, 2026-11-11). */
+export const CODE_CONFLIT = 409
+export const arreteLeLot = (action: Action, codeHttp: number | null): boolean =>
+  codeHttp !== null && (CODES_ARRET.includes(codeHttp) || (codeHttp === CODE_CONFLIT && (action.type === 'enchere' || action.type === 'defausse')))
 /** Libellé fixe d’un résultat d’arrêt sans requête émise (jeton absent). */
 export const CAUSE_JETON_ABSENT = 'jeton-absent'
 
@@ -229,7 +233,7 @@ export function creerFile(deps: DependancesFile): File {
         await appliquer(action, resultat)
         return
       case 'echec':
-        if (resultat.codeHttp !== null && CODES_ARRET.includes(resultat.codeHttp)) throw new Arret('code-http')
+        if (arreteLeLot(action, resultat.codeHttp)) throw new Arret('code-http')
         echecs.n++
         if (echecs.n >= MAX_ECHECS) throw new Arret('echecs')
         return

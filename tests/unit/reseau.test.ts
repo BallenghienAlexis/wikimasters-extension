@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Action } from '../../src/lib/actions'
 import { TABLE_CONTRAT } from '../../src/lib/contrat'
-import { creerEmetteur } from '../../src/lib/reseau'
+import { classerConflit, creerEmetteur } from '../../src/lib/reseau'
 import { avecIdEtiquette, registreVide, enregistrerEtiquette } from '../../src/lib/registre'
 
 const ORIGINE = 'https://www.wiki-masters.com'
@@ -170,5 +170,21 @@ describe('reseau : enchère et défausse sur l’origine du site', () => {
       expect(r).toEqual({ classe: 'echec', codeHttp: code, cause: 'action non disponible' })
       expect(f).toHaveBeenCalledTimes(1)
     }
+  })
+})
+
+describe('reseau : conflit 409 de l’enchère', () => {
+  const CARD = '44444444-4444-4444-8444-444444444444'
+  const enchere: Action = { type: 'enchere', idCarte: 'R|T', idExemplaire: EX, prix: 25, idCardSite: CARD }
+  it('classe le conflit en libellé fixe, sans recopier le corps', async () => {
+    const limite = vi.fn(async () => reponse(409, JSON.stringify({ message: 'Maximum de 5 enchères actives atteint', secret: 'zzz' })))
+    const r1 = await creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: ORIGINE, fetchImpl: limite as unknown as typeof fetch })(enchere)
+    expect(r1).toEqual({ classe: 'echec', codeHttp: 409, cause: 'limite d’enchères atteinte' })
+    const autre = vi.fn(async () => reponse(409, 'oups'))
+    const r2 = await creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: ORIGINE, fetchImpl: autre as unknown as typeof fetch })(enchere)
+    expect(r2).toEqual({ classe: 'echec', codeHttp: 409, cause: 'conflit signalé par le site' })
+  })
+  it('classerConflit tolère toute forme de corps', () => {
+    for (const j of [null, undefined, 3, 'x', [], {}, { message: 4 }]) expect(classerConflit(j)).toBe('conflit signalé par le site')
   })
 })
