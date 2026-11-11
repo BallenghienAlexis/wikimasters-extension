@@ -32,5 +32,14 @@ Origine de l'onglet : `https://www.wiki-masters.com`.
 - `/api/...` : mécanisme **non relevé** (cookies de même origine ou jeton).
 - Décision d'Alexis (option B, 2026-11-07) : lecture en mémoire du jeton de session autorisée dans un seul module, au moment d'émettre la requête, sans jamais le stocker, le journaliser, l'afficher ni l'envoyer hors de l'origine du site (AGENTS.md « Ne jamais faire »).
 
+## Étiquettes — relevé du 2026-11-11 (captures d'Alexis, en-têtes de réponse seulement)
+- **Hôte** : `https://cyrxjeppjqsxxjayfrur.supabase.co/rest/v1/` (projet Supabase du site, **autre origine** que `https://www.wiki-masters.com`). Réponses derrière Cloudflare, `Content-Profile: public`.
+- **CORS** : `Access-Control-Allow-Origin: https://www.wiki-masters.com` : un `fetch` depuis un onglet du site est accepté ; l'origine de l'extension ne le serait pas.
+- **Pose** : `POST /rest/v1/user_card_tags` → `201 Created`, `Content-Length: 0` (**corps de réponse vide** : rien à valider ni à lire).
+- **Retrait** : `DELETE /rest/v1/user_card_tags?user_card_id=eq.<user_card_id>&tag_id=eq.<tag_id>` → `204 No Content`. **Filtre relevé** : les deux conditions `eq.`, valeurs encodées.
+- **Lecture vue au passage** : `GET /rest/v1/cards?select=summary&id=eq.<card_id>` → 200, `{"summary":null}` (format PostgREST, `application/vnd.pgrst.object+json`). Non utilisée par l'extension.
+- Le jeton est un JWT signé ES256 émis par `…/auth/v1` (en-têtes `Sb-Jwt-*` de la réponse).
+- **Toujours non relevé** (requête, pas réponse) : noms des en-têtes de requête (`apikey`, `Authorization`, `Prefer`…), corps du `POST user_card_tags` (champs `user_card_id`, `tag_id` attendus, déjà notés plus haut), nom du cookie ou de la clé qui porte la session, création d'étiquette (`POST /rest/v1/tags`, réponse), limites, visibilité.
+
 ## Reste à relever (SC-001)
-Hôte et en-têtes exigés de `/rest/v1`, mode d'authentification de `/api/`, filtre du `DELETE user_card_tags`, lien `card_id` ↔ `user_card_id`, limites et visibilité des étiquettes, bornes de `base_amount`, forme des erreurs (401, 403, 429), réponses de création (identifiants renvoyés).
+En-têtes de requête exigés de `/rest/v1`, emplacement du jeton, mode d'authentification de `/api/`, lien `card_id` ↔ `user_card_id`, limites et visibilité des étiquettes, bornes de `base_amount`, forme des erreurs (401, 403, 429), réponses de création (identifiants renvoyés).
