@@ -153,18 +153,14 @@ describe('étiquettes (SC-007 a à e, H16)', () => {
     ])
   })
 
-  it('H17 : en-vente remplace « Statut · Vendre » par « Statut · En vente » sur chaque exemplaire', () => {
+  it('H17 : une carte en vente sur le site n’envoie aucune étiquette (403 : exemplaire hors collection), avec une raison lisible', () => {
     const r = registre(
       [{ ex: 'x1', nom: 'Statut · Vendre' }, { ex: 'x2', nom: 'Statut · Vendre' }],
       { 'Statut · Vendre': 'e2', 'Statut · En vente': 'e3' },
     )
     const lot = construireLot(coll(carte('a', { statut: 'en-vente', idsSite: ['x1', 'x2'] })), r, config(), TOUS)
-    expect(lot.actions).toEqual([
-      { type: 'retrait-etiquette', idCarte: 'a', idExemplaire: 'x1', nomEtiquette: 'Statut · Vendre' },
-      { type: 'retrait-etiquette', idCarte: 'a', idExemplaire: 'x2', nomEtiquette: 'Statut · Vendre' },
-      { type: 'pose-etiquette', idCarte: 'a', idExemplaire: 'x1', nomEtiquette: 'Statut · En vente' },
-      { type: 'pose-etiquette', idCarte: 'a', idExemplaire: 'x2', nomEtiquette: 'Statut · En vente' },
-    ])
+    expect(lot.actions).toEqual([])
+    expect(lot.ecartees).toEqual([{ idCarte: 'a', titre: 'Carte a', raison: 'en-vente-sur-site' }])
   })
 
   it('(d) un couple attendu déjà au registre ne produit aucune action', () => {

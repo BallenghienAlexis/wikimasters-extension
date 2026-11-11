@@ -272,8 +272,8 @@ describe('retraits (SC-011, SC-022)', () => {
     expect(lot.actions).toEqual([])
   })
 
-  it('retire « #À échanger Léa » quand la carte passe à garder, vendre ou en-vente', () => {
-    for (const statut of ['garder', 'vendre', 'en-vente'] as const) {
+  it('retire « #À échanger Léa » quand la carte passe à garder ou vendre', () => {
+    for (const statut of ['garder', 'vendre'] as const) {
       const c = carte('a', { ...CHIEN, statut })
       const lot = construireLot(coll(c), r(['#À échanger Léa']), config({ amis: AMIS }), TOUS)
       expect(nomsDe(lot.actions, 'retrait-etiquette')).toContain('#À échanger Léa')

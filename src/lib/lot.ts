@@ -342,6 +342,13 @@ export function construireLot(
       continue
     }
 
+    // Une carte aux enchères n'est plus dans la collection du joueur : le site refuse (403) toute pose
+    // sur son exemplaire. On n'envoie donc aucune étiquette, ni pose ni retrait ni création.
+    if (c.statut === 'en-vente') {
+      ecarter('en-vente-sur-site')
+      continue
+    }
+
     if (c.statut === 'vendre') aVendre.push(c)
 
     // Étiquettes (SC-007, SC-008).

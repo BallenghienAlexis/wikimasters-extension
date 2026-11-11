@@ -59,6 +59,7 @@ const RAISONS: Record<RaisonEcart, string> = {
   'nom-trop-long': 'nom d’étiquette trop long',
   homonyme: 'une étiquette du même nom existe déjà sur le site',
   'exemplaires-non-relies': 'exemplaires non reliés au site',
+  'en-vente-sur-site': 'en vente sur le site : l’exemplaire n’est plus dans la collection, aucune étiquette n’est envoyée',
   'valeur-defausse-elevee': `valeur marchande inconnue ou supérieure au plafond de défausse (${PLAFOND_VALEUR_DEFAUSSE})`,
 };
 
