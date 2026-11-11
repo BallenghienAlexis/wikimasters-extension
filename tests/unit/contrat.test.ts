@@ -24,11 +24,11 @@ const entreeFictive: EntreeContrat = {
 }
 
 describe('table du contrat', () => {
-  it('ne rend disponibles que les types relevés : les trois étiquettes (SC-020)', () => {
-    expect([...typesDisponibles()].sort()).toEqual(['creation-etiquette', 'pose-etiquette', 'retrait-etiquette'])
-    for (const e of [ENTREES_DEFAUSSE, ENTREES_ENCHERE, ENTREES_LECTURE]) {
-      expect(Object.keys(e)).toHaveLength(0)
-    }
+  it('ne rend disponibles que les types relevés : étiquettes, enchère et défausse (SC-020)', () => {
+    expect([...typesDisponibles()].sort()).toEqual(['creation-etiquette', 'defausse', 'enchere', 'pose-etiquette', 'retrait-etiquette'])
+    expect(Object.keys(ENTREES_LECTURE)).toHaveLength(0)
+    expect(Object.keys(ENTREES_ENCHERE)).toEqual(['enchere'])
+    expect(Object.keys(ENTREES_DEFAUSSE)).toEqual(['defausse'])
     expect(Object.keys(ENTREES_ETIQUETTES)).toHaveLength(3)
   })
 
@@ -57,13 +57,13 @@ describe('table du contrat', () => {
 
   it('ne contient ni URL ni nom d’en-tête dans contrat.ts ni dans contrat/ (AC3)', () => {
     const dossier = fileURLToPath(new URL('../../src/lib/contrat/', import.meta.url))
-    const sources = [
-      lireSource('../../src/lib/contrat.ts'),
-      ...readdirSync(dossier).map((f) => lireSource(`../../src/lib/contrat/${f}`)),
-    ]
+    const fichiers = ['contrat.ts', ...readdirSync(dossier).map((f) => `contrat/${f}`)]
+    const sources = fichiers.map((f) => lireSource(`../../src/lib/${f}`))
     expect(sources.length).toBeGreaterThan(1)
-    for (const source of sources) {
-      for (const interdit of ['/api/', 'https://', 'http://', 'authorization', 'apikey']) {
+    for (const [i, source] of sources.entries()) {
+      // Seuls les chemins relatifs du site (enchère, défausse) contiennent « /api/ ».
+      const interdits = ['contrat/enchere.ts', 'contrat/defausse.ts'].includes(fichiers[i]!) ? ['https://', 'http://', 'authorization', 'apikey'] : ['/api/', 'https://', 'http://', 'authorization', 'apikey']
+      for (const interdit of interdits) {
         expect(source.toLowerCase(), interdit).not.toContain(interdit)
       }
     }

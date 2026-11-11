@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { Action, CarteEcartee, Registre, TypeAction } from '../../src/lib/actions'
 import type { Carte, Collection } from '../../src/lib/collection'
+import { preferencesParDefaut } from '../../src/lib/tri'
 import type { EtatFile } from '../../src/lib/file'
 import {
   AVERTISSEMENT_AMIS,
   CADENCE_TEXTE,
   actionsRetrait,
+  configDuLot,
   contientAmi,
   detailsDuLot,
   dureeMinutes,
@@ -94,8 +96,8 @@ describe('détail des actions', () => {
   it('numérote les exemplaires défaussés d’une même carte', () => {
     const actions = [defausse('R|a', '1'), pose('R|b', 'Statut · Vendre'), defausse('R|a', '2')]
     const d = detailsDuLot(actions, cartes)
-    expect(d[0]).toBe('exemplaire 1 sur 2')
-    expect(d[2]).toBe('exemplaire 2 sur 2')
+    expect(d[0]).toBe('exemplaire 1 sur 2 · valeur marchande 140')
+    expect(d[2]).toBe('exemplaire 2 sur 2 · valeur marchande 140')
   })
 
   it('donne le nom d’étiquette, avec le verbe pour un retrait ou une création', () => {
@@ -364,5 +366,11 @@ describe('exécution : libellés fixes (D-22, D-41)', () => {
     expect(libelleErreurLancement(new Error('<b>corps brut du site</b>'))).toBe('le lot n’a pas pu être lancé.')
     expect(libelleErreurLancement('x')).toBe('le lot n’a pas pu être lancé.')
     expect(libelleErreurLancement(new Error('Une exécution est déjà en cours.'))).toBe('Une exécution est déjà en cours.')
+  })
+})
+
+describe('configDuLot', () => {
+  it('relie les cartes au site (lienCardId) : c’est ce qui ouvre les enchères', () => {
+    expect(configDuLot(preferencesParDefaut()).lienCardId).toBe(true)
   })
 })

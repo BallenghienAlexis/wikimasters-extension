@@ -1,6 +1,7 @@
 // Exécution côté page de gestion : accepte les ports des onglets WikiMasters, fournit le
 // transport à la file, tient le verrou d'exécution unique et clôt les exécutions orphelines.
 // Aucune requête ici : les ordres passent par le content script.
+import { ORIGINE_SITE } from '../config/synchro';
 import type { Action, EtatExecution, ResultatAction } from '../lib/actions';
 import type { Horloge } from '../lib/file';
 import { cloreInterrompues as cloreJournal, type Journal } from '../lib/journal';
@@ -13,7 +14,7 @@ import {
   enregistrerSignalSynchro,
 } from '../lib/stockage';
 
-export const ORIGINE_SITE = 'https://www.wiki-masters.com';
+export { ORIGINE_SITE };
 export const NOM_VERROU = 'wm-collection-execution';
 
 interface Chrono {

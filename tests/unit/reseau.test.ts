@@ -58,7 +58,7 @@ describe('reseau : émetteur des étiquettes', () => {
   it('type absent de la table ou identifiant manquant : action non disponible, aucune requête', async () => {
     const f = vi.fn()
     const e = emetteur(f as unknown as typeof fetch)
-    expect((await e({ type: 'defausse', idCarte: 'R|T', idExemplaire: EX })).cause).toBe('action non disponible')
+    expect((await e({ type: 'lecture' } as unknown as Action)).cause).toBe('action non disponible')
     expect((await e({ ...pose, idEtiquette: undefined } as Action)).cause).toBe('action non disponible')
     expect(f).not.toHaveBeenCalled()
   })
@@ -84,7 +84,7 @@ describe('reseau : émetteur des étiquettes', () => {
     const session = vi.fn(() => SESSION)
     const f = vi.fn()
     const e = (origine: string) => creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: origine, session, fetchImpl: f as unknown as typeof fetch })
-    await e(ORIGINE)({ type: 'defausse', idCarte: 'R|T', idExemplaire: EX })
+    await e(ORIGINE)({ type: 'lecture' } as unknown as Action)
     await e('https://exemple.test')(pose)
     await e(ORIGINE)({ ...pose, idEtiquette: 'a&b' } as Action)
     expect(session).not.toHaveBeenCalled()
@@ -115,5 +115,60 @@ describe('avecIdEtiquette : enrichissement au moment d’envoyer', () => {
     const collection = { version: 2, cartes: [] } as never
     const suivant = appliquerResultat(collection, registreVide(), creation, { classe: 'reussie', codeHttp: 201, cause: 'action réussie', idEtiquette: ET })
     expect(avecIdEtiquette(pose, suivant.registre)?.idEtiquette).toBe(ET)
+  })
+})
+
+describe('reseau : enchère et défausse sur l’origine du site', () => {
+  const CARD = '44444444-4444-4444-8444-444444444444'
+  const enchere: Action = { type: 'enchere', idCarte: 'R|T', idExemplaire: EX, prix: 25, idCardSite: CARD }
+  const defausse: Action = { type: 'defausse', idCarte: 'R|T', idExemplaire: EX }
+
+  it('enchère : POST same-origin, seul Content-Type, ni jeton ni clé, corps fixe', async () => {
+    const f = vi.fn(async () => reponse(201, JSON.stringify({ auction_id: 'a1' })))
+    const sessionLue = vi.fn(() => SESSION)
+    const r = await creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: ORIGINE, session: sessionLue, fetchImpl: f as unknown as typeof fetch })(enchere)
+    expect(r).toEqual({ classe: 'reussie', codeHttp: 201, cause: 'action réussie' })
+    const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe('https://www.wiki-masters.com/api/marketplace')
+    expect(init.credentials).toBe('same-origin')
+    expect(Object.keys(init.headers as Record<string, string>)).toEqual(['Content-Type'])
+    expect(JSON.parse(init.body as string)).toEqual({ card_id: CARD, base_amount: 25, duration_minutes: 60 })
+    expect(sessionLue).not.toHaveBeenCalled()
+  })
+
+  it('enchère sans card_id : action non disponible, aucune requête', async () => {
+    const f = vi.fn()
+    const { idCardSite: _omis, ...sans } = enchere as Extract<Action, { type: 'enchere' }>
+    void _omis
+    const r = await emetteur(f as unknown as typeof fetch)(sans)
+    expect(r).toEqual({ classe: 'echec', codeHttp: null, cause: 'action non disponible' })
+    expect(f).not.toHaveBeenCalled()
+  })
+
+  it('défausse : POST sans corps ni en-tête, 200 attendu', async () => {
+    const f = vi.fn(async () => reponse(200))
+    const r = await emetteur(f as unknown as typeof fetch)(defausse)
+    expect(r.classe).toBe('reussie')
+    const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe(`https://www.wiki-masters.com/api/user-cards/${EX}/discard`)
+    expect(init.body).toBeUndefined()
+    expect(init.headers).toEqual({})
+    expect(init.credentials).toBe('same-origin')
+  })
+
+  it('défausse depuis un autre onglet que le site : refusée', async () => {
+    const f = vi.fn()
+    const r = await emetteur(f as unknown as typeof fetch, SESSION, 'https://autre.example')(defausse)
+    expect(r.cause).toBe('action non disponible')
+    expect(f).not.toHaveBeenCalled()
+  })
+
+  it.each([401, 403, 429])('%i sur enchère et défausse : échec avec le code, une seule requête chacune', async (code) => {
+    for (const ordre of [enchere, defausse]) {
+      const f = vi.fn(async () => reponse(code))
+      const r = await emetteur(f as unknown as typeof fetch)(ordre)
+      expect(r).toEqual({ classe: 'echec', codeHttp: code, cause: 'action non disponible' })
+      expect(f).toHaveBeenCalledTimes(1)
+    }
   })
 })

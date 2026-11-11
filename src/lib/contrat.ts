@@ -32,6 +32,13 @@ export interface EntreeContrat {
   lireIdEtiquette?: (json: unknown) => string | null
   /** `{ entete: 'session' }` si la requête exige le jeton de session (ajouté par `reseau.ts`), sinon `null`. */
   auth: { entete: string } | null
+  /**
+   * Hôte visé : `rest` (défaut : projet Supabase du site, jeton et clé publique) ou `site` (origine de
+   * l’onglet, cookies du navigateur, aucun en-tête d’authentification, aucun jeton lu).
+   */
+  hote?: 'rest' | 'site'
+  /** `true` si la requête n’a volontairement pas de corps (le corps `null` n’est alors pas une invalidité). */
+  sansCorps?: boolean
   validerReponse: (statut: number, json: unknown) => 'reussie' | 'hors-contrat'
 }
 

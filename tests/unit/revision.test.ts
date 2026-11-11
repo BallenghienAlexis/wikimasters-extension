@@ -69,15 +69,18 @@ describe('reverifierAction (AC1)', () => {
   })
 
   it('défausse avec quantité > 1 mais un seul identifiant restant : ok pour cet identifiant', () => {
-    const c = carte({ statut: 'defausser', quantite: 3, idsSite: ['ex-1'] })
+    const c = carte({ statut: 'defausser', valeurMarchande: 1, quantite: 3, idsSite: ['ex-1'] })
     expect(reverifierAction(defausse, coll(c), reg(), config)).toBe('ok')
     expect(reverifierAction({ ...defausse, idExemplaire: 'ex-2' }, coll(c), reg(), config)).toBe('passee')
   })
 
   it('défausse', () => {
-    const c = carte({ statut: 'defausser' })
+    const c = carte({ statut: 'defausser', valeurMarchande: 1 })
     expect(reverifierAction(defausse, coll(c), reg(), config)).toBe('ok')
     expect(reverifierAction(defausse, coll(carte({ statut: 'vendre' })), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll({ ...c, valeurMarchande: 6 }), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll({ ...c, valeurMarchande: null }), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll({ ...c, valeurMarchande: 5 }), reg(), config)).toBe('ok')
     expect(reverifierAction(defausse, coll({ ...c, favori: true }), reg(), config)).toBe('passee')
     expect(reverifierAction(defausse, coll({ ...c, idsSite: ['ex-2'] }), reg(), config)).toBe('passee')
     expect(reverifierAction(defausse, coll(), reg(), config)).toBe('passee')
@@ -188,14 +191,14 @@ describe('appliquerResultat (AC2)', () => {
       { ex: 'ex-1', nom: 'A' },
       { ex: 'ex-2', nom: 'A' },
     ])
-    const r = appliquerResultat(coll(carte({ statut: 'defausser' })), registre, defausse, ok)
+    const r = appliquerResultat(coll(carte({ statut: 'defausser', valeurMarchande: 1 })), registre, defausse, ok)
     expect(r.collection.cartes[0]?.idsSite).toEqual(['ex-2'])
     expect(r.collection.cartes[0]?.quantite).toBe(1)
     expect(r.registre.couples).toEqual([{ ex: 'ex-2', nom: 'A' }])
   })
 
   it('dernière défausse : carte retirée et registre purgé', () => {
-    const c = carte({ statut: 'defausser', quantite: 1, idsSite: ['ex-1'] })
+    const c = carte({ statut: 'defausser', valeurMarchande: 1, quantite: 1, idsSite: ['ex-1'] })
     const registre = reg([
       { ex: 'ex-1', nom: 'A' },
       { ex: 'ex-9', nom: 'B' },
@@ -206,7 +209,7 @@ describe('appliquerResultat (AC2)', () => {
   })
 
   it('quantité 0 atteinte avec des identifiants restants : tout le registre de la carte purgé', () => {
-    const c = carte({ statut: 'defausser', quantite: 1, idsSite: ['ex-1', 'ex-2'] })
+    const c = carte({ statut: 'defausser', valeurMarchande: 1, quantite: 1, idsSite: ['ex-1', 'ex-2'] })
     const registre = reg([{ ex: 'ex-2', nom: 'A' }])
     const r = appliquerResultat(coll(c), registre, defausse, ok)
     expect(r.collection.cartes).toEqual([])
@@ -214,7 +217,7 @@ describe('appliquerResultat (AC2)', () => {
   })
 
   it('la quantité ne descend jamais sous 0', () => {
-    const c = carte({ statut: 'defausser', quantite: 0, idsSite: ['ex-1', 'ex-2'] })
+    const c = carte({ statut: 'defausser', valeurMarchande: 1, quantite: 0, idsSite: ['ex-1', 'ex-2'] })
     const r = appliquerResultat(coll(c), reg(), defausse, ok)
     expect(r.collection.cartes.every((x) => x.quantite >= 0)).toBe(true)
   })
