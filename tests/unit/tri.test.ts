@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ConfigPrix } from '../../src/config/prix';
 import { CONFIG_PRIX } from '../../src/config/prix';
 import type { Carte } from '../../src/lib/collection';
-import { amisConcernes, apercuTri, appliquerTri, fusionnerAmisInitiaux, fileDeVente, lirePreferences, preferencesParDefaut, prixDepart, proposerTri, valeurDeCarte, type Preferences } from '../../src/lib/tri';
+import { amisConcernes, apercuTri, appliquerTri, fusionnerAmisInitiaux, fileDeVente, lirePreferences, preferencesParDefaut, prixDepart, proposerTri, themesAimesDesFavoris, valeurDeCarte, type Preferences } from '../../src/lib/tri';
 
 const carte = (surcharge: Partial<Carte> = {}): Carte => ({
   id: 'c1',
@@ -293,5 +293,28 @@ describe('fusionnerAmisInitiaux (SC-024)', () => {
     expect(JSON.stringify(entree)).toBe(copie);
     expect(une.mesThemes).toEqual(['chien']);
     expect(fusionnerAmisInitiaux(une, initiaux)).toEqual(une);
+  });
+});
+
+describe('themesAimesDesFavoris', () => {
+  it('compte les thèmes les plus précis des seuls favoris, du plus fréquent au plus rare', () => {
+    const cartes = [
+      carte({ id: 'a', titre: 'Tibet', description: '', favori: true }),
+      carte({ id: 'b', titre: 'Barrage des Trois-Gorges', description: '', favori: true }),
+      carte({ id: 'c', titre: 'Tibet', description: '', favori: true }),
+      carte({ id: 'd', titre: 'Ukraine', description: '', favori: false }),
+      carte({ id: 'e', titre: 'Xyzzy', description: '', favori: true }),
+    ];
+    const themes = themesAimesDesFavoris(cartes);
+    expect(themes[0]).toEqual({ theme: 'tibet', nombre: 2 });
+    expect(themes.map((x) => x.theme)).not.toContain('ukraine');
+    expect(themes.map((x) => x.theme)).not.toContain('autres');
+  });
+  it('ne suggère pas le thème parent d’un thème trouvé sur la même carte', () => {
+    const themes = themesAimesDesFavoris([carte({ titre: 'Tibet', description: '', favori: true })]);
+    expect(themes).toEqual([{ theme: 'tibet', nombre: 1 }]);
+  });
+  it('renvoie une liste vide sans favori', () => {
+    expect(themesAimesDesFavoris([carte()])).toEqual([]);
   });
 });
