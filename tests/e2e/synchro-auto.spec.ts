@@ -1,6 +1,7 @@
 import type { BrowserContext, Page, Route, Worker } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
+import { CONFIG_AFFLUENCE } from '../../src/config/affluence';
 import { expect, test } from './extension';
 
 // Le site est entièrement simulé : ces tests ne contactent jamais le vrai WikiMasters (G1).
@@ -18,7 +19,9 @@ const ID_CARTE = 'UR|Loutre fictive';
 const CHEMIN_STATS = '/api/my-collection/stats?sort=added';
 const CHEMIN_PAGE = (n: number): string => `/api/my-collection?sort=added&page=${n}&stats=0`;
 const CHEMIN_PRIX = '/api/marketplace/cards/carte-fictive-1/sales?scope=summary';
-const CHEMINS_AUTORISES = [CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_PAGE(1), CHEMIN_PRIX];
+// Relevé d'affluence (décision du 2026-11-11) : un seul GET vers le listing du marché, après la synchro.
+const CHEMIN_MARCHE = CONFIG_AFFLUENCE.routeMarche ?? '/api/marketplace';
+const CHEMINS_AUTORISES = [CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_PAGE(1), CHEMIN_PRIX, CHEMIN_MARCHE];
 // Attente plus longue qu'une cadence (6 s) pour prouver qu'aucune autre requête ne part.
 const PLUS_QU_UNE_CADENCE_MS = 8_000;
 
@@ -141,7 +144,7 @@ test.describe('synchronisation automatique sur site fictif', () => {
     verifierLectureSeule(site.api);
   });
 
-  test('total inchangé depuis la dernière synchro complète : une seule requête, stats (SC-003)', async ({ context, serviceWorker }) => {
+  test('total inchangé depuis la dernière synchro complète : une seule requête de synchro (stats), puis le relevé du marché (SC-003)', async ({ context, serviceWorker }) => {
     const maintenant = Date.now();
     await poser(serviceWorker, {
       collection: { version: 3, cartes: [carteLocale({ quantite: 2, etiquettesSite: ['Étiquette fictive'], valeurMarchande: 276 })] },
@@ -162,7 +165,10 @@ test.describe('synchronisation automatique sur site fictif', () => {
     const site = await ouvrirSite(context, { [CHEMIN_STATS]: { corps: STATS }, [CHEMIN_PAGE(0)]: { corps: PAGE_0 } });
     await expect.poll(() => site.api.length, { intervals: [250] }).toBe(1);
     await site.page.waitForTimeout(PLUS_QU_UNE_CADENCE_MS);
-    expect(chemins(site.api)).toEqual([CHEMIN_STATS]);
+    // Synchro terminée, puis un seul GET vers le listing du marché (6 s plus tard), jamais de page ni de prix.
+    await expect.poll(() => chemins(site.api), { timeout: 20_000, intervals: [250] }).toEqual([CHEMIN_STATS, CHEMIN_MARCHE]);
+    await site.page.waitForTimeout(PLUS_QU_UNE_CADENCE_MS);
+    expect(chemins(site.api)).toEqual([CHEMIN_STATS, CHEMIN_MARCHE]);
     verifierLectureSeule(site.api);
   });
 

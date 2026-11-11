@@ -18,8 +18,8 @@ export interface Preferences {
 
 export const preferencesParDefaut = (): Preferences => ({ version: 2, mesThemes: [], amis: [] });
 
-export function valeurDeCarte(carte: Pick<Carte, 'valeurMarchande' | 'rarete'>, config: ConfigPrix = CONFIG_PRIX): number | null {
-  return carte.valeurMarchande ?? config.valeurParRarete[carte.rarete ?? ''] ?? null;
+export function valeurDeCarte(carte: Pick<Carte, 'valeurMarchande'>): number | null {
+  return carte.valeurMarchande ?? null;
 }
 
 export function prixDepart(valeur: number, config: ConfigPrix = CONFIG_PRIX): number | null {
@@ -78,7 +78,7 @@ export function proposerTri(carte: Carte, preferences: Preferences, config: Conf
   if (ami) return { statut: 'echanger', ami: ami.nom, prixCible: null };
 
   // Sans valeur connue, on ne propose rien : une défausse ne se rattrape pas.
-  const valeur = valeurDeCarte(carte, config);
+  const valeur = valeurDeCarte(carte);
   if (valeur === null) return { statut: 'a-trier', ami: null, prixCible: null };
   if (valeur < config.seuilDefausse) return { statut: 'defausser', ami: null, prixCible: null };
   return { statut: 'vendre', ami: null, prixCible: prixDepart(valeur, config) };
@@ -107,7 +107,7 @@ export function fileDeVente(cartes: Carte[], config: ConfigPrix = CONFIG_PRIX): 
   const enCours = cartes.filter((c) => c.statut === 'en-vente');
   const aVendre = cartes
     .filter((c) => c.statut === 'vendre')
-    .sort((a, b) => (valeurDeCarte(b, config) ?? 0) - (valeurDeCarte(a, config) ?? 0));
+    .sort((a, b) => (valeurDeCarte(b) ?? 0) - (valeurDeCarte(a) ?? 0));
   const placesLibres = Math.max(0, config.maxVentesSimultanees - enCours.length);
   return {
     enCours,

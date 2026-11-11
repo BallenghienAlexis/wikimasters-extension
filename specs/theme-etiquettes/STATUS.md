@@ -1,6 +1,6 @@
 # STATUS — theme-etiquettes
 
-- **Besoin** : « Thèmes précis et étiquettes de thème sur le site » (Alexis, 2026-11-08) : étendre `src/lib/themes.ts` (pont, tunnel, chien, chat, cheval…), garder la cohérence avec l’assistant de tri (Garder / Échanger + nom de l’ami), et poser les thèmes précis comme étiquettes sur le site (« Thème · chien ») en plus de « Statut · … » et « Ami · … ».
+- **Besoin** : « Thèmes précis et étiquettes de thème sur le site » (Alexis, 2026-11-08) : étendre `src/lib/themes.ts` (pont, tunnel, chien, chat, cheval…), garder la cohérence avec l’assistant de tri (Garder / Échanger + nom de l’ami), et poser les thèmes précis comme étiquettes sur le site (« #Chien », sans préfixe « Thème · », décision d’Alexis du 2026-11-08) en plus de « Statut · … » et des étiquettes d’échange « #À échanger <nom> » (qui ont remplacé « Ami · … »).
 - **Étape courante** : 5-vérification (tâches T-101 à T-110 et T-901 à T-903 mergées, T-904 en PR)
 - **Mis à jour** : 2026-11-09 21:10
 

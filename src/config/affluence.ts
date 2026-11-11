@@ -13,6 +13,10 @@ export interface ConfigAffluence {
   /** Créneaux par défaut, en attendant les données : [heure de début incluse, heure de fin exclue]. */
   creneauxSemaine: [number, number][];
   creneauxWeekend: [number, number][];
+  /** Route de listing du marché (GET, même origine), ex. '/api/marketplace?...'. `null` : relevé du site désactivé. À relever dans l’onglet Réseau de la page Marché. */
+  routeMarche: string | null;
+  /** Champs de chaque annonce qui portent son horodatage de création, par ordre de préférence. */
+  champsHorodatage: string[];
 }
 
 export const CONFIG_AFFLUENCE: ConfigAffluence = {
@@ -22,4 +26,8 @@ export const CONFIG_AFFLUENCE: ConfigAffluence = {
   minObservations: 20,
   creneauxSemaine: [[12, 14], [19, 23]],
   creneauxWeekend: [[10, 12], [15, 23]],
+  // Relevée par Alexis le 2026-11-11 : répond `{ auctions: [...] }`, chaque annonce porte `created_at` (ISO, mise en vente) et `end_at`.
+  // `mine=1` limite peut-être le listing à ses propres enchères : si le relevé ne reflète que ses ventes, tester sans ce paramètre.
+  routeMarche: '/api/marketplace?page=1&limit=50&sort=recent&mine=1',
+  champsHorodatage: ['created_at'],
 };

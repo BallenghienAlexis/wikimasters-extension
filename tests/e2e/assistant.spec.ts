@@ -63,7 +63,7 @@ test('la file de vente suit les places libres', async ({ pageCollection: page })
   await expect(file).toContainText('0 en cours sur 5, 5 places libres');
   await expect(file).toContainText('Athlète fictif · valeur 100');
   await expect(file).toContainText(/heure forte|temps libre|attendre une heure forte/);
-  await expect(file).toContainText('Heures fortes par défaut (0 mise en vente notée)');
+  await expect(file).toContainText('Heures fortes par défaut (0 observation)');
 
   await file.getByRole('button', { name: 'Je l’ai mise aux enchères' }).click();
   await expect(file).toContainText('1 en cours sur 5, 4 places libres');
