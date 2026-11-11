@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ConfigPrix } from '../../src/config/prix';
-import { CONFIG_PRIX } from '../../src/config/prix';
+import { CONFIG_PRIX, PLAFOND_VALEUR_DEFAUSSE } from '../../src/config/prix';
 import type { Carte } from '../../src/lib/collection';
 import { amisConcernes, apercuTri, appliquerTri, fusionnerAmisInitiaux, fileDeVente, lirePreferences, preferencesParDefaut, prixDepart, proposerTri, themesAimesDesFavoris, valeurDeCarte, type Preferences } from '../../src/lib/tri';
 
@@ -36,9 +36,20 @@ const prefs = (surcharge: Partial<Preferences> = {}): Preferences => ({ ...prefe
 const propose = (c: Carte, p = prefs()) => proposerTri(c, p, CONFIG);
 
 describe('réglages livrés', () => {
-  it('respecte le seuil de défausse de 15 et la limite de 5 ventes', () => {
-    expect(CONFIG_PRIX.seuilDefausse).toBe(15);
+  it('respecte le seuil de défausse aligné sur le plafond (5) et la limite de 5 ventes', () => {
+    expect(CONFIG_PRIX.seuilDefausse).toBe(PLAFOND_VALEUR_DEFAUSSE + 1);
+    expect(PLAFOND_VALEUR_DEFAUSSE).toBe(5);
     expect(CONFIG_PRIX.maxVentesSimultanees).toBe(5);
+  });
+});
+
+describe('proposerTri : alignement sur le plafond de défausse', () => {
+  it('propose « défausser » jusqu’à 5 inclus, « vendre » dès 6', () => {
+    const livre = (valeur: number) => proposerTri(carte({ valeurMarchande: valeur }), prefs(), CONFIG_PRIX);
+    expect(livre(PLAFOND_VALEUR_DEFAUSSE).statut).toBe('defausser');
+    const six = livre(PLAFOND_VALEUR_DEFAUSSE + 1);
+    expect(six.statut).toBe('vendre');
+    expect(six.prixCible).toBe(1);
   });
 });
 

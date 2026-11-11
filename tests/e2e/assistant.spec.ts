@@ -3,7 +3,7 @@ import { expect, test } from './extension';
 const COLLECTION = {
   version: 1,
   cartes: [
-    { id: 'a', titre: 'Agrume fictif', rarete: 'C', description: 'agrume', valeurMarchande: 10 },
+    { id: 'a', titre: 'Agrume fictif', rarete: 'C', description: 'agrume', valeurMarchande: 3 },
     { id: 'b', titre: 'Athlète fictif', rarete: 'SR', description: 'athlète belge', valeurMarchande: 100 },
     { id: 'c', titre: 'Planète fictive', rarete: 'C', description: 'planète lointaine', valeurMarchande: 5 },
     { id: 'd', titre: 'Peintre fictif', rarete: 'C', description: 'artiste peintre', favori: true, valeurMarchande: 5 },
@@ -23,7 +23,7 @@ test.beforeEach(async ({ pageCollection }) => {
   await expect(pageCollection.getByRole('status')).toHaveText('6 cartes importées.');
 });
 
-test('trie selon mes thèmes, ceux des amis, le seuil de 15 et la valeur', async ({ pageCollection: page }) => {
+test('trie selon mes thèmes, ceux des amis, le seuil de défausse (5) et la valeur', async ({ pageCollection: page }) => {
   await page.getByRole('button', { name: OUVRIR }).click();
 
   // Seuls les thèmes présents dans la collection sont demandés.
