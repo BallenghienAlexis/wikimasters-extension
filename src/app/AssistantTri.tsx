@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { LIBELLES_STATUT, STATUTS, type Collection } from '../lib/collection';
 import type { CacheWikipedia } from '../lib/wikipedia';
 import { IDS_THEMES, LIBELLES_THEMES, compterThemes, themesDeCarte } from '../lib/themes';
-import { apercuTri, type Preferences } from '../lib/tri';
+import { apercuTri, themesAimesDesFavoris, type Preferences } from '../lib/tri';
 
 const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded border border-line bg-ink-2 px-4';
 const CLASSE_CHAMP = 'min-h-11 rounded border border-line bg-ink px-3';
@@ -39,6 +39,7 @@ const AssistantTri: React.FC<Props> = ({ collection, preferencesInitiales, onApp
     return parTheme;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `cacheWiki` change les thèmes lus par `themesDeCarte`.
   }, [collection.cartes, cacheWiki]);
+  const aimesDesFavoris = useMemo(() => themesAimesDesFavoris(collection.cartes), [collection.cartes]);
   const themesPresents = IDS_THEMES.filter((id) => (comptes[id] ?? 0) > 0);
   const apercu = useMemo(() => (etape === 2 ? apercuTri(collection, preferences) : null), [collection, preferences, etape]);
 
@@ -64,6 +65,25 @@ const AssistantTri: React.FC<Props> = ({ collection, preferencesInitiales, onApp
       {etape === 0 && (
         <fieldset className="mt-4">
           <legend>Quels thèmes vous intéressent ? Les cartes de ces thèmes seront gardées. Vous pourrez revenir ici à tout moment.</legend>
+          {aimesDesFavoris.length > 0 && (
+            <div className="mt-4 rounded border border-line p-3">
+              <p>
+                Vos cartes favorites évoquent : {aimesDesFavoris.map((a) => `${LIBELLES_THEMES[a.theme]} (${a.nombre})`).join(', ')}.
+              </p>
+              <button
+                type="button"
+                className={`${CLASSE_BOUTON} mt-2`}
+                onClick={() =>
+                  setPreferences((p) => ({
+                    ...p,
+                    mesThemes: [...new Set([...p.mesThemes, ...aimesDesFavoris.map((a) => a.theme)])],
+                  }))
+                }
+              >
+                Cocher les thèmes de vos favoris
+              </button>
+            </div>
+          )}
           <ul className="mt-4 divide-y divide-line border-y border-line">
             {themesPresents.map((theme) => (
               <li key={theme} className="py-2">

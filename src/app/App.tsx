@@ -14,13 +14,14 @@ import {
   type Filtres,
 } from '../lib/collection';
 import { versCsv, versJson } from '../lib/exports';
-import { chargerCacheWikipedia, chargerCollection, chargerExecution, chargerPreferences, chargerRegistre, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences, lireCollectionBrute, reinitialiserCollection } from '../lib/stockage';
+import { chargerCacheWikipedia, chargerCollection, chargerExecution, chargerPreferences, chargerRegistre, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences, chargerAffluenceSite, chargerVentes, noterEvenementVente, lireCollectionBrute, reinitialiserCollection } from '../lib/stockage';
 import { progression, texteProgression, type Synchro } from '../lib/synchro';
 import { LIBELLES_THEMES, IDS_THEMES, definirThemesWikipedia, themesDeCarte } from '../lib/themes';
 import { cacheVide, themesParTitre, type CacheWikipedia } from '../lib/wikipedia';
 import VerificationWikipedia from './VerificationWikipedia';
 import { appliquerTri, preferencesParDefaut, type Preferences } from '../lib/tri';
 import type { Registre } from '../lib/actions';
+import type { EvenementVente } from '../lib/affluence';
 import { registreVide } from '../lib/registre';
 import AssistantTri from './AssistantTri';
 import Synchronisation from './Synchronisation';
@@ -59,6 +60,9 @@ const App: React.FC = () => {
   const [cacheWiki, setCacheWiki] = useState<CacheWikipedia>(cacheVide);
   const [preferences, setPreferences] = useState<Preferences>(preferencesParDefaut);
   const [assistantOuvert, setAssistantOuvert] = useState(false);
+  const [ventesJoueur, setVentes] = useState<EvenementVente[]>([]);
+  const [releveSite, setReleveSite] = useState<EvenementVente[]>([]);
+  const ventes = useMemo(() => [...ventesJoueur, ...releveSite], [ventesJoueur, releveSite]);
   const [synchro, setSynchro] = useState<Synchro | null>(null);
   const [registre, setRegistre] = useState<Registre>(registreVide);
   const [executionEnCours, setExecutionEnCours] = useState(false);
@@ -71,6 +75,13 @@ const App: React.FC = () => {
   // Les amis fixent les étiquettes d’échange de l’aperçu : il attend aussi la lecture des préférences.
   const [preferencesLues, setPreferencesLues] = useState(false);
   const champFichier = useRef<HTMLInputElement>(null);
+
+  // Note l’heure d’une mise en vente ou d’une fin d’enchère ; un échec est signalé, jamais avalé.
+  const noterVente = (type: EvenementVente['type']): void => {
+    noterEvenementVente({ type, at: Date.now() })
+      .then(setVentes)
+      .catch(() => setMessage('L’heure de cette vente n’a pas pu être notée (stockage indisponible).'));
+  };
 
   // Lit le registre et l’état d’exécution ; un échec est signalé à l’aperçu, jamais avalé.
   const lireStockageSynchro = async (): Promise<EtatStockageSynchro> => {
@@ -104,6 +115,10 @@ const App: React.FC = () => {
     void chargerPreferences()
       .then(setPreferences)
       .finally(() => setPreferencesLues(true));
+    void chargerVentes()
+      .then(setVentes)
+      .catch(() => setMessage('Le journal des ventes n’a pas pu être lu (stockage indisponible).'));
+    void chargerAffluenceSite().then(setReleveSite).catch(() => undefined);
     void chargerSynchro().then(setSynchro);
     void lireStockageSynchro().then(appliquerStockageSynchro);
     return ecouterSynchro(setSynchro);
@@ -295,8 +310,15 @@ const App: React.FC = () => {
 
           <FileVente
             cartes={collection.cartes}
-            onMiseEnVente={(id) => editer(id, { statut: 'en-vente', decidePar: 'moi' })}
-            onTerminee={(id) => appliquer(terminerEnchere(collection, id))}
+            ventes={ventes}
+            onMiseEnVente={(id) => {
+              editer(id, { statut: 'en-vente', decidePar: 'moi' });
+              noterVente('debut');
+            }}
+            onTerminee={(id) => {
+              appliquer(terminerEnchere(collection, id));
+              noterVente('fin');
+            }}
           />
 
           <SynchroAuto collection={collection} preferences={preferences} cacheWiki={cacheWiki} />

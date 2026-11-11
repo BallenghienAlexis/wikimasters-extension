@@ -38,6 +38,10 @@ import {
   enregistrerJournal,
   enregistrerPreferences,
   enregistrerRegistre,
+  chargerVentes,
+  chargerAffluenceSite,
+  noterAffluenceSite,
+  noterEvenementVente,
   enregistrerSignalSynchro,
   chargerEtatSynchro,
   enregistrerEtatSynchro,
@@ -132,10 +136,49 @@ afterEach(() => {
   delete (globalThis as { chrome?: unknown }).chrome;
 });
 
+describe('ventes (affluence)', () => {
+  it('lit une liste vide si absente, de version inconnue ou mal formée', async () => {
+    expect(await chargerVentes()).toEqual([]);
+    faux.donnees.set('ventes', { version: 2, evenements: [{ type: 'debut', at: 1 }] });
+    expect(await chargerVentes()).toEqual([]);
+    faux.donnees.set('ventes', { version: 1, evenements: 'x' });
+    expect(await chargerVentes()).toEqual([]);
+  });
+  it('écrit une enveloppe versionnée, bornée à 500, et ignore les entrées illisibles', async () => {
+    faux.donnees.set('ventes', { version: 1, evenements: [{ type: 'zzz', at: 1 }, { type: 'debut', at: 2 }] });
+    await noterEvenementVente({ type: 'fin', at: 3 });
+    expect(faux.donnees.get('ventes')).toEqual({ version: 1, evenements: [{ type: 'debut', at: 2 }, { type: 'fin', at: 3 }] });
+    const gros = Array.from({ length: 500 }, (_, i) => ({ type: 'debut', at: i }));
+    faux.donnees.set('ventes', { version: 1, evenements: gros });
+    const suite = await noterEvenementVente({ type: 'fin', at: 999 });
+    expect(suite).toHaveLength(500);
+  });
+  it('ne perd aucun évènement quand deux notes se suivent', async () => {
+    await Promise.all([noterEvenementVente({ type: 'debut', at: 1 }), noterEvenementVente({ type: 'fin', at: 2 })]);
+    expect(await chargerVentes()).toHaveLength(2);
+  });
+});
+
+describe('affluenceSite', () => {
+  it('stocke des horodatages sans doublon, triés, bornés à 2 000, et ignore une valeur illisible', async () => {
+    expect(await chargerAffluenceSite()).toEqual([]);
+    await noterAffluenceSite([5, 3, 5]);
+    expect((await noterAffluenceSite([3, 9])).map((e) => e.at)).toEqual([3, 5, 9]);
+    const suite = await noterAffluenceSite(Array.from({ length: 2100 }, (_, i) => 100 + i));
+    expect(suite).toHaveLength(2000);
+    faux.donnees.set('affluenceSite', { version: 9, evenements: [] });
+    expect(await chargerAffluenceSite()).toEqual([]);
+  });
+  it('n’entre pas dans le journal des ventes du joueur', async () => {
+    await noterAffluenceSite([1]);
+    expect(await chargerVentes()).toEqual([]);
+  });
+});
+
 describe('CLES_STOCKAGE', () => {
   it('AC4 : énumère exactement les clés locales de l’extension', () => {
     expect([...cles()].sort()).toEqual([
-      'amisInitiaux', 'arretSynchro', 'bailSynchro', 'collection', 'derniereSynchro', 'etatSynchro', 'execution', 'journal', 'preferences', 'registre', 'signalSynchro', 'statutSynchro', 'syncAuto', 'synchro', 'wikipedia',
+      'affluenceSite', 'amisInitiaux', 'arretSynchro', 'bailSynchro', 'collection', 'derniereSynchro', 'etatSynchro', 'execution', 'journal', 'preferences', 'registre', 'releveMarche', 'signalSynchro', 'statutSynchro', 'syncAuto', 'synchro', 'ventes', 'wikipedia',
     ]);
   });
 
@@ -605,9 +648,11 @@ describe('récupération d’une collection illisible', () => {
   it('réinitialise la seule clé de la collection', async () => {
     faux.donnees.set('collection', { version: 3 });
     faux.donnees.set('preferences', { a: 1 });
+    faux.donnees.set('ventes', { version: 1, evenements: [{ type: 'debut', at: 1 }] });
     await reinitialiserCollection();
     expect(faux.donnees.has('collection')).toBe(false);
     expect(faux.donnees.get('preferences')).toEqual({ a: 1 });
+    expect(faux.donnees.has('ventes')).toBe(true);
     expect(await chargerCollection()).toEqual(collectionVide());
   });
 });

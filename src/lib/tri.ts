@@ -3,7 +3,7 @@
 import { CONFIG_PRIX, type ConfigPrix } from '../config/prix';
 import type { Carte, Collection, Statut } from './collection';
 import { normaliser } from './collection';
-import { themesDeCarte } from './themes';
+import { DEFINITIONS_THEMES, THEME_AUTRES, themesDeCarte } from './themes';
 
 export interface Ami {
   nom: string;
@@ -18,8 +18,8 @@ export interface Preferences {
 
 export const preferencesParDefaut = (): Preferences => ({ version: 2, mesThemes: [], amis: [] });
 
-export function valeurDeCarte(carte: Pick<Carte, 'valeurMarchande' | 'rarete'>, config: ConfigPrix = CONFIG_PRIX): number | null {
-  return carte.valeurMarchande ?? config.valeurParRarete[carte.rarete ?? ''] ?? null;
+export function valeurDeCarte(carte: Pick<Carte, 'valeurMarchande'>): number | null {
+  return carte.valeurMarchande ?? null;
 }
 
 export function prixDepart(valeur: number, config: ConfigPrix = CONFIG_PRIX): number | null {
@@ -36,6 +36,28 @@ export function amisConcernes(themesCarte: readonly string[], amis: readonly Ami
   if (themesCarte.length === 0) return [];
   const themes = new Set(themesCarte);
   return amis.filter((ami) => ami.themes.some((theme) => themes.has(theme)));
+}
+
+/**
+ * Thèmes « aimés » déduits des cartes que le joueur a mises en favori sur le site (lecture locale :
+ * aucune requête). Du plus fréquent au plus rare ; « autres » n'est jamais suggéré.
+ */
+export function themesAimesDesFavoris(cartes: readonly Carte[]): { theme: string; nombre: number }[] {
+  const compte = new Map<string, number>();
+  for (const carte of cartes) {
+    if (!carte.favori) continue;
+    // Seuls les thèmes les plus précis : un parent déjà couvert par un thème de la carte est écarté,
+    // sinon « Tibet » ferait cocher toute la géographie.
+    const themes = themesDeCarte(carte);
+    const parents = new Set(DEFINITIONS_THEMES.filter((d) => themes.includes(d.id)).flatMap((d) => d.parents ?? []));
+    for (const theme of themes) {
+      if (theme === THEME_AUTRES || parents.has(theme)) continue;
+      compte.set(theme, (compte.get(theme) ?? 0) + 1);
+    }
+  }
+  return [...compte.entries()]
+    .map(([theme, nombre]) => ({ theme, nombre }))
+    .sort((a, b) => b.nombre - a.nombre || a.theme.localeCompare(b.theme, 'fr'));
 }
 
 export interface Proposition {
@@ -56,7 +78,7 @@ export function proposerTri(carte: Carte, preferences: Preferences, config: Conf
   if (ami) return { statut: 'echanger', ami: ami.nom, prixCible: null };
 
   // Sans valeur connue, on ne propose rien : une défausse ne se rattrape pas.
-  const valeur = valeurDeCarte(carte, config);
+  const valeur = valeurDeCarte(carte);
   if (valeur === null) return { statut: 'a-trier', ami: null, prixCible: null };
   if (valeur < config.seuilDefausse) return { statut: 'defausser', ami: null, prixCible: null };
   return { statut: 'vendre', ami: null, prixCible: prixDepart(valeur, config) };
@@ -85,7 +107,7 @@ export function fileDeVente(cartes: Carte[], config: ConfigPrix = CONFIG_PRIX): 
   const enCours = cartes.filter((c) => c.statut === 'en-vente');
   const aVendre = cartes
     .filter((c) => c.statut === 'vendre')
-    .sort((a, b) => (valeurDeCarte(b, config) ?? 0) - (valeurDeCarte(a, config) ?? 0));
+    .sort((a, b) => (valeurDeCarte(b) ?? 0) - (valeurDeCarte(a) ?? 0));
   const placesLibres = Math.max(0, config.maxVentesSimultanees - enCours.length);
   return {
     enCours,
