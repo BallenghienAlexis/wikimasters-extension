@@ -79,6 +79,6 @@ Décision d'Alexis : `apikey` publique **en dur** dans une constante unique de `
 
 ## Ouzbékistan 409 (2026-11-11, soir)
 
-- Constat (lectures seules) : l’enchère manuelle sur Ouzbékistan est `cancelled` ; la carte est revenue avec un **nouvel** identifiant d’exemplaire (`ab523cd5…`, l’ancien `be97fa52…` a disparu). L’extension gardait l’ancien dans `idsSite` : 409 sur un identifiant mort, pas une carte « déjà en vente ».
+- Constat (lectures seules) : l’enchère manuelle sur Ouzbékistan est `cancelled` ; la carte est revenue avec un **nouvel** identifiant d’exemplaire (l’ancien a disparu). L’extension gardait l’ancien dans `idsSite` : 409 sur un identifiant mort, pas une carte « déjà en vente ».
 - Fait : le message d’arrêt sur 409 nomme cette cause et demande de relancer la synchronisation.
 - À reprendre : exclure de l’aperçu les cartes déjà en vente exige les identifiants d’exemplaires de `selling` (aujourd’hui seuls les compteurs de `marketplace/mine` sont conservés) ; un relevé de la forme de `selling` est nécessaire.
