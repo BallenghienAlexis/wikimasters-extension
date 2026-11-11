@@ -66,3 +66,8 @@ Décision d'Alexis : `apikey` publique **en dur** dans une constante unique de `
 - Cookie de session lisible par `document.cookie` (non HttpOnly) : à confirmer au premier essai réel.
 - `src/lib/reseau.ts:86-87` : 401, 403, 429 portent le libellé « action non disponible » ; prévoir un libellé propre (« refus du site ») dans `CAUSES_RESULTAT`.
 - `tests/e2e/synchro-ecriture.spec.ts` : le retrait d'étiquette (`DELETE user_card_tags`) n'est pas couvert en e2e ; ajouter un cas avec une carte dont le statut a changé et un registre amorcé. Les requêtes du site fictif hors navigation ne sont pas comptées (seul l'hôte REST l'est).
+
+## À reprendre (revue de la PR d'envoi de l'enchère et de la défausse, 2026-11-11)
+- `src/lib/tri.ts:83` et `src/config/prix.ts` : l'assistant propose « défausser » sous `seuilDefausse` (15), mais l'envoi réel est plafonné à 5 (`PLAFOND_VALEUR_DEFAUSSE`). Les cartes valant de 6 à 14 sont proposées puis écartées au lancement (raison visible). Décision à prendre par Alexis : caler la proposition sur le plafond, ou garder l'écart.
+- Enchères : le prix et la durée (1 h) par enchère ne sont pas confirmés une à une avant l'envoi ; l'aperçu affiche le prix de départ et la valeur marchande.
+- Première défausse réelle : l'authentification par cookies n'a pas été rejouée ; un 401 ou 403 arrête le lot. À tenter sur une carte de valeur ≤ 5 choisie par Alexis.

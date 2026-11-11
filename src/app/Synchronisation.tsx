@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CONFIG_PRIX } from '../config/prix';
+import { CONFIG_PRIX, PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
 import type {
   Action,
   CarteEcartee,
@@ -60,7 +60,7 @@ const RAISONS: Record<RaisonEcart, string> = {
   'nom-trop-long': 'nom d’étiquette trop long',
   homonyme: 'une étiquette du même nom existe déjà sur le site',
   'exemplaires-non-relies': 'exemplaires non reliés au site',
-  'valeur-defausse-elevee': 'valeur marchande inconnue ou supérieure au plafond de défausse (5)',
+  'valeur-defausse-elevee': `valeur marchande inconnue ou supérieure au plafond de défausse (${PLAFOND_VALEUR_DEFAUSSE})`,
 };
 
 export const libelleRaison = (raison: RaisonEcart): string => RAISONS[raison];
