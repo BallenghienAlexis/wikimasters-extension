@@ -3,8 +3,9 @@
  *
  * Logique pure : horloge, transport, confirmation, revérification, application
  * locale et journal sont **injectés**. Aucun accès à `chrome.*`, au réseau ni au
- * jeton. Intervalle minimal fixe, plus un délai variable injecté (`gigue`, décision
- * d’Alexis du 2026-11-11) qui ne raccourcit jamais l’attente. Les échéances sont en temps absolu, si bien qu’un minuteur
+ * jeton. Cadence : 6 s au minimum entre deux débuts de requête, plus un délai
+ * supplémentaire variable fourni par l’appelant (décision d’Alexis du 2026-11-11),
+ * si bien que ce module ne tire aucun nombre aléatoire lui-même. Les échéances sont en temps absolu, si bien qu’un minuteur
  * ralenti (onglet masqué) ne peut jamais rendre l’exécution plus rapide.
  *
  * Pas de reprise automatique après interruption, et jamais de relance d’une
@@ -15,6 +16,8 @@ import type { Action, EtatExecution, ResultatAction } from './actions'
 
 /** Intervalle minimal entre deux débuts de requête. */
 export const INTERVALLE_MS = 6000
+/** Délai supplémentaire maximal, ajouté à l’intervalle minimal (jamais en dessous de 6 s). */
+export const SUPPLEMENT_MAX_MS = 4000
 /** Fenêtre glissante et plafond de requêtes dans cette fenêtre. */
 export const FENETRE_MS = 60_000
 export const MAX_PAR_FENETRE = 10
@@ -58,8 +61,11 @@ export interface DependancesFile {
   reverifier: (action: Action) => Ou<Verification>
   appliquer: (action: Action, resultat: ResultatAction) => Ou<void>
   journal: JournalFile
-  /** Millisecondes ajoutées à l’intervalle minimal entre deux requêtes (délai variable). Absent : 0. */
-  gigue?: () => number
+  /**
+   * Délai supplémentaire (ms) avant la requête suivante, tiré par l'appelant. Borné à
+   * [0, SUPPLEMENT_MAX_MS] et arrondi ; absent ou invalide : 0 (cadence fixe de 6 s).
+   */
+  delaiSupplementaire?: () => number
 }
 
 export type RaisonArret =
@@ -96,11 +102,7 @@ class Arret extends Error {
 }
 
 export function creerFile(deps: DependancesFile): File {
-  const { horloge, transport, confirmer, reverifier, appliquer, journal } = deps
-  const gigue = (): number => {
-    const g = deps.gigue?.() ?? 0
-    return Number.isFinite(g) ? Math.max(0, g) : 0
-  }
+  const { horloge, transport, confirmer, reverifier, appliquer, journal, delaiSupplementaire } = deps
 
   let enCours = false
   let file: Action[] = []
@@ -114,6 +116,19 @@ export function creerFile(deps: DependancesFile): File {
   let dernierDebut = Number.NEGATIVE_INFINITY
   let derniereReponse = Number.NEGATIVE_INFINITY
   const debuts: number[] = []
+  /** Supplément tiré après la dernière requête, appliqué avant la suivante. */
+  let supplement = 0
+
+  function tirerSupplement(): number {
+    if (!delaiSupplementaire) return 0
+    let v: number
+    try {
+      v = delaiSupplementaire()
+    } catch {
+      return 0
+    }
+    return Number.isFinite(v) ? Math.min(SUPPLEMENT_MAX_MS, Math.max(0, Math.floor(v))) : 0
+  }
 
   const publier = (): void => {
     if (etat === null) return
@@ -150,9 +165,9 @@ export function creerFile(deps: DependancesFile): File {
     await journal.passer(id)
   }
 
-  /** Date de début autorisée : intervalle de 6 s plus gigue, réponse précédente, confirmation, fenêtre de 60 s. */
+  /** Date de début autorisée : cadence de 6 s plus supplément, réponse précédente, confirmation, fenêtre de 60 s. */
   function debutAutorise(plancher: number): number {
-    let debut = Math.max(dernierDebut + INTERVALLE_MS + gigue(), derniereReponse, plancher)
+    let debut = Math.max(dernierDebut + INTERVALLE_MS + supplement, derniereReponse, plancher)
     const recents = debuts.filter((d) => d > debut - FENETRE_MS)
     if (recents.length >= MAX_PAR_FENETRE) {
       debut = Math.max(debut, recents[recents.length - MAX_PAR_FENETRE]! + FENETRE_MS)
@@ -201,6 +216,7 @@ export function creerFile(deps: DependancesFile): File {
     // Seul l’arrêt « jeton absent » (aucune requête émise) laisse la cadence intacte.
     if (exception || !(resultat.classe === 'arret' && resultat.cause === CAUSE_JETON_ABSENT)) {
       dernierDebut = debut
+      supplement = tirerSupplement()
       derniereReponse = horloge.now()
       debuts.push(debut)
       if (debuts.length > MAX_PAR_FENETRE * 2) debuts.splice(0, debuts.length - MAX_PAR_FENETRE * 2)

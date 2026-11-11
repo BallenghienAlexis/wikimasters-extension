@@ -183,3 +183,23 @@ describe('types du protocole (AC3)', () => {
     expectTypeOf<MessageResultat['resultat']>().toEqualTypeOf<ResultatAction>()
   })
 })
+
+describe('idEtiquette dans les ordres et les résultats', () => {
+  const ID = '22222222-2222-4222-8222-222222222222'
+  const pose = { type: 'pose-etiquette', idCarte: 'R|T', idExemplaire: 'ex', nomEtiquette: 'Garder' }
+
+  it('accepte un ordre de pose avec ou sans idEtiquette, refuse un champ en trop', () => {
+    expect(validerOrdre({ message: 'ordre', ordre: pose })).toEqual(pose)
+    expect(validerOrdre({ message: 'ordre', ordre: { ...pose, idEtiquette: ID } })).toEqual({ ...pose, idEtiquette: ID })
+    expect(validerOrdre({ message: 'ordre', ordre: { ...pose, idEtiquette: '' } })).toBeNull()
+    expect(validerOrdre({ message: 'ordre', ordre: { ...pose, idEtiquette: 'pas-un-uuid' } })).toBeNull()
+    expect(validerOrdre({ message: 'ordre', ordre: { ...pose, jeton: 'x' } })).toBeNull()
+  })
+
+  it('accepte un résultat avec idEtiquette, refuse tout autre champ', () => {
+    const r = { classe: 'reussie', codeHttp: 201, cause: 'action réussie' }
+    expect(validerResultat({ message: 'resultat', resultat: { ...r, idEtiquette: ID } })).toEqual({ ...r, idEtiquette: ID })
+    expect(validerResultat({ message: 'resultat', resultat: { ...r, idEtiquette: 5 } })).toBeNull()
+    expect(validerResultat({ message: 'resultat', resultat: { ...r, corps: 'x' } })).toBeNull()
+  })
+})

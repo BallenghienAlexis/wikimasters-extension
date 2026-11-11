@@ -40,12 +40,16 @@ export interface ActionRetraitEtiquette extends ActionBase {
   type: 'retrait-etiquette'
   idExemplaire: string
   nomEtiquette: string
+  /** Identifiant d’étiquette du site, ajouté à l’envoi depuis le registre (absent dans le lot). */
+  idEtiquette?: string
 }
 
 export interface ActionPoseEtiquette extends ActionBase {
   type: 'pose-etiquette'
   idExemplaire: string
   nomEtiquette: string
+  /** Identifiant d’étiquette du site, ajouté à l’envoi depuis le registre (absent dans le lot). */
+  idEtiquette?: string
 }
 
 export interface ActionEnchere extends ActionBase {
@@ -99,6 +103,8 @@ export interface ResultatAction {
   codeHttp: number | null
   /** Libellé fixe choisi par l’extension, jamais recopié depuis une réponse. */
   cause: string
+  /** Identifiant de l’étiquette créée (réponse d’une création), validé avant d’aller au registre. */
+  idEtiquette?: string
 }
 
 /**

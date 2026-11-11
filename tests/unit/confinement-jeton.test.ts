@@ -56,3 +56,12 @@ describe('SC-018 (AC4) : import de jeton.ts', () => {
     expect(await erreurs(imp('./jeton'), 'src/lib/reseau.ts')).toEqual([]);
   });
 });
+
+describe('SC-018 (AC4) : l’hôte REST est une origine d’envoi autorisée, rien d’autre', () => {
+  it('jeton.ts ne cite que le site et l’hôte REST de la configuration', async () => {
+    const { readFileSync } = await import('node:fs');
+    const source = readFileSync(resolve(RACINE, 'src/lib/jeton.ts'), 'utf8');
+    expect(source).toContain('ORIGINES_AUTORISEES');
+    expect(source.match(/https:\/\/[a-z.-]+/g)).toEqual(['https://www.wiki-masters.com']);
+  });
+});

@@ -4,6 +4,8 @@ import { LIBELLES_STATUT, type Carte, type Collection } from '../lib/collection'
 import { identifiantCarte, lireFenetreEnchere, lirePositionPage, regrouperCartes, trouverCartes } from '../lib/lecteur';
 import { chargerCollection, ecouterCollection, enregistrerPage, enregistrerValeur, fusionnerDansStockage } from '../lib/stockage';
 import { progression, texteProgression, type Synchro } from '../lib/synchro';
+import { TABLE_CONTRAT } from '../lib/contrat';
+import { creerEmetteur } from '../lib/reseau';
 import { demarrerExecutant } from './executant';
 import { demarrerSynchroAuto } from './synchroAuto';
 
@@ -77,6 +79,6 @@ ecouterCollection(afficherReperes);
 void chargerCollection().then(afficherReperes);
 planifierLecture();
 // Pilotage depuis la page de gestion : aucune requête tant qu'aucune action n'est branchée.
-demarrerExecutant();
+demarrerExecutant({ emettre: creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: location.origin }) });
 // Lecture automatique de la collection par l'API du site : activée par défaut, 0 requête si le joueur coupe l'option.
 demarrerSynchroAuto();

@@ -102,3 +102,13 @@ export function validerRegistre(brut: unknown): Registre | null {
   }
   return { version: VERSION_REGISTRE, etiquettes, couples }
 }
+
+/**
+ * Ajoute à une pose ou un retrait l'identifiant d'étiquette du site, lu dans le registre.
+ * `null` si le nom n'y figure pas (l'action n'est alors pas émise). Clés héritées du prototype ignorées.
+ */
+export function avecIdEtiquette<T extends { nomEtiquette: string }>(action: T, registre: Registre): (T & { idEtiquette: string }) | null {
+  if (!Object.prototype.hasOwnProperty.call(registre.etiquettes, action.nomEtiquette)) return null
+  const id = registre.etiquettes[action.nomEtiquette]
+  return typeof id === 'string' && id !== '' ? { ...action, idEtiquette: id } : null
+}

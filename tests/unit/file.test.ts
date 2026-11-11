@@ -86,6 +86,43 @@ function banc(
   return { deps, horloge, departs, requetes, appliquees, journal };
 }
 
+describe('délai supplémentaire variable (décision du 2026-11-11)', () => {
+  it('ajoute le supplément tiré à l’intervalle de 6 000 ms, jamais en dessous', async () => {
+    const tirages = [0, 1500, 4000, 2500]
+    let i = 0
+    const b = banc({ delaiSupplementaire: () => tirages[i++ % tirages.length]! })
+    await creerFile(b.deps).demarrer(lot(5), 'lot-1')
+    // Le supplément tiré après la requête n s'applique avant la requête n + 1.
+    expect(b.departs.slice(1).map((d, n) => d - b.departs[n]!)).toEqual([6000, 7500, 10_000, 8500])
+  })
+
+  it('borne un tirage hors limites, négatif ou non numérique', async () => {
+    const tirages = [99_999, -5, Number.NaN, 4000.9]
+    let i = 0
+    const b = banc({ delaiSupplementaire: () => tirages[i++]! })
+    await creerFile(b.deps).demarrer(lot(5), 'lot-1')
+    expect(b.departs.slice(1).map((d, n) => d - b.departs[n]!)).toEqual([10_000, 6000, 6000, 10_000])
+  })
+
+  it('reste à 6 000 ms si la source lève une exception', async () => {
+    const b = banc({
+      delaiSupplementaire: () => {
+        throw new Error('x')
+      },
+    })
+    await creerFile(b.deps).demarrer(lot(3), 'lot-1')
+    expect(b.departs[1]! - b.departs[0]!).toBe(6000)
+  })
+
+  it('garde au plus 10 requêtes par fenêtre de 60 s avec un supplément', async () => {
+    const b = banc({ delaiSupplementaire: () => 1000 })
+    await creerFile(b.deps).demarrer(lot(30), 'lot-1')
+    for (let n = 0; n + 10 < b.departs.length; n++) {
+      expect(b.departs[n + 10]! - b.departs[n]!).toBeGreaterThanOrEqual(60_000)
+    }
+  })
+})
+
 describe('cadence fixe (AC2)', () => {
   it('espace les débuts de requête de 6 000 ms quand tout répond vite', async () => {
     const b = banc();
@@ -176,32 +213,6 @@ describe('cadence fixe (AC2)', () => {
     await creerFile(c.deps).demarrer(lot(4), 'lot-1');
     const ecarts = (d: number[]) => d.map((x, i) => (i === 0 ? 0 : x - d[i - 1]!));
     expect(ecarts(a.departs)).toEqual(ecarts(c.departs));
-  });
-});
-
-describe('délai variable (gigue)', () => {
-  it('ajoute la gigue à l’intervalle, sans jamais le raccourcir (gigue négative ignorée)', async () => {
-    const gigues = [1500, -4000, 3000, 0];
-    let i = 0;
-    const b = banc({ gigue: () => gigues[i++ % gigues.length]! });
-    await creerFile(b.deps).demarrer(lot(5), 'lot-1');
-    const ecarts = b.departs.slice(1).map((d, k) => d - b.departs[k]!);
-    for (const e of ecarts) expect(e).toBeGreaterThanOrEqual(6000);
-    expect(ecarts).toEqual([6000, 9000, 6000, 7500]);
-  });
-
-  it('ignore une gigue non finie (NaN)', async () => {
-    const b = banc({ gigue: () => Number.NaN });
-    await creerFile(b.deps).demarrer(lot(3), 'lot-1');
-    expect(b.departs.slice(1).map((d, k) => d - b.departs[k]!)).toEqual([6000, 6000]);
-  });
-
-  it('respecte le plafond de 10 requêtes par 60 s malgré la gigue', async () => {
-    const b = banc({ gigue: () => 500 });
-    await creerFile(b.deps).demarrer(lot(30), 'lot-1');
-    for (let i = 0; i + 10 < b.departs.length; i++) {
-      expect(b.departs[i + 10]! - b.departs[i]!).toBeGreaterThanOrEqual(60_000);
-    }
   });
 });
 

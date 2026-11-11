@@ -28,14 +28,28 @@ const carteComplete = (c: Record<string, unknown>): object => ({
 });
 
 async function amorcer(page: Page, cartes: object[], preferences: object): Promise<void> {
-  await page.evaluate(
-    async ([c, p]) => {
-      // Le drapeau des amis initiaux évite la fusion de ceux de src/config/amis.ts (G2).
-      await chrome.storage.local.set({ collection: { version: 2, cartes: c }, preferences: p, amisInitiaux: 999 });
-    },
-    [cartes, preferences] as const,
-  );
-  await page.reload();
+  const ecrire = (): Promise<void> =>
+    page.evaluate(
+      async ([c, p]) => {
+        // Le drapeau des amis initiaux évite la fusion de ceux de src/config/amis.ts (G2).
+        await chrome.storage.local.set({ collection: { version: 2, cartes: c }, preferences: p, amisInitiaux: 999 });
+      },
+      [cartes, preferences] as const,
+    );
+  const attendus = JSON.stringify((preferences as { amis: unknown }).amis);
+  const amisStockes = (): Promise<string> => page.evaluate(async () => JSON.stringify(((await chrome.storage.local.get('preferences')).preferences as { amis: unknown }).amis));
+  // La page peut encore écrire ses propres préférences (fusion des amis initiaux) au moment de l'amorçage et écraser les nôtres :
+  // on réécrit et on recharge jusqu'à ce que les amis stockés soient bien ceux de la fixture (cause du test instable en CI).
+  await expect
+    .poll(
+      async () => {
+        await ecrire();
+        await page.reload();
+        return (await amisStockes()) === attendus;
+      },
+      { timeout: 20_000, intervals: [0, 250, 500] },
+    )
+    .toBe(true);
 }
 
 const amorcerFixture = (page: Page, amis = FIXTURE.preferences.amis): Promise<void> =>
@@ -47,6 +61,9 @@ const ouvrirApercu = async (page: Page): Promise<void> => {
 };
 
 const ligne = (page: Page, nom: string) => page.getByTestId('etiquettes-prevues').locator('table tbody tr').filter({ has: page.getByRole('cell', { name: nom, exact: true }) });
+
+// Runners CI lents : 30 s par défaut suffisaient rarement pour les captures avec un amorçage complet.
+test.setTimeout(60_000);
 
 test.beforeEach(async ({ context }) => {
   // Aucune requête vers l’extérieur : le test échoue si l’une d’elles est tentée.
@@ -85,7 +102,10 @@ test('liste les étiquettes prévues avec leurs nombres, sans requête ni lectur
   const section = page.getByTestId('etiquettes-prevues');
   await expect(section).toContainText('Étiquettes prévues (envoi pas encore possible)');
   // Les nombres sont lus par cellule : Étiquette, Cartes, Exemplaires, État.
-  const cellules = async (nom: string): Promise<string[]> => (await ligne(page, nom).getByRole('cell').allInnerTexts()).map((t) => t.trim());
+  const cellules = async (nom: string): Promise<string[]> => {
+    await expect(ligne(page, nom)).toHaveCount(1); // allInnerTexts n'attend pas : on attend la ligne d'abord
+    return (await ligne(page, nom).getByRole('cell').allInnerTexts()).map((t) => t.trim());
+  };
   expect(await cellules('Statut · Échanger')).toEqual(['Statut · Échanger', '5', '6', 'nouvelle · non disponible']);
   expect(await cellules('#Chien')).toEqual(['#Chien', '1', '2', 'nouvelle · non disponible']);
   expect(await cellules('#Animaux')).toEqual(['#Animaux', '1', '2', 'nouvelle · non disponible']);
