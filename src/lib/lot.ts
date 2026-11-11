@@ -79,7 +79,7 @@ const COLLATEUR_FR = new Intl.Collator('fr')
 
 const comparer = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
 
-const STATUTS_ETIQUETES = new Set<Statut>(['garder', 'echanger', 'vendre', 'en-vente'])
+const STATUTS_ETIQUETES = new Set<Statut>(['garder', 'echanger', 'vendre'])
 
 const PREFIXE_ECHANGE = '#À échanger '
 const PREFIXE_STATUT = 'Statut · '
@@ -133,7 +133,7 @@ const MEMO_ETIQUETTES = new WeakMap<Carte, { amis: readonly Ami[] | undefined; l
  * Étiquettes d’une carte pour chaque exemplaire relié, dans l’ordre de priorité de H5 :
  * Statut, étiquettes d’échange (carte `echanger`), puis thèmes. `ecartees` : thèmes au-delà de la
  * limite du site par exemplaire ; Statut et échanges ne sont jamais écartés au profit d’un thème.
- * Vide pour un favori, une carte à trier ou à défausser, ou non reliée.
+ * Vide pour un favori, une carte à trier, à défausser ou en vente sur le site, ou non reliée.
  */
 export function etiquettesDeCarte(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire'>): EtiquettesCarte {
   // Le lot, l’aperçu et le regroupement demandent trois fois les mêmes étiquettes pour les mêmes cartes
@@ -168,7 +168,7 @@ function calculerEtiquettes(carte: Carte, config?: Pick<Config, 'amis' | 'limite
 
 /**
  * Exemplaires reliés d’une carte et étiquettes attendues sur chacun.
- * Vide pour un favori, une carte à trier ou à défausser, ou non reliée.
+ * Vide pour un favori, une carte à trier, à défausser ou en vente sur le site, ou non reliée.
  */
 export function exemplairesAttendus(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire'>): ExemplaireAttendu[] {
   const { retenues } = etiquettesDeCarte(carte, config)

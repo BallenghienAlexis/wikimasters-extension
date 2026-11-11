@@ -38,6 +38,12 @@ const AMIS = [
 ]
 
 describe('regrouperEtiquettes : lignes (AC1)', () => {
+  it('une carte en vente sur le site ne produit aucune ligne (aucune étiquette envoyée)', () => {
+    const lignes = regrouperEtiquettes(coll(carte('a', { ...CHIEN, statut: 'en-vente' })), registre(), config())
+    expect(JSON.stringify(lignes)).not.toContain('En vente')
+    expect(JSON.stringify(lignes)).not.toContain('#Chien')
+  })
+
   it('regroupe par nom, avec cartes, exemplaires, nouveauté et genre', () => {
     const a = carte('a', { ...CHIEN, statut: 'echanger', idsSite: ['e1', 'e2'], quantite: 2 })
     const b = carte('b', { ...CHIEN, statut: 'echanger' })

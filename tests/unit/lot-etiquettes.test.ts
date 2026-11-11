@@ -51,8 +51,15 @@ describe('étiquettes attendues (SC-008)', () => {
     expect(attendues(carte('a', CHIEN), config({ amis: AMIS }))).toEqual(attendues(carte('a', CHIEN)))
   })
 
-  it.each(['garder', 'echanger', 'vendre', 'en-vente'] as const)('statut %s : étiqueté', (statut) => {
+  it.each(['garder', 'echanger', 'vendre'] as const)('statut %s : étiqueté', (statut) => {
     expect(attendues(carte('a', { ...CHIEN, statut }))).toContain('#Chien')
+  })
+
+  it('en vente sur le site : aucune étiquette attendue, et aucune place prise dans la limite de noms', () => {
+    expect(attendues(carte('a', { ...CHIEN, statut: 'en-vente' }))).toEqual([])
+    const lot = construireLot(coll(carte('a', { ...CHIEN, statut: 'en-vente' }), carte('b', { ...CHIEN, id: 'b', statut: 'garder', idsSite: ['ex-b'] })), registre(), config({ limiteNoms: 4 }), TOUS)
+    expect(lot.actions.every((a) => a.idCarte === 'b')).toBe(true)
+    expect(lot.actions.length).toBeGreaterThan(0)
   })
 
   it('favori, à trier et à défausser : aucune étiquette ni action de thème ou d’échange', () => {
