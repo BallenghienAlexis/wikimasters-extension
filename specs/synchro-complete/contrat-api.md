@@ -40,7 +40,8 @@ Origine de l'onglet : `https://www.wiki-masters.com`.
 - **Lecture vue au passage** : `GET /rest/v1/cards?select=summary&id=eq.<card_id>` → 200, `{"summary":null}` (format PostgREST, `application/vnd.pgrst.object+json`). Non utilisée par l'extension.
 - Le jeton est un JWT signé ES256 émis par `…/auth/v1` (en-têtes `Sb-Jwt-*` de la réponse).
 - **En-têtes de requête du `POST user_card_tags` (noms, relevé du 2026-11-11)** : `apikey` (clé anonyme publique du projet), `authorization: Bearer <jeton de session>` (JWT expirant en environ 1 h : 401 attendu à l'expiration), `content-profile: public`, `content-type: application/json`, `accept`. **Corps confirmé** : `{ user_card_id: <uuid>, tag_id: <uuid> }`, rien d'autre.
-- **Toujours non relevé** : nom du cookie ou de la clé qui porte la session, création d'étiquette (`POST /rest/v1/tags`, réponse), limites, visibilité.
+- **Session (relevé du 2026-11-11, noms et forme seulement)** : cookie `sb-cyrxjeppjqsxxjayfrur-auth-token`, **découpé en deux morceaux** `….0` et `….1` à concaténer ; valeur = préfixe `base64-` puis JSON encodé en base64 avec les champs `access_token`, `token_type`, `expires_in`, `expires_at`, `refresh_token`, `user`. L'extension n'extrait que `access_token` (jamais `refresh_token` ni `user`) ; expiration ≈ 1 h : jeton expiré, arrêt propre sans rafraîchissement. À vérifier : le cookie est-il lisible par `document.cookie` (pas HttpOnly) ?
+- **Toujours non relevé** : création d'étiquette (`POST /rest/v1/tags`, réponse), limites, visibilité.
 
 ## Reste à relever (SC-001)
 En-têtes de requête exigés de `/rest/v1`, emplacement du jeton, mode d'authentification de `/api/`, lien `card_id` ↔ `user_card_id`, limites et visibilité des étiquettes, bornes de `base_amount`, forme des erreurs (401, 403, 429), réponses de création (identifiants renvoyés).
