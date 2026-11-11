@@ -116,7 +116,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'chateau', libelle: '#Château', motifs: ['chateau', 'forteresse', 'citadelle'], parents: ['architecture', 'arts'] },
   { id: 'cathedrale', libelle: '#Cathédrale', motifs: ['cathedrale', 'basilique', 'abbaye'], parents: ['architecture', 'arts'] },
   { id: 'phare', libelle: '#Phare', motifs: ['phare de ', 'phare du ', "phare d'", 'phares(?![a-z0-9])', 'gardien de phare'], parents: ['architecture', 'arts'] },
-  { id: 'barrage', libelle: '#Barrage', motifsCategories: ['barrage(?![a-z0-9])'], motifs: ['barrage hydroelectrique', 'barrages hydroelectriques', 'barrage-voute', 'barrage-poids', 'grands? barrages?', "retenue d'eau", '(?<!match(?:s)? de )barrages(?![a-z0-9])(?! de (?:ligue|promotion|relegation))'], parents: ['architecture', 'arts'] },
+  { id: 'barrage', libelle: '#Barrage', motifsCategories: ['(?<!match(?:s)? de )(?<!play-offs? de )barrage(?![a-z0-9])'], motifs: ['barrage hydroelectrique', 'barrages hydroelectriques', 'barrage-voute', 'barrage-poids', 'grands? barrages?', "retenue d'eau", '(?<!match(?:s)? de )barrages(?![a-z0-9])(?! de (?:ligue|promotion|relegation))'], parents: ['architecture', 'arts'] },
   { id: 'gratteciel', libelle: '#Gratte-ciel', motifs: ['gratte-ciel'], parents: ['architecture', 'arts'] },
 
   // Géographie
