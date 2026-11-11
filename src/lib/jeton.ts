@@ -39,6 +39,8 @@ export function enteteAuthentification(
   return { nom: nomEntete, valeur };
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function decoderBase64(brut: string): string | null {
   try {
     const binaire = atob(brut.replace(/-/g, '+').replace(/_/g, '/'));
@@ -95,13 +97,15 @@ export function lireSession(cookies: string, maintenantMs: number): SessionLue |
   if (typeof session !== 'object' || session === null) return null;
   const { access_token: jeton, expires_at: expire } = session as Record<string, unknown>;
   if (typeof jeton !== 'string' || jeton === '') return null;
-  if (typeof expire === 'number' && expire * 1000 <= maintenantMs) return null;
   const parties = jeton.split('.');
   const charge = parties.length === 3 ? decoderBase64(parties[1]!) : null;
   if (charge === null) return null;
   try {
-    const sub = (JSON.parse(charge) as Record<string, unknown>).sub;
-    if (typeof sub !== 'string' || sub === '') return null;
+    const { sub, exp } = JSON.parse(charge) as Record<string, unknown>;
+    // Expiration : celle de la session, à défaut celle du jeton ; sans aucune des deux, refus.
+    const echeance = typeof expire === 'number' ? expire : typeof exp === 'number' ? exp : null;
+    if (echeance === null || echeance * 1000 <= maintenantMs) return null;
+    if (typeof sub !== 'string' || !UUID.test(sub)) return null;
     return { jeton, idJoueur: sub };
   } catch {
     return null;

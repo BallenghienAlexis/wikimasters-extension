@@ -192,6 +192,7 @@ describe('idEtiquette dans les ordres et les résultats', () => {
     expect(validerOrdre({ message: 'ordre', ordre: pose })).toEqual(pose)
     expect(validerOrdre({ message: 'ordre', ordre: { ...pose, idEtiquette: ID } })).toEqual({ ...pose, idEtiquette: ID })
     expect(validerOrdre({ message: 'ordre', ordre: { ...pose, idEtiquette: '' } })).toBeNull()
+    expect(validerOrdre({ message: 'ordre', ordre: { ...pose, idEtiquette: 'pas-un-uuid' } })).toBeNull()
     expect(validerOrdre({ message: 'ordre', ordre: { ...pose, jeton: 'x' } })).toBeNull()
   })
 

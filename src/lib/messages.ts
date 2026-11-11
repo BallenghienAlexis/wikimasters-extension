@@ -11,6 +11,9 @@
 import { TYPES_ACTION, type Action, type ResultatAction, type TypeAction } from './actions'
 
 const LONGUEUR_MAX = 200
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const uuid = (v: unknown): string | null => (typeof v === 'string' && UUID.test(v) ? v : null)
 
 /** Nom du port ouvert par le content script vers la page de gestion. */
 export const NOM_PORT = 'wm-synchro'
@@ -122,7 +125,7 @@ export function validerOrdre(brut: unknown): Action | null {
       if (idExemplaire === null || nomEtiquette === null) return null
       const base = { type: type as 'retrait-etiquette' | 'pose-etiquette', idCarte, idExemplaire, nomEtiquette }
       if (!avecId) return base
-      const idEtiquette = texte(ordre.idEtiquette)
+      const idEtiquette = uuid(ordre.idEtiquette)
       return idEtiquette === null ? null : { ...base, idEtiquette }
     }
     case 'enchere': {
@@ -156,6 +159,6 @@ export function validerResultat(brut: unknown): ResultatAction | null {
   if (cause === null || !CAUSES_RESULTAT.includes(cause)) return null
   const base = { classe: classe as ResultatAction['classe'], codeHttp: codeHttp as number | null, cause }
   if (!avecId) return base
-  const idEtiquette = texte(resultat.idEtiquette)
+  const idEtiquette = uuid(resultat.idEtiquette)
   return idEtiquette === null ? null : { ...base, idEtiquette }
 }

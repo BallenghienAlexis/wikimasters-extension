@@ -89,23 +89,27 @@ describe('lecture de la session dans le cookie du site', async () => {
   const { NOM_COOKIE_SESSION } = await import('../../src/config/synchro')
   const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url')
   const jeton = (sub: string) => `${b64({ alg: 'x' })}.${b64({ sub })}.signature-fictive`
+  const J1 = '33333333-3333-4333-8333-333333333333'
+  const J2 = '44444444-4444-4444-8444-444444444444'
   const cookie = (session: unknown) => `base64-${b64(session)}`
   const MAINTENANT = 1_800_000_000_000
 
   it('lit un cookie en un morceau et ne renvoie que le jeton d’accès et l’identifiant', () => {
-    const c = `${NOM_COOKIE_SESSION}=${cookie({ access_token: jeton('joueur-1'), refresh_token: 'r', expires_at: MAINTENANT / 1000 + 100 })}`
-    expect(lireSession(c, MAINTENANT)).toEqual({ jeton: jeton('joueur-1'), idJoueur: 'joueur-1' })
+    const c = `${NOM_COOKIE_SESSION}=${cookie({ access_token: jeton(J1), refresh_token: 'r', expires_at: MAINTENANT / 1000 + 100 })}`
+    expect(lireSession(c, MAINTENANT)).toEqual({ jeton: jeton(J1), idJoueur: J1 })
   })
 
   it('recolle un cookie découpé en .0 et .1', () => {
-    const entier = cookie({ access_token: jeton('joueur-2'), expires_at: MAINTENANT / 1000 + 100 })
+    const entier = cookie({ access_token: jeton(J2), expires_at: MAINTENANT / 1000 + 100 })
     const c = `a=b; ${NOM_COOKIE_SESSION}.0=${entier.slice(0, 40)}; ${NOM_COOKIE_SESSION}.1=${entier.slice(40)}`
-    expect(lireSession(c, MAINTENANT)?.idJoueur).toBe('joueur-2')
+    expect(lireSession(c, MAINTENANT)?.idJoueur).toBe(J2)
   })
 
   it('refuse un jeton expiré, un cookie absent ou mal formé', () => {
-    const vieux = `${NOM_COOKIE_SESSION}=${cookie({ access_token: jeton('j'), expires_at: MAINTENANT / 1000 - 1 })}`
+    const vieux = `${NOM_COOKIE_SESSION}=${cookie({ access_token: jeton(J1), expires_at: MAINTENANT / 1000 - 1 })}`
     expect(lireSession(vieux, MAINTENANT)).toBeNull()
+    expect(lireSession(`${NOM_COOKIE_SESSION}=${cookie({ access_token: jeton('pas-un-uuid'), expires_at: MAINTENANT / 1000 + 9 })}`, MAINTENANT)).toBeNull()
+    expect(lireSession(`${NOM_COOKIE_SESSION}=${cookie({ access_token: jeton(J1) })}`, MAINTENANT)).toBeNull()
     expect(lireSession('a=b', MAINTENANT)).toBeNull()
     expect(lireSession(`${NOM_COOKIE_SESSION}=pas-base64`, MAINTENANT)).toBeNull()
     expect(lireSession(`${NOM_COOKIE_SESSION}=${cookie({ access_token: 'sans-points' })}`, MAINTENANT)).toBeNull()
