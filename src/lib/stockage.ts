@@ -25,6 +25,7 @@ const CLE_STATUT_SYNCHRO = 'statutSynchro';
 const CLE_VENTES = 'ventes';
 const CLE_AFFLUENCE_SITE = 'affluenceSite';
 const MAX_RELEVES_SITE = 2000;
+const CLE_RELEVE_MARCHE = 'releveMarche';
 
 /** Version de l’enveloppe du journal stocké. */
 export const VERSION_JOURNAL = 1;
@@ -47,6 +48,7 @@ export const CLES_STOCKAGE = {
   statutSynchro: CLE_STATUT_SYNCHRO,
   ventes: CLE_VENTES,
   affluenceSite: CLE_AFFLUENCE_SITE,
+  releveMarche: CLE_RELEVE_MARCHE,
 } as const;
 
 function illisible(detail: string): Error {
@@ -432,12 +434,37 @@ export async function chargerAffluenceSite(): Promise<EvenementVente[]> {
   return validerEvenements((brut as { evenements?: unknown }).evenements, MAX_RELEVES_SITE).filter((e) => e.type === 'site');
 }
 
-/** Ajoute les horodatages nouveaux (sans doublon), en gardant les plus récents. */
-export async function noterAffluenceSite(horodatages: readonly number[]): Promise<EvenementVente[]> {
-  const actuels = await chargerAffluenceSite();
-  const connus = new Set(actuels.map((e) => e.at));
-  const nouveaux = [...new Set(horodatages)].filter((t) => !connus.has(t)).map((at): EvenementVente => ({ type: 'site', at }));
-  const suite = [...actuels, ...nouveaux].sort((a, b) => a.at - b.at).slice(-MAX_RELEVES_SITE);
-  await chrome.storage.local.set({ [CLE_AFFLUENCE_SITE]: { version: VERSION_VENTES, evenements: suite } });
-  return suite;
+let fileAffluence: Promise<unknown> = Promise.resolve();
+
+/** Ajoute les horodatages nouveaux (sans doublon), en gardant les plus récents ; écritures chaînées. */
+export function noterAffluenceSite(horodatages: readonly number[]): Promise<EvenementVente[]> {
+  const tache = fileAffluence.then(async () => {
+    const actuels = await chargerAffluenceSite();
+    const connus = new Set(actuels.map((e) => e.at));
+    const nouveaux = [...new Set(horodatages)].filter((t) => !connus.has(t)).map((at): EvenementVente => ({ type: 'site', at }));
+    const suite = [...actuels, ...nouveaux].sort((a, b) => a.at - b.at).slice(-MAX_RELEVES_SITE);
+    await chrome.storage.local.set({ [CLE_AFFLUENCE_SITE]: { version: VERSION_VENTES, evenements: suite } });
+    return suite;
+  });
+  fileAffluence = tache.catch(() => undefined);
+  return tache;
+}
+
+/** Dernier relevé du marché (horodatage) et nombre d’échecs consécutifs, communs aux onglets. */
+export interface ReleveMarche {
+  le: number | null;
+  echecs: number;
+}
+
+export async function chargerReleveMarche(): Promise<ReleveMarche> {
+  const contenu = await chrome.storage.local.get(CLE_RELEVE_MARCHE);
+  const brut = contenu[CLE_RELEVE_MARCHE];
+  if (typeof brut !== 'object' || brut === null) return { le: null, echecs: 0 };
+  const { le, echecs } = brut as { le?: unknown; echecs?: unknown };
+  return { le: horodatageValide(le) ? le : null, echecs: typeof echecs === 'number' && Number.isInteger(echecs) && echecs >= 0 && echecs <= 100 ? echecs : 0 };
+}
+
+export async function enregistrerReleveMarche(releve: ReleveMarche): Promise<void> {
+  if (releve.le !== null && !horodatageValide(releve.le)) throw new Error('Horodatage invalide.');
+  await chrome.storage.local.set({ [CLE_RELEVE_MARCHE]: { le: releve.le, echecs: Math.min(100, Math.max(0, Math.trunc(releve.echecs))) } });
 }

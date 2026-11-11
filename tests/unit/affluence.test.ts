@@ -75,12 +75,13 @@ describe('extraireHorodatages', () => {
     expect(extraireHorodatages({ autre: [] })).toEqual([]);
     expect(extraireHorodatages('nope')).toEqual([]);
     expect(extraireHorodatages([{ created_at: 9e15 }])).toEqual([]);
+    expect(extraireHorodatages([{ created_at: 1_700_000_000 }])).toEqual([]);
   });
 });
 
 describe('routeMarcheValide', () => {
   it.each(['/api/marketplace', '/api/marketplace?status=active&page=0', '/api/marketplace/cards/c/sales?scope=summary'])('accepte %s', (r) => expect(routeMarcheValide(r)).toBe(true));
-  it.each([null, '/api/my-collection', 'https://x.fr/api/marketplace', '/api/marketplace/../trades', '/api/marketplace/cards/c/sales'])('refuse %s', (r) => expect(routeMarcheValide(r)).toBe(false));
+  it.each([null, '/api/my-collection', 'https://x.fr/api/marketplace', '/api/marketplace/../trades', '/api/marketplace/cards/c/sales', '/api/marketplaceX', '/api/marketplace-admin/x', '/api/marketplace/cards/c/sales?x=1&noscope=summary', '/api/marketplace/cards/c/sales?scope=summaryall'])('refuse %s', (r) => expect(routeMarcheValide(r)).toBe(false));
 });
 
 describe('relevés du site dans les heures fortes', () => {

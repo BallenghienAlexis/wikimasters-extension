@@ -10,6 +10,8 @@ export const VERSION_VENTES = 1;
 export const MAX_EVENEMENTS = 500;
 /** Plus grande date représentable par `Date` (ms) ; au-delà, `getDay()` renvoie NaN. */
 const DATE_MAX = 8.64e15;
+/** 2020-01-01 : en deçà, un nombre est pris pour des secondes Unix et rejeté plutôt que de fausser l’histogramme. */
+const DATE_MIN_RELEVE = Date.UTC(2020, 0, 1);
 
 export type Histogramme = number[][]; // [jour 0-6][heure 0-23]
 
@@ -84,7 +86,7 @@ const CLES_LISTES = ['items', 'auctions', 'results', 'data', 'marketplace', 'lis
 
 function enMs(valeur: unknown): number | null {
   const t = typeof valeur === 'string' ? Date.parse(valeur) : typeof valeur === 'number' ? valeur : NaN;
-  return Number.isSafeInteger(t) && t >= 0 && t <= DATE_MAX ? t : null;
+  return Number.isSafeInteger(t) && t >= DATE_MIN_RELEVE && t <= DATE_MAX ? t : null;
 }
 
 /**
@@ -113,9 +115,11 @@ export function extraireHorodatages(json: unknown, champs: readonly string[] = C
   return sortie;
 }
 
-/** Une route de listing du marché : chemin relatif sous `/api/marketplace`, jamais l’historique des ventes (`/sales` sans `scope=summary`, réservé PRO). */
+/** Une route de listing du marché : chemin relatif `/api/marketplace`, jamais l’historique des ventes (segment `sales` sans `scope=summary`, réservé PRO). */
 export function routeMarcheValide(route: string | null): route is string {
-  if (route === null || !/^\/api\/marketplace[A-Za-z0-9_/?=&.,-]*$/.test(route)) return false;
+  if (route === null || !/^\/api\/marketplace(?:[/?]|$)[A-Za-z0-9_/?=&.,-]*$/.test(route)) return false;
   if (route.includes('..') || route.includes('//')) return false;
-  return !route.includes('/sales') || route.includes('scope=summary');
+  const [chemin = '', requete = ''] = route.split('?');
+  if (!chemin.split('/').includes('sales')) return true;
+  return new URLSearchParams(requete).get('scope') === 'summary';
 }
