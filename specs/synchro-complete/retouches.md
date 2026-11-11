@@ -76,3 +76,9 @@ Décision d'Alexis : `apikey` publique **en dur** dans une constante unique de `
 - Cause exacte du 409 non établie : `marketplace/mine` donne 0 enchère en cours pour un plafond de 5, donc ce n'est pas (seulement) la limite. Le libellé du refus du site n'est pas recopié ; `classerConflit` (`src/lib/reseau.ts`) ne distingue que « limite d'enchères atteinte » et « conflit signalé par le site ». À préciser avec le message affiché par le site pour une de ces trois cartes (les trois du premier lot réel, détail dans le journal local) mise aux enchères à la main.
 
 - Mise à jour (2026-11-11, soir) : l'enchère envoie désormais l'identifiant de l'exemplaire dans `card_id` (corps relevé sur une mise manuelle réussie). Hypothèse la plus probable du 409, à confirmer par un prochain lot réel d'une seule enchère. L'ancien relevé « `card_id` = celui de la carte » du 2026-11-11 (midi) était faux.
+
+## Ouzbékistan 409 (2026-11-11, soir)
+
+- Constat (lectures seules) : l’enchère manuelle sur Ouzbékistan est `cancelled` ; la carte est revenue avec un **nouvel** identifiant d’exemplaire (l’ancien a disparu). L’extension gardait l’ancien dans `idsSite` : 409 sur un identifiant mort, pas une carte « déjà en vente ».
+- Fait : le message d’arrêt sur 409 nomme cette cause et demande de relancer la synchronisation.
+- À reprendre : exclure de l’aperçu les cartes déjà en vente exige les identifiants d’exemplaires de `selling` (aujourd’hui seuls les compteurs de `marketplace/mine` sont conservés) ; un relevé de la forme de `selling` est nécessaire.
