@@ -36,10 +36,8 @@ const VerificationWikipedia: React.FC<Props> = ({ titres, onCache }) => {
   const etat = useSyncExternalStore(file.abonner, file.etat);
 
   useEffect(() => {
+    // `onCache` (App) est stable et App n'est jamais démonté : on garde le rappel même quand ce composant l'est.
     rappelCache = onCache;
-    return () => {
-      rappelCache = () => undefined;
-    };
   }, [onCache]);
 
   useEffect(() => {
