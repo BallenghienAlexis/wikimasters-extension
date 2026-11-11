@@ -145,7 +145,7 @@ export default tseslint.config(
   {
     // Seul fichier du content script autorisé à appeler `fetch` (GET même origine, voir synchro-auto-lint.test.ts).
     files: ['src/content/synchroAuto.ts'],
-    rules: regles({ site: true, reseau: 'sauf-fetch', alea: true }),
+    rules: regles({ site: true, reseau: 'sauf-fetch' }),
   },
   {
     // Aléatoire interdit dans la file (cadence fixe).

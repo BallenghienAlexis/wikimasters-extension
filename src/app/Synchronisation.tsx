@@ -12,6 +12,7 @@ import type {
 } from '../lib/actions';
 import type { Carte, Collection } from '../lib/collection';
 import { typesDisponibles } from '../lib/contrat';
+import { gigueAleatoire } from '../lib/gigue';
 import { CODES_ARRET, creerFile, type Decision, type EtatFile, type File as FileLot, type RaisonArret } from '../lib/file';
 import { regrouperEtiquettes, type ApercuEtiquettes } from '../lib/apercuEtiquettes';
 import { completerEntree, ouvrirEntree, passerEntree } from '../lib/journal';
@@ -44,7 +45,7 @@ const ECARTEES_MAX = 50;
 /** Espace insécable : typographie française avant « : » (D-40). */
 const NB = ' ';
 
-export const CADENCE_TEXTE = `Cadence fixe${NB}: 10 actions par minute · arrêt après 3 erreurs`;
+export const CADENCE_TEXTE = `Cadence variable${NB}: 6 à 12 s entre deux actions, 10 par minute au plus · arrêt après 3 erreurs`;
 
 const RAISONS: Record<RaisonEcart, string> = {
   'non-reliee': 'non reliée au site',
@@ -407,6 +408,7 @@ function contexteExecution(): ContexteExecution {
     (await chargerCollection()).cartes.find((c) => c.id === idCarte)?.titre ?? idCarte;
   const file = creerFile({
     horloge: horlogeReelle,
+    gigue: gigueAleatoire,
     transport: (ordre) => execution.transport(ordre),
     confirmer: (action) => {
       if (!pont.confirmer) throw new Error('Confirmation indisponible.');

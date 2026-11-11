@@ -451,8 +451,8 @@ describe('T-202 : migration de la collection stockée', () => {
 });
 
 describe('T-202 : état de la synchronisation automatique', () => {
-  it('SC-007 : valeurs par défaut (désactivée, aucune synchro, aucun bail)', async () => {
-    expect(await chargerSyncAuto()).toBe(false);
+  it('SC-007 : valeurs par défaut (activée, aucune synchro, aucun bail)', async () => {
+    expect(await chargerSyncAuto()).toBe(true);
     expect(await chargerDerniereSynchro()).toBeNull();
     expect(await chargerBailSynchro()).toBeNull();
   });
@@ -478,7 +478,7 @@ describe('T-202 : état de la synchronisation automatique', () => {
   it('SC-007 : une valeur stockée invalide vaut la valeur par défaut, sans exception', async () => {
     for (const invalide of ['oui', 1, null, {}, []]) {
       faux.donnees.set('syncAuto', invalide);
-      expect(await chargerSyncAuto(), JSON.stringify(invalide)).toBe(false);
+      expect(await chargerSyncAuto(), JSON.stringify(invalide)).toBe(true);
     }
     for (const invalide of ['12', -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, true, {}]) {
       faux.donnees.set('derniereSynchro', invalide);

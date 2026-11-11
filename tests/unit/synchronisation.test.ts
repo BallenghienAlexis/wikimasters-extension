@@ -81,7 +81,7 @@ describe('libellés', () => {
   })
 
   it('rappelle la cadence fixe', () => {
-    expect(CADENCE_TEXTE).toBe(`Cadence fixe${NB}: 10 actions par minute · arrêt après 3 erreurs`)
+    expect(CADENCE_TEXTE).toBe(`Cadence variable${NB}: 6 à 12 s entre deux actions, 10 par minute au plus · arrêt après 3 erreurs`)
   })
 })
 

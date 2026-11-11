@@ -122,6 +122,12 @@ export function analyserPage(json: unknown): PageLue | null {
   return { cartes: [...parId.values()], ignorees, fin: false, recentDabord: dateDecroissante(json.collection) };
 }
 
+// Lecture de `/api/marketplace/mine` : enchères du joueur en cours et plafond du site.
+export function analyserVentes(json: unknown): { enCours: number; max: number } | null {
+  if (!estObjet(json) || !estEntier(json.sellingCount) || !estEntier(json.maxConcurrentAuctions)) return null;
+  return { enCours: json.sellingCount, max: json.maxConcurrentAuctions };
+}
+
 // Lecture de `/api/marketplace/cards/<card_id>/sales?scope=summary` : valeur marchande de la rareté demandée.
 export function analyserPrix(json: unknown, rarete: string): number | null {
   if (!estObjet(json) || !estObjet(json.summary)) return null;

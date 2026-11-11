@@ -125,10 +125,10 @@ export async function enregistrerSignalSynchro(horodatage: number): Promise<void
 
 const horodatageValide = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
 
-/** Synchronisation automatique : désactivée par défaut, toute valeur illisible vaut « désactivée ». */
+/** Synchronisation automatique : activée par défaut (décision d’Alexis du 2026-11-11) ; seul `false` la désactive. */
 export async function chargerSyncAuto(): Promise<boolean> {
   const contenu = await chrome.storage.local.get(CLE_SYNC_AUTO);
-  return contenu[CLE_SYNC_AUTO] === true;
+  return contenu[CLE_SYNC_AUTO] !== false;
 }
 
 export async function enregistrerSyncAuto(actif: boolean): Promise<void> {
@@ -179,6 +179,11 @@ function validerEtatSynchro(brut: unknown): EtatOrdonnanceur | null {
     if (!estObjet(r) || !nullOuEntier(r.valeur) || !horodatageValide(r.releveLe)) return null;
     releves[id] = { valeur: r.valeur, releveLe: r.releveLe };
   }
+  const vs = brut.ventesSite;
+  const ventesSite =
+    estObjet(vs) && nullOuEntier(vs.enCours) && nullOuEntier(vs.max) && vs.enCours !== null && vs.max !== null && horodatageValide(vs.releveLe)
+      ? { enCours: vs.enCours, max: vs.max, releveLe: vs.releveLe }
+      : null;
   return {
     version: 1,
     total,
@@ -189,6 +194,7 @@ function validerEtatSynchro(brut: unknown): EtatOrdonnanceur | null {
     requetes: [...requetes],
     cardIds: { ...(cardIds as Record<string, string>) },
     prix: releves,
+    ...(ventesSite === null ? {} : { ventesSite }),
   };
 }
 

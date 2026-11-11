@@ -3,8 +3,8 @@
  *
  * Logique pure : horloge, transport, confirmation, revérification, application
  * locale et journal sont **injectés**. Aucun accès à `chrome.*`, au réseau ni au
- * jeton. Cadence fixe, sans aléa ni délai variable : aucune simulation de
- * comportement humain. Les échéances sont en temps absolu, si bien qu’un minuteur
+ * jeton. Intervalle minimal fixe, plus un délai variable injecté (`gigue`, décision
+ * d’Alexis du 2026-11-11) qui ne raccourcit jamais l’attente. Les échéances sont en temps absolu, si bien qu’un minuteur
  * ralenti (onglet masqué) ne peut jamais rendre l’exécution plus rapide.
  *
  * Pas de reprise automatique après interruption, et jamais de relance d’une
@@ -58,6 +58,8 @@ export interface DependancesFile {
   reverifier: (action: Action) => Ou<Verification>
   appliquer: (action: Action, resultat: ResultatAction) => Ou<void>
   journal: JournalFile
+  /** Millisecondes ajoutées à l’intervalle minimal entre deux requêtes (délai variable). Absent : 0. */
+  gigue?: () => number
 }
 
 export type RaisonArret =
@@ -95,6 +97,7 @@ class Arret extends Error {
 
 export function creerFile(deps: DependancesFile): File {
   const { horloge, transport, confirmer, reverifier, appliquer, journal } = deps
+  const gigue = (): number => Math.max(0, deps.gigue?.() ?? 0)
 
   let enCours = false
   let file: Action[] = []
@@ -146,7 +149,7 @@ export function creerFile(deps: DependancesFile): File {
 
   /** Date de début autorisée : cadence de 6 s, réponse précédente, confirmation, fenêtre de 60 s. */
   function debutAutorise(plancher: number): number {
-    let debut = Math.max(dernierDebut + INTERVALLE_MS, derniereReponse, plancher)
+    let debut = Math.max(dernierDebut + INTERVALLE_MS + gigue(), derniereReponse, plancher)
     const recents = debuts.filter((d) => d > debut - FENETRE_MS)
     if (recents.length >= MAX_PAR_FENETRE) {
       debut = Math.max(debut, recents[recents.length - MAX_PAR_FENETRE]! + FENETRE_MS)

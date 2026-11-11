@@ -65,7 +65,7 @@ describe('T-205 G5 : aucune action à la place du joueur', () => {
   it('ni innerHTML ni insertAdjacentHTML', () => {
     for (const f of fichiers) expect(lire(f), f).not.toMatch(/innerHTML|outerHTML|insertAdjacentHTML/);
   });
-  it('aucun aléa', () => {
-    expect(lire(EXECUTEUR)).not.toMatch(/Math\.random|getRandomValues|randomUUID/);
+  it('aucun aléa autre que la gigue injectée', () => {
+    expect(lire(EXECUTEUR)).not.toMatch(/getRandomValues|randomUUID/);
   });
 });

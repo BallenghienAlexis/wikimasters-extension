@@ -155,7 +155,7 @@ describe('ordonnanceur — critère 1 : total inchangé, une seule requête', ()
     second.horloge.t = T0 + 1000 * 60 * 60;
     const r2 = await synchroniser({ ...second.deps, maxPrix: 0 });
     expect(r2.issue).toBe('termine');
-    expect(second.departs.map((d) => d.chemin)).toEqual(['/api/my-collection/stats?sort=added']);
+    expect(second.departs.map((d) => d.chemin)).toEqual(['/api/my-collection/stats?sort=added', '/api/marketplace/mine']);
   });
 
   it('relit les pages si une étiquette change de effectif malgré un total identique', async () => {
@@ -169,7 +169,7 @@ describe('ordonnanceur — critère 1 : total inchangé, une seule requête', ()
   it('relit les pages tant qu’aucune synchro complète n’a eu lieu', async () => {
     const b = banc(siteFictif(2));
     await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(b.departs.length).toBe(1 + 2); // stats, page 1, page vide
+    expect(b.departs.length).toBe(1 + 2 + 1); // stats, page 1, page vide, marketplace/mine
   });
 });
 
@@ -483,7 +483,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     await synchroniser(b.deps);
     for (const d of b.departs) {
       expect(d.chemin).toMatch(
-        /^\/api\/(my-collection\/stats\?sort=added|my-collection\?sort=(?:added|rarity)&page=\d+&stats=0|marketplace\/cards\/[A-Za-z0-9_-]+\/sales\?scope=summary)$/,
+        /^\/api\/(my-collection\/stats\?sort=added|my-collection\?sort=(?:added|rarity)&page=\d+&stats=0|marketplace\/mine|marketplace\/cards\/[A-Za-z0-9_-]+\/sales\?scope=summary)$/,
       );
     }
   });
@@ -534,5 +534,34 @@ describe('ordonnanceur — critère 5 : bail et décisions manuelles', () => {
     const r = await synchroniser(b.deps);
     expect(b.enregistrements.length).toBeGreaterThanOrEqual(2);
     expect(JSON.stringify(r.etat)).not.toMatch(/token|jeton|authorization|cookie/i);
+  });
+});
+
+describe('ordonnanceur — délai variable et enchères du site', () => {
+  it('la gigue allonge l’attente entre deux requêtes, jamais ne la raccourcit', async () => {
+    const b = banc(siteFictif(2));
+    const gigues = [1500, -50, 4000];
+    let i = 0;
+    await synchroniser({ ...b.deps, maxPrix: 0, gigue: () => gigues[i++ % gigues.length] ?? 0 });
+    const t = b.departs.map((d) => d.t);
+    for (let k = 1; k < t.length; k++) expect((t[k] ?? 0) - (t[k - 1] ?? 0)).toBeGreaterThanOrEqual(INTERVALLE_MS);
+    expect(new Set(t.slice(1).map((x, k) => x - (t[k] ?? 0))).size).toBeGreaterThan(1);
+  });
+
+  it('relève les enchères en cours sur le site (marketplace/mine) sans compter d’échec', async () => {
+    const site = siteFictif(1);
+    const b = banc((chemin) =>
+      chemin === '/api/marketplace/mine' ? { statut: 200, json: { sellingCount: 3, maxConcurrentAuctions: 5 } } : site(chemin),
+    );
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.etat.ventesSite).toMatchObject({ enCours: 3, max: 5 });
+  });
+
+  it('une réponse 500 ou illisible de marketplace/mine ne compte pas comme échec', async () => {
+    const site = siteFictif(1);
+    const b = banc((chemin) => (chemin === '/api/marketplace/mine' ? { statut: 500, json: null } : site(chemin)));
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.complete).toBe(true);
+    expect(r.etat.ventesSite ?? null).toBeNull();
   });
 });

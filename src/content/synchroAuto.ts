@@ -23,6 +23,7 @@ import {
   enregistrerStatutSynchro,
   type StatutSynchro,
 } from '../lib/stockage';
+import { gigueAleatoire } from '../lib/gigue';
 import { analyserStats } from '../lib/lectureApi';
 import { completerEntree, ouvrirEntree } from '../lib/journal';
 import { proposerTri, type Preferences } from '../lib/tri';
@@ -48,6 +49,8 @@ export interface DependancesSynchroAuto {
   /** Événements fixes (début, fin, arrêt et cause) pour le journal existant ; une erreur d'écriture est sans effet. */
   journaliser?: (evenement: EvenementSynchro) => Promise<void>;
   journal?: (message: string) => void;
+  /** Millisecondes ajoutées à l'intervalle minimal entre deux requêtes (délai variable). */
+  gigue?: () => number;
 }
 
 export interface SynchroAuto {
@@ -192,6 +195,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         etat,
         bail: deps.bail,
         journal,
+        gigue: deps.gigue,
         arretDemande: () => arretDemande,
         enregistrer: async (produite, courant) => {
           const stockee = await deps.chargerCollection();
@@ -266,6 +270,7 @@ const transportSite = async (chemin: string): Promise<ReponseApi> => {
 const synchroDuNavigateur = (): SynchroAuto =>
   creerSynchroAuto({
     horloge: horlogeReelle,
+    gigue: gigueAleatoire,
     transport: transportSite,
     actif: chargerSyncAuto,
     derniereSynchro: chargerDerniereSynchro,
