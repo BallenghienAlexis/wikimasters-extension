@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CONFIG_AFFLUENCE } from '../../src/config/affluence';
 import { extraireHorodatages, routeMarcheValide, ajouterEvenement, conseillerDelai, estHeureForte, histogramme, MAX_EVENEMENTS, validerEvenements, type EvenementVente } from '../../src/lib/affluence';
 
 // Mardi 2026-11-10 à 20 h locales, puis à 15 h.
@@ -90,5 +91,13 @@ describe('relevés du site dans les heures fortes', () => {
     for (let i = 0; i < 25; i++) ev.push({ type: 'site', at: apresMidi });
     expect(estHeureForte(apresMidi, ev)).toBe(true);
     expect(estHeureForte(soir, ev)).toBe(false);
+  });
+});
+
+describe('route relevée du marché', () => {
+  it('la route configurée est valide', () => expect(routeMarcheValide(CONFIG_AFFLUENCE.routeMarche)).toBe(true));
+  it('ne retient que created_at, jamais le vendeur ni la fin', () => {
+    const json = { auctions: [{ created_at: '2026-11-10T20:05:00.000Z', end_at: '2026-11-10T21:05:00.000Z', seller: { username: 'fictif' } }] };
+    expect(extraireHorodatages(json, CONFIG_AFFLUENCE.champsHorodatage)).toEqual([Date.parse('2026-11-10T20:05:00.000Z')]);
   });
 });

@@ -26,6 +26,8 @@ export const CONFIG_AFFLUENCE: ConfigAffluence = {
   minObservations: 20,
   creneauxSemaine: [[12, 14], [19, 23]],
   creneauxWeekend: [[10, 12], [15, 23]],
-  routeMarche: null,
-  champsHorodatage: ['created_at', 'createdAt', 'started_at', 'start_at'],
+  // Relevée par Alexis le 2026-11-11 : répond `{ auctions: [...] }`, chaque annonce porte `created_at` (ISO, mise en vente) et `end_at`.
+  // `mine=1` limite peut-être le listing à ses propres enchères : si le relevé ne reflète que ses ventes, tester sans ce paramètre.
+  routeMarche: '/api/marketplace?page=1&limit=50&sort=recent&mine=1',
+  champsHorodatage: ['created_at'],
 };
