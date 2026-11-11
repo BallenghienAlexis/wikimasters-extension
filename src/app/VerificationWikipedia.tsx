@@ -60,7 +60,7 @@ const VerificationWikipedia: React.FC<Props> = ({ cartes, cache, onCache }) => {
       <p className="mt-1 text-sm text-muted">
         Lit la page Wikipédia de chaque carte (une requête par seconde, titre de la carte seul) pour affiner ses thèmes. Les décisions que vous avez prises ne changent jamais.
       </p>
-      <p className="mt-2 text-sm" role="status">
+      <p className="mt-2 text-sm" aria-live="polite">
         {enCours ? `Vérification en cours${NB}: ${faites} sur ${total}` : `${restantes.length} carte${restantes.length > 1 ? 's' : ''} à vérifier.`}
         {message !== null && ` ${message}`}
       </p>
