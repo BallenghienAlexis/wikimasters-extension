@@ -409,7 +409,14 @@ function contexteExecution(): ContexteExecution {
     horloge: horlogeReelle,
     // Délai variable entre les requêtes (décision d’Alexis du 2026-11-11), en plus des 6 s minimales.
     delaiSupplementaire: () => Math.floor(Math.random() * (SUPPLEMENT_MAX_MS + 1)),
-    transport: (ordre) => execution.transport(ordre),
+    transport: async (ordre) => {
+      if (ordre.type !== 'pose-etiquette' && ordre.type !== 'retrait-etiquette') return execution.transport(ordre);
+      // L’identifiant d’étiquette du site vient du registre, au moment d’envoyer (la création précède la pose).
+      const { etiquettes } = await chargerRegistre();
+      const idEtiquette = Object.prototype.hasOwnProperty.call(etiquettes, ordre.nomEtiquette) ? etiquettes[ordre.nomEtiquette] : undefined;
+      if (!idEtiquette) return { classe: 'echec', codeHttp: null, cause: 'action non disponible' };
+      return execution.transport({ ...ordre, idEtiquette });
+    },
     confirmer: (action) => {
       if (!pont.confirmer) throw new Error('Confirmation indisponible.');
       return pont.confirmer(action);

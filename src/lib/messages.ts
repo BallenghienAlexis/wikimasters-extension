@@ -117,9 +117,13 @@ export function validerOrdre(brut: unknown): Action | null {
     case 'pose-etiquette': {
       const idExemplaire = texte(ordre.idExemplaire)
       const nomEtiquette = texte(ordre.nomEtiquette)
-      if (!cles(ordre, ['type', 'idCarte', 'idExemplaire', 'nomEtiquette'])) return null
+      const avecId = 'idEtiquette' in ordre
+      if (!cles(ordre, ['type', 'idCarte', 'idExemplaire', 'nomEtiquette', ...(avecId ? ['idEtiquette'] : [])])) return null
       if (idExemplaire === null || nomEtiquette === null) return null
-      return { type: type as 'retrait-etiquette' | 'pose-etiquette', idCarte, idExemplaire, nomEtiquette }
+      const base = { type: type as 'retrait-etiquette' | 'pose-etiquette', idCarte, idExemplaire, nomEtiquette }
+      if (!avecId) return base
+      const idEtiquette = texte(ordre.idEtiquette)
+      return idEtiquette === null ? null : { ...base, idEtiquette }
     }
     case 'enchere': {
       const idExemplaire = texte(ordre.idExemplaire)
@@ -141,7 +145,8 @@ export function validerResultat(brut: unknown): ResultatAction | null {
   const enveloppe = enObjet(brut)
   if (!enveloppe || !cles(enveloppe, ['message', 'resultat']) || enveloppe.message !== 'resultat') return null
   const resultat = enObjet(enveloppe.resultat)
-  if (!resultat || !cles(resultat, ['classe', 'codeHttp', 'cause'])) return null
+  const avecId = resultat !== null && 'idEtiquette' in resultat
+  if (!resultat || !cles(resultat, ['classe', 'codeHttp', 'cause', ...(avecId ? ['idEtiquette'] : [])])) return null
   const { classe, codeHttp } = resultat
   if (typeof classe !== 'string' || !(CLASSES as readonly string[]).includes(classe)) return null
   if (codeHttp !== null) {
@@ -149,5 +154,8 @@ export function validerResultat(brut: unknown): ResultatAction | null {
   }
   const cause = texte(resultat.cause)
   if (cause === null || !CAUSES_RESULTAT.includes(cause)) return null
-  return { classe: classe as ResultatAction['classe'], codeHttp: codeHttp as number | null, cause }
+  const base = { classe: classe as ResultatAction['classe'], codeHttp: codeHttp as number | null, cause }
+  if (!avecId) return base
+  const idEtiquette = texte(resultat.idEtiquette)
+  return idEtiquette === null ? null : { ...base, idEtiquette }
 }
