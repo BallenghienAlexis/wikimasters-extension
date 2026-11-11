@@ -7,7 +7,9 @@ Les créneaux d’affluence doivent se mettre à jour automatiquement avec l’a
 « J’autorise les requêtes get » (2026-11-11) : `GET` en lecture seule vers une route de listing du marché. Risque de bannissement rappelé et assumé. Inscrite dans AGENTS.md.
 
 ## Route
-La route exacte n’est **pas encore relevée**. Elle se règle dans `src/config/affluence.ts` (`routeMarche`, `null` par défaut : fonction inerte). Elle doit commencer par `/api/marketplace` ; l’historique des ventes (`/sales` sans `scope=summary`, réservé PRO) est refusé. Relevé à faire par Alexis : page Marché, F12, onglet Réseau, noter l’URL du listing et le champ d’horodatage d’une annonce (`champsHorodatage`).
+Route relevée par Alexis le 2026-11-11 : `GET /api/marketplace?page=1&limit=50&sort=recent&mine=1`, réponse `{ auctions: [...] }`, champ `created_at` (ISO) ; `end_at` donne la fin (non retenu). Chaque annonce contient aussi le vendeur : jamais conservé. Réserve : `mine=1` limite peut-être le listing à ses propres enchères ; si l’histogramme ne reflète que ses ventes, retirer ce paramètre dans la config.
+
+Historique : la route n’était pas relevée à l’origine. Elle se règle dans `src/config/affluence.ts` (`routeMarche`, `null` avant le relevé du 2026-11-11 : fonction inerte). Elle doit commencer par `/api/marketplace` ; l’historique des ventes (`/sales` sans `scope=summary`, réservé PRO) est refusé. Relevé à faire par Alexis : page Marché, F12, onglet Réseau, noter l’URL du listing et le champ d’horodatage d’une annonce (`champsHorodatage`).
 
 ## Comportement
 - Dans la synchronisation automatique (désactivée par défaut), après la synchro et si aucun arrêt : une requête vers `routeMarche`, 6 s après la précédente, au plus toutes les 30 min (le déclenchement existant), comptée dans le budget commun.
