@@ -73,3 +73,22 @@ describe('verifierTitres', () => {
     expect((await verifierTitres({ titres: ['A'], cache: cacheVide(), signal: c.signal, surProgres: () => undefined, transport: ok([]) })).arret).toBe('manuel');
   });
 });
+
+describe('cas limites', () => {
+  it('ne confond pas un titre avec une propriété héritée du cache', () => {
+    expect(titresAVerifier(['constructor', 'toString'], cacheVide(), 1)).toEqual(['constructor', 'toString']);
+    const cache = validerCache(JSON.parse('{"version":1,"entrees":{"__proto__":{"themes":["chat"],"verifieLe":1}}}'));
+    expect(cache && Object.getPrototypeOf(cache.entrees)).toBe(Object.prototype);
+  });
+  it('saute un titre contenant « | » sans requête', async () => {
+    let appels = 0;
+    const transport: Transport = async () => { appels++; return { status: 200, json: async () => ({}) }; };
+    const r = await verifierTitres({ titres: ['A|B'], cache: cacheVide(), signal: new AbortController().signal, surProgres: () => undefined, attendre: async () => undefined, transport });
+    expect(appels).toBe(0);
+    expect(r.verifiees).toBe(1);
+  });
+  it('garde une catégorie de sujet commençant par « Projet » et ignore « Match de barrage »', () => {
+    expect(themesDepuisCategories(['Projet de fusée européenne'])).toContain('fusee');
+    expect(themesDepuisCategories(['Match de barrage de football'])).not.toContain('barrage');
+  });
+});

@@ -64,7 +64,7 @@ export function lireReponse(brut: unknown): LectureWikipedia {
 }
 
 // Catégories de maintenance ou d'organisation du site : aucune information sur le sujet.
-const CATEGORIE_TECHNIQUE = /^(article|page|wikipedia|portail|ebauche|homonymie|projet)/;
+const CATEGORIE_TECHNIQUE = /^(articles? |pages? |wikipedia|portail|ebauche|homonymie)/;
 
 /** Thèmes déduits des catégories, avec les mêmes règles que les mots-clés locaux. */
 export function themesDepuisCategories(categories: string[]): string[] {
@@ -77,14 +77,14 @@ export function validerCache(brut: unknown): CacheWikipedia | null {
   const cles = Object.keys(brut.entrees);
   if (cles.length > MAX_ENTREES) return null;
   const connus = new Set(IDS_THEMES);
-  const entrees: Record<string, EntreeWikipedia> = {};
+  const entrees: Record<string, EntreeWikipedia> = Object.create(null) as Record<string, EntreeWikipedia>;
   for (const cle of cles) {
     const e = brut.entrees[cle];
     if (!estObjet(e) || !Array.isArray(e.themes) || typeof e.verifieLe !== 'number' || !Number.isSafeInteger(e.verifieLe) || e.verifieLe < 0) return null;
     // Un identifiant inconnu (thème retiré depuis) est écarté sans invalider le reste.
     entrees[cle] = { themes: e.themes.filter((t): t is string => typeof t === 'string' && connus.has(t)), verifieLe: e.verifieLe };
   }
-  return { version: 1, entrees };
+  return { version: 1, entrees: { ...entrees } };
 }
 
 export function ajouterEntree(cache: CacheWikipedia, titre: string, themes: string[], maintenant: number): CacheWikipedia {
@@ -98,7 +98,7 @@ export function titresAVerifier(titres: string[], cache: CacheWikipedia, mainten
   for (const titre of titres) {
     if (vus.has(titre)) continue;
     vus.add(titre);
-    const entree = cache.entrees[titre];
+    const entree = Object.hasOwn(cache.entrees, titre) ? cache.entrees[titre] : undefined;
     if (entree === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS) resultat.push(titre);
   }
   return resultat;

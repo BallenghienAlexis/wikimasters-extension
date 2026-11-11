@@ -4,7 +4,7 @@ import { ajouterEntree, lireReponse, themesDepuisCategories, urlRequete, type Ca
 
 export type Transport = (url: string, signal: AbortSignal) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
-const transportReel: Transport = (url, signal) => fetch(url, { method: 'GET', credentials: 'omit', signal });
+const transportReel: Transport = (url, signal) => fetch(url, { method: 'GET', credentials: 'omit', redirect: 'error', signal });
 
 export type RaisonArret = 'manuel' | 'code-http' | 'echecs';
 
@@ -42,6 +42,12 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
   let echecs = 0;
   for (const titre of titres) {
     if (signal.aborted) return { verifiees, arret: 'manuel', codeHttp: null };
+    // MediaWiki découpe `titles` sur « | » : un tel titre interrogerait plusieurs pages, on le saute.
+    if (titre.includes('|')) {
+      cache = ajouterEntree(cache, titre, [], maintenant());
+      await surProgres(cache, ++verifiees);
+      continue;
+    }
     let reponse;
     try {
       reponse = await transport(urlRequete(titre), signal);

@@ -11,6 +11,7 @@ import {
   chargerCollection,
   chargerDerniereSynchro,
   chargerEtatSynchro,
+  chargerCacheWikipedia,
   chargerPreferences,
   chargerSyncAuto,
   ecouterArretSynchro,
@@ -25,6 +26,8 @@ import {
 } from '../lib/stockage';
 import { analyserStats } from '../lib/lectureApi';
 import { completerEntree, ouvrirEntree } from '../lib/journal';
+import { definirThemesWikipedia } from '../lib/themes';
+import { themesParTitre } from '../lib/wikipedia';
 import { proposerTri, type Preferences } from '../lib/tri';
 
 /** Délai minimal entre deux synchronisations, et période du minuteur tant que l'onglet est visible. */
@@ -275,7 +278,11 @@ const synchroDuNavigateur = (): SynchroAuto =>
     chargerEtat: chargerEtatSynchro,
     enregistrerEtat: enregistrerEtatSynchro,
     bail: { lire: chargerBailSynchro, ecrire: enregistrerBailSynchro },
-    chargerPreferences,
+    // Les thèmes Wikipédia en cache font partie de la proposition de tri : on les charge avec les préférences.
+    chargerPreferences: async () => {
+      definirThemesWikipedia(themesParTitre(await chargerCacheWikipedia()));
+      return chargerPreferences();
+    },
     noterStatut: enregistrerStatutSynchro,
     journaliser: (evenement) => ecrireEvenementJournal(evenement),
   });

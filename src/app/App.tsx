@@ -109,11 +109,17 @@ const App: React.FC = () => {
     return ecouterSynchro(setSynchro);
   }, []);
 
-  // La surcouche est posée pendant le rendu : les enfants lisent `themesDeCarte` juste après.
-  definirThemesWikipedia(useMemo(() => themesParTitre(cacheWiki), [cacheWiki]));
+  // La surcouche des thèmes est posée avant l'état : les rendus qui suivent lisent déjà le nouveau cache.
+  const appliquerCacheWiki = (cache: CacheWikipedia): void => {
+    definirThemesWikipedia(themesParTitre(cache));
+    setCacheWiki(cache);
+  };
 
   useEffect(() => {
-    void chargerCacheWikipedia().then(setCacheWiki);
+    void chargerCacheWikipedia().then((c) => {
+      definirThemesWikipedia(themesParTitre(c));
+      setCacheWiki(c);
+    });
   }, []);
 
   useEffect(() => {
@@ -268,6 +274,7 @@ const App: React.FC = () => {
 
       {assistantOuvert ? (
         <AssistantTri
+          cacheWiki={cacheWiki}
           collection={collection}
           preferencesInitiales={preferences}
           onAppliquer={appliquerAssistant}
@@ -290,9 +297,9 @@ const App: React.FC = () => {
             onTerminee={(id) => appliquer(terminerEnchere(collection, id))}
           />
 
-          <SynchroAuto collection={collection} preferences={preferences} />
+          <SynchroAuto collection={collection} preferences={preferences} cacheWiki={cacheWiki} />
 
-          <VerificationWikipedia cartes={collection.cartes} cache={cacheWiki} onCache={setCacheWiki} />
+          <VerificationWikipedia cartes={collection.cartes} cache={cacheWiki} onCache={appliquerCacheWiki} />
 
           <Synchronisation
             collection={collection}

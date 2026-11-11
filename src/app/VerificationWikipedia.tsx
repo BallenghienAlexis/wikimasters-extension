@@ -23,7 +23,8 @@ const VerificationWikipedia: React.FC<Props> = ({ cartes, cache, onCache }) => {
   const [enCours, setEnCours] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [faites, setFaites] = useState(0);
-  const [maintenant] = useState(() => Date.now());
+  const [maintenant, setMaintenant] = useState(() => Date.now());
+  const [total, setTotal] = useState(0);
   const controleur = useRef<AbortController | null>(null);
 
   const restantes = useMemo(() => titresAVerifier(cartes.map((c) => c.titre), cache, maintenant), [cartes, cache, maintenant]);
@@ -32,6 +33,8 @@ const VerificationWikipedia: React.FC<Props> = ({ cartes, cache, onCache }) => {
 
   const lancer = (): void => {
     const c = new AbortController();
+    setMaintenant(Date.now());
+    setTotal(restantes.length);
     controleur.current = c;
     setEnCours(true);
     setMessage(null);
@@ -58,7 +61,7 @@ const VerificationWikipedia: React.FC<Props> = ({ cartes, cache, onCache }) => {
         Lit la page Wikipédia de chaque carte (une requête par seconde, titre de la carte seul) pour affiner ses thèmes. Les décisions que vous avez prises ne changent jamais.
       </p>
       <p className="mt-2 text-sm" role="status">
-        {enCours ? `Vérification en cours${NB}: ${faites} sur ${restantes.length}` : `${restantes.length} carte${restantes.length > 1 ? 's' : ''} à vérifier.`}
+        {enCours ? `Vérification en cours${NB}: ${faites} sur ${total}` : `${restantes.length} carte${restantes.length > 1 ? 's' : ''} à vérifier.`}
         {message !== null && ` ${message}`}
       </p>
       <button
