@@ -1,6 +1,7 @@
 import { analyserStockage,appliquerEdition, collectionVide, fusionnerImport, type CarteImportee, type Collection } from './collection';
 import type { EtatExecution, Registre } from './actions';
 import { validerJournal, type Journal } from './journal';
+import { cacheVide, validerCache, type CacheWikipedia } from './wikipedia';
 import { registreVide, validerRegistre } from './registre';
 import { lireSynchro, noterPage, type Pagination, type Synchro } from './synchro';
 import type { EtatOrdonnanceur, RaisonArretSynchro } from './ordonnanceur';
@@ -22,6 +23,7 @@ const CLE_BAIL_SYNCHRO = 'bailSynchro';
 const CLE_ETAT_SYNCHRO = 'etatSynchro';
 const CLE_ARRET_SYNCHRO = 'arretSynchro';
 const CLE_STATUT_SYNCHRO = 'statutSynchro';
+const CLE_WIKIPEDIA = 'wikipedia';
 const CLE_VENTES = 'ventes';
 const CLE_AFFLUENCE_SITE = 'affluenceSite';
 const MAX_RELEVES_SITE = 2000;
@@ -46,6 +48,7 @@ export const CLES_STOCKAGE = {
   etatSynchro: CLE_ETAT_SYNCHRO,
   arretSynchro: CLE_ARRET_SYNCHRO,
   statutSynchro: CLE_STATUT_SYNCHRO,
+  wikipedia: CLE_WIKIPEDIA,
   ventes: CLE_VENTES,
   affluenceSite: CLE_AFFLUENCE_SITE,
   releveMarche: CLE_RELEVE_MARCHE,
@@ -53,6 +56,17 @@ export const CLES_STOCKAGE = {
 
 function illisible(detail: string): Error {
   return new Error(`Données stockées illisibles. ${detail}`);
+}
+
+/** Cache des catégories Wikipédia : un cache illisible vaut « vide » (il se reconstruit, rien d'irremplaçable). */
+export async function chargerCacheWikipedia(): Promise<CacheWikipedia> {
+  const contenu = await chrome.storage.local.get(CLE_WIKIPEDIA);
+  return validerCache(contenu[CLE_WIKIPEDIA]) ?? cacheVide();
+}
+
+export async function enregistrerCacheWikipedia(cache: CacheWikipedia): Promise<void> {
+  if (validerCache(cache) === null) throw new Error('Cache Wikipédia invalide.');
+  await chrome.storage.local.set({ [CLE_WIKIPEDIA]: cache });
 }
 
 export async function chargerRegistre(): Promise<Registre> {
