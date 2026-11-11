@@ -22,6 +22,7 @@ import {
   chargerExecution,
   chargerJournal,
   chargerPreferences,
+  chargerEtatSynchro,
   chargerRegistre,
   enregistrerCollection,
   enregistrerExecution,
@@ -229,6 +230,7 @@ export function configDuLot(preferences: Preferences): Config {
     longueurMaxEtiquette: null,
     nomsExistants: [],
     amis: preferences.amis,
+    lienCardId: true,
   };
 }
 
@@ -411,6 +413,12 @@ function contexteExecution(): ContexteExecution {
     // Délai variable entre les requêtes (décision d’Alexis du 2026-11-11), en plus des 6 s minimales.
     delaiSupplementaire: () => Math.floor(Math.random() * (SUPPLEMENT_MAX_MS + 1)),
     transport: async (ordre) => {
+      if (ordre.type === 'enchere') {
+        // L’identifiant « card_id » du site vient de l’état de synchronisation, au moment d’envoyer.
+        const idCardSite = (await chargerEtatSynchro())?.cardIds[ordre.idCarte];
+        if (idCardSite === undefined) return { classe: 'echec', codeHttp: null, cause: 'action non disponible' };
+        return execution.transport({ ...ordre, idCardSite });
+      }
       if (ordre.type !== 'pose-etiquette' && ordre.type !== 'retrait-etiquette') return execution.transport(ordre);
       // L’identifiant d’étiquette du site vient du registre, au moment d’envoyer (la création précède la pose).
       const complete = avecIdEtiquette(ordre, await chargerRegistre());

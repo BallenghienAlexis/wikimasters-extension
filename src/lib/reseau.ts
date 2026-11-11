@@ -9,7 +9,7 @@
 import type { Action, ResultatAction } from './actions'
 import type { EntreeContrat, TableContrat } from './contrat'
 import { enteteAuthentification, sessionCourante, type SessionLue } from './jeton'
-import { COULEUR_ETIQUETTE, CLE_PUBLIQUE, DELAI_REQUETE_MS, ORIGINE_REST } from '../config/synchro'
+import { COULEUR_ETIQUETTE, CLE_PUBLIQUE, DELAI_REQUETE_MS, ORIGINE_REST, ORIGINE_SITE } from '../config/synchro'
 
 export interface DependancesReseau {
   table: TableContrat
@@ -44,12 +44,15 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
     try {
       chemin = entree.construireChemin(ordre)
       const essai = entree.construireCorps(ordre, { idJoueur: '', couleurEtiquette: COULEUR_ETIQUETTE })
-      if (essai === null && entree.methode !== 'DELETE' && entree.methode !== 'GET') return NON_DISPONIBLE
+      if (essai === null && entree.methode !== 'DELETE' && entree.methode !== 'GET' && entree.sansCorps !== true) return NON_DISPONIBLE
     } catch {
       return NON_DISPONIBLE
     }
-    const url = `${ORIGINE_REST}${chemin}`
-    if (entree.auth && enteteAuthentification(url, deps.origineOnglet, 'Authorization', () => 'x') === null) {
+    const siteSeul = entree.hote === 'site'
+    // Hôte du site : même origine que l’onglet, cookies du navigateur, ni jeton ni clé d’API.
+    if (siteSeul && deps.origineOnglet !== ORIGINE_SITE) return NON_DISPONIBLE
+    const url = `${siteSeul ? ORIGINE_SITE : ORIGINE_REST}${chemin}`
+    if (!siteSeul && entree.auth && enteteAuthentification(url, deps.origineOnglet, 'Authorization', () => 'x') === null) {
       return { classe: 'arret', codeHttp: null, cause: 'jeton-absent' }
     }
 
@@ -61,13 +64,15 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
       ? enteteAuthentification(url, deps.origineOnglet, 'Authorization', () => `Bearer ${session.jeton}`)
       : null
 
-    const entetes: Record<string, string> = {
-      Accept: 'application/json',
-      apikey: CLE_PUBLIQUE,
-      'Content-Profile': 'public',
-      ...(corps !== null ? { 'Content-Type': 'application/json' } : {}),
-      ...(entree.entetes ?? {}),
-    }
+    const entetes: Record<string, string> = siteSeul
+      ? corps !== null ? { 'Content-Type': 'application/json' } : {}
+      : {
+          Accept: 'application/json',
+          apikey: CLE_PUBLIQUE,
+          'Content-Profile': 'public',
+          ...(corps !== null ? { 'Content-Type': 'application/json' } : {}),
+          ...(entree.entetes ?? {}),
+        }
     if (jeton) entetes[jeton.nom] = jeton.valeur
 
     const controle = new AbortController()
@@ -77,7 +82,7 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
         method: entree.methode,
         headers: entetes,
         body: corps !== null ? JSON.stringify(corps) : undefined,
-        credentials: 'omit',
+        credentials: siteSeul ? 'same-origin' : 'omit',
         redirect: 'error',
         cache: 'no-store',
         signal: controle.signal,

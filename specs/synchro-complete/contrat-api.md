@@ -22,7 +22,7 @@ Origine de l'onglet : `https://www.wiki-masters.com`.
 | Défausser | `POST /api/user-cards/<user_card_id>/discard` | aucun | 200 |
 
 - Durées d'enchère proposées par le site : 10 min, 30 min, 1 h, 3 h, 6 h, 12 h ; mise de départ par défaut : 10.
-- `user_card_id` (exemplaire possédé) est le même identifiant pour l'étiquette et la défausse. `card_id` de l'enchère : relation avec `user_card_id` **non relevée**.
+- `user_card_id` (exemplaire possédé) est le même identifiant pour l'étiquette et la défausse. `card_id` de l'enchère (relevé 2026-11-11) : identifiant de la carte (`card_id` de `my-collection`, ≠ `user_card_id`) ; l'enchère part de l'origine du site, cookies de session, seul en-tête `content-type` (aucun en-tête d'authentification), réponse 201 `{ auction_id }`. Défausse : même authentification supposée (cookies de même origine), **non rejouée en réel** (décision d'Alexis du 2026-11-11 : pas de test, valeur > 5 à éviter).
 - Le site demande une confirmation côté interface avant la défausse (dernière copie : retrait définitif, 1 wikibidou rendu).
 - Après une défausse, le site appelle `POST /rest/v1/rpc/get_my_profile` (solde).
 - Une enchère n'était plus active quelques minutes après sa création (annulée) ; l'appel d'annulation n'est pas capturé : **l'extension ne l'émet pas** (« non annulable par l'extension »).

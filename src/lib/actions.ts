@@ -56,6 +56,8 @@ export interface ActionEnchere extends ActionBase {
   type: 'enchere'
   idExemplaire: string
   prix: number
+  /** Identifiant de la carte (`card_id` du site), ajouté au moment d’envoyer ; absent : l’enchère n’est pas émise. */
+  idCardSite?: string
 }
 
 export interface ActionDefausse extends ActionBase {

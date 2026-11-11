@@ -37,3 +37,8 @@ Une session Chrome pilotable sur le PC d’Alexis, onglet connecté à `https://
 
 ## Livrable du fil de relevé
 `specs/synchro-complete/contrat-api.md` mis à jour (sections « Authentification » et « Reste à relever » réduites), puis les entrées de `src/lib/contrat/{enchere,defausse,etiquettes}.ts`, `src/lib/jeton.ts` (source du jeton) et `src/lib/reseau.ts` complétées, en PR.
+
+## État au 2026-11-11 (fin)
+- R1 (enchère) : fait. Cookies de même origine suffisent ; `card_id` = identifiant de la carte.
+- R3 (défausse) : non rejouée en réel, par décision d’Alexis ; l’authentification par cookies est une inférence, à confirmer au premier usage réel (arrêt sur 401/403).
+- R4 (étiquettes) : couvert par T-019 à T-026.
