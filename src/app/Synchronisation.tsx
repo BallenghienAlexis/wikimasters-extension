@@ -323,6 +323,7 @@ export function libelleCause(raison: RaisonArret | null, codeHttp: number | null
   if (deconnecte) return 'l’onglet WikiMasters s’est déconnecté';
   if (raison === null) return CAUSES_ARRET.manuel;
   if (raison === 'code-http' && codeHttp === CODE_CONFLIT) return 'réponse 409 : le site signale un conflit (limite d’enchères, carte déjà en vente, identifiant d’exemplaire périmé après une annulation : relancer la synchronisation avant de réessayer)';
+  if (raison === 'code-http' && codeHttp === 403) return 'réponse 403 : le site a refusé l’action (exemplaire périmé ou carte en vente, ou session refusée : relancer la synchronisation avant de réessayer, puis se reconnecter à WikiMasters si cela se répète)';
   if (raison === 'code-http' && codeHttp !== null && CODES_ARRET.includes(codeHttp)) return `réponse ${codeHttp}`;
   return CAUSES_ARRET[raison];
 }

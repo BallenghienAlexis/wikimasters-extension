@@ -82,3 +82,11 @@ Décision d'Alexis : `apikey` publique **en dur** dans une constante unique de `
 - Constat (lectures seules) : l’enchère manuelle sur Ouzbékistan est `cancelled` ; la carte est revenue avec un **nouvel** identifiant d’exemplaire (l’ancien a disparu). L’extension gardait l’ancien dans `idsSite` : 409 sur un identifiant mort, pas une carte « déjà en vente ».
 - Fait : le message d’arrêt sur 409 nomme cette cause et demande de relancer la synchronisation.
 - À reprendre : exclure de l’aperçu les cartes déjà en vente exige les identifiants d’exemplaires de `selling` (aujourd’hui seuls les compteurs de `marketplace/mine` sont conservés) ; un relevé de la forme de `selling` est nécessaire.
+
+## Premier lot réel du 2026-11-11 (403 à la pose)
+
+Carte « Primaire présidentielle socialiste française de 2026 » : création de « Statut · En vente » 201, retrait de « Statut · Vendre » 204, pose de « Statut · En vente » 403, arrêt du lot (règle des codes 401, 403, 429).
+
+- Diagnostic (hypothèse, non confirmée) : la création passe avec le même jeton, donc la session est acceptée ; le 403 sur un `POST /rest/v1/user_card_tags` correspond à un refus de sécurité par ligne (RLS) sur `user_card_id`. Cause la plus probable : identifiant d’exemplaire périmé ou exemplaire en vente (la carte avait été mise aux enchères par erreur de test juste avant). Un retrait sur un identifiant périmé renvoie quand même 204 (aucune ligne touchée), ce qui masque le problème. Même famille que le 409 « identifiant d’exemplaire périmé » traité en #69.
+- Fait : le lot s’arrête avec la cause lisible « réponse 403 : exemplaire périmé ou carte en vente, ou session refusée : relancer la synchronisation avant de réessayer » (`libelleCause`, `src/app/Synchronisation.tsx`).
+- À reprendre : confirmer avec un lot d’une carte « Garder » non mise en vente (si la pose réussit, l’hypothèse « carte en vente » est établie et la pose de « Statut · En vente » est à retirer du lot pour les cartes déjà en vente, ou à envoyer avant l’enchère) ; sinon relever le corps de l’erreur de Supabase (code et message, sans valeur secrète).
