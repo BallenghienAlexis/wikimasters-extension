@@ -32,7 +32,6 @@ import {
 import { preferencesParDefaut, type Preferences } from '../lib/tri';
 import DialogueDefausse from './DialogueDefausse';
 import EtiquettesPrevues from './EtiquettesPrevues';
-import { avecIdCardSite } from '../lib/idCardSite';
 import { avecIdEtiquette } from '../lib/registre';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
 import Journal, { type CoupleRetrait } from './Journal';
@@ -419,12 +418,6 @@ function contexteExecution(): ContexteExecution {
     // Délai variable entre les requêtes (décision d’Alexis du 2026-11-11), en plus des 6 s minimales.
     delaiSupplementaire: () => Math.floor(Math.random() * (SUPPLEMENT_MAX_MS + 1)),
     transport: async (ordre) => {
-      if (ordre.type === 'enchere') {
-        // L’identifiant « card_id » du site vient de l’état de synchronisation, au moment d’envoyer.
-        const complete = avecIdCardSite(ordre, (await chargerEtatSynchro())?.cardIds);
-        if (complete === null) return { classe: 'echec', codeHttp: null, cause: 'action non disponible' };
-        return execution.transport(complete);
-      }
       if (ordre.type !== 'pose-etiquette' && ordre.type !== 'retrait-etiquette') return execution.transport(ordre);
       // L’identifiant d’étiquette du site vient du registre, au moment d’envoyer (la création précède la pose).
       const complete = avecIdEtiquette(ordre, await chargerRegistre());

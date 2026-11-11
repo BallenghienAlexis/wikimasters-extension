@@ -133,13 +133,9 @@ export function validerOrdre(brut: unknown): Action | null {
     case 'enchere': {
       const idExemplaire = texte(ordre.idExemplaire)
       const prix = ordre.prix
-      const avecCard = 'idCardSite' in ordre
-      if (!cles(ordre, ['type', 'idCarte', 'idExemplaire', 'prix', ...(avecCard ? ['idCardSite'] : [])]) || idExemplaire === null) return null
+      if (!cles(ordre, ['type', 'idCarte', 'idExemplaire', 'prix']) || idExemplaire === null) return null
       if (typeof prix !== 'number' || !Number.isSafeInteger(prix) || prix < 1 || prix > PRIX_MAX) return null
-      const base = { type: 'enchere' as const, idCarte, idExemplaire, prix }
-      if (!avecCard) return base
-      const idCardSite = uuid(ordre.idCardSite)
-      return idCardSite === null ? null : { ...base, idCardSite }
+      return { type: 'enchere' as const, idCarte, idExemplaire, prix }
     }
     case 'defausse': {
       const idExemplaire = texte(ordre.idExemplaire)

@@ -17,10 +17,13 @@ export const ENTREES_ENCHERE: Partial<Record<TypeAction, EntreeContrat>> = {
     construireChemin: () => '/api/marketplace',
     construireCorps: (action) => {
       if (action.type !== 'enchere') return null
-      const { idCardSite, prix } = action
-      if (idCardSite === undefined || !UUID.test(idCardSite)) return null
+      // Malgré son nom, le champ `card_id` du corps reçoit l’identifiant de l’exemplaire possédé (`id` de
+      // `my-collection`, le même que pour la défausse) : relevé du 2026-11-11 sur la mise aux enchères manuelle
+      // d’Ouzbékistan (201) ; avec le `card_id` de la carte, l’extension avait reçu un 409.
+      const { idExemplaire, prix } = action
+      if (!UUID.test(idExemplaire)) return null
       if (!Number.isSafeInteger(prix) || prix < 1 || prix > PRIX_MAX) return null
-      return { card_id: idCardSite, base_amount: prix, duration_minutes: DUREE_MINUTES }
+      return { card_id: idExemplaire, base_amount: prix, duration_minutes: DUREE_MINUTES }
     },
     auth: null,
     hote: 'site',

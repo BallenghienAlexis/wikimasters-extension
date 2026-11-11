@@ -119,8 +119,7 @@ describe('avecIdEtiquette : enrichissement au moment d’envoyer', () => {
 })
 
 describe('reseau : enchère et défausse sur l’origine du site', () => {
-  const CARD = '44444444-4444-4444-8444-444444444444'
-  const enchere: Action = { type: 'enchere', idCarte: 'R|T', idExemplaire: EX, prix: 25, idCardSite: CARD }
+  const enchere: Action = { type: 'enchere', idCarte: 'R|T', idExemplaire: EX, prix: 25 }
   const defausse: Action = { type: 'defausse', idCarte: 'R|T', idExemplaire: EX }
 
   it('enchère : POST same-origin, seul Content-Type, ni jeton ni clé, corps fixe', async () => {
@@ -132,15 +131,13 @@ describe('reseau : enchère et défausse sur l’origine du site', () => {
     expect(url).toBe('https://www.wiki-masters.com/api/marketplace')
     expect(init.credentials).toBe('same-origin')
     expect(Object.keys(init.headers as Record<string, string>)).toEqual(['Content-Type'])
-    expect(JSON.parse(init.body as string)).toEqual({ card_id: CARD, base_amount: 25, duration_minutes: 60 })
+    expect(JSON.parse(init.body as string)).toEqual({ card_id: EX, base_amount: 25, duration_minutes: 60 })
     expect(sessionLue).not.toHaveBeenCalled()
   })
 
-  it('enchère sans card_id : action non disponible, aucune requête', async () => {
+  it('enchère sans identifiant d’exemplaire valide : action non disponible, aucune requête', async () => {
     const f = vi.fn()
-    const { idCardSite: _omis, ...sans } = enchere as Extract<Action, { type: 'enchere' }>
-    void _omis
-    const r = await emetteur(f as unknown as typeof fetch)(sans)
+    const r = await emetteur(f as unknown as typeof fetch)({ ...enchere, idExemplaire: 'pas-un-uuid' } as Action)
     expect(r).toEqual({ classe: 'echec', codeHttp: null, cause: 'action non disponible' })
     expect(f).not.toHaveBeenCalled()
   })
@@ -174,8 +171,7 @@ describe('reseau : enchère et défausse sur l’origine du site', () => {
 })
 
 describe('reseau : conflit 409 de l’enchère', () => {
-  const CARD = '44444444-4444-4444-8444-444444444444'
-  const enchere: Action = { type: 'enchere', idCarte: 'R|T', idExemplaire: EX, prix: 25, idCardSite: CARD }
+  const enchere: Action = { type: 'enchere', idCarte: 'R|T', idExemplaire: EX, prix: 25 }
   it('classe le conflit en libellé fixe, sans recopier le corps', async () => {
     const limite = vi.fn(async () => reponse(409, JSON.stringify({ message: 'Maximum de 5 enchères actives atteint', secret: 'zzz' })))
     const r1 = await creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: ORIGINE, fetchImpl: limite as unknown as typeof fetch })(enchere)

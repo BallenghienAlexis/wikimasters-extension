@@ -74,3 +74,5 @@ Décision d'Alexis : `apikey` publique **en dur** dans une constante unique de `
 
 ## À reprendre (premier lot réel, 409 sur trois enchères, 2026-11-11)
 - Cause exacte du 409 non établie : `marketplace/mine` donne 0 enchère en cours pour un plafond de 5, donc ce n'est pas (seulement) la limite. Le libellé du refus du site n'est pas recopié ; `classerConflit` (`src/lib/reseau.ts`) ne distingue que « limite d'enchères atteinte » et « conflit signalé par le site ». À préciser avec le message affiché par le site pour une de ces trois cartes (les trois du premier lot réel, détail dans le journal local) mise aux enchères à la main.
+
+- Mise à jour (2026-11-11, soir) : l'enchère envoie désormais l'identifiant de l'exemplaire dans `card_id` (corps relevé sur une mise manuelle réussie). Hypothèse la plus probable du 409, à confirmer par un prochain lot réel d'une seule enchère. L'ancien relevé « `card_id` = celui de la carte » du 2026-11-11 (midi) était faux.
