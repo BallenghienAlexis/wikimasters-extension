@@ -560,7 +560,7 @@ describe('relevé d’affluence du marché', () => {
     expect(b.chemins).not.toContain(ROUTE);
   });
 
-  it('avec une route : un GET, 6 s après la précédente, et seuls les horodatages sont notés', async () => {
+  it('avec une route : un GET, 0,2 s après la précédente, et seuls les horodatages sont notés', async () => {
     const b = banc({ reponse: reponseMarche });
     const notes: number[][] = [];
     b.deps.routeMarche = ROUTE;
@@ -573,7 +573,18 @@ describe('relevé d’affluence du marché', () => {
     expect(b.chemins[b.chemins.length - 1]).toBe(ROUTE);
     expect(notes).toEqual([[Date.parse('2026-11-10T20:05:00Z')]]);
     const dernieres = b.stockage.etat?.requetes ?? [];
-    expect(dernieres[dernieres.length - 1]! - dernieres[dernieres.length - 2]!).toBeGreaterThanOrEqual(6_000);
+    expect(dernieres[dernieres.length - 1]! - dernieres[dernieres.length - 2]!).toBeGreaterThanOrEqual(200);
+  });
+
+  it('borne à 20 entrées l’historique des requêtes conservé après le relevé du marché', async () => {
+    const b = banc({ reponse: reponseMarche });
+    b.deps.routeMarche = ROUTE;
+    b.deps.noterAffluence = async () => {};
+    avecReleve(b);
+    b.stockage.etat = { ...etatInitial(), requetes: Array.from({ length: 30 }, (_, i) => i + 1) };
+    await creerSynchroAuto(b.deps).declencher();
+    expect(b.chemins).toContain(ROUTE);
+    expect((b.stockage.etat?.requetes ?? []).length).toBeLessThanOrEqual(20);
   });
 
   it('sur 403 : rien n’est noté et la reprise est repoussée de 30 min', async () => {

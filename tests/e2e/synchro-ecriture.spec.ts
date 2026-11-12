@@ -97,6 +97,8 @@ async function amorcer(page: Page): Promise<void> {
       collection: { version: 2, cartes: [carte] },
       preferences: { version: 2, mesThemes: [], amis: [] },
       amisInitiaux: 999,
+      // Le lot refuse de démarrer tant que la synchro automatique tient le bail : elle est coupée ici.
+      syncAuto: false,
     });
   }, CARTE);
   await page.reload();
@@ -162,7 +164,7 @@ test('401 sur la création : arrêt immédiat, une seule requête, aucune autre 
   await page.getByRole('button', { name: /^Lancer/ }).click();
   await expect.poll(() => banc.rest.length, { timeout: 20_000 }).toBe(1);
   await expect(page.getByTestId('zone-execution')).toContainText(/Lot arrêté.*réponse 401/, { timeout: 20_000 });
-  // Plus longtemps que le plus long écart possible (6 s + 4 s) : aucune seconde tentative.
+  // Plus longtemps que le plus long écart possible (0,2 s + 0,1 s) : aucune seconde tentative.
   await page.waitForTimeout(11_000);
   expect(banc.rest).toHaveLength(1);
   expect(await toutLeStockage(page)).not.toContain(JETON_TEMOIN);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FENETRE_MS, INTERVALLE_MS, MAX_PAR_FENETRE, type Horloge } from '../../src/lib/file';
+import { INTERVALLE_MS, type Horloge } from '../../src/lib/file';
 import type { Carte, Collection } from '../../src/lib/collection';
 import { VERSION_SCHEMA } from '../../src/lib/collection';
 import {
@@ -399,22 +399,28 @@ describe('ordonnanceur — critère 3 : prix', () => {
 });
 
 describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
-  it('sépare deux requêtes d’au moins 6 s, au plus 10 par 60 s, une seule en vol', async () => {
-    const b = banc(siteFictif(600));
+  it('sépare deux requêtes d’au moins 0,2 s, sans plafond par minute, une seule en vol', async () => {
+    const b = banc(siteFictif(8000));
     await synchroniser({ ...b.deps, maxPrix: 0 });
     const t = b.departs.map((d) => d.t);
-    expect(t.length).toBeGreaterThan(MAX_PAR_FENETRE);
+    expect(t.length).toBeGreaterThan(100);
     for (let i = 1; i < t.length; i++) expect((t[i] ?? 0) - (t[i - 1] ?? 0)).toBeGreaterThanOrEqual(INTERVALLE_MS);
-    for (let i = 0; i + MAX_PAR_FENETRE < t.length; i++) expect((t[i + MAX_PAR_FENETRE] ?? 0) - (t[i] ?? 0)).toBeGreaterThanOrEqual(FENETRE_MS);
     expect(b.enVolMax()).toBe(1);
   });
 
-  it('respecte la fenêtre de 60 s même quand des requêtes récentes viennent d’une exécution précédente', async () => {
+  it('attend l’intervalle minimal depuis la dernière requête d’une exécution précédente', async () => {
     const etat = etatInitial();
-    etat.requetes = Array.from({ length: MAX_PAR_FENETRE }, (_, i) => T0 - 1000 + i); // 10 requêtes à l’instant
+    etat.requetes = [T0 - 50];
     const b = banc(siteFictif(1), collectionDe([]), etat);
     await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect((b.departs[0]?.t ?? 0) - (T0 - 1000)).toBeGreaterThanOrEqual(FENETRE_MS);
+    expect((b.departs[0]?.t ?? 0) - (T0 - 50)).toBeGreaterThanOrEqual(INTERVALLE_MS);
+  });
+
+  it('borne l’historique des requêtes conservé dans l’état à 20 entrées', async () => {
+    const b = banc(siteFictif(8000));
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(b.departs.length).toBeGreaterThan(20);
+    expect(r.etat.requetes.length).toBeLessThanOrEqual(20);
   });
 
   it.each([401, 403, 429])('arrêt immédiat sur %i, sans reprise avant 30 min', async (code) => {

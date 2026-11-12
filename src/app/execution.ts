@@ -5,7 +5,7 @@ import { ORIGINE_SITE } from '../config/synchro';
 import type { Action, EtatExecution, ResultatAction } from '../lib/actions';
 import type { Horloge } from '../lib/file';
 import { cloreInterrompues as cloreJournal, type Journal } from '../lib/journal';
-import { NOM_PORT, messageOrdre, validerResultat } from '../lib/messages';
+import { ID_MAX, NOM_PORT, idDeMessage, messageOrdre, validerResultat } from '../lib/messages';
 import {
   chargerExecution,
   chargerJournal,
@@ -16,6 +16,8 @@ import {
 
 export { ORIGINE_SITE };
 export const NOM_VERROU = 'wm-collection-execution';
+/** Nombre maximal d’ordres en attente de résultat en même temps (garde-fou de la file parallèle). */
+export const MAX_ORDRES_EN_ATTENTE = 4;
 
 interface Chrono {
   now: () => number;
@@ -104,7 +106,14 @@ export function creerExecution(deps: DependancesExecution): Execution {
   const abonnes = new Set<() => void>();
   let enCours = false;
   let interruption: AbortController | null = null;
-  let attente: { port: PortPage; resoudre: (r: ResultatAction) => void; rejeter: (e: Error) => void } | null = null;
+  interface Attente {
+    port: PortPage;
+    resoudre: (r: ResultatAction) => void;
+    rejeter: (e: Error) => void;
+  }
+  /** Ordres envoyés dont le résultat n’est pas revenu, par numéro de corrélation. */
+  const attentes = new Map<number, Attente>();
+  let prochainId = 0;
 
   const notifier = (): void => abonnes.forEach((rappel) => rappel());
 
@@ -119,19 +128,24 @@ export function creerExecution(deps: DependancesExecution): Execution {
     groupe.add(port);
     ports.set(tab, groupe);
     port.onMessage.addListener((brut) => {
-      if (attente?.port !== port) return;
       const resultat = validerResultat(brut);
       if (resultat === null) return;
-      const courante = attente;
-      attente = null;
+      // Le résultat reprend le numéro de l’ordre. Sans numéro, il n’est admis que s’il n’y a qu’un seul ordre en attente.
+      const recu = idDeMessage(brut);
+      let id: number | undefined;
+      if (recu !== null) id = recu;
+      else if (attentes.size === 1) id = [...attentes.keys()][0];
+      const courante = id === undefined ? undefined : attentes.get(id);
+      if (id === undefined || courante === undefined || courante.port !== port) return;
+      attentes.delete(id);
       courante.resoudre(resultat);
     });
     port.onDisconnect.addListener(() => {
       groupe.delete(port);
       if (groupe.size === 0) ports.delete(tab);
-      if (attente?.port === port) {
-        const courante = attente;
-        attente = null;
+      for (const [id, courante] of [...attentes]) {
+        if (courante.port !== port) continue;
+        attentes.delete(id);
         courante.rejeter(new Error('Onglet WikiMasters déconnecté.'));
       }
       if (enCours) interruption?.abort();
@@ -161,14 +175,16 @@ export function creerExecution(deps: DependancesExecution): Execution {
     },
     transport(ordre) {
       if (ports.size !== 1) return Promise.reject(new Error('Un seul onglet WikiMasters est requis.'));
-      if (attente !== null) return Promise.reject(new Error('Un ordre est déjà en attente.'));
+      if (attentes.size >= MAX_ORDRES_EN_ATTENTE) return Promise.reject(new Error('Trop d’ordres en attente.'));
       const port = [...[...ports.values()][0]!][0]!;
+      const id = prochainId;
+      prochainId = prochainId >= ID_MAX ? 0 : prochainId + 1;
       return new Promise<ResultatAction>((resoudre, rejeter) => {
-        attente = { port, resoudre, rejeter };
+        attentes.set(id, { port, resoudre, rejeter });
         try {
-          port.postMessage(messageOrdre(ordre));
+          port.postMessage(messageOrdre(ordre, id));
         } catch (e) {
-          attente = null;
+          attentes.delete(id);
           rejeter(e instanceof Error ? e : new Error('Envoi impossible.'));
         }
       });
@@ -186,9 +202,9 @@ export function creerExecution(deps: DependancesExecution): Execution {
       } finally {
         enCours = false;
         interruption = null;
-        const restante = attente;
-        attente = null;
-        restante?.rejeter(new Error('Exécution terminée.'));
+        const restantes = [...attentes.values()];
+        attentes.clear();
+        for (const restante of restantes) restante.rejeter(new Error('Exécution terminée.'));
         notifier();
       }
     },

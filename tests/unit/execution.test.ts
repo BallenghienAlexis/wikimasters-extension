@@ -164,7 +164,7 @@ describe('transport (AC4)', () => {
     const p = fauxPort(bon(1));
     connecter(p);
     const r = e.transport(ordre);
-    expect(p.envoyes).toEqual([{ message: 'ordre', ordre }]);
+    expect(p.envoyes).toEqual([{ message: 'ordre', ordre, id: expect.any(Number) }]);
     p.recevoir({ message: 'resultat', resultat: OK });
     await expect(r).resolves.toEqual(OK);
   });
@@ -186,6 +186,41 @@ describe('transport (AC4)', () => {
     p.recevoir({ message: 'resultat', resultat: { classe: 'x' } });
     p.recevoir({ message: 'resultat', resultat: OK });
     await expect(r).resolves.toEqual(OK);
+  });
+
+  it('plusieurs ordres en attente : chaque résultat va à son ordre (par identifiant)', async () => {
+    const e = creer();
+    const p = fauxPort(bon(1));
+    connecter(p);
+    const a = e.transport(ordre);
+    const b = e.transport({ ...ordre, idCarte: 'Rare|D' });
+    const [ma, mb] = p.envoyes as [{ id: number }, { id: number }];
+    expect(ma.id).not.toBe(mb.id);
+    const autre: ResultatAction = { classe: 'reussie', codeHttp: 201, cause: 'action réussie' };
+    p.recevoir({ message: 'resultat', resultat: autre, id: mb.id });
+    p.recevoir({ message: 'resultat', resultat: OK, id: ma.id });
+    await expect(b).resolves.toEqual(autre);
+    await expect(a).resolves.toEqual(OK);
+  });
+
+  it('refuse un cinquième ordre en attente', async () => {
+    const e = creer();
+    const p = fauxPort(bon(1));
+    connecter(p);
+    const attente = [1, 2, 3, 4].map(() => e.transport(ordre));
+    await expect(e.transport(ordre)).rejects.toThrow('Trop d’ordres en attente.');
+    p.fermer();
+    await Promise.allSettled(attente);
+  });
+
+  it('une déconnexion rejette tous les ordres en attente', async () => {
+    const e = creer();
+    const p = fauxPort(bon(1));
+    connecter(p);
+    const r = [e.transport(ordre), e.transport(ordre)];
+    p.fermer();
+    const res = await Promise.allSettled(r);
+    expect(res.map((x) => x.status)).toEqual(['rejected', 'rejected']);
   });
 
   it('déconnexion pendant l’attente du résultat → transport rejeté', async () => {
