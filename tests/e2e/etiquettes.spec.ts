@@ -216,7 +216,7 @@ test.describe('captures et mouvement réduit', () => {
   });
 });
 
-test('5 000 cartes : l’aperçu s’affiche en moins de 500 ms ; l’export CSV porte les nouveaux libellés', async ({ pageCollection: page }) => {
+test('5 000 cartes : l’aperçu s’affiche en moins de 500 ms', async ({ pageCollection: page }) => {
   const modeles = FIXTURE.cartes;
   const cartes = Array.from({ length: 5000 }, (_, i) => {
     const m = modeles[i % modeles.length]!;
@@ -242,10 +242,4 @@ test('5 000 cartes : l’aperçu s’affiche en moins de 500 ms ; l’export CSV
       }),
   );
   expect(duree).toBeLessThan(500);
-
-  const telechargement = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Exporter en CSV' }).click();
-  const contenu = fs.readFileSync(await (await telechargement).path(), 'utf8');
-  expect(contenu.split('\r\n')[0]).toContain('themes');
-  for (const libelle of ['#Chien', '#Pont', '#Tibet', '#Ukraine', '#Barrage']) expect(contenu).toContain(libelle);
 });

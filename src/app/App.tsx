@@ -1,19 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   LIBELLES_STATUT,
   STATUTS,
-  analyserImport,
   appliquerEdition,
   collectionVide,
   filtrerCartes,
-  fusionnerImport,
   resumer,
   terminerEnchere,
   type Collection,
   type EditionCarte,
   type Filtres,
 } from '../lib/collection';
-import { versCsv, versJson } from '../lib/exports';
 import { chargerCacheWikipedia, chargerCollection, chargerExecution, chargerPreferences, chargerRegistre, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences, chargerAffluenceSite, chargerVentes, noterEvenementVente, lireCollectionBrute, reinitialiserCollection } from '../lib/stockage';
 import { progression, texteProgression, type Synchro } from '../lib/synchro';
 import { LIBELLES_THEMES, IDS_THEMES, definirThemesWikipedia, themesDeCarte } from '../lib/themes';
@@ -74,7 +71,6 @@ const App: React.FC = () => {
   const [stockageSynchroLu, setStockageSynchroLu] = useState(false);
   // Les amis fixent les étiquettes d’échange de l’aperçu : il attend aussi la lecture des préférences.
   const [preferencesLues, setPreferencesLues] = useState(false);
-  const champFichier = useRef<HTMLInputElement>(null);
 
   // Note l’heure d’une mise en vente ou d’une fin d’enchère ; un échec est signalé, jamais avalé.
   const noterVente = (type: EvenementVente['type']): void => {
@@ -174,24 +170,6 @@ const App: React.FC = () => {
     setMessage('Tri appliqué. À vous d’agir sur WikiMasters : les repères vous guident sur chaque carte.');
   };
 
-  const importer = async (fichier: File): Promise<void> => {
-    let brut: unknown;
-    try {
-      brut = JSON.parse(await fichier.text());
-    } catch {
-      setMessage('Import refusé : ce fichier n’est pas du JSON valide.');
-      return;
-    }
-    const resultat = analyserImport(brut);
-    if (!resultat.ok) {
-      setMessage(`Import refusé : ${resultat.erreur}`);
-      return;
-    }
-    appliquer(fusionnerImport(collection, resultat.cartes));
-    setRevision((r) => r + 1);
-    setMessage(`${resultat.cartes.length} cartes importées.`);
-  };
-
   if (blocage) {
     return (
       <main className="mx-auto max-w-3xl p-4">
@@ -256,28 +234,6 @@ const App: React.FC = () => {
               Gérer mes thèmes et mes amis
             </button>
           )}
-          <button type="button" className={CLASSE_BOUTON} onClick={() => champFichier.current?.click()}>
-            Importer un fichier
-          </button>
-          <input
-            ref={champFichier}
-            type="file"
-            accept="application/json,.json"
-            aria-label="Fichier de collection à importer"
-            className="sr-only"
-            tabIndex={-1}
-            onChange={(e) => {
-              const fichier = e.target.files?.[0];
-              e.target.value = '';
-              if (fichier) void importer(fichier);
-            }}
-          />
-          <button type="button" className={CLASSE_BOUTON} onClick={() => telecharger(versCsv(collection.cartes), 'collection.csv', 'text/csv;charset=utf-8')}>
-            Exporter en CSV
-          </button>
-          <button type="button" className={CLASSE_BOUTON} onClick={() => telecharger(versJson(collection), 'collection.json', 'application/json')}>
-            Exporter en JSON
-          </button>
         </div>
       </header>
 
@@ -299,7 +255,7 @@ const App: React.FC = () => {
         />
       ) : collection.cartes.length === 0 ? (
         <p className="mt-6 rounded border border-line bg-ink-2 p-6">
-          Votre collection est vide. Ouvrez la page Collection de WikiMasters, ou importez un fichier JSON.
+          Votre collection est vide. Ouvrez la page Collection de WikiMasters : la synchronisation automatique la remplit.
         </p>
       ) : (
         <>
