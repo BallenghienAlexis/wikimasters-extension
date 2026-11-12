@@ -1,5 +1,5 @@
 // Exécuteur de la vérification Wikipédia : seul fichier de l'application qui appelle `fetch` vers Wikipédia.
-// GET en lecture seule vers fr.wikipedia.org, un titre de carte par requête, sans cookie ni en-tête ajouté.
+// GET en lecture seule vers fr.wikipedia.org (et www.wikidata.org si Wikipédia ne donne aucun thème), un titre de carte par requête, sans cookie ni en-tête ajouté.
 import { ajouterEntree, lireReponse, lireReponseWikidata, themesDepuisCategories, themesDepuisWikidata, titresAVerifier, urlRequete, urlRequeteWikidata, type CacheWikipedia } from '../lib/wikipedia';
 
 export type Transport = (url: string, signal: AbortSignal) => Promise<{ status: number; json: () => Promise<unknown> }>;
@@ -40,11 +40,12 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
   let cache = options.cache;
   let verifiees = 0;
   let echecs = 0;
+  let echecsWikidata = 0;
   for (const titre of titres) {
     if (signal.aborted) return { verifiees, arret: 'manuel', codeHttp: null };
     // MediaWiki découpe `titles` sur « | » : un tel titre interrogerait plusieurs pages, on le saute.
     if (titre.includes('|')) {
-      cache = ajouterEntree(cache, titre, [], maintenant());
+      cache = ajouterEntree(cache, titre, [], maintenant(), true);
       await surProgres(cache, ++verifiees);
       continue;
     }
@@ -72,7 +73,7 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
       // Page absente ou ambiguë : on mémorise « aucun thème » pour ne pas la redemander avant 30 jours.
       let themes = lecture.type === 'ok' ? themesDepuisCategories(lecture.categories, lecture.resume) : [];
       // Wikipédia n'a rien donné : courte description Wikidata (même cadence, titre seul), sinon l'entrée sera relue une fois.
-      let wikidata = themes.length > 0;
+      let wikidata = false;
       if (themes.length === 0) {
         await attendre(PAUSE_MS, signal);
         let r2;
@@ -83,17 +84,26 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
           r2 = null;
         }
         if (r2 && (r2.status === 403 || r2.status === 429)) return { verifiees, arret: 'code-http', codeHttp: r2.status };
+        let lu2 = false;
         if (r2 && r2.status === 200) {
           try {
             const l2 = lireReponseWikidata(await r2.json(), titre);
             if (l2.type === 'ok') {
               themes = themesDepuisWikidata(l2.descriptions);
               wikidata = true;
+              lu2 = true;
             }
           } catch {
-            // Réponse illisible : l'entrée reste sans marque Wikidata et sera relue.
+            // Réponse illisible : comptée comme un échec ci-dessous.
           }
         }
+        // Même règle que Wikipédia : un échec de Wikidata compte, rien n'est mémorisé, 3 échecs arrêtent.
+        if (!lu2) {
+          if (++echecsWikidata >= MAX_ECHECS) return { verifiees, arret: 'echecs', codeHttp: null };
+          await attendre(PAUSE_MS, signal);
+          continue;
+        }
+        echecsWikidata = 0;
       }
       cache = ajouterEntree(cache, titre, themes, maintenant(), wikidata);
       verifiees += 1;
@@ -128,7 +138,7 @@ export interface Planificateur {
   abonner: (rappel: () => void) => () => void;
 }
 
-const MESSAGE_CODE = (code: number | null): string => `Wikipédia a refusé (${code ?? '?'}) : vérification suspendue jusqu’au rechargement de la page.`;
+const MESSAGE_CODE = (code: number | null): string => `Wikipédia ou Wikidata a refusé (${code ?? '?'}) : vérification suspendue jusqu’au rechargement de la page.`;
 const MESSAGE_ECHECS = 'Vérification suspendue : trop d’échecs de lecture. Elle reprendra au rechargement de la page.';
 
 /**

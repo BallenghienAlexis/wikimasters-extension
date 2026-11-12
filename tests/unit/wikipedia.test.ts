@@ -98,6 +98,13 @@ describe('Wikidata', () => {
     await verifierTitres({ titres: ['B'], cache: cacheVide(), signal: new AbortController().signal, surProgres: () => undefined, attendre: async () => undefined, maintenant: () => 5, transport: async (u) => { deja.push(u); return { status: 200, json: async () => page({ categories: [{ title: 'Catégorie:Barrage en France' }] }) }; } });
     expect(deja).toHaveLength(1);
   });
+  it('compte les échecs de Wikidata et s’arrête à 3 sans rien mémoriser', async () => {
+    let dernier = cacheVide();
+    const transport: Transport = async (url) => (url.includes('wikidata') ? { status: 500, json: async () => ({}) } : { status: 200, json: async () => page({ categories: [] }) });
+    const r = await verifierTitres({ titres: ['A', 'B', 'C', 'D'], cache: cacheVide(), signal: new AbortController().signal, surProgres: (c) => { dernier = c; }, attendre: async () => undefined, transport });
+    expect(r).toEqual({ verifiees: 0, arret: 'echecs', codeHttp: null });
+    expect(Object.keys(dernier.entrees)).toEqual([]);
+  });
   it('s’arrête sur 429 de Wikidata', async () => {
     const transport: Transport = async (url) => (url.includes('wikidata') ? { status: 429, json: async () => ({}) } : { status: 200, json: async () => page({ categories: [] }) });
     const r = await verifierTitres({ titres: ['A', 'B'], cache: cacheVide(), signal: new AbortController().signal, surProgres: () => undefined, attendre: async () => undefined, transport });
