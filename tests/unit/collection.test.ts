@@ -1,9 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  VERSION_ECHANGE,
   VERSION_SCHEMA,
   ajouterIdSite,
-  analyserImport,
   analyserStockage,
   appliquerEdition,
   collectionVide,
@@ -44,24 +42,24 @@ const carte = (surcharge: Partial<Carte> = {}): Carte => ({
 const FILTRES: Filtres = { recherche: '', statut: 'tous', doublonsSeulement: false };
 
 const erreurDe = (cartes: unknown[]): string => {
-  const r = analyserImport({ version: 1, cartes });
-  if (r.ok) throw new Error('Import accepté à tort');
+  const r = analyserStockage({ version: 3, cartes });
+  if (r.ok) throw new Error('Contenu accepté à tort');
   return r.erreur;
 };
 
-describe('analyserImport', () => {
-  it('accepte un fichier minimal et pose les valeurs par défaut', () => {
-    const r = analyserImport({ version: 1, cartes: [{ id: 'a', titre: 'A' }] });
-    expect(r).toEqual({ ok: true, cartes: [{ id: 'a', titre: 'A', rarete: null, quantite: 1, url: null }] });
+describe('analyserStockage : validation des cartes', () => {
+  it('accepte une carte minimale et pose les valeurs par défaut', () => {
+    const r = analyserStockage({ version: 3, cartes: [{ id: 'a', titre: 'A' }] });
+    expect(r).toEqual({ ok: true, collection: { version: 3, cartes: [carte({ id: 'a', titre: 'A', rarete: null, quantite: 1, url: null })] } });
   });
 
   it.each([
     ['pas un objet', 'texte'],
     ['un tableau', []],
-    ['une version inconnue', { version: 2, cartes: [] }],
-    ['sans liste de cartes', { version: 1 }],
+    ['une version inconnue', { version: 99, cartes: [] }],
+    ['sans liste de cartes', { version: 3 }],
   ])('refuse %s', (_nom, brut) => {
-    expect(analyserImport(brut).ok).toBe(false);
+    expect(analyserStockage(brut).ok).toBe(false);
   });
 
   it('refuse un identifiant manquant ou en double', () => {
@@ -81,7 +79,7 @@ describe('analyserImport', () => {
   });
 
   it('accepte un lien https', () => {
-    expect(analyserImport({ version: 1, cartes: [{ id: 'a', titre: 'A', url: 'https://exemple.test/a' }] }).ok).toBe(true);
+    expect(analyserStockage({ version: 3, cartes: [{ id: 'a', titre: 'A', url: 'https://exemple.test/a' }] }).ok).toBe(true);
   });
 });
 
@@ -213,9 +211,8 @@ const CARTE_V1 = {
 const LONG = 'x'.repeat(201);
 
 describe('schéma v2 : versions', () => {
-  it('SC-019 : VERSION_SCHEMA vaut 3 et VERSION_ECHANGE vaut 1', () => {
+  it('SC-019 : VERSION_SCHEMA vaut 3', () => {
     expect(VERSION_SCHEMA).toBe(3);
-    expect(VERSION_ECHANGE).toBe(1);
     expect(collectionVide()).toEqual({ version: 3, cartes: [] });
   });
 });
@@ -294,28 +291,18 @@ describe('analyserStockage', () => {
   });
 });
 
-describe('analyserImport : fichier d’échange', () => {
-  it('SC-019 : refuse version 2 et ignore tout idsSite présent', () => {
-    expect(analyserImport({ version: 2, cartes: [] }).ok).toBe(false);
-    const r = analyserImport({ version: 1, cartes: [{ id: 'a', titre: 'A', idsSite: ['s1'] }] });
-    expect(r.ok).toBe(true);
-    if (r.ok) expect(r.cartes[0]).not.toHaveProperty('idsSite');
-  });
-});
-
 describe('fusionnerImport et idsSite', () => {
   it('SC-019 : conserve idsSite de la carte existante', () => {
-    const r = analyserImport({ version: 1, cartes: [{ id: 'c1', titre: 'Nouveau titre', quantite: 2 }] });
-    if (!r.ok) throw new Error('import refusé');
-    const f = fusionnerImport(col(carte({ idsSite: ['s1', 's2'] })), r.cartes);
+    const f = fusionnerImport(col(carte({ idsSite: ['s1', 's2'] })), [{ id: 'c1', titre: 'Nouveau titre', rarete: null, quantite: 2, url: null }]);
     expect(f.cartes[0]?.idsSite).toEqual(['s1', 's2']);
     expect(f.cartes[0]?.titre).toBe('Nouveau titre');
   });
 
   it('SC-012 : conserve etiquettesSite de la carte existante, une nouvelle carte en a une liste vide', () => {
-    const r = analyserImport({ version: 1, cartes: [{ id: 'c1', titre: 'T' }, { id: 'c2', titre: 'U' }] });
-    if (!r.ok) throw new Error('import refusé');
-    const f = fusionnerImport(col(carte({ etiquettesSite: ['Ami · Léa'] })), r.cartes);
+    const f = fusionnerImport(col(carte({ etiquettesSite: ['Ami · Léa'] })), [
+      { id: 'c1', titre: 'T', rarete: null, quantite: 1, url: null },
+      { id: 'c2', titre: 'U', rarete: null, quantite: 1, url: null },
+    ]);
     expect(f.cartes.find((c) => c.id === 'c1')?.etiquettesSite).toEqual(['Ami · Léa']);
     expect(f.cartes.find((c) => c.id === 'c2')?.etiquettesSite).toEqual([]);
   });

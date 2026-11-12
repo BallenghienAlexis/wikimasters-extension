@@ -1,7 +1,6 @@
-import { expect, test } from './extension';
+import { chargerCartes, expect, test } from './extension';
 
 const COLLECTION = {
-  version: 1,
   cartes: [
     { id: 'a', titre: 'Agrume fictif', rarete: 'C', description: 'agrume', valeurMarchande: 3 },
     { id: 'b', titre: 'Athlète fictif', rarete: 'SR', description: 'athlète belge', valeurMarchande: 100 },
@@ -15,12 +14,7 @@ const COLLECTION = {
 const OUVRIR = 'Gérer mes thèmes et mes amis';
 
 test.beforeEach(async ({ pageCollection }) => {
-  await pageCollection.setInputFiles('input[type="file"]', {
-    name: 'collection.json',
-    mimeType: 'application/json',
-    buffer: Buffer.from(JSON.stringify(COLLECTION)),
-  });
-  await expect(pageCollection.getByRole('status')).toHaveText('6 cartes importées.');
+  await chargerCartes(pageCollection, COLLECTION.cartes);
 });
 
 test('trie selon mes thèmes, ceux des amis, le seuil de défausse (5) et la valeur', async ({ pageCollection: page }) => {

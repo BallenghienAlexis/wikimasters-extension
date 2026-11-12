@@ -11,7 +11,7 @@ Extension Chrome personnelle pour préparer le tri, l'échange et la vente d'une
 - Lister les ventes à lancer selon vos places libres (5 enchères au plus).
 - Afficher un repère avec votre décision sur les cartes du site.
 - Se synchroniser seule avec le site, si vous l’activez (voir ci-dessous).
-- Éditer chaque carte, filtrer, repérer les doublons, importer et exporter en CSV ou JSON.
+- Éditer chaque carte, filtrer, repérer les doublons.
 
 **Elle ne clique sur rien sur le site** : vous défaussez, vendez et échangez vous-même. Le cadre et ses raisons sont dans [AGENTS.md](AGENTS.md).
 
@@ -47,20 +47,7 @@ npm run build
 
 Puis dans Chrome : `chrome://extensions` › mode développeur › « Charger l'extension non empaquetée » › dossier `dist/`. Un clic sur l'icône ouvre la collection.
 
-Pour essayer sans données réelles, importez `tests/e2e/fixtures/collection-fictive.json`.
-
-## Format d'import
-
-```json
-{
-  "version": 1,
-  "cartes": [
-    { "id": "identifiant-unique", "titre": "Titre", "rarete": "Rare", "quantite": 2, "url": "https://exemple.test/carte" }
-  ]
-}
-```
-
-Seuls `id` et `titre` sont obligatoires. Un import met à jour les cartes de même `id` en gardant votre édition locale, sauf si le fichier fournit `statut`, `prixCible` ou `note`.
+Les données viennent de la lecture de `/collection` et de la synchronisation automatique (voir [AGENTS.md](AGENTS.md)). Il n’y a plus d’import ni d’export de fichier. Pour essayer sans données réelles, les tests e2e écrivent des cartes fictives (`tests/e2e/fixtures/`) dans le stockage de l’extension.
 
 ## Développer avec des agents
 
