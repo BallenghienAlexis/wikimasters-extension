@@ -6,7 +6,7 @@ Vagues : V1 : T-201 [P], T-202 [P] · V2 : T-203 [P], T-204 [P] · V3 : T-205 ·
 - **G1** Aucun test ne contacte le vrai site. Unitaire : transport et horloge injectés. E2e : `page.route` sert des réponses **fictives** conformes à `releve-api.md` et abandonne toute autre requête.
 - **G2** `GET` uniquement. Aucun `POST`, `PUT`, `PATCH`, `DELETE`. Jamais la route `/sales` sans `?scope=summary`.
 - **G3** Aucun en-tête ajouté (ni `Authorization`, ni jeton), `credentials: 'same-origin'`, aucune lecture de cookie ni du jeton ; `jeton.ts` n'est pas importé.
-- **G4** Intervalle minimal 6 000 ms plus gigue injectée de 0 à 6 s (avenant du 2026-11-11), 10 requêtes max par 60 s, une seule requête en vol, arrêt sur 401/403/429 et après 3 échecs, aucune reprise avant 30 min. Aucune valeur aléatoire.
+- **G4** Intervalle minimal 200 ms plus gigue injectée de 0 à 100 ms (avenants des 2026-11-11 et 2026-11-12), aucun plafond par minute, une seule requête en vol, arrêt sur 401/403/429 et après 3 échecs, aucune reprise avant 30 min. Aucune valeur aléatoire.
 - **G5** `click`, `submit`, `requestSubmit`, `dispatchEvent`, `focus` interdits dans le code du site. Pas de `innerHTML`. Permission `storage` seule, aucun `host_permissions`.
 - **G6** Option activée par défaut depuis le 2026-11-11 (avenant) : 0 requête si le joueur la désactive.
 - **G7** Données fictives dans les tests ; jamais de contenu de `captures-site/`.
@@ -54,7 +54,7 @@ Vagues : V1 : T-201 [P], T-202 [P] · V2 : T-203 [P], T-204 [P] · V3 : T-205 ·
   1. Total inchangé depuis la dernière synchro complète → une seule requête (`stats`).
   2. Sinon pages lues dans l'ordre jusqu'à `collection: []` ; arrêt anticipé uniquement si le test de stabilité du tri le permet.
   3. Prix : cartes à décider d'abord, puis valeur absente ou périmée (30 jours) ; une valeur saisie à la main n'est pas écrasée sans signalement.
-  4. Cadence 6 s, 10 par 60 s, une requête en vol (horloge simulée) ; 401/403/429 ou 3 échecs → arrêt, aucune reprise avant 30 min.
+  4. Cadence 0,2 s plus gigue, sans plafond par minute, une requête en vol (horloge simulée) ; 401/403/429 ou 3 échecs → arrêt, aucune reprise avant 30 min.
   5. Un bail empêche deux synchros simultanées ; `decidePar: 'moi'` jamais modifié.
 - **Tests attendus** : un test par critère, horloge et transport injectés.
 - **Brief** : *Pourquoi* : cœur du comportement. *État actuel* : `file.ts` fournit les constantes et le modèle d'exécuteur à cadence fixe : les réutiliser, pas les dupliquer. *Pièges* : aucun hasard ; l'état d'arrêt est conservé pour l'interface. *Vérifier* : `npm run check && npm run build`.
@@ -111,3 +111,13 @@ Vagues : V1 : T-201 [P], T-202 [P] · V2 : T-203 [P], T-204 [P] · V3 : T-205 ·
 
 ## Avenant du 2026-11-11
 Décision d’Alexis (voir AGENTS.md) : synchronisation automatique **activée par défaut**, `GET /api/marketplace/mine` ajouté au périmètre de lecture, délai variable (gigue de 0 à 6 s) ajouté à l’intervalle de 6 s. L’écriture sur le site est autorisée ; ses contrats attendent les relevés de `specs/synchro-complete/releves-a-faire.md`. En cas d’écart avec le texte ci-dessus, AGENTS.md prime.
+
+## Avenant du 2026-11-12 : cadence actuelle
+
+Décisions d’Alexis du 2026-11-12, livrées (PR #72 à #76) ; `AGENTS.md` prime. Les passages de ce document qui parlent de 6 s, de 10 par minute, de 134 pages en 14 min ou d’un plafond par fenêtre de 60 s sont remplacés par ce qui suit.
+
+- **Cadence** : 0,2 s au minimum entre deux requêtes (`INTERVALLE_MS`) plus une gigue de 0 à 0,1 s (`gigue.ts`, injectée dans l’ordonnanceur), **sans plafond par minute**, une seule requête en vol, une seule synchro à la fois (bail dans `chrome.storage.local`). SC-005 se lit : deux requêtes sont séparées d’au moins 0,2 s ; une seule synchro à la fois, même avec plusieurs onglets. Une lecture complète de 134 pages dure donc quelques dizaines de secondes (134 × environ 0,25 s) au lieu de 14 min, et un lot d’écriture prend le bail pour toute sa durée.
+- **Arrêts** : 401, 403, 429 ou 3 échecs arrêtent la synchro ; aucune reprise automatique avant 30 min. Inchangé.
+- **Relance explicite** : le bouton « Relancer la synchro » (PR #76) est proposé seulement après un arrêt manuel ou un 403 ; il passe outre la pause de 30 min et le délai de 30 min depuis la dernière synchro, avec un avertissement, au plus une relance par minute commune aux onglets (`derniereRelance`). Après un 401, un 429 ou des échecs, la pause est gardée. Le bail, l’option désactivée et les arrêts automatiques restent en vigueur.
+- **Relevé d’affluence** (`affluence-site`) : une requête au plus toutes les 30 min, 0,2 s après la précédente (au lieu de 6 s).
+- **Écarts d’étiquettes** : une carte `en-vente` n’attend aucune étiquette (PR #71) ; `calculerEcarts` doit l’ignorer (voir `retouches.md` de `synchro-complete`).

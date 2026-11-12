@@ -32,7 +32,7 @@ Décision prise par Alexis le 2026-11-07, en réponse aux questions du premier p
 |---|---|---|
 | 1 | Portée | C : appels directs à l'API interne pour les étiquettes, les enchères et la défausse |
 | 2 | Confirmation | A : aperçu du lot dans `collection.html`, une validation pour tout le lot, plus une confirmation propre à chaque défausse |
-| 3 | Rythme | B : 10 actions par minute au plus, pas de plafond par session, arrêt après 3 erreurs. Cadence fixe |
+| 3 | Rythme | B (révisée le 2026-11-12) : 0,2 s au minimum entre deux débuts de requête plus 0 à 0,1 s de gigue, ni plafond par minute ni plafond par session, arrêt après 3 erreurs |
 | 4 | Journal | A : journal local horodaté dans `chrome.storage.local`, visible dans `collection.html`, bouton « Retirer l’étiquette » ; enchères et défausses marquées non annulables par l'extension |
 
 ## 1. Goals
@@ -49,7 +49,7 @@ Décision prise par Alexis le 2026-11-07, en réponse aux questions du premier p
 - **Enchères** : mise aux enchères des cartes `vendre`, de la plus chère à la moins chère, au prix de départ de la carte, dans la limite des places libres (`maxVentesSimultanees`).
 - **Défausse** : défausse des cartes `defausser`, chacune après sa propre confirmation.
 - **Aperçu du lot** dans `collection.html` (variante 1 des wireframes, adaptée), avec le rappel du risque, une validation unique « Lancer », et un bouton « Arrêter » actif pendant l'exécution.
-- **Exécution** depuis l'onglet WikiMasters ouvert, à cadence fixe (une action toutes les 6 s au plus vite, soit 10 par minute), avec arrêt après 3 erreurs.
+- **Exécution** depuis l'onglet WikiMasters ouvert, à la cadence la plus rapide (0,2 s au minimum entre deux débuts de requête plus 0 à 0,1 s de gigue, sans plafond par minute), avec arrêt après 3 erreurs.
 - **Mise à jour locale** après chaque action réussie (statut `en-vente`, quantité, étiquettes posées).
 - **Journal** local horodaté, persistant, consultable dans `collection.html`, avec « Retirer l’étiquette » sur les étiquettes posées.
 - **Migration** du schéma de stockage si le modèle s'enrichit (identifiant de la carte sur le site, étiquettes posées, journal).
@@ -74,7 +74,7 @@ Décision prise par Alexis le 2026-11-07, en réponse aux questions du premier p
 | SC-007 | Module de lot · étiquettes : une carte `echanger` avec `ami` renseigné reçoit l'étiquette de cet ami et celle de son statut ; une autre carte (hors `a-trier`, favori et `defausser`) reçoit seulement l'étiquette de son statut. Une carte qui porte déjà une étiquette de statut de l'extension pour un ancien statut reçoit une action de retrait de l'ancienne. Aucune action ne vise une étiquette absente du registre des étiquettes créées par l'extension. | unitaire |
 | SC-008 | `collection.html` · ouvrir l'aperçu · chaque action du lot est listée avec carte (rareté et titre), type d'action et détail (nom de l'étiquette, prix de départ et valeur marchande, ou « défausse »), avec le total par type ; le rappel du risque (règles § 3, CGU § 6) est visible au-dessus du bouton « Lancer ». Tant que « Lancer » n'est pas activé, **0** requête vers le site n'est émise. | e2e (site simulé) |
 | SC-009 | `collection.html` · pendant l'exécution, à chaque défausse · une confirmation propre à la carte (rareté, titre, quantité) s'affiche ; sans « Défausser cette carte », aucune requête de défausse n'est émise ; « Passer » saute la carte et l'inscrit au journal comme « passée ». Seuil : 0 requête de défausse sans confirmation. | e2e (site simulé) |
-| SC-010 | Module d'exécution · cadence : l'intervalle entre le début de deux requêtes d'action consécutives est **fixe**, égal à 6 000 ms (± 50 ms de tolérance d'horloge), et aucune fenêtre glissante de 60 s ne contient plus de 10 requêtes d'action. L'attente d'une confirmation de défausse ne raccourcit jamais l'intervalle. Le code ne contient aucun tirage aléatoire dans le calcul des délais. | unitaire (horloge simulée) + lint/grep |
+| SC-010 | Module d'exécution · cadence : l'intervalle entre le début de deux requêtes d'action consécutives est au moins de 200 ms, plus un supplément aléatoire de 0 à 100 ms tiré hors du module (source injectée), sans fenêtre glissante ni plafond par minute (avenant du 2026-11-12). | unitaire (horloge simulée) + lint/grep |
 | SC-011 | Module d'exécution · erreurs : à la 3e action en échec d'un même lot, l'exécution s'arrête et aucune requête suivante n'est émise. Une réponse 401, 403 ou 429, ou une réponse dont la forme ne correspond pas au contrat, arrête l'exécution dès la première occurrence. Le journal indique la cause de l'arrêt. | unitaire |
 | SC-012 | `collection.html` · cliquer « Arrêter » (ou Échap quand le focus est dans la zone d'exécution) · aucune nouvelle requête n'est émise après le clic ; une requête déjà partie peut aboutir et est journalisée. Seuil : 0 requête émise plus de 100 ms après le clic. | e2e (site simulé) |
 | SC-013 | Exécution interrompue (onglet WikiMasters fermé ou rechargé, service worker endormi, extension rechargée) · l'exécution ne reprend jamais seule ; le journal porte une entrée « interrompue » et les actions restantes ne sont pas émises. | e2e (site simulé) |
@@ -101,11 +101,11 @@ Décision prise par Alexis le 2026-11-07, en réponse aux questions du premier p
 - Pas d'automatisation d'autres actions de jeu (paquets, parties, échanges, enchères sur les cartes des autres, achats).
 - Pas d'annulation d'enchère ni de récupération de défausse par l'extension.
 - Pas d'exécution planifiée, en arrière-plan ou sans onglet WikiMasters ouvert.
-- Pas de plafond par session (choix d'Alexis) ; seul le plafond par minute et l'arrêt sur erreur limitent un lot.
+- Pas de plafond par session (choix d'Alexis) ; seul l'arrêt sur erreur limite un lot (plus de plafond par minute depuis le 2026-11-12).
 
 ## Visuels
 
-Variante retenue : `specs/synchro-complete/wireframes/variante-1.html` (aperçu du lot dans `collection.html`), avec ces écarts : plus de plafond de session, cadence affichée « 10 actions par minute », arrêt après 3 erreurs, bouton « Arrêter » pendant l'exécution, mention « Non annulable par l’extension » au journal. Les variantes 2 (panneau sur le site, clic par clic) et 3 (assistance sans clic) ne sont pas retenues.
+Variante retenue : `specs/synchro-complete/wireframes/variante-1.html` (aperçu du lot dans `collection.html`), avec ces écarts : plus de plafond de session, cadence affichée « 0,2 s + 0 à 0,1 s », arrêt après 3 erreurs, bouton « Arrêter » pendant l'exécution, mention « Non annulable par l’extension » au journal. Les variantes 2 (panneau sur le site, clic par clic) et 3 (assistance sans clic) ne sont pas retenues.
 
 ```
 collection.html › Synchronisation avec WikiMasters
@@ -121,7 +121,7 @@ collection.html › Synchronisation avec WikiMasters
 │ [C] Titre        │ Étiquette « Ami · Léa »│ thème d’un ami   │
 │ [C] Titre        │ Défausser              │ confirmation 1/1 │
 │ … 2 ventes en attente d’une place libre (5 / 5)              │
-│ Cadence fixe : 10 actions par minute · arrêt après 3 erreurs │
+│ Cadence : 0,2 s + 0 à 0,1 s · arrêt après 3 erreurs │
 │ [ Lancer les 12 actions ]  [ Annuler ]                       │
 ├──────────────────────────────────────────────────────────────┤
 │ En cours : 4 / 12 · 0 erreur        [ Arrêter ]  (aria-live) │
@@ -161,7 +161,7 @@ stateDiagram-v2
   [*] --> Apercu
   Apercu --> EnCours : Lancer
   Apercu --> [*] : Annuler
-  EnCours --> Attente : intervalle fixe de 6 s
+  EnCours --> Attente : intervalle de 0,2 s plus gigue
   Attente --> EnCours : action suivante
   EnCours --> ConfirmationDefausse : action = défausse
   ConfirmationDefausse --> EnCours : Défausser / Passer
@@ -187,3 +187,17 @@ stateDiagram-v2
 - H10 — Pas de case à cocher supplémentaire d'acceptation du risque : la décision écrite en section 0 suffit, le rappel reste affiché au-dessus de « Lancer ».
 - H11 — Le journal garde les 1 000 dernières entrées et peut être vidé par l'utilisateur ; il n'est pas inclus dans l'export JSON.
 - H12 — Les fixtures de test suivent la forme réelle décrite dans `contrat-api.md`, sans aucune donnée tirée de `captures-site/` (ni pseudo, ni identifiant réel, ni jeton).
+
+## Avenant du 2026-11-12 : cadence actuelle
+
+Décisions d’Alexis du 2026-11-12, déjà livrées (PR #72 à #76) ; `AGENTS.md` prime sur tout texte de ce document. Les passages historiques de ce document (revues `R-13`, `R-48`, hypothèse `H28`, etc.) qui parlent de 6 s, de 10 par minute ou de « cadence fixe » sont **remplacés** par ce qui suit.
+
+- **Cadence** : 0,2 s au minimum entre deux débuts de requête (`INTERVALLE_MS`) plus un supplément aléatoire de 0 à 0,1 s (`SUPPLEMENT_MAX_MS`, `GIGUE_MAX_MS`), tiré hors de `file.ts` (source injectée) ; **aucun plafond par minute** ni par session. Le délai n’est donc plus « fixe » et le code contient un tirage aléatoire (injecté). SC-010 se lit : début de requête ≥ max(début précédent + 0,2 s + supplément, réponse précédente), sans fenêtre glissante de 60 s.
+- **Parallélisme** : poses et retraits d’étiquettes en parallèle par défaut, 3 en vol (`CONCURRENCE_MAX` = 4 en plafond ; 4 ordres en attente au plus côté page, chacun avec un identifiant de corrélation dans le protocole page ↔ content script). Les débuts de requête restent espacés de 0,2 s plus la gigue. Création d’étiquettes, enchères, défausses et lectures : une seule requête en vol.
+- **Arrêts** : 401, 403, 429 (et 409 sur enchère ou défausse) et 3 échecs arrêtent le lot ; pause de 30 min. En parallèle, un arrêt bloque tout nouveau départ, les requêtes en vol vont à leur terme (le seuil de 3 échecs peut être dépassé de 2 au plus).
+- **Bail** : un lot d’écriture prend le bail de la synchro automatique pour toute sa durée, et ne démarre pas si la synchro tourne (et inversement), pour ne pas additionner les débits.
+- **Relance** : le bouton « Relancer la synchro » (spec `synchro-auto`) n’est proposé qu’après un arrêt manuel ou un 403.
+- **Durée estimée** (SC-008, H28) : nombre de requêtes × 0,25 s en moyenne (`SECONDES_PAR_REQUETE`), arrondi à la minute supérieure (`dureeMinutesApercu`).
+- **Défausse** : plafond de valeur marchande de 5 (`PLAFOND_VALEUR_DEFAUSSE`, décision du 2026-11-11), jamais dépassé même sur décision manuelle. La confirmation individuelle de chaque défausse (SC-009, G2, D-xx du dialogue) est supprimée sur demande d’Alexis le 2026-11-12 (PR #79, T-906) ; la réécriture détaillée de ces passages suit cette PR.
+- **Cartes en vente** : une carte `en-vente` ne reçoit aucune étiquette (ni création, ni pose, ni retrait), le site refusant la pose (403) ; elle est écartée avec la raison « en vente sur le site » (PR #71). « Statut · En vente » n’est donc plus posée par l’extension, ce qui remplace H17 et les lignes qui disent qu’elle est posée au lot suivant.
+- **Étiquettes préexistantes** : la suppression d’étiquettes du compte non posées par l’extension (action `suppression-etiquette`, `POST /rest/v1/rpc/delete_tag`) est décidée par Alexis le 2026-11-12 (PR #77) : uniquement sur étiquettes cochées une à une puis confirmées, même file, mêmes arrêts et même cadence, non parallèle.

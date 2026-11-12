@@ -6,7 +6,7 @@ Vagues : V1 : T-001 [P], T-002 [P], T-003 [P] · V2 : T-004 [P], T-005 [P], T-00
 
 ## Amendements du 2026-11-11 (décisions d'Alexis, PR de la pose des étiquettes)
 
-- **G3** : le jeton ne part que vers `https://www.wiki-masters.com` **et** l'hôte REST de `src/config/synchro.ts` (`jeton.ts`, `reseau.ts` seuls). **G4** : délai variable, 6 s minimum plus 0 à 4 s tirées hors de `file.ts` (T-011 AC8 levé) ; en-têtes : `Content-Type`, `Accept`, `apikey`, `Content-Profile`, `Authorization`, plus `Prefer` pour la création.
+- **G3** : le jeton ne part que vers `https://www.wiki-masters.com` **et** l'hôte REST de `src/config/synchro.ts` (`jeton.ts`, `reseau.ts` seuls). **G4** : délai variable, 0,2 s minimum plus 0 à 0,1 s tirées hors de `file.ts` (T-011 AC8 levé) ; en-têtes : `Content-Type`, `Accept`, `apikey`, `Content-Profile`, `Authorization`, plus `Prefer` pour la création.
 - **T-019** : `fetch` avec `credentials: 'omit'` et `redirect: 'error'` (jeton explicite, aucun cookie), délai de 15 s ; 401, 403, 429 sont classés `echec` avec leur code (la file s'arrête via `CODES_ARRET`), une réponse 2xx hors contrat est `inconnu` (la file s'arrête).
 - **Listes de fichiers étendues** : `src/lib/actions.ts`, `src/lib/messages.ts`, `src/lib/contrat.ts`, `src/lib/registre.ts`, `src/app/Synchronisation.tsx`, `src/content/index.ts`, `src/config/synchro.ts`, `src/lib/jeton.ts`, `src/lib/reseau.ts`, `src/lib/file.ts` (écart assumé : `idEtiquette`, session lue à l'envoi, branchement du délai).
 - **T-018, T-020, T-026** : couverts par `tests/e2e/synchro-ecriture.spec.ts` (site et hôte REST fictifs), voir `retouches.md`.
@@ -21,7 +21,7 @@ Vagues : V1 : T-001 [P], T-002 [P], T-003 [P] · V2 : T-004 [P], T-005 [P], T-00
 - **G1** Aucun test automatisé ne contacte le vrai site. Unitaire : transport, horloge et source de jeton injectés. E2e : `page.route` sert une page fictive et des réponses fictives conformes à `contrat-api.md`, et **bloque (abort) toute autre requête**. Aucune donnée de `captures-site/` ; ce dossier n'est jamais committé (`git check-ignore captures-site/` doit renvoyer le chemin).
 - **G2** Aucune action n'est lancée sans la confirmation prévue : « Lancer » (une validation pour le lot), puis confirmation individuelle de chaque défausse. 0 requête avant « Lancer ».
 - **G3** Le jeton de session n'est lu que dans `src/lib/jeton.ts`, importé seulement par `src/lib/reseau.ts`. Jamais stocké, journalisé, affiché, copié dans `chrome.storage`, ni envoyé hors de `https://www.wiki-masters.com`. `collection.html` et le service worker ne le voient jamais.
-- **G4** Cadence fixe 6 000 ms ; aucun `Math.random`, `crypto.getRandomValues`, `crypto.randomUUID`, aucun délai variable ; aucun en-tête falsifié (jamais `User-Agent`, `Referer`, `Origin`, `Cookie`). En-têtes fixés : `Content-Type`, `Accept` et, si la table du contrat l'exige pour ce type, l'en-tête d'authentification dont la valeur vient de `jeton.ts`.
+- **G4** Cadence 0,2 s plus gigue de 0 à 0,1 s, sans plafond par minute (avenant du 2026-11-12) ; tirage aléatoire injecté, jamais dans `file.ts` ; aucun en-tête falsifié (jamais `User-Agent`, `Referer`, `Origin`, `Cookie`). En-têtes fixés : `Content-Type`, `Accept` et, si la table du contrat l'exige pour ce type, l'en-tête d'authentification dont la valeur vient de `jeton.ts`.
 - **G5** Les inconnues de « Reste à relever » du contrat ne sont jamais devinées : type « non disponible » tant qu'elles ne sont pas relevées.
 - **G6** `click`, `submit`, `requestSubmit`, `dispatchEvent`, `focus` interdits dans le code exécuté sur le site (le piège de focus du dialogue vit dans `src/app/`). Pas de `innerHTML` / `dangerouslySetInnerHTML`. Permission `storage` seule, aucun `host_permissions`. Aucune nouvelle dépendance. `src/styles/tokens.css` et `public/manifest.json` inchangés.
 - **G7** L'exception du jeton (AGENTS.md) vaut dans le content script seulement, sans code injecté dans la page (pas de monde principal, pas de `<script>` inséré), en n'extrayant que la valeur du jeton d'accès (jamais de jeton de rafraîchissement ni d'autre cookie).
@@ -310,7 +310,7 @@ Contrôles : aucun fichier n'apparaît dans deux tâches d'une même vague (vér
   - `tests/unit/file.test.ts` (créé)
 - **Critères d'acceptation**
   1. Dépendances **injectées** : `horloge` (now + attente à échéance absolue), `transport(ordre) → ResultatAction`, `confirmer(action) → 'defausser' | 'passer' | 'arreter'`, `reverifier(action) → 'ok' | 'passee'`, `appliquer(action, resultat)`, `journal` (ouvrir/compléter). Aucune dépendance à `chrome.*`, `fetch`, `jeton.ts`, `reseau.ts`.
-  2. Cadence : début de requête = max(début précédent + 6 000 ms, réponse précédente, confirmation). Réponse et confirmation rapides → intervalle 6 000 ms (± 50), jamais < 5 950 ms ; au plus 10 requêtes dans toute fenêtre de 60 s ; action passée ou arrêtée faute de jeton n’avance pas la date.
+  2. Cadence : début de requête = max(début précédent + 200 ms + supplément de 0 à 100 ms, réponse précédente). Réponse rapide → intervalle d’au moins 200 ms ; aucune fenêtre de 60 s ; action passée ou arrêtée faute de jeton n’avance pas la date.
   3. Une seule requête en vol ; une seule exécution (`demarrer` refusé tant qu’une exécution est en cours).
   4. Arrêt : 3e échec cumulé (passées exclues) ; première occurrence de 401, 403, 429, forme hors contrat, redirection, délai de 30 s, erreur réseau, échec d’écriture, jeton absent ; arrêt manuel (aucune requête émise plus de 100 ms après `arreter()`) ; résultat « inconnu » ne modifie pas l’état local.
   5. Ajout en fin de file possible pendant l’exécution (retraits du journal).
@@ -318,7 +318,7 @@ Contrôles : aucun fichier n'apparaît dans deux tâches d'une même vague (vér
   7. Défausse : `confirmer` est appelé avant toute requête de défausse ; « passer » → journal « passée », aucune requête ; « arreter » → fin comme un arrêt manuel.
   8. Aucun `Math.random` / `crypto.*` aléatoire ni délai variable (le lint de T-003 le vérifie).
 - **Tests attendus**
-  - `tests/unit/file.test.ts` (horloge simulée) : intervalle exact (AC2), cas réponse lente, fenêtre de 60 s, passées sans effet de cadence, 3 échecs, chaque cas d’arrêt immédiat (AC4), arrêt manuel < 100 ms, 2e `demarrer` refusé (AC3), ajout en fin de file (AC5), revérification (AC6), défausse sans confirmation = 0 requête (AC7).
+  - `tests/unit/file.test.ts` (horloge simulée) : intervalle exact (AC2), cas réponse lente, passées sans effet de cadence, 3 échecs, chaque cas d’arrêt immédiat (AC4), arrêt manuel < 100 ms, 2e `demarrer` refusé (AC3), ajout en fin de file (AC5), revérification (AC6), défausse sans confirmation = 0 requête (AC7).
 - **Brief de contexte**
   - *Pourquoi* : cœur du rythme et des arrêts ; cadence fixe, aucune simulation de comportement humain (G4).
   - *État actuel* : `journal.ts` (T-006) fournit ouvrir/compléter. `actions.ts` fournit `ResultatAction`.
@@ -688,3 +688,17 @@ Contrôles : aucun fichier n'apparaît dans deux tâches d'une même vague (vér
   - *Contrats* : G1 à G4. `captures-site/` jamais lu ni committé ; contrôle `security-reviewer` des fixtures.
   - *Pièges* : minuteurs ; deux onglets pour le cas « plusieurs onglets » ; ne jamais cibler le vrai site.
   - *Vérifier* : `npm run test:e2e`
+
+## Avenant du 2026-11-12 : cadence actuelle
+
+Décisions d’Alexis du 2026-11-12, déjà livrées (PR #72 à #76) ; `AGENTS.md` prime sur tout texte de ce document. Les passages historiques de ce document (revues `R-13`, `R-48`, hypothèse `H28`, etc.) qui parlent de 6 s, de 10 par minute ou de « cadence fixe » sont **remplacés** par ce qui suit.
+
+- **Cadence** : 0,2 s au minimum entre deux débuts de requête (`INTERVALLE_MS`) plus un supplément aléatoire de 0 à 0,1 s (`SUPPLEMENT_MAX_MS`, `GIGUE_MAX_MS`), tiré hors de `file.ts` (source injectée) ; **aucun plafond par minute** ni par session. Le délai n’est donc plus « fixe » et le code contient un tirage aléatoire (injecté). SC-010 se lit : début de requête ≥ max(début précédent + 0,2 s + supplément, réponse précédente), sans fenêtre glissante de 60 s.
+- **Parallélisme** : poses et retraits d’étiquettes en parallèle par défaut, 3 en vol (`CONCURRENCE_MAX` = 4 en plafond ; 4 ordres en attente au plus côté page, chacun avec un identifiant de corrélation dans le protocole page ↔ content script). Les débuts de requête restent espacés de 0,2 s plus la gigue. Création d’étiquettes, enchères, défausses et lectures : une seule requête en vol.
+- **Arrêts** : 401, 403, 429 (et 409 sur enchère ou défausse) et 3 échecs arrêtent le lot ; pause de 30 min. En parallèle, un arrêt bloque tout nouveau départ, les requêtes en vol vont à leur terme (le seuil de 3 échecs peut être dépassé de 2 au plus).
+- **Bail** : un lot d’écriture prend le bail de la synchro automatique pour toute sa durée, et ne démarre pas si la synchro tourne (et inversement), pour ne pas additionner les débits.
+- **Relance** : le bouton « Relancer la synchro » (spec `synchro-auto`) n’est proposé qu’après un arrêt manuel ou un 403.
+- **Durée estimée** (SC-008, H28) : nombre de requêtes × 0,25 s en moyenne (`SECONDES_PAR_REQUETE`), arrondi à la minute supérieure (`dureeMinutesApercu`).
+- **Défausse** : plafond de valeur marchande de 5 (`PLAFOND_VALEUR_DEFAUSSE`, décision du 2026-11-11), jamais dépassé même sur décision manuelle. La confirmation individuelle de chaque défausse (SC-009, G2, D-xx du dialogue) est supprimée sur demande d’Alexis le 2026-11-12 (PR #79, T-906) ; la réécriture détaillée de ces passages suit cette PR.
+- **Cartes en vente** : une carte `en-vente` ne reçoit aucune étiquette (ni création, ni pose, ni retrait), le site refusant la pose (403) ; elle est écartée avec la raison « en vente sur le site » (PR #71). « Statut · En vente » n’est donc plus posée par l’extension, ce qui remplace H17 et les lignes qui disent qu’elle est posée au lot suivant.
+- **Étiquettes préexistantes** : la suppression d’étiquettes du compte non posées par l’extension (action `suppression-etiquette`, `POST /rest/v1/rpc/delete_tag`) est décidée par Alexis le 2026-11-12 (PR #77) : uniquement sur étiquettes cochées une à une puis confirmées, même file, mêmes arrêts et même cadence, non parallèle.
