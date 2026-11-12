@@ -99,3 +99,11 @@ Carte « Primaire présidentielle socialiste française de 2026 » : création d
 
 - Parallélisme (PR « poses et retraits en parallèle », 2026-11-12) : les specs `synchro-complete` et `synchro-auto` décrivent encore une seule requête en vol, 6 s et 10 par minute ; à aligner dans une PR de documents de l’orchestrateur.
 - Bail de la synchro (`src/app/Synchronisation.tsx` `lancerLot`, `src/lib/ordonnanceur.ts`) : lecture puis écriture non atomiques entre contextes, sans identifiant de détenteur ; deux démarrages dans la même boucle d’évènements peuvent s’additionner (rare). À reprendre : relire le bail après écriture avec un identifiant.
+
+## À reprendre — PR #77 (suppression d’étiquettes préexistantes)
+
+- `src/content/synchroAuto.ts:257` : si le stockage rejette la liste lue, le repli enregistre `[]` ; préférable d’effacer la clé pour que l’interface affiche « pas encore lue ».
+- `src/content/synchroAuto.ts:253-258` : pas de test unitaire de `noterEtiquettesSite` (appel depuis `stats` et repli).
+- `src/app/Synchronisation.tsx:605-610` et `:430-431` : une suppression apparaît sous le texte « etiquettes » (`ID_CARTE_ETIQUETTES`) dans le journal ; prévoir le libellé « Étiquettes du compte ».
+- `src/app/EtiquettesPreexistantes.tsx` : pas de test e2e ni de captures aux 3 tailles.
+- `src/lib/revision.ts:89` : après une suppression, les `etiquettesSite` des cartes gardent le nom supprimé jusqu’à la prochaine synchro.
