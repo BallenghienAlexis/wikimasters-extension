@@ -46,11 +46,19 @@ export interface MessageBonjour {
 export interface MessageOrdre {
   message: 'ordre'
   ordre: Action
+  /** Numéro de corrélation (entier) : le résultat le reprend, ce qui permet plusieurs ordres en attente. */
+  id?: number
 }
 export interface MessageResultat {
   message: 'resultat'
   resultat: ResultatAction
+  id?: number
 }
+
+/** Plus grand numéro de corrélation admis. */
+export const ID_MAX = 2_147_483_647
+
+const idValide = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= ID_MAX
 export interface MessageArret {
   message: 'arret'
 }
@@ -62,12 +70,23 @@ export function messageBonjour(): MessageBonjour {
   return { message: 'bonjour' }
 }
 
-export function messageOrdre(ordre: Action): MessageOrdre {
-  return { message: 'ordre', ordre }
+export function messageOrdre(ordre: Action, id?: number): MessageOrdre {
+  return id === undefined ? { message: 'ordre', ordre } : { message: 'ordre', ordre, id }
 }
 
-export function messageResultat(resultat: ResultatAction): MessageResultat {
-  return { message: 'resultat', resultat }
+export function messageResultat(resultat: ResultatAction, id?: number): MessageResultat {
+  return id === undefined ? { message: 'resultat', resultat } : { message: 'resultat', resultat, id }
+}
+
+/** Numéro de corrélation d’un message `ordre` ou `resultat` : `null` si absent ou invalide. */
+export function idDeMessage(brut: unknown): number | null {
+  const enveloppe = enObjet(brut)
+  return enveloppe && idValide(enveloppe.id) ? enveloppe.id : null
+}
+
+/** Clés attendues d’une enveloppe : le numéro de corrélation est facultatif mais, s’il est là, valide. */
+function clesAvecId(enveloppe: Brut, base: readonly string[]): boolean {
+  return 'id' in enveloppe ? idValide(enveloppe.id) && cles(enveloppe, [...base, 'id']) : cles(enveloppe, base)
 }
 
 export function messageArret(): MessageArret {
@@ -102,7 +121,7 @@ export function validerSignal(brut: unknown): 'bonjour' | 'arret' | null {
 /** Valide un ordre : enveloppe `{ message: 'ordre', ordre }`. Renvoie l’action ou `null`. */
 export function validerOrdre(brut: unknown): Action | null {
   const enveloppe = enObjet(brut)
-  if (!enveloppe || !cles(enveloppe, ['message', 'ordre']) || enveloppe.message !== 'ordre') return null
+  if (!enveloppe || !clesAvecId(enveloppe, ['message', 'ordre']) || enveloppe.message !== 'ordre') return null
   const ordre = enObjet(enveloppe.ordre)
   if (!ordre) return null
   const type = ordre.type
@@ -148,7 +167,7 @@ export function validerOrdre(brut: unknown): Action | null {
 /** Valide un résultat : enveloppe `{ message: 'resultat', resultat }`. Renvoie le résultat ou `null`. */
 export function validerResultat(brut: unknown): ResultatAction | null {
   const enveloppe = enObjet(brut)
-  if (!enveloppe || !cles(enveloppe, ['message', 'resultat']) || enveloppe.message !== 'resultat') return null
+  if (!enveloppe || !clesAvecId(enveloppe, ['message', 'resultat']) || enveloppe.message !== 'resultat') return null
   const resultat = enObjet(enveloppe.resultat)
   const avecId = resultat !== null && 'idEtiquette' in resultat
   if (!resultat || !cles(resultat, ['classe', 'codeHttp', 'cause', ...(avecId ? ['idEtiquette'] : [])])) return null

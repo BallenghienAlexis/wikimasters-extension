@@ -595,3 +595,139 @@ describe('cadence unique pour toutes les actions (2026-11-12)', () => {
     expect(b.departs.slice(1).map((d, n) => d - b.departs[n]!)).toEqual([200, 200])
   })
 })
+
+describe('parallélisme (poses et retraits, décision du 2026-11-12)', () => {
+  it('lance jusqu’à 3 poses en vol en même temps, départs espacés d’au moins 200 ms', async () => {
+    let enVol = 0;
+    let maxVol = 0;
+    const b = banc({ concurrence: 3 });
+    const echeances: number[] = [];
+    const attendre = b.horloge.attendreJusqua;
+    b.horloge.attendreJusqua = (e: number) => {
+      echeances.push(e);
+      return attendre(e);
+    };
+    const base = b.deps.transport;
+    b.deps.transport = async (a) => {
+      enVol++;
+      maxVol = Math.max(maxVol, enVol);
+      await Promise.resolve();
+      await Promise.resolve();
+      const r = await base(a);
+      enVol--;
+      return r;
+    };
+    const f = creerFile(b.deps);
+    await f.demarrer([pose(1), pose(2), pose(3), pose(4), pose(5)], 'lot');
+    expect(b.requetes).toHaveLength(5);
+    expect(maxVol).toBeLessThanOrEqual(3);
+    const tries = [...echeances].sort((x, y) => x - y);
+    for (let i = 1; i < tries.length; i++) expect(tries[i]! - tries[i - 1]!).toBeGreaterThanOrEqual(200);
+  });
+
+  it('sans concurrence, une seule requête en vol', async () => {
+    let enVol = 0;
+    let maxVol = 0;
+    const b = banc();
+    const base = b.deps.transport;
+    b.deps.transport = async (a) => {
+      enVol++;
+      maxVol = Math.max(maxVol, enVol);
+      await Promise.resolve();
+      const r = await base(a);
+      enVol--;
+      return r;
+    };
+    await creerFile(b.deps).demarrer([pose(1), pose(2), pose(3)], 'lot');
+    expect(maxVol).toBe(1);
+  });
+
+  it('une défausse n’est jamais lancée en parallèle', async () => {
+    let enVol = 0;
+    let maxVol = 0;
+    const b = banc({ concurrence: 3 });
+    const base = b.deps.transport;
+    b.deps.transport = async (a) => {
+      enVol++;
+      maxVol = Math.max(maxVol, enVol);
+      await Promise.resolve();
+      const r = await base(a);
+      enVol--;
+      return r;
+    };
+    await creerFile(b.deps).demarrer([defausse(1), defausse(2), defausse(3)], 'lot');
+    expect(maxVol).toBe(1);
+  });
+
+  it('un arrêt (429) dans un lot parallèle arrête la file : aucune requête ensuite', async () => {
+    const b = banc({ concurrence: 3 }, (n) => (n === 2 ? arret(429) : OK));
+    const f = creerFile(b.deps);
+    await f.demarrer([pose(1), pose(2), pose(3), pose(4), pose(5), pose(6)], 'lot').catch(() => undefined);
+    expect(b.requetes.length).toBeLessThanOrEqual(3);
+    expect(f.etat()?.etat).not.toBe('terminee');
+  });
+
+  it('garde 200 ms entre deux envois réels même si le journal retarde un départ', async () => {
+    const b = banc({ concurrence: 3 });
+    const ouvrir = b.deps.journal.ouvrir;
+    let n = 0;
+    b.deps.journal.ouvrir = async (a) => {
+      if (n++ === 0) b.horloge.t += 300;
+      return ouvrir(a);
+    };
+    const envois: number[] = [];
+    const base = b.deps.transport;
+    b.deps.transport = (a) => {
+      envois.push(b.horloge.now());
+      return base(a);
+    };
+    await creerFile(b.deps).demarrer([pose(1), pose(2), pose(3)], 'lot');
+    expect(envois).toHaveLength(3);
+    for (let i = 1; i < envois.length; i++) expect(envois[i]! - envois[i - 1]!).toBeGreaterThanOrEqual(200);
+  });
+
+  it('avec une horloge réelle et une réponse lente, plusieurs requêtes sont en vol en même temps (3 au plus)', async () => {
+    let enVol = 0;
+    let maxVol = 0;
+    const b = banc({
+      concurrence: 3,
+      horloge: {
+        now: () => Date.now(),
+        attendreJusqua: (e: number) => new Promise<void>((r) => setTimeout(r, Math.max(0, e - Date.now()))),
+      },
+      delaiSupplementaire: () => 0,
+    });
+    b.deps.transport = async () => {
+      enVol++;
+      maxVol = Math.max(maxVol, enVol);
+      await new Promise((r) => setTimeout(r, 450));
+      enVol--;
+      return OK;
+    };
+    await creerFile(b.deps).demarrer([pose(1), pose(2), pose(3), pose(4)], 'lot');
+    expect(maxVol).toBeGreaterThan(1);
+    expect(maxVol).toBeLessThanOrEqual(3);
+  });
+
+  it.each([401, 403, 429])('un %i en parallèle : un ordre dont le journal s’écrit encore n’est pas envoyé', async (code) => {
+    const b = banc({ concurrence: 3 }, (n) => (n === 1 ? arret(code) : OK));
+    const ouvrir = b.deps.journal.ouvrir;
+    b.deps.journal.ouvrir = async (a) => {
+      await new Promise((r) => setTimeout(r, 5));
+      return ouvrir(a);
+    };
+    const f = creerFile(b.deps);
+    await f.demarrer([pose(1), pose(2), pose(3)], 'lot');
+    expect(b.requetes).toHaveLength(1);
+    expect(f.etat()).toMatchObject({ etat: 'arretee', raison: 'resultat' });
+    expect(b.journal.some((j) => j.startsWith('passer:'))).toBe(true);
+  });
+
+  it('3 échecs en parallèle arrêtent la file avec la raison « echecs »', async () => {
+    const b = banc({ concurrence: 3 }, () => echec());
+    const f = creerFile(b.deps);
+    await f.demarrer([pose(1), pose(2), pose(3), pose(4), pose(5), pose(6)], 'lot');
+    expect(b.requetes).toHaveLength(3);
+    expect(f.etat()).toMatchObject({ etat: 'arretee', raison: 'echecs' });
+  });
+});
