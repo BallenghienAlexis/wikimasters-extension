@@ -417,9 +417,9 @@ describe('revérification tardive', () => {
       modifiee = true;
       return attendre(e);
     };
-    await creerFile(b.deps).demarrer([defausse(1)], 'lot-1');
-    expect(b.requetes).toHaveLength(0);
-    expect(b.journal).toEqual(['ouvrir:e1:defausse', 'passer:e1']);
+    await creerFile(b.deps).demarrer([lecture(1), defausse(2)], 'lot-1');
+    expect(b.requetes.map((x) => x.type)).toEqual(['lecture']);
+    expect(b.journal.slice(-2)).toEqual(['ouvrir:e2:defausse', 'passer:e2']);
   });
 
   it('carte modifiée pendant l’attente de cadence : aucune requête pour elle', async () => {
