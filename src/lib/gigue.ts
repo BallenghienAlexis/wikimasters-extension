@@ -5,7 +5,7 @@
  * restent inchangés : la gigue ne fait qu’allonger l’attente, jamais la raccourcir.
  * La source d’aléa est injectée dans la file et l’ordonnanceur, qui restent purs et testables.
  */
-export const GIGUE_MAX_MS = 6000;
+export const GIGUE_MAX_MS = 500;
 
 /** Millisecondes supplémentaires, entre 0 (inclus) et `GIGUE_MAX_MS` (exclu). */
 export const gigueAleatoire = (): number => Math.floor(Math.random() * GIGUE_MAX_MS);

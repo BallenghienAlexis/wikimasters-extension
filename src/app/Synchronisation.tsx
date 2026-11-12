@@ -36,8 +36,8 @@ import { avecIdEtiquette } from '../lib/registre';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
 import Journal, { type CoupleRetrait } from './Journal';
 
-/** Secondes par écriture d’étiquette en moyenne : 2 s minimales plus un supplément de 0 à 1,5 s (moyenne 0,75 s). */
-const SECONDES_PAR_ACTION = 3;
+/** Secondes par action en moyenne : 1 s minimale plus un supplément de 0 à 0,5 s (moyenne 0,25 s). */
+const SECONDES_PAR_ACTION = 1.25;
 /** Nombre maximal de lignes d’actions affichées (SC-025). */
 const LIGNES_MAX = 100;
 /** Au-delà, les cartes écartées sont regroupées par raison. */
@@ -46,7 +46,7 @@ const ECARTEES_MAX = 50;
 /** Espace insécable : typographie française avant « : » (D-40). */
 const NB = ' ';
 
-export const CADENCE_TEXTE = `Cadence variable${NB}: 2 à 3,5 s entre deux étiquettes (6 à 10 s pour une enchère ou une défausse), 30 par minute au plus pour les étiquettes, 10 pour une enchère ou une défausse · arrêt après 3 erreurs`;
+export const CADENCE_TEXTE = `Cadence variable${NB}: 1 à 1,5 s entre deux actions, 60 par minute au plus · arrêt après 3 erreurs`;
 
 const RAISONS: Record<RaisonEcart, string> = {
   'non-reliee': 'non reliée au site',
@@ -120,8 +120,8 @@ export function texteTotaux(t: Totaux): string {
   return parts.join(' · ');
 }
 
-/** Secondes par enchère ou défausse en moyenne : 6 s minimales plus un supplément de 0 à 4 s (moyenne 2 s). */
-const SECONDES_PAR_ACTION_LENTE = 8;
+/** Idem pour une enchère ou une défausse (cadence unique depuis le 2026-11-12). */
+const SECONDES_PAR_ACTION_LENTE = 1.25;
 
 /** `nbLentes` : part du lot faite d’enchères et de défausses, comptée à la cadence lente. */
 export const dureeMinutes = (nbRequetes: number, nbLentes = 0): number =>

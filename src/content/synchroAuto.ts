@@ -4,7 +4,7 @@
 // par les cookies de même origine du navigateur ; aucun en-tête ajouté, aucun jeton ni cookie lu.
 // Le plan de lecture, la cadence et les arrêts sont dans `src/lib/ordonnanceur.ts`.
 import { VERSION_SCHEMA, type Carte, type Collection } from '../lib/collection';
-import type { Horloge } from '../lib/file';
+import { INTERVALLE_MS, MAX_PAR_FENETRE, type Horloge } from '../lib/file';
 import { DUREE_BAIL_MS, PAUSE_APRES_ARRET_MS, etatInitial, synchroniser, type Bail, type EtatOrdonnanceur, type ReponseApi, type ResultatSynchro } from '../lib/ordonnanceur';
 import {
   chargerBailSynchro,
@@ -173,9 +173,9 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
       bailPris = true;
       // Cadence commune : 6 s après la dernière requête de l’état, 10 au plus par minute.
       const recentes = etatAvant.requetes.filter((t) => maintenant - t < 60_000);
-      if (recentes.length >= 10) return;
+      if (recentes.length >= MAX_PAR_FENETRE) return;
       const derniere = etatAvant.requetes.reduce((m, t) => Math.max(m, t), 0);
-      await deps.horloge.attendreJusqua(Math.max(deps.horloge.now(), derniere + 6_000));
+      await deps.horloge.attendreJusqua(Math.max(deps.horloge.now(), derniere + INTERVALLE_MS));
       if (arretDemande) return;
       const debut = deps.horloge.now();
       const reponse = await deps.transport(route);

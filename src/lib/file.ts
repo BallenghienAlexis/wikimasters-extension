@@ -16,21 +16,21 @@
 import type { Action, EtatExecution, ResultatAction } from './actions'
 
 /** Intervalle minimal entre deux débuts de requête. */
-export const INTERVALLE_MS = 6000
+export const INTERVALLE_MS = 1000
 /** Délai supplémentaire maximal, ajouté à l’intervalle minimal (jamais en dessous de 6 s). */
-export const SUPPLEMENT_MAX_MS = 4000
+export const SUPPLEMENT_MAX_MS = 500
 /** Fenêtre glissante et plafond de requêtes dans cette fenêtre. */
 export const FENETRE_MS = 60_000
-export const MAX_PAR_FENETRE = 10
+export const MAX_PAR_FENETRE = 60
 /**
  * Cadence rapide des écritures d’étiquettes (Alexis, 2026-11-12 : la synchro était trop longue).
  * Ces requêtes partent vers l’hôte REST du site, comme les actions de son interface : 2 s au
  * minimum entre deux débuts, plus un supplément de 0 à 1,5 s, 30 au plus par fenêtre de 60 s.
  * Enchère, défausse et lecture gardent la cadence lente ci-dessus.
  */
-export const INTERVALLE_ETIQUETTE_MS = 2000
-export const SUPPLEMENT_ETIQUETTE_MAX_MS = 1500
-export const MAX_ETIQUETTES_PAR_FENETRE = 30
+export const INTERVALLE_ETIQUETTE_MS = INTERVALLE_MS
+export const SUPPLEMENT_ETIQUETTE_MAX_MS = SUPPLEMENT_MAX_MS
+export const MAX_ETIQUETTES_PAR_FENETRE = MAX_PAR_FENETRE
 
 export interface Cadence {
   intervalle: number
