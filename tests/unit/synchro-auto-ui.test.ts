@@ -194,8 +194,16 @@ describe('T-206 : garde-fous du fichier', () => {
 describe('bouton « Relancer la synchro »', () => {
   const arret = (surcharge: Partial<StatutSynchro> = {}) => statut({ etat: 'arret', ...surcharge });
 
-  it('proposé après un arrêt manuel, un refus du site (403, 401, 429) ou des échecs', () => {
-    for (const s of [arret({ raison: 'manuel' }), arret({ raison: 'code-http', codeHttp: 403 }), arret({ raison: 'code-http', codeHttp: 429 }), arret({ raison: 'echecs' })]) {
+  it('après un 401 ou un 429, pas de bouton : la pause de 30 min est gardée', () => {
+    for (const code of [401, 429]) {
+      const html = rendre({ actif: true, statut: arret({ raison: 'code-http', codeHttp: code }) });
+      expect(html).not.toContain('Relancer la synchro');
+      expect(html).toContain('Reprise automatique après');
+    }
+  });
+
+  it('proposé après un arrêt manuel, un refus 403 ou des échecs', () => {
+    for (const s of [arret({ raison: 'manuel' }), arret({ raison: 'code-http', codeHttp: 403 }), arret({ raison: 'echecs' })]) {
       const html = rendre({ actif: true, statut: s });
       expect(html).toContain('Relancer la synchro');
       expect(html).toMatch(/<button[^>]*type="button"[^>]*>Relancer la synchro/);

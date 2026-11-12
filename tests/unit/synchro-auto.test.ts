@@ -6,6 +6,7 @@ import type { StatutSynchro } from '../../src/lib/stockage';
 import { preferencesParDefaut } from '../../src/lib/tri';
 import {
   DELAI_SYNCHRO_MS,
+  DELAI_RELANCE_MS,
   creerSynchroAuto,
   ecrireEvenementJournal,
   type EvenementSynchro,
@@ -309,6 +310,17 @@ describe('relance explicite du joueur', () => {
     expect(r?.issue).toBe('arret');
     expect(b.chemins).toHaveLength(1);
     expect(b.stockage.etat?.arretJusqua).toBe(b.horloge.t + 30 * MIN);
+  });
+
+  it('deux relances à moins d’une minute : la seconde est ignorée', async () => {
+    const b = banc({ reponse: () => ({ statut: 403, json: null }) });
+    const synchro = creerSynchroAuto(b.deps);
+    expect((await synchro.relancer())?.issue).toBe('arret');
+    expect(await synchro.relancer()).toBeNull();
+    expect(b.chemins).toHaveLength(1);
+    b.horloge.t += DELAI_RELANCE_MS;
+    expect((await synchro.relancer())?.issue).toBe('arret');
+    expect(b.chemins).toHaveLength(2);
   });
 
   it('relancer() pendant une synchro en cours ne démarre rien de plus', async () => {

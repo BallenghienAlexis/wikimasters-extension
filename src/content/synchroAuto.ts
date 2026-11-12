@@ -40,6 +40,8 @@ import { proposerTri, type Preferences } from '../lib/tri';
 /** Délai minimal entre deux synchronisations, et période du minuteur tant que l'onglet est visible. */
 export const DELAI_SYNCHRO_MS = 30 * 60_000;
 const MAX_ECHECS_RELEVE = 3;
+/** Délai minimal entre deux relances demandées par le joueur. */
+export const DELAI_RELANCE_MS = 60_000;
 
 export interface DependancesSynchroAuto {
   horloge: Horloge;
@@ -157,6 +159,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
   let enCours = false;
   let arretDemande = false;
   let dernierEssai: number | null = null;
+  let derniereRelance: number | null = null;
 
   /**
    * Une requête `GET` vers le listing du marché, seulement après une synchro terminée, hors pause, bail pris,
@@ -305,7 +308,12 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
 
   return {
     declencher: () => declencher(),
-    relancer: () => declencher(true),
+    relancer: async () => {
+      const maintenant = deps.horloge.now();
+      if (derniereRelance !== null && maintenant - derniereRelance < DELAI_RELANCE_MS) return null;
+      derniereRelance = maintenant;
+      return declencher(true);
+    },
     arreter: () => {
       arretDemande = true;
     },
