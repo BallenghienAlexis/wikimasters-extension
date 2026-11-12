@@ -620,3 +620,12 @@ describe('cadence rapide des étiquettes (Alexis, 2026-11-12)', () => {
     expect(b.departs.slice(1).map((d, n) => d - b.departs[n]!)).toEqual([6000, 6000])
   })
 })
+
+describe('supplément après une étiquette, avant une enchère', () => {
+  it('garde le tirage maximal de 4 s pour l’enchère qui suit une pose', async () => {
+    const e = (n: number): Action => ({ type: 'enchere', idCarte: `Rare|Carte ${n}`, idExemplaire: 'x', prix: 5 })
+    const b = banc({ delaiSupplementaire: () => 99_999 })
+    await creerFile(b.deps).demarrer([pose(1), e(2)], 'lot-1')
+    expect(b.departs[1]! - b.departs[0]!).toBe(10_000)
+  })
+})

@@ -12,7 +12,7 @@ import type {
 } from '../lib/actions';
 import type { Carte, Collection } from '../lib/collection';
 import { typesDisponibles } from '../lib/contrat';
-import { CODES_ARRET, CODE_CONFLIT, cadenceDe, creerFile, type Decision, type EtatFile, type File as FileLot, type RaisonArret } from '../lib/file';
+import { CODES_ARRET, CODE_CONFLIT, SUPPLEMENT_MAX_MS, creerFile, type Decision, type EtatFile, type File as FileLot, type RaisonArret } from '../lib/file';
 import { regrouperEtiquettes, type ApercuEtiquettes } from '../lib/apercuEtiquettes';
 import { completerEntree, ouvrirEntree, passerEntree } from '../lib/journal';
 import { construireLot, type Config, type EtiquetteObsolete, type LotConstruit } from '../lib/lot';
@@ -120,9 +120,15 @@ export function texteTotaux(t: Totaux): string {
   return parts.join(' · ');
 }
 
-export const dureeMinutes = (nbRequetes: number): number => Math.ceil((nbRequetes * SECONDES_PAR_ACTION) / 60);
+/** Secondes par enchère ou défausse en moyenne : 6 s minimales plus un supplément de 0 à 4 s (moyenne 2 s). */
+const SECONDES_PAR_ACTION_LENTE = 8;
 
-export const texteDuree = (nbRequetes: number): string => `Durée estimée${NB}: ${dureeMinutes(nbRequetes)} min`;
+/** `nbLentes` : part du lot faite d’enchères et de défausses, comptée à la cadence lente. */
+export const dureeMinutes = (nbRequetes: number, nbLentes = 0): number =>
+  Math.ceil(((nbRequetes - nbLentes) * SECONDES_PAR_ACTION + nbLentes * SECONDES_PAR_ACTION_LENTE) / 60);
+
+export const texteDuree = (nbRequetes: number, nbLentes = 0): string =>
+  `Durée estimée${NB}: ${dureeMinutes(nbRequetes, nbLentes)} min`;
 
 export function separerDisponibles(
   actions: readonly Action[],
@@ -417,7 +423,7 @@ function contexteExecution(): ContexteExecution {
   const file = creerFile({
     horloge: horlogeReelle,
     // Délai variable entre les requêtes (décision d’Alexis du 2026-11-11), en plus des 6 s minimales.
-    delaiSupplementaire: (action) => Math.floor(Math.random() * (cadenceDe(action).supplementMax + 1)),
+    delaiSupplementaire: () => Math.floor(Math.random() * (SUPPLEMENT_MAX_MS + 1)),
     transport: async (ordre) => {
       if (ordre.type !== 'pose-etiquette' && ordre.type !== 'retrait-etiquette') return execution.transport(ordre);
       // L’identifiant d’étiquette du site vient du registre, au moment d’envoyer (la création précède la pose).
@@ -983,7 +989,7 @@ const Synchronisation: React.FC<Props> = ({
             ) : (
               <>
                 <p className="mt-2 text-sm">{texteTotaux(totauxParType(separes.disponibles))}</p>
-                <p className="mt-1 text-sm">{texteDuree(n)}</p>
+                <p className="mt-1 text-sm">{texteDuree(n, totauxParType(separes.disponibles).encheres + totauxParType(separes.disponibles).defausses)}</p>
 
                 <div
                   aria-hidden="true"

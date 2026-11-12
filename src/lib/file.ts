@@ -150,6 +150,7 @@ export function creerFile(deps: DependancesFile): File {
   let supplement = 0
   /** Cadence de la dernière requête émise : la pause qui suit est celle de la plus lente des deux actions. */
   let dernierIntervalle = INTERVALLE_MS
+  let dernierSupplementMax = SUPPLEMENT_MAX_MS
 
   function tirerSupplement(action: Action): number {
     if (!delaiSupplementaire) return 0
@@ -159,7 +160,7 @@ export function creerFile(deps: DependancesFile): File {
     } catch {
       return 0
     }
-    return Number.isFinite(v) ? Math.min(cadenceDe(action).supplementMax, Math.max(0, Math.floor(v))) : 0
+    return Number.isFinite(v) ? Math.min(SUPPLEMENT_MAX_MS, Math.max(0, Math.floor(v))) : 0
   }
 
   const publier = (): void => {
@@ -199,9 +200,9 @@ export function creerFile(deps: DependancesFile): File {
 
   /** Date de début autorisée : cadence de 6 s plus supplément, réponse précédente, confirmation, fenêtre de 60 s. */
   function debutAutorise(plancher: number, action: Action): number {
-    const { intervalle, maxParFenetre } = cadenceDe(action)
+    const { intervalle, maxParFenetre, supplementMax } = cadenceDe(action)
     // Entre deux actions de cadences différentes, la plus lente s’applique (jamais plus rapide qu’avant).
-    let debut = Math.max(dernierDebut + Math.max(intervalle, dernierIntervalle) + supplement, derniereReponse, plancher)
+    let debut = Math.max(dernierDebut + Math.max(intervalle, dernierIntervalle) + Math.min(supplement, Math.max(supplementMax, dernierSupplementMax)), derniereReponse, plancher)
     const recents = debuts.filter((d) => d > debut - FENETRE_MS)
     if (recents.length >= maxParFenetre) {
       debut = Math.max(debut, recents[recents.length - maxParFenetre]! + FENETRE_MS)
@@ -252,6 +253,7 @@ export function creerFile(deps: DependancesFile): File {
       dernierDebut = debut
       supplement = tirerSupplement(action)
       dernierIntervalle = cadenceDe(action).intervalle
+      dernierSupplementMax = cadenceDe(action).supplementMax
       derniereReponse = horloge.now()
       debuts.push(debut)
       if (debuts.length > MAX_ETIQUETTES_PAR_FENETRE * 2) debuts.splice(0, debuts.length - MAX_ETIQUETTES_PAR_FENETRE * 2)
