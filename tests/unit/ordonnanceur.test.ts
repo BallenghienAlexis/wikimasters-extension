@@ -423,6 +423,24 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.etat.requetes.length).toBeLessThanOrEqual(20);
   });
 
+  it('relance explicite (forcer) : passe outre la pause de 30 min, mais un nouvel arrêt rouvre la pause', async () => {
+    const b = banc((chemin, n) => (n === 2 ? { statut: 403, json: null } : siteFictif(10)(chemin)));
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.etat.arretJusqua).not.toBeNull();
+    const b2 = banc(siteFictif(10), r.collection, r.etat);
+    b2.horloge.t = r.etat.arretJusqua! - 60_000;
+    const r2 = await synchroniser({ ...b2.deps, maxPrix: 0, forcer: true });
+    expect(r2.issue).toBe('termine');
+    expect(b2.departs.length).toBeGreaterThan(0);
+    // Le site refuse encore : arrêt immédiat et nouvelle pause.
+    const b3 = banc(() => ({ statut: 429, json: null }), r.collection, r.etat);
+    b3.horloge.t = r.etat.arretJusqua! - 60_000;
+    const r3 = await synchroniser({ ...b3.deps, forcer: true });
+    expect(r3.issue).toBe('arret');
+    expect(b3.departs).toHaveLength(1);
+    expect(r3.etat.arretJusqua).toBe(b3.horloge.t + PAUSE_APRES_ARRET_MS);
+  });
+
   it.each([401, 403, 429])('arrêt immédiat sur %i, sans reprise avant 30 min', async (code) => {
     const b = banc((chemin, n) => (n === 2 ? { statut: code, json: null } : siteFictif(10)(chemin)));
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });

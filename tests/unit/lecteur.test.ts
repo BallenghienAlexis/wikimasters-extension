@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyserFenetreEnchere, analyserTexteCarte, identifiantCarte, regrouperCartes } from '../../src/lib/lecteur';
+import { analyserFenetreEnchere, analyserTexteCarte, delaiRelecture, descriptionProvisoire, identifiantCarte, regrouperCartes } from '../../src/lib/lecteur';
 
 const AJOUTER = 'Ajouter aux favoris (verrouille la carte : ni défausse, ni vente, ni échange)';
 const RETIRER = 'Retirer des favoris (déverrouille la carte)';
@@ -94,5 +94,26 @@ describe('regrouperCartes', () => {
     expect(carte).not.toHaveProperty('statut');
     expect(carte).not.toHaveProperty('prixCible');
     expect(carte).not.toHaveProperty('note');
+  });
+});
+
+describe('descriptionProvisoire', () => {
+  it('repère une description vide ou tronquée', () => {
+    expect(descriptionProvisoire('')).toBe(true);
+    expect(descriptionProvisoire('Un grand barrage…')).toBe(true);
+    expect(descriptionProvisoire('Un grand barrage...')).toBe(true);
+    expect(descriptionProvisoire('Un grand barrage.')).toBe(false);
+  });
+});
+
+describe('delaiRelecture', () => {
+  const paliers = [1000, 2500, 5000];
+  it('suit les paliers puis s’arrête', () => {
+    expect(delaiRelecture(['Complète.', 'Courte…'], 0, paliers)).toBe(1000);
+    expect(delaiRelecture(['Courte…'], 2, paliers)).toBe(5000);
+    expect(delaiRelecture(['Courte…'], 3, paliers)).toBeNull();
+  });
+  it('ne relit pas quand toutes les descriptions sont complètes', () => {
+    expect(delaiRelecture(['Complète.'], 0, paliers)).toBeNull();
   });
 });

@@ -164,7 +164,8 @@ test.describe('synchronisation automatique sur site fictif', () => {
       },
     });
     const site = await ouvrirSite(context, { [CHEMIN_STATS]: { corps: STATS }, [CHEMIN_PAGE(0)]: { corps: PAGE_0 } });
-    await expect.poll(() => site.api.length, { intervals: [250] }).toBe(1);
+    // Avec 0,2 s entre deux requêtes, les trois GET partent en moins d'une demi-seconde : on attend le premier, la suite exacte est vérifiée ci-dessous.
+    await expect.poll(() => site.api.length, { intervals: [250] }).toBeGreaterThanOrEqual(1);
     await site.page.waitForTimeout(PLUS_QU_UNE_CADENCE_MS);
     // Synchro terminée, puis un GET vers marketplace/mine (délai variable), puis un seul GET vers le listing du marché, jamais de page ni de prix.
     await expect.poll(() => chemins(site.api), { timeout: 45_000, intervals: [250] }).toEqual([CHEMIN_STATS, CHEMIN_VENTES, CHEMIN_MARCHE]);

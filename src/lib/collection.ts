@@ -188,8 +188,20 @@ export function analyserStockage(brut: unknown): ResultatStockage {
   };
 }
 
+const sansPoints = (texte: string): string => texte.replace(/\s*(…|\.{3})\s*$/, '').trim();
+
+/** Le site charge la description en deux temps (courte, puis complète) : une lecture vide ou tronquée n'efface pas la complète. */
+export function meilleureDescription(actuelle: string, lue: string | undefined): string {
+  if (lue === undefined) return actuelle;
+  if (lue === '') return actuelle;
+  if (actuelle === '') return lue;
+  const debut = sansPoints(lue);
+  if (actuelle.length > lue.length && actuelle.startsWith(debut)) return actuelle;
+  return lue;
+}
+
 // Les données du jeu viennent de l'import ; l'édition locale existante est gardée
-// sauf si le fichier en fournit une. Les cartes absentes du fichier restent en place.
+// sauf si le fichier en fournit une ; une description vide ou tronquée n'efface pas la complète. Les cartes absentes du fichier restent en place.
 export function fusionnerImport(collection: Collection, importees: CarteImportee[]): Collection {
   const parId = new Map(collection.cartes.map((c) => [c.id, c]));
   for (const importee of importees) {
@@ -198,7 +210,6 @@ export function fusionnerImport(collection: Collection, importees: CarteImportee
       favori: existante?.favori ?? false,
       idsSite: existante?.idsSite ?? null,
       etiquettesSite: existante?.etiquettesSite ?? [],
-      description: existante?.description ?? '',
       ami: existante?.ami ?? null,
       decidePar: existante?.decidePar ?? null,
       valeurMarchande: existante?.valeurMarchande ?? null,
@@ -206,6 +217,7 @@ export function fusionnerImport(collection: Collection, importees: CarteImportee
       prixCible: existante?.prixCible ?? null,
       note: existante?.note ?? '',
       ...importee,
+      description: meilleureDescription(existante?.description ?? '', importee.description),
       // Une lecture du site ne connaît pas l'URL : elle n'efface pas celle d'un import.
       url: importee.url ?? existante?.url ?? null,
     });
