@@ -99,3 +99,12 @@ Carte « Primaire présidentielle socialiste française de 2026 » : création d
 
 - Parallélisme (PR « poses et retraits en parallèle », 2026-11-12) : les specs `synchro-complete` et `synchro-auto` décrivent encore une seule requête en vol, 6 s et 10 par minute ; à aligner dans une PR de documents de l’orchestrateur.
 - Bail de la synchro (`src/app/Synchronisation.tsx` `lancerLot`, `src/lib/ordonnanceur.ts`) : lecture puis écriture non atomiques entre contextes, sans identifiant de détenteur ; deux démarrages dans la même boucle d’évènements peuvent s’additionner (rare). À reprendre : relire le bail après écriture avec un identifiant.
+
+## À reprendre (suppression de la confirmation de défausse, 2026-11-12, T-906)
+
+Un amendement daté est en tête de `spec.md`, `spec.refined.md`, `design.md` et `plan.md`. Les passages suivants décrivent encore la confirmation par carte et sont à réécrire par l'agent spec ou l'orchestrateur :
+- `spec.refined.md` : G2 (l.42), l.52, SC-009 (l.91), SC-010 (l.92), SC-021 (l.103), diagramme d'états (l.223-227), H3 (l.243).
+- `spec.md` : l.34, 40, 50, 76 (SC-009), 77 (SC-010), 88 (SC-021).
+- `design.md` : D-24 à D-27 et D-43 (l.58-59, 97-100, 179, 186) à marquer retirés.
+- `plan.md` : l.12, 36, 75 (état « attente de confirmation », `DialogueDefausse`, cadence).
+- Ajouter T-906 au suivi de `synchro-complete` (`tasks.md`, `STATUS.md`).

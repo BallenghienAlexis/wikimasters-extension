@@ -1,5 +1,7 @@
 # Design — Synchronisation complète (aperçu du lot, exécution, défausse, journal)
 
+
+> **Amendement du 2026-11-12 (décision d’Alexis)** : « les lots sont correctement vendus, par contre pour les défausses il demande confirmation à chaque carte, enlève-la » (message d’Alexis dans le fil « Supprimer la confirmation à chaque défausse »). **Plus aucune confirmation avant une défausse** : ce qui précède sur la confirmation par carte (G2, H3, SC-009, SC-010, SC-021, diagramme d’états, D-24 à D-27 et D-43 du design, calcul de cadence du plan) est **retiré**. Garde-fous conservés : un seul « Lancer » après l’aperçu, plafond de valeur (5) même pour une décision manuelle, revérification avant l’envoi, arrêts sur 401, 403, 429, 409 et après 3 échecs. Risque rappelé et assumé : une défausse est définitive (aucune annulation) et le risque de bannissement demeure. Le détail des passages à réécrire est dans `retouches.md` § « À reprendre ».
 Contrat visuel. Chaque règle a un identifiant `D-xx` cité par les tâches, la revue et la vérification.
 
 Sources : `spec.refined.md` (SC-008, 009, 012, 016, 020, 021 surtout), wireframe retenu `wireframes/variante-1.html` avec les écarts listés dans la spec (§ Visuels), `src/styles/tokens.css`, `src/app/FileVente.tsx` (conventions existantes : `rounded border border-line bg-ink-2 p-4`, `min-h-11`, titre `h2 font-semibold`).

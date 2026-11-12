@@ -1,5 +1,7 @@
 # Spec — Synchronisation complète : étiquettes, enchères et défausse appliquées sur le site
 
+
+> **Amendement du 2026-11-12 (décision d’Alexis)** : « les lots sont correctement vendus, par contre pour les défausses il demande confirmation à chaque carte, enlève-la » (message d’Alexis dans le fil « Supprimer la confirmation à chaque défausse »). **Plus aucune confirmation avant une défausse** : ce qui précède sur la confirmation par carte (G2, H3, SC-009, SC-010, SC-021, diagramme d’états, D-24 à D-27 et D-43 du design, calcul de cadence du plan) est **retiré**. Garde-fous conservés : un seul « Lancer » après l’aperçu, plafond de valeur (5) même pour une décision manuelle, revérification avant l’envoi, arrêts sur 401, 403, 429, 409 et après 3 échecs. Risque rappelé et assumé : une défausse est définitive (aucune annulation) et le risque de bannissement demeure. Le détail des passages à réécrire est dans `retouches.md` § « À reprendre ».
 - **Feature** : `synchro-complete` · **Auteur** : agent spec · **Date** : 2026-11-07
 - **Besoin d'origine** : « Synchronisation complète entre WikiMasters et l'extension : étiquettes (tags), mise en vente aux enchères et défausse des cartes, appliquées sur le site à partir des décisions de l'extension. »
 - **Validation** : voir `STATUS.md` (gate humain). Cette spec n'est pas validée tant qu'Alexis ne l'a pas écrit dans `STATUS.md`.

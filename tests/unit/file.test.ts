@@ -408,6 +408,20 @@ describe('revérification (AC6)', () => {
 });
 
 describe('revérification tardive', () => {
+  it('défausse modifiée pendant l’attente de cadence : aucune requête', async () => {
+    const b = banc();
+    let modifiee = false;
+    b.deps.reverifier = () => (modifiee ? 'passee' : 'ok');
+    const attendre = b.horloge.attendreJusqua;
+    b.horloge.attendreJusqua = (e) => {
+      modifiee = true;
+      return attendre(e);
+    };
+    await creerFile(b.deps).demarrer([defausse(1)], 'lot-1');
+    expect(b.requetes).toHaveLength(0);
+    expect(b.journal).toEqual(['ouvrir:e1:defausse', 'passer:e1']);
+  });
+
   it('carte modifiée pendant l’attente de cadence : aucune requête pour elle', async () => {
     const b = banc();
     let modifiee = false;
