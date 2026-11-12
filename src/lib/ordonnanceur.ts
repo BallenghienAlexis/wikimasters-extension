@@ -237,7 +237,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
 
   async function requete(chemin: string, tolerant = false): Promise<ReponseApi | null> {
     if (deps.arretDemande?.()) throw new Interruption('manuel', null);
-    // Cadence : 6 s depuis la dernière requête, 10 au plus par fenêtre de 60 s (budget commun).
+    // Cadence : 1 s depuis la dernière requête, 60 au plus par fenêtre de 60 s (budget commun).
     const t = horloge.now();
     const recentes = etat.requetes.filter((x) => x > t - FENETRE_MS);
     const derniere = recentes.at(-1);

@@ -120,15 +120,10 @@ export function texteTotaux(t: Totaux): string {
   return parts.join(' · ');
 }
 
-/** Idem pour une enchère ou une défausse (cadence unique depuis le 2026-11-12). */
-const SECONDES_PAR_ACTION_LENTE = 1.25;
 
-/** `nbLentes` : part du lot faite d’enchères et de défausses, comptée à la cadence lente. */
-export const dureeMinutes = (nbRequetes: number, nbLentes = 0): number =>
-  Math.ceil(((nbRequetes - nbLentes) * SECONDES_PAR_ACTION + nbLentes * SECONDES_PAR_ACTION_LENTE) / 60);
+export const dureeMinutes = (nbRequetes: number): number => Math.ceil((nbRequetes * SECONDES_PAR_ACTION) / 60);
 
-export const texteDuree = (nbRequetes: number, nbLentes = 0): string =>
-  `Durée estimée${NB}: ${dureeMinutes(nbRequetes, nbLentes)} min`;
+export const texteDuree = (nbRequetes: number): string => `Durée estimée${NB}: ${dureeMinutes(nbRequetes)} min`;
 
 export function separerDisponibles(
   actions: readonly Action[],
@@ -422,7 +417,7 @@ function contexteExecution(): ContexteExecution {
     (await chargerCollection()).cartes.find((c) => c.id === idCarte)?.titre ?? idCarte;
   const file = creerFile({
     horloge: horlogeReelle,
-    // Délai variable entre les requêtes (décision d’Alexis du 2026-11-11), en plus des 6 s minimales.
+    // Délai variable entre les requêtes (décision d’Alexis du 2026-11-11), en plus de la seconde minimale.
     delaiSupplementaire: () => Math.floor(Math.random() * (SUPPLEMENT_MAX_MS + 1)),
     transport: async (ordre) => {
       if (ordre.type !== 'pose-etiquette' && ordre.type !== 'retrait-etiquette') return execution.transport(ordre);
@@ -989,7 +984,7 @@ const Synchronisation: React.FC<Props> = ({
             ) : (
               <>
                 <p className="mt-2 text-sm">{texteTotaux(totauxParType(separes.disponibles))}</p>
-                <p className="mt-1 text-sm">{texteDuree(n, totauxParType(separes.disponibles).encheres + totauxParType(separes.disponibles).defausses)}</p>
+                <p className="mt-1 text-sm">{texteDuree(n)}</p>
 
                 <div
                   aria-hidden="true"
