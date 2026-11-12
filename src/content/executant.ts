@@ -2,7 +2,7 @@
 // Les ordres ne viennent QUE de ce port : aucun écouteur sur la page du site, qui est hostile.
 // Par défaut, aucune requête n'est émise : `emettre` renvoie « action non disponible ».
 import type { Action, ResultatAction } from '../lib/actions';
-import { NOM_PORT, messageBonjour, messageResultat, validerOrdre } from '../lib/messages';
+import { NOM_PORT, idDeMessage, messageBonjour, messageResultat, validerOrdre } from '../lib/messages';
 import { CLES_STOCKAGE } from '../lib/stockage';
 
 export type Emettre = (ordre: Action) => Promise<ResultatAction>;
@@ -25,6 +25,7 @@ export function demarrerExecutant(options: OptionsExecutant = {}): () => void {
   const traiter = (courant: chrome.runtime.Port, brut: unknown): void => {
     const ordre = validerOrdre(brut);
     if (ordre === null) return;
+    const id = idDeMessage(brut) ?? undefined;
     void (async () => {
       let resultat: ResultatAction;
       try {
@@ -34,7 +35,7 @@ export function demarrerExecutant(options: OptionsExecutant = {}): () => void {
         resultat = { classe: 'inconnu', codeHttp: null, cause: CAUSE_ERREUR };
       }
       try {
-        courant.postMessage(messageResultat(resultat));
+        courant.postMessage(messageResultat(resultat, id));
       } catch {
         // Port fermé entre-temps : la page a déjà conclu à l'interruption.
       }

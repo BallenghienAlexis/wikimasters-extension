@@ -12,6 +12,7 @@ import type {
 } from '../lib/actions';
 import type { Carte, Collection } from '../lib/collection';
 import { typesDisponibles } from '../lib/contrat';
+import { DUREE_BAIL_MS } from '../lib/ordonnanceur';
 import { CODES_ARRET, CODE_CONFLIT, SUPPLEMENT_MAX_MS, creerFile, type Decision, type EtatFile, type File as FileLot, type RaisonArret } from '../lib/file';
 import { regrouperEtiquettes, type ApercuEtiquettes } from '../lib/apercuEtiquettes';
 import { completerEntree, ouvrirEntree, passerEntree } from '../lib/journal';
@@ -20,11 +21,13 @@ import { appliquerResultat, reverifierAction } from '../lib/revision';
 import {
   chargerCollection,
   chargerExecution,
+  chargerBailSynchro,
   chargerJournal,
   chargerPreferences,
   chargerEtatSynchro,
   chargerRegistre,
   enregistrerCollection,
+  enregistrerBailSynchro,
   enregistrerExecution,
   enregistrerJournal,
   enregistrerRegistre,
@@ -354,12 +357,18 @@ const TITRE_INTERROMPU = 'Lot interrompu';
 const SUITE_INTERROMPU = `${NB}: la page ou l’onglet a été fermé ou rechargé. L’exécution ne reprend pas toute seule.`;
 export const texteInterrompu = (): string => `${TITRE_INTERROMPU}${SUITE_INTERROMPU}`;
 
+/** Poses et retraits en vol en même temps. */
+const CONCURRENCE_PAR_DEFAUT = 3;
+
+const SYNCHRO_EN_COURS = 'La synchronisation automatique est en cours : réessaie quand elle est terminée.';
+
 /** Message affiché au lancement : libellé fixe de l’extension, jamais un texte venu d’ailleurs (D-41). */
 const ERREURS_LANCEMENT = new Set([
   'Une exécution est déjà en cours.',
   'Une exécution est déjà en cours dans un autre onglet.',
   'Un seul onglet WikiMasters est requis.',
   'Onglet WikiMasters déconnecté.',
+  SYNCHRO_EN_COURS,
 ]);
 
 export function libelleErreurLancement(e: unknown): string {
@@ -418,6 +427,8 @@ function contexteExecution(): ContexteExecution {
     horloge: horlogeReelle,
     // Délai variable entre les requêtes (décision d’Alexis du 2026-11-11), en plus de la seconde minimale.
     delaiSupplementaire: () => Math.floor(Math.random() * (SUPPLEMENT_MAX_MS + 1)),
+    // Poses et retraits d’étiquettes en parallèle, par défaut (Alexis, 2026-11-12).
+    concurrence: CONCURRENCE_PAR_DEFAUT,
     transport: async (ordre) => {
       if (ordre.type !== 'pose-etiquette' && ordre.type !== 'retrait-etiquette') return execution.transport(ordre);
       // L’identifiant d’étiquette du site vient du registre, au moment d’envoyer (la création précède la pose).
@@ -482,6 +493,21 @@ async function lancerLot(actions: readonly Action[], idLot: string): Promise<voi
   ctx.pont.idLot = idLot;
   ctx.pont.bilan = bilanVide();
   ctx.pont.deconnecte = false;
+  // Une seule source de débit à la fois : le lot prend le bail de la synchro automatique (qui ne démarre pas tant qu’il est tenu).
+  const bailTenu = await chargerBailSynchro();
+  if (bailTenu !== null && bailTenu > Date.now()) throw new Error(SYNCHRO_EN_COURS);
+  await enregistrerBailSynchro(Date.now() + DUREE_BAIL_MS);
+  // Le bail expire au bout de 2 min : il est renouvelé tant que le lot tourne.
+  const renouvellement = setInterval(() => void enregistrerBailSynchro(Date.now() + DUREE_BAIL_MS).catch(() => undefined), DUREE_BAIL_MS / 4);
+  try {
+    await executerLot(ctx, actions, idLot);
+  } finally {
+    clearInterval(renouvellement);
+    await enregistrerBailSynchro(null).catch(() => undefined);
+  }
+}
+
+async function executerLot(ctx: ContexteExecution, actions: readonly Action[], idLot: string): Promise<void> {
   await ctx.execution.demarrer(async (interruption) => {
     const arreter = (): void => {
       ctx.pont.deconnecte = true;
