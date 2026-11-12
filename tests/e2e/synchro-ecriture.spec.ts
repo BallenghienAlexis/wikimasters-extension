@@ -162,7 +162,7 @@ test('401 sur la création : arrêt immédiat, une seule requête, aucune autre 
   await page.getByRole('button', { name: /^Lancer/ }).click();
   await expect.poll(() => banc.rest.length, { timeout: 20_000 }).toBe(1);
   await expect(page.getByTestId('zone-execution')).toContainText(/Lot arrêté.*réponse 401/, { timeout: 20_000 });
-  // Plus longtemps que le plus long écart possible (6 s + 4 s) : aucune seconde tentative.
+  // Plus longtemps que le plus long écart possible (1 s + 0,5 s) : aucune seconde tentative.
   await page.waitForTimeout(11_000);
   expect(banc.rest).toHaveLength(1);
   expect(await toutLeStockage(page)).not.toContain(JETON_TEMOIN);
