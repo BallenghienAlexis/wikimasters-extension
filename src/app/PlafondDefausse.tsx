@@ -43,7 +43,7 @@ const PlafondDefausse: React.FC<Props> = ({ plafond, onChange }) => {
           }}
         />
       </label>
-      <p id="aide-plafond" role="status" className="mt-2 text-sm">
+      <p id="aide-plafond" aria-live="polite" className="mt-2 text-sm">
         {!valide
           ? `Saisissez un entier de ${PLAFOND_DEFAUSSE_MIN} à ${PLAFOND_DEFAUSSE_MAX} : le plafond enregistré reste ${plafond}.`
           : valeur > PLAFOND_VALEUR_DEFAUSSE
