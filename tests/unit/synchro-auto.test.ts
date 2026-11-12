@@ -583,6 +583,7 @@ describe('relevé d’affluence du marché', () => {
     avecReleve(b);
     b.stockage.etat = { ...etatInitial(), requetes: Array.from({ length: 30 }, (_, i) => i + 1) };
     await creerSynchroAuto(b.deps).declencher();
+    expect(b.chemins).toContain(ROUTE);
     expect((b.stockage.etat?.requetes ?? []).length).toBeLessThanOrEqual(20);
   });
 
