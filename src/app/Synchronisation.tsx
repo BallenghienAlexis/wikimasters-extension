@@ -12,7 +12,7 @@ import type {
 } from '../lib/actions';
 import type { Carte, Collection } from '../lib/collection';
 import { typesDisponibles } from '../lib/contrat';
-import { CODES_ARRET, CODE_CONFLIT, SUPPLEMENT_MAX_MS, creerFile, type Decision, type EtatFile, type File as FileLot, type RaisonArret } from '../lib/file';
+import { CODES_ARRET, CODE_CONFLIT, cadenceDe, creerFile, type Decision, type EtatFile, type File as FileLot, type RaisonArret } from '../lib/file';
 import { regrouperEtiquettes, type ApercuEtiquettes } from '../lib/apercuEtiquettes';
 import { completerEntree, ouvrirEntree, passerEntree } from '../lib/journal';
 import { construireLot, type Config, type EtiquetteObsolete, type LotConstruit } from '../lib/lot';
@@ -36,8 +36,8 @@ import { avecIdEtiquette } from '../lib/registre';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
 import Journal, { type CoupleRetrait } from './Journal';
 
-/** Secondes entre deux requêtes en moyenne : 6 s minimales plus une gigue de 0 à 6 s (moyenne 3 s). */
-const SECONDES_PAR_ACTION = 9;
+/** Secondes par écriture d’étiquette en moyenne : 2 s minimales plus un supplément de 0 à 1,5 s (moyenne 0,75 s). */
+const SECONDES_PAR_ACTION = 3;
 /** Nombre maximal de lignes d’actions affichées (SC-025). */
 const LIGNES_MAX = 100;
 /** Au-delà, les cartes écartées sont regroupées par raison. */
@@ -46,7 +46,7 @@ const ECARTEES_MAX = 50;
 /** Espace insécable : typographie française avant « : » (D-40). */
 const NB = ' ';
 
-export const CADENCE_TEXTE = `Cadence variable${NB}: 6 à 12 s entre deux actions, 10 par minute au plus · arrêt après 3 erreurs`;
+export const CADENCE_TEXTE = `Cadence variable${NB}: 2 à 3,5 s entre deux étiquettes (6 à 10 s pour une enchère ou une défausse), 30 par minute au plus · arrêt après 3 erreurs`;
 
 const RAISONS: Record<RaisonEcart, string> = {
   'non-reliee': 'non reliée au site',
@@ -417,7 +417,7 @@ function contexteExecution(): ContexteExecution {
   const file = creerFile({
     horloge: horlogeReelle,
     // Délai variable entre les requêtes (décision d’Alexis du 2026-11-11), en plus des 6 s minimales.
-    delaiSupplementaire: () => Math.floor(Math.random() * (SUPPLEMENT_MAX_MS + 1)),
+    delaiSupplementaire: (action) => Math.floor(Math.random() * (cadenceDe(action).supplementMax + 1)),
     transport: async (ordre) => {
       if (ordre.type !== 'pose-etiquette' && ordre.type !== 'retrait-etiquette') return execution.transport(ordre);
       // L’identifiant d’étiquette du site vient du registre, au moment d’envoyer (la création précède la pose).

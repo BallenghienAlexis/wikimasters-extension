@@ -597,3 +597,26 @@ describe('état observable', () => {
     expect(vus).toEqual([0, 1, 2, 2]);
   });
 });
+
+describe('cadence rapide des étiquettes (Alexis, 2026-11-12)', () => {
+  it('espace les poses de 2 s au minimum plus un supplément borné à 1,5 s', async () => {
+    const tirages = [0, 1000, 99_999]
+    let i = 0
+    const b = banc({ delaiSupplementaire: () => tirages[i++ % tirages.length]! })
+    await creerFile(b.deps).demarrer([pose(1), pose(2), pose(3), pose(4)], 'lot-1')
+    expect(b.departs.slice(1).map((d, n) => d - b.departs[n]!)).toEqual([2000, 3000, 3500])
+  })
+
+  it('garde au plus 30 écritures d’étiquettes par fenêtre de 60 s', async () => {
+    const b = banc({ delaiSupplementaire: () => 0 })
+    await creerFile(b.deps).demarrer(Array.from({ length: 70 }, (_, n) => pose(n + 1)), 'lot-1')
+    for (let n = 0; n + 30 < b.departs.length; n++) expect(b.departs[n + 30]! - b.departs[n]!).toBeGreaterThanOrEqual(60_000)
+  })
+
+  it('reste lent après ou avant une enchère ou une défausse (jamais plus rapide que l’action la plus lente)', async () => {
+    const e = (n: number): Action => ({ type: 'enchere', idCarte: `Rare|Carte ${n}`, idExemplaire: 'x', prix: 5 })
+    const b = banc({ delaiSupplementaire: () => 0 })
+    await creerFile(b.deps).demarrer([pose(1), e(2), pose(3)], 'lot-1')
+    expect(b.departs.slice(1).map((d, n) => d - b.departs[n]!)).toEqual([6000, 6000])
+  })
+})

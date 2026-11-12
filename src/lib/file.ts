@@ -21,6 +21,32 @@ export const SUPPLEMENT_MAX_MS = 4000
 /** Fenêtre glissante et plafond de requêtes dans cette fenêtre. */
 export const FENETRE_MS = 60_000
 export const MAX_PAR_FENETRE = 10
+/**
+ * Cadence rapide des écritures d’étiquettes (Alexis, 2026-11-12 : la synchro était trop longue).
+ * Ces requêtes partent vers l’hôte REST du site, comme les actions de son interface : 2 s au
+ * minimum entre deux débuts, plus un supplément de 0 à 1,5 s, 30 au plus par fenêtre de 60 s.
+ * Enchère, défausse et lecture gardent la cadence lente ci-dessus.
+ */
+export const INTERVALLE_ETIQUETTE_MS = 2000
+export const SUPPLEMENT_ETIQUETTE_MAX_MS = 1500
+export const MAX_ETIQUETTES_PAR_FENETRE = 30
+
+export interface Cadence {
+  intervalle: number
+  supplementMax: number
+  maxParFenetre: number
+}
+const CADENCE_LENTE: Cadence = { intervalle: INTERVALLE_MS, supplementMax: SUPPLEMENT_MAX_MS, maxParFenetre: MAX_PAR_FENETRE }
+const CADENCE_ETIQUETTE: Cadence = {
+  intervalle: INTERVALLE_ETIQUETTE_MS,
+  supplementMax: SUPPLEMENT_ETIQUETTE_MAX_MS,
+  maxParFenetre: MAX_ETIQUETTES_PAR_FENETRE,
+}
+/** Cadence applicable à une action : rapide pour les seules écritures d’étiquettes. */
+export const cadenceDe = (action: Action): Cadence =>
+  action.type === 'creation-etiquette' || action.type === 'pose-etiquette' || action.type === 'retrait-etiquette'
+    ? CADENCE_ETIQUETTE
+    : CADENCE_LENTE
 /** Nombre d’échecs cumulés (actions passées exclues) qui arrête la file. */
 export const MAX_ECHECS = 3
 /** Codes HTTP qui arrêtent la file dès la première occurrence. */
@@ -67,9 +93,9 @@ export interface DependancesFile {
   journal: JournalFile
   /**
    * Délai supplémentaire (ms) avant la requête suivante, tiré par l'appelant. Borné à
-   * [0, SUPPLEMENT_MAX_MS] et arrondi ; absent ou invalide : 0 (cadence fixe de 6 s).
+   * [0, supplément maximal de la cadence de l'action envoyée] et arrondi ; absent ou invalide : 0.
    */
-  delaiSupplementaire?: () => number
+  delaiSupplementaire?: (action: Action) => number
 }
 
 export type RaisonArret =
@@ -122,16 +148,18 @@ export function creerFile(deps: DependancesFile): File {
   const debuts: number[] = []
   /** Supplément tiré après la dernière requête, appliqué avant la suivante. */
   let supplement = 0
+  /** Cadence de la dernière requête émise : la pause qui suit est celle de la plus lente des deux actions. */
+  let dernierIntervalle = INTERVALLE_MS
 
-  function tirerSupplement(): number {
+  function tirerSupplement(action: Action): number {
     if (!delaiSupplementaire) return 0
     let v: number
     try {
-      v = delaiSupplementaire()
+      v = delaiSupplementaire(action)
     } catch {
       return 0
     }
-    return Number.isFinite(v) ? Math.min(SUPPLEMENT_MAX_MS, Math.max(0, Math.floor(v))) : 0
+    return Number.isFinite(v) ? Math.min(cadenceDe(action).supplementMax, Math.max(0, Math.floor(v))) : 0
   }
 
   const publier = (): void => {
@@ -170,11 +198,13 @@ export function creerFile(deps: DependancesFile): File {
   }
 
   /** Date de début autorisée : cadence de 6 s plus supplément, réponse précédente, confirmation, fenêtre de 60 s. */
-  function debutAutorise(plancher: number): number {
-    let debut = Math.max(dernierDebut + INTERVALLE_MS + supplement, derniereReponse, plancher)
+  function debutAutorise(plancher: number, action: Action): number {
+    const { intervalle, maxParFenetre } = cadenceDe(action)
+    // Entre deux actions de cadences différentes, la plus lente s’applique (jamais plus rapide qu’avant).
+    let debut = Math.max(dernierDebut + Math.max(intervalle, dernierIntervalle) + supplement, derniereReponse, plancher)
     const recents = debuts.filter((d) => d > debut - FENETRE_MS)
-    if (recents.length >= MAX_PAR_FENETRE) {
-      debut = Math.max(debut, recents[recents.length - MAX_PAR_FENETRE]! + FENETRE_MS)
+    if (recents.length >= maxParFenetre) {
+      debut = Math.max(debut, recents[recents.length - maxParFenetre]! + FENETRE_MS)
     }
     return debut
   }
@@ -196,7 +226,7 @@ export function creerFile(deps: DependancesFile): File {
       plancher = horloge.now()
     }
 
-    await attendre(debutAutorise(plancher))
+    await attendre(debutAutorise(plancher, action))
 
     // La carte a pu changer pendant la confirmation ou l’attente : dernière revérification avant l’envoi.
     if ((await verifier(action)) === 'passee') return inscrirePassee(action)
@@ -220,10 +250,11 @@ export function creerFile(deps: DependancesFile): File {
     // Seul l’arrêt « jeton absent » (aucune requête émise) laisse la cadence intacte.
     if (exception || !(resultat.classe === 'arret' && resultat.cause === CAUSE_JETON_ABSENT)) {
       dernierDebut = debut
-      supplement = tirerSupplement()
+      supplement = tirerSupplement(action)
+      dernierIntervalle = cadenceDe(action).intervalle
       derniereReponse = horloge.now()
       debuts.push(debut)
-      if (debuts.length > MAX_PAR_FENETRE * 2) debuts.splice(0, debuts.length - MAX_PAR_FENETRE * 2)
+      if (debuts.length > MAX_ETIQUETTES_PAR_FENETRE * 2) debuts.splice(0, debuts.length - MAX_ETIQUETTES_PAR_FENETRE * 2)
     }
     await journal.completer(id, resultat)
     if (exception) throw new Arret('transport')
