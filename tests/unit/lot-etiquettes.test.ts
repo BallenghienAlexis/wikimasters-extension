@@ -51,8 +51,15 @@ describe('étiquettes attendues (SC-008)', () => {
     expect(attendues(carte('a', CHIEN), config({ amis: AMIS }))).toEqual(attendues(carte('a', CHIEN)))
   })
 
-  it.each(['garder', 'echanger', 'vendre', 'en-vente'] as const)('statut %s : étiqueté', (statut) => {
+  it.each(['garder', 'echanger', 'vendre'] as const)('statut %s : étiqueté', (statut) => {
     expect(attendues(carte('a', { ...CHIEN, statut }))).toContain('#Chien')
+  })
+
+  it('en vente sur le site : aucune étiquette attendue, et aucune place prise dans la limite de noms', () => {
+    expect(attendues(carte('a', { ...CHIEN, statut: 'en-vente' }))).toEqual([])
+    const lot = construireLot(coll(carte('a', { ...CHIEN, statut: 'en-vente' }), carte('b', { ...CHIEN, id: 'b', statut: 'garder', idsSite: ['ex-b'] })), registre(), config({ limiteNoms: 4 }), TOUS)
+    expect(lot.actions.every((a) => a.idCarte === 'b')).toBe(true)
+    expect(lot.actions.length).toBeGreaterThan(0)
   })
 
   it('favori, à trier et à défausser : aucune étiquette ni action de thème ou d’échange', () => {
@@ -272,8 +279,8 @@ describe('retraits (SC-011, SC-022)', () => {
     expect(lot.actions).toEqual([])
   })
 
-  it('retire « #À échanger Léa » quand la carte passe à garder, vendre ou en-vente', () => {
-    for (const statut of ['garder', 'vendre', 'en-vente'] as const) {
+  it('retire « #À échanger Léa » quand la carte passe à garder ou vendre', () => {
+    for (const statut of ['garder', 'vendre'] as const) {
       const c = carte('a', { ...CHIEN, statut })
       const lot = construireLot(coll(c), r(['#À échanger Léa']), config({ amis: AMIS }), TOUS)
       expect(nomsDe(lot.actions, 'retrait-etiquette')).toContain('#À échanger Léa')
