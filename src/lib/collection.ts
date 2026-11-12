@@ -201,7 +201,7 @@ export function meilleureDescription(actuelle: string, lue: string | undefined):
 }
 
 // Les données du jeu viennent de l'import ; l'édition locale existante est gardée
-// sauf si le fichier en fournit une. Les cartes absentes du fichier restent en place.
+// sauf si le fichier en fournit une ; une description vide ou tronquée n'efface pas la complète. Les cartes absentes du fichier restent en place.
 export function fusionnerImport(collection: Collection, importees: CarteImportee[]): Collection {
   const parId = new Map(collection.cartes.map((c) => [c.id, c]));
   for (const importee of importees) {

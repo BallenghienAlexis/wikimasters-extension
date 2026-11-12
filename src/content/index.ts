@@ -1,7 +1,7 @@
 // Content script : lit la page de collection ouverte par le joueur et y affiche ses décisions.
 // Il ne clique sur rien, n'envoie rien et ne change pas de page : le joueur reste aux commandes.
 import { LIBELLES_STATUT, type Carte, type Collection } from '../lib/collection';
-import { descriptionProvisoire, identifiantCarte, lireFenetreEnchere, lirePositionPage, regrouperCartes, trouverCartes } from '../lib/lecteur';
+import { delaiRelecture, identifiantCarte, lireFenetreEnchere, lirePositionPage, regrouperCartes, trouverCartes } from '../lib/lecteur';
 import { chargerCollection, ecouterCollection, enregistrerPage, enregistrerValeur, fusionnerDansStockage } from '../lib/stockage';
 import { progression, texteProgression, type Synchro } from '../lib/synchro';
 import { TABLE_CONTRAT } from '../lib/contrat';
@@ -15,7 +15,7 @@ const DELAI_MS = 400;
 // Le site charge la description en deux temps : on relit quelques fois tant qu'une carte n'a qu'une description courte ou vide.
 const DELAIS_RELECTURE_MS = [1000, 2500, 5000];
 let relectures = 0;
-let minuteurRelecture: ReturnType<typeof setTimeout> | undefined;
+let minuteur: ReturnType<typeof setTimeout> | undefined;
 
 const texteRepere = (carte: Carte): string | null => {
   if (carte.statut === 'a-trier') return null;
@@ -53,11 +53,12 @@ async function lirePage(): Promise<void> {
   if (location.pathname !== '/collection' && !location.pathname.startsWith('/collection/')) return;
   const cartes = trouverCartes(document).map(({ carte }) => carte);
   if (cartes.length > 0) {
-    const delai = DELAIS_RELECTURE_MS[relectures];
-    if (delai !== undefined && cartes.some((c) => descriptionProvisoire(c.description))) {
+    // Une carte sans description est un cas normal : au pire 3 relectures locales (sans requête), puis arrêt.
+    const delai = delaiRelecture(cartes.map((c) => c.description), relectures, DELAIS_RELECTURE_MS);
+    if (delai !== null) {
       relectures += 1;
-      clearTimeout(minuteurRelecture);
-      minuteurRelecture = setTimeout(() => void lirePage().catch(() => undefined), delai);
+      clearTimeout(minuteur);
+      minuteur = setTimeout(() => void lirePage().catch(() => undefined), delai);
     }
     afficherReperes(await fusionnerDansStockage(regrouperCartes(cartes)));
     const position = lirePositionPage(document);
@@ -71,7 +72,6 @@ async function lirePage(): Promise<void> {
 const estRepere = (noeud: Node): boolean =>
   noeud instanceof Element && (noeud.classList.contains(CLASSE_REPERE) || noeud.classList.contains(CLASSE_SYNCHRO));
 
-let minuteur: ReturnType<typeof setTimeout> | undefined;
 const planifierLecture = (): void => {
   clearTimeout(minuteur);
   minuteur = setTimeout(() => void lirePage().catch(() => undefined), DELAI_MS);

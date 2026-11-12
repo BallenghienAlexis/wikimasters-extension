@@ -34,7 +34,7 @@ describe('themesDepuisCategories', () => {
 
 describe('résumé Wikipédia', () => {
   it('complète les catégories par le résumé', () => {
-    expect(themesDepuisCategories([], 'Le Mont Blanc est un massif dominé par le ski et les barrages.')).toContain('barrage');
+    expect(themesDepuisCategories([], 'Serre-Ponçon est un barrage hydroélectrique situé dans les Alpes.')).toContain('barrage');
     expect(themesDepuisCategories(['Barrage en France'], '')).toContain('barrage');
   });
   it('relit une fois une entrée sans thème enregistrée avant le résumé', () => {

@@ -41,7 +41,7 @@ export function urlRequete(titre: string): string {
     prop: 'categories|pageprops|extracts',
     exintro: '1',
     explaintext: '1',
-    exsentences: '5',
+    exsentences: '2',
     ppprop: 'disambiguation',
     cllimit: 'max',
     clshow: '!hidden',

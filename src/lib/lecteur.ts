@@ -35,6 +35,12 @@ export function analyserTexteCarte(texte: string, libelleFavori: string): CarteA
 /** Description absente ou tronquée : le site n'a peut-être pas fini de charger la version complète. */
 export const descriptionProvisoire = (description: string): boolean => description === '' || /(…|\.{3})\s*$/.test(description);
 
+/** Délai avant la prochaine relecture, ou null (arrêt) : au plus un délai par palier, tant qu'une description est provisoire. */
+export function delaiRelecture(descriptions: string[], dejaFaites: number, paliers: readonly number[]): number | null {
+  const delai = paliers[dejaFaites];
+  return delai !== undefined && descriptions.some(descriptionProvisoire) ? delai : null;
+}
+
 // Une carte présente plusieurs fois sur la page compte comme autant d'exemplaires.
 export function regrouperCartes(cartes: CarteAffichee[]): CarteImportee[] {
   const parId = new Map<string, CarteImportee>();
