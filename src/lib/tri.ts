@@ -89,8 +89,8 @@ export function proposerTri(carte: Carte, preferences: Preferences, config: Conf
   const valeur = valeurDeCarte(carte);
   if (valeur === null) return { statut: 'a-trier', ami: null, prixCible: null };
   // Le seuil suit le plafond réglé : l'assistant ne propose rien que l'envoi refuserait.
-  const seuil = preferences.plafondDefausse === undefined ? config.seuilDefausse : plafondDefausse(preferences) + 1;
-  if (valeur < seuil) return { statut: 'defausser', ami: null, prixCible: null };
+  const sousLePlafond = preferences.plafondDefausse === undefined ? valeur < config.seuilDefausse : valeur <= plafondDefausse(preferences);
+  if (sousLePlafond) return { statut: 'defausser', ami: null, prixCible: null };
   // Plafond abaissé : une carte sous la première tranche de la matrice se vend au prix de cette tranche.
   const basse = config.matricePrixDepart.reduce<TranchePrix | null>((m, t) => (m === null || t.valeurMin < m.valeurMin ? t : m), null);
   return { statut: 'vendre', ami: null, prixCible: prixDepart(valeur, config) ?? basse?.prixDepart ?? null };

@@ -16,7 +16,7 @@ import type {
 } from './actions'
 import { LIBELLES_STATUT, normaliser, type Carte, type Collection, type Statut } from './collection'
 import { LONGUEUR_MAX_ID } from './registre'
-import { PLAFOND_VALEUR_DEFAUSSE } from '../config/prix'
+import { plafondDefausse } from './tri'
 import { amisConcernes, prixDepart, type Ami } from './tri'
 import { DEFINITIONS_THEMES, LIBELLES_THEMES, THEME_AUTRES, themesDeCarte } from './themes'
 
@@ -331,7 +331,7 @@ export function construireLot(
     if (c.statut === 'defausser') {
       // Aucun retrait d’étiquette avant défausse (H19).
       const ids = c.idsSite.slice(0, Math.max(0, c.quantite))
-      if (ids.length > 0 && !(c.valeurMarchande !== null && c.valeurMarchande <= (config.plafondDefausse ?? PLAFOND_VALEUR_DEFAUSSE))) {
+      if (ids.length > 0 && !(c.valeurMarchande !== null && c.valeurMarchande <= plafondDefausse({ plafondDefausse: config.plafondDefausse }))) {
         ecarter('valeur-defausse-elevee')
       } else if (ids.length > 0) {
         if (dispo('defausse')) {

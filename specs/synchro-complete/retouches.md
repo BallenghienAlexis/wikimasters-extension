@@ -124,3 +124,8 @@ Un amendement daté est en tête de `spec.md`, `spec.refined.md`, `design.md` et
 - `src/app/Synchronisation.tsx:605-610` et `:430-431` : une suppression apparaît sous le texte « etiquettes » (`ID_CARTE_ETIQUETTES`) dans le journal ; prévoir le libellé « Étiquettes du compte ».
 - `src/app/EtiquettesPreexistantes.tsx` : pas de test e2e ni de captures aux 3 tailles.
 - `src/lib/revision.ts:89` : après une suppression, les `etiquettesSite` des cartes gardent le nom supprimé jusqu’à la prochaine synchro.
+
+## À reprendre (plafond de défausse réglable, 2026-11-12, T-907)
+
+- T-907 (plafond réglable, PR #86) est à rattacher au suivi de `synchro-complete` (`tasks.md`, `STATUS.md`), comme T-906.
+- `tests/unit/plafond-defausse.test.ts` : rendu statique seulement ; le refus d'une saisie invalide est couvert par `tests/e2e/plafond-defausse.spec.ts` (non exécuté localement faute de navigateur).

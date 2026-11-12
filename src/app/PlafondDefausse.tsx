@@ -45,7 +45,7 @@ const PlafondDefausse: React.FC<Props> = ({ plafond, onChange }) => {
       </label>
       <p id="aide-plafond" aria-live="polite" className="mt-2 text-sm">
         {!valide
-          ? `Saisissez un entier de ${PLAFOND_DEFAUSSE_MIN} à ${PLAFOND_DEFAUSSE_MAX} : le plafond enregistré reste ${plafond}.`
+          ? `Saisissez un entier de ${PLAFOND_DEFAUSSE_MIN} à ${PLAFOND_DEFAUSSE_MAX}${NB}: le plafond enregistré reste ${plafond}.`
           : valeur > PLAFOND_VALEUR_DEFAUSSE
             ? `Attention${NB}: au-dessus de ${PLAFOND_VALEUR_DEFAUSSE}, des cartes de valeur plus élevée seront défaussées définitivement.`
             : ''}

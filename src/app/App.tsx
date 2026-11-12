@@ -176,9 +176,17 @@ const App: React.FC = () => {
 
   const editer = (id: string, edition: EditionCarte): void => appliquer(appliquerEdition(collection, id, edition));
 
-  const appliquerAssistant = (choix: Preferences): void => {
+  const appliquerAssistant = (reponses: Preferences): void => {
+    // Le plafond de défausse n'est pas une réponse de l'assistant : il garde la valeur réglée (autre onglet comprise).
+    const choix = { ...reponses, plafondDefausse: preferences.plafondDefausse };
     setPreferences(choix);
-    enregistrerPreferences(choix).catch(() => setMessage('Enregistrement de vos réponses impossible.'));
+    void chargerPreferences()
+      .then((stockees) => {
+        const final = { ...choix, plafondDefausse: stockees.plafondDefausse };
+        setPreferences(final);
+        return enregistrerPreferences(final);
+      })
+      .catch(() => setMessage('Enregistrement de vos réponses impossible.'));
     appliquer(appliquerTri(collection, choix));
     setRevision((r) => r + 1);
     setAssistantOuvert(false);
@@ -332,7 +340,9 @@ const App: React.FC = () => {
             }}
           />
 
+          {preferencesLues && (
           <PlafondDefausse
+            key={plafondDefausse(preferences)}
             plafond={plafondDefausse(preferences)}
             onChange={(plafond) => {
               const suivantes = { ...preferences, plafondDefausse: plafond };
@@ -340,6 +350,7 @@ const App: React.FC = () => {
               enregistrerPreferences(suivantes).catch(() => setMessage('Enregistrement du plafond impossible.'));
             }}
           />
+          )}
 
           <SynchroAuto collection={collection} preferences={preferences} cacheWiki={cacheWiki} />
 

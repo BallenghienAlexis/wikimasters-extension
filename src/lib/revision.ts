@@ -4,7 +4,7 @@
  * Logique pure, sans `chrome.*`. L’aperçu est figé (H24) : la revérification rattrape
  * les modifications faites ensuite, et l’état local ne bouge qu’après un succès.
  */
-import { PLAFOND_VALEUR_DEFAUSSE } from '../config/prix'
+import { plafondDefausse } from './tri'
 import type { Action, Registre, ResultatAction } from './actions'
 import {
   appliquerEdition,
@@ -56,7 +56,7 @@ export function reverifierAction(
       return prixCourant(carte) === action.prix ? 'ok' : 'passee'
     case 'defausse':
       if (carte.statut !== 'defausser' || carte.quantite < 1) return 'passee'
-      if (!(typeof carte.valeurMarchande === 'number' && carte.valeurMarchande <= (config.plafondDefausse ?? PLAFOND_VALEUR_DEFAUSSE))) return 'passee'
+      if (!(typeof carte.valeurMarchande === 'number' && carte.valeurMarchande <= plafondDefausse({ plafondDefausse: config.plafondDefausse }))) return 'passee'
       return carte.idsSite?.includes(action.idExemplaire) ? 'ok' : 'passee'
     case 'creation-etiquette':
       return exemplairesAttendus(carte, config).some((e) => e.etiquettes.includes(action.nomEtiquette)) ? 'ok' : 'passee'
