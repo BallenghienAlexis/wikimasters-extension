@@ -11,8 +11,8 @@ import type { Collection } from './collection'
 import { construireLot, etiquettesDeCarte, type Config, type EtiquetteNonPosee } from './lot'
 import { DEFINITIONS_THEMES, LIBELLES_THEMES } from './themes'
 
-/** Secondes par écriture d’étiquette en moyenne : 0,4 s minimale plus un supplément de 0 à 0,2 s. */
-const SECONDES_PAR_REQUETE = 0.5
+/** Secondes par écriture d’étiquette en moyenne : 0,2 s minimale plus un supplément de 0 à 0,1 s. */
+const SECONDES_PAR_REQUETE = 0.25
 
 /** Nombre maximal de lignes rendues par l’aperçu (DT-05). */
 export const LIGNES_MAX = 100

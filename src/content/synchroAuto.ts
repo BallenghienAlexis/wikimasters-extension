@@ -4,7 +4,7 @@
 // par les cookies de même origine du navigateur ; aucun en-tête ajouté, aucun jeton ni cookie lu.
 // Le plan de lecture, la cadence et les arrêts sont dans `src/lib/ordonnanceur.ts`.
 import { VERSION_SCHEMA, type Carte, type Collection } from '../lib/collection';
-import { INTERVALLE_MS, MAX_PAR_FENETRE, type Horloge } from '../lib/file';
+import { INTERVALLE_MS, type Horloge } from '../lib/file';
 import { DUREE_BAIL_MS, PAUSE_APRES_ARRET_MS, etatInitial, synchroniser, type Bail, type EtatOrdonnanceur, type ReponseApi, type ResultatSynchro } from '../lib/ordonnanceur';
 import {
   chargerBailSynchro,
@@ -153,7 +153,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
 
   /**
    * Une requête `GET` vers le listing du marché, seulement après une synchro terminée, hors pause, bail pris,
-   * 0,4 s après la précédente et au plus toutes les 30 min (horodatage commun aux onglets). Seuls les horodatages
+   * 0,2 s après la précédente et au plus toutes les 30 min (horodatage commun aux onglets). Seuls les horodatages
    * des annonces sont conservés. 401, 403, 429 ou 3 échecs consécutifs : pause de 30 min.
    */
   async function releverMarche(): Promise<void> {
@@ -171,9 +171,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
       if (tenu !== null && tenu > maintenant) return;
       await deps.bail.ecrire(maintenant + DUREE_BAIL_MS);
       bailPris = true;
-      // Cadence commune : 0,4 s après la dernière requête de l’état, 120 au plus par minute.
-      const recentes = etatAvant.requetes.filter((t) => maintenant - t < 60_000);
-      if (recentes.length >= MAX_PAR_FENETRE) return;
+      // Cadence commune : 0,2 s après la dernière requête de l’état, sans plafond par minute.
       const derniere = etatAvant.requetes.reduce((m, t) => Math.max(m, t), 0);
       await deps.horloge.attendreJusqua(Math.max(deps.horloge.now(), derniere + INTERVALLE_MS));
       if (arretDemande) return;
@@ -186,7 +184,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
       const etat = (await deps.chargerEtat()) ?? etatInitial();
       await deps.enregistrerEtat({
         ...etat,
-        requetes: [...etat.requetes, debut].slice(-200),
+        requetes: [...etat.requetes, debut].slice(-20),
         arretJusqua: pause ? deps.horloge.now() + PAUSE_APRES_ARRET_MS : etat.arretJusqua,
       });
       await deps.releve.ecrire({ le: debut, echecs: pause ? 0 : echecs });
