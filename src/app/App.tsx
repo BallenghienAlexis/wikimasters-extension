@@ -26,6 +26,7 @@ import { registreVide } from '../lib/registre';
 import AssistantTri from './AssistantTri';
 import Synchronisation from './Synchronisation';
 import SynchroAuto from './SynchroAuto';
+import EtiquettesPreexistantes from './EtiquettesPreexistantes';
 import FileVente from './FileVente';
 import CarteLigne from './CarteLigne';
 
@@ -322,6 +323,8 @@ const App: React.FC = () => {
           />
 
           <SynchroAuto collection={collection} preferences={preferences} cacheWiki={cacheWiki} />
+
+          <EtiquettesPreexistantes cartes={collection.cartes} registre={registre} amis={preferences.amis} />
 
           <VerificationWikipedia titres={titresConsultes} onCache={appliquerCacheWiki} />
 
