@@ -16,8 +16,7 @@ import type {
 } from './actions'
 import { LIBELLES_STATUT, normaliser, type Carte, type Collection, type Statut } from './collection'
 import { LONGUEUR_MAX_ID } from './registre'
-import { plafondDefausse } from './tri'
-import { amisConcernes, prixDepart, type Ami } from './tri'
+import { amisConcernes, plafondDefausse, prixDepart, type Ami } from './tri'
 import { DEFINITIONS_THEMES, LIBELLES_THEMES, THEME_AUTRES, themesDeCarte } from './themes'
 
 /** Réglages du lot. */

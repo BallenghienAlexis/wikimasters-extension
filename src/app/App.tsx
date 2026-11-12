@@ -180,17 +180,18 @@ const App: React.FC = () => {
     // Le plafond de défausse n'est pas une réponse de l'assistant : il garde la valeur réglée (autre onglet comprise).
     const choix = { ...reponses, plafondDefausse: preferences.plafondDefausse };
     setPreferences(choix);
+    setAssistantOuvert(false);
     void chargerPreferences()
+      .catch(() => choix)
       .then((stockees) => {
         const final = { ...choix, plafondDefausse: stockees.plafondDefausse };
         setPreferences(final);
-        return enregistrerPreferences(final);
-      })
-      .catch(() => setMessage('Enregistrement de vos réponses impossible.'));
-    appliquer(appliquerTri(collection, choix));
-    setRevision((r) => r + 1);
-    setAssistantOuvert(false);
-    setMessage('Tri appliqué. À vous d’agir sur WikiMasters : les repères vous guident sur chaque carte.');
+        enregistrerPreferences(final).catch(() => setMessage('Enregistrement de vos réponses impossible.'));
+        // Le tri applique le plafond relu dans le stockage (autre onglet compris).
+        appliquer(appliquerTri(collection, final));
+        setRevision((r) => r + 1);
+        setMessage('Tri appliqué. À vous d’agir sur WikiMasters : les repères vous guident sur chaque carte.');
+      });
   };
 
   const importer = async (fichier: File): Promise<void> => {
@@ -342,7 +343,6 @@ const App: React.FC = () => {
 
           {preferencesLues && (
           <PlafondDefausse
-            key={plafondDefausse(preferences)}
             plafond={plafondDefausse(preferences)}
             onChange={(plafond) => {
               const suivantes = { ...preferences, plafondDefausse: plafond };

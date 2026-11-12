@@ -38,6 +38,17 @@ test('plafond de défausse : 5 par défaut, saisie invalide refusée, avertissem
   await expect(page.locator('#aide-plafond')).toContainText('Attention');
 });
 
+test('plafond de défausse : saisie touche par touche, le champ garde le focus', async ({ pageCollection: page }) => {
+  await champ(page).fill('');
+  await champ(page).pressSequentially('12');
+  await expect(champ(page)).toHaveValue('12');
+  await expect(champ(page)).toBeFocused();
+  await champ(page).press('ArrowUp');
+  await champ(page).press('ArrowUp');
+  await expect(champ(page)).toHaveValue('14');
+  await expect(champ(page)).toBeFocused();
+});
+
 test.describe('captures du plafond de défausse', () => {
   const BREAKPOINTS = [
     { name: 'mobile', width: 375, height: 812 },
