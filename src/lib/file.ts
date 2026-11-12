@@ -3,8 +3,8 @@
  *
  * Logique pure : horloge, transport, confirmation, revérification, application
  * locale et journal sont **injectés**. Aucun accès à `chrome.*`, au réseau ni au
- * jeton. Cadence : 6 s au minimum entre deux débuts de requête (2 s pour les seules écritures
- * d’étiquettes, voir `cadenceDe`), plus un délai
+ * jeton. Cadence : 1 s au minimum entre deux débuts de requête (décision d’Alexis du
+ * 2026-11-12, toutes actions), plus un délai
  * supplémentaire variable fourni par l’appelant (décision d’Alexis du 2026-11-11),
  * si bien que ce module ne tire aucun nombre aléatoire lui-même. Les échéances sont en temps absolu, si bien qu’un minuteur
  * ralenti (onglet masqué) ne peut jamais rendre l’exécution plus rapide.
@@ -17,16 +17,15 @@ import type { Action, EtatExecution, ResultatAction } from './actions'
 
 /** Intervalle minimal entre deux débuts de requête. */
 export const INTERVALLE_MS = 1000
-/** Délai supplémentaire maximal, ajouté à l’intervalle minimal (jamais en dessous de 6 s). */
+/** Délai supplémentaire maximal, ajouté à l’intervalle minimal (jamais en dessous de l’intervalle minimal). */
 export const SUPPLEMENT_MAX_MS = 500
 /** Fenêtre glissante et plafond de requêtes dans cette fenêtre. */
 export const FENETRE_MS = 60_000
 export const MAX_PAR_FENETRE = 60
 /**
- * Cadence rapide des écritures d’étiquettes (Alexis, 2026-11-12 : la synchro était trop longue).
- * Ces requêtes partent vers l’hôte REST du site, comme les actions de son interface : 2 s au
- * minimum entre deux débuts, plus un supplément de 0 à 1,5 s, 30 au plus par fenêtre de 60 s.
- * Enchère, défausse et lecture gardent la cadence lente ci-dessus.
+ * Depuis le 2026-11-12 (Alexis : « le plus court possible pour toutes les actions »), la cadence
+ * des étiquettes est identique à celle des autres actions. `cadenceDe` est gardé pour pouvoir
+ * réintroduire plus tard une cadence propre à un type d’action.
  */
 export const INTERVALLE_ETIQUETTE_MS = INTERVALLE_MS
 export const SUPPLEMENT_ETIQUETTE_MAX_MS = SUPPLEMENT_MAX_MS

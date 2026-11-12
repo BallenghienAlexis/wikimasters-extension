@@ -153,7 +153,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
 
   /**
    * Une requête `GET` vers le listing du marché, seulement après une synchro terminée, hors pause, bail pris,
-   * 6 s après la précédente et au plus toutes les 30 min (horodatage commun aux onglets). Seuls les horodatages
+   * 1 s après la précédente et au plus toutes les 30 min (horodatage commun aux onglets). Seuls les horodatages
    * des annonces sont conservés. 401, 403, 429 ou 3 échecs consécutifs : pause de 30 min.
    */
   async function releverMarche(): Promise<void> {
@@ -171,7 +171,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
       if (tenu !== null && tenu > maintenant) return;
       await deps.bail.ecrire(maintenant + DUREE_BAIL_MS);
       bailPris = true;
-      // Cadence commune : 6 s après la dernière requête de l’état, 10 au plus par minute.
+      // Cadence commune : 1 s après la dernière requête de l’état, 60 au plus par minute.
       const recentes = etatAvant.requetes.filter((t) => maintenant - t < 60_000);
       if (recentes.length >= MAX_PAR_FENETRE) return;
       const derniere = etatAvant.requetes.reduce((m, t) => Math.max(m, t), 0);

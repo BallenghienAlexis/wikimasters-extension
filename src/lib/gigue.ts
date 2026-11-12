@@ -1,7 +1,7 @@
 /**
  * Délai variable ajouté à l’intervalle minimal entre deux requêtes (décision d’Alexis du 2026-11-11) :
  * des cadences trop régulières déclenchent plus facilement erreurs et sanctions côté serveur.
- * L’intervalle minimal de 6 s, le plafond de 10 requêtes par minute et les arrêts sur 401, 403 ou 429
+ * L’intervalle minimal de 1 s, le plafond de 60 requêtes par minute et les arrêts sur 401, 403 ou 429
  * restent inchangés : la gigue ne fait qu’allonger l’attente, jamais la raccourcir.
  * La source d’aléa est injectée dans la file et l’ordonnanceur, qui restent purs et testables.
  */
