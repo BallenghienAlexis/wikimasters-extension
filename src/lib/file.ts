@@ -3,7 +3,7 @@
  *
  * Logique pure : horloge, transport, confirmation, revérification, application
  * locale et journal sont **injectés**. Aucun accès à `chrome.*`, au réseau ni au
- * jeton. Cadence : 1 s au minimum entre deux débuts de requête (décision d’Alexis du
+ * jeton. Cadence : 0,4 s au minimum entre deux débuts de requête (décision d’Alexis du
  * 2026-11-12, toutes actions), plus un délai
  * supplémentaire variable fourni par l’appelant (décision d’Alexis du 2026-11-11),
  * si bien que ce module ne tire aucun nombre aléatoire lui-même. Les échéances sont en temps absolu, si bien qu’un minuteur
@@ -16,12 +16,12 @@
 import type { Action, EtatExecution, ResultatAction } from './actions'
 
 /** Intervalle minimal entre deux débuts de requête. */
-export const INTERVALLE_MS = 1000
+export const INTERVALLE_MS = 400
 /** Délai supplémentaire maximal, ajouté à l’intervalle minimal (jamais en dessous de l’intervalle minimal). */
-export const SUPPLEMENT_MAX_MS = 500
+export const SUPPLEMENT_MAX_MS = 200
 /** Fenêtre glissante et plafond de requêtes dans cette fenêtre. */
 export const FENETRE_MS = 60_000
-export const MAX_PAR_FENETRE = 60
+export const MAX_PAR_FENETRE = 120
 /** Nombre d’échecs cumulés (actions passées exclues) qui arrête la file. */
 export const MAX_ECHECS = 3
 /** Codes HTTP qui arrêtent la file dès la première occurrence. */
@@ -170,7 +170,7 @@ export function creerFile(deps: DependancesFile): File {
     await journal.passer(id)
   }
 
-  /** Date de début autorisée : cadence unique (1 s plus supplément), réponse précédente, confirmation, fenêtre de 60 s. */
+  /** Date de début autorisée : cadence unique (0,4 s plus supplément), réponse précédente, confirmation, fenêtre de 60 s. */
   function debutAutorise(plancher: number): number {
     let debut = Math.max(dernierDebut + INTERVALLE_MS + supplement, derniereReponse, plancher)
     const recents = debuts.filter((d) => d > debut - FENETRE_MS)

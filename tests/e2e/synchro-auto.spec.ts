@@ -6,7 +6,7 @@ import { expect, test } from './extension';
 
 // Le site est entièrement simulé : ces tests ne contactent jamais le vrai WikiMasters (G1).
 // Les réponses fictives ont la forme décrite dans specs/synchro-auto/releve-api.md.
-// Le content script utilise l'horloge réelle (la cadence est de 1 à 1,5 s) : les jeux de données sont minimaux.
+// Le content script utilise l'horloge réelle (la cadence est de 0,4 à 0,6 s) : les jeux de données sont minimaux.
 const DOSSIER = path.resolve('tests/e2e/fixtures');
 const lire = (nom: string): string => fs.readFileSync(path.join(DOSSIER, nom), 'utf8');
 const SITE = lire('site-vide.html');
@@ -23,7 +23,7 @@ const CHEMIN_PRIX = '/api/marketplace/cards/carte-fictive-1/sales?scope=summary'
 const CHEMIN_VENTES = '/api/marketplace/mine';
 const CHEMIN_MARCHE = CONFIG_AFFLUENCE.routeMarche ?? '/api/marketplace';
 const CHEMINS_AUTORISES = [CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_PAGE(1), CHEMIN_PRIX, CHEMIN_VENTES, CHEMIN_MARCHE];
-// Attente plus longue qu'une cadence (1,5 s) pour prouver qu'aucune autre requête ne part.
+// Attente plus longue qu'une cadence (0,6 s) pour prouver qu'aucune autre requête ne part.
 const PLUS_QU_UNE_CADENCE_MS = 8_000;
 
 interface RequeteVue {
