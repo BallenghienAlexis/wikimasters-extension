@@ -399,8 +399,8 @@ describe('ordonnanceur — critère 3 : prix', () => {
 });
 
 describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
-  it('sépare deux requêtes d’au moins 1 s, au plus 60 par 60 s, une seule en vol', async () => {
-    const b = banc(siteFictif(4000));
+  it('sépare deux requêtes d’au moins 0,4 s, au plus 120 par 60 s, une seule en vol', async () => {
+    const b = banc(siteFictif(8000));
     await synchroniser({ ...b.deps, maxPrix: 0 });
     const t = b.departs.map((d) => d.t);
     expect(t.length).toBeGreaterThan(MAX_PAR_FENETRE);

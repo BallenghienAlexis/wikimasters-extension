@@ -108,7 +108,7 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
         Synchronisation automatique
       </h2>
       <p className="mt-1 text-sm text-muted">
-        Lit votre collection sur WikiMasters pendant qu’un onglet du site est ouvert : une requête toutes les 1 à 1,5 s, arrêt immédiat si le site refuse. Rien n’est modifié sur le site.
+        Lit votre collection sur WikiMasters pendant qu’un onglet du site est ouvert : une requête toutes les 0,4 à 0,6 s, arrêt immédiat si le site refuse. Rien n’est modifié sur le site.
       </p>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
