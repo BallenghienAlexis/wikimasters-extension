@@ -129,3 +129,7 @@ Un amendement daté est en tête de `spec.md`, `spec.refined.md`, `design.md` et
 
 - T-907 (plafond réglable, PR #86) est à rattacher au suivi de `synchro-complete` (`tasks.md`, `STATUS.md`), comme T-906.
 - `tests/unit/plafond-defausse.test.ts` : rendu statique seulement ; le refus d'une saisie invalide est couvert par `tests/e2e/plafond-defausse.spec.ts` (non exécuté localement faute de navigateur).
+- `src/app/PlafondDefausse.tsx:15` : la saisie n'est initialisée qu'au montage ; un plafond changé dans un autre onglet n'apparaît qu'au rechargement de la page.
+- `src/app/App.tsx:59-64` : entre la relecture et l'écriture des préférences de l'assistant, un changement du plafond fait dans le même onglet serait écrasé (fenêtre très courte, assistant fermé).
+- `src/lib/tri.ts:94` : sans plafond réglé, l'assistant compare `valeur < seuilDefausse` (6) ; pour une valeur non entière (5,5) il propose une défausse que le lot refuse. Comparer toujours `valeur <= plafond`.
+- Noms des captures : `plafond-<light|dark>-<mobile|tablet|desktop>.png` (artefact `captures` de la CI).
