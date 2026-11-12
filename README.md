@@ -102,7 +102,7 @@ Les grosses fonctions passent par un pipeline de documents dans `specs/<feature>
 
 ## Régler les prix
 
-Tout se trouve dans [src/config/prix.ts](src/config/prix.ts) : seuil de défausse, limite d’enchères, matrice valeur marchande → prix de départ. Les amis et leurs thèmes sont dans [src/config/amis.ts](src/config/amis.ts) : remplacez-les par les vôtres. Après une modification, lancez `npm run build` puis rechargez l’extension.
+Tout se trouve dans [src/config/prix.ts](src/config/prix.ts) : seuil de défausse, limite d’enchères, matrice valeur marchande → prix de départ. Les amis et leurs thèmes se saisissent dans la page de gestion (liste vide au départ ; `src/config/amis.ts` reste vide dans le code livré) : renseignez les vôtres. Après une modification, lancez `npm run build` puis rechargez l’extension.
 
 ## Format d’import
 

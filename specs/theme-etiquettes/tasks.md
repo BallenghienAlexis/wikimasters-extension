@@ -4,7 +4,7 @@ Vagues : V1 : T-101 [P], T-102 [P] · V2 : T-103 · V3 : T-104 [P], T-107 [P] ·
 
 Garde-fous communs (tout dev les lit) :
 - **G1** Aucune requête vers le site, aucun nouveau type d’action ni point d’accès. Les types d’étiquette restent « non disponibles » (table du contrat inchangée) : tout test de l’aperçu tourne avec `typesDisponibles()` vide.
-- **G2** Données de test fictives uniquement (prénoms Léa, Hugo, Zoé ; jamais `captures-site/`). Les prénoms Benjamin et Anatole n’apparaissent que dans `src/config/amis.ts` et dans le test SC-024/SC-025 qui les lit.
+- **G2** Données de test fictives uniquement (prénoms Léa, Hugo, Zoé ; jamais `captures-site/`). Les prénoms Léa et Hugo n’apparaissent que dans `src/config/amis.ts` et dans le test SC-024/SC-025 qui les lit.
 - **G3** `src/styles/tokens.css`, `public/manifest.json`, `package.json` inchangés. Pas de `innerHTML` ni `dangerouslySetInnerHTML`. Code, commentaires, UI, commits en français (’, espace insécable avant `:`). Commits `type(T-xxx): …`.
 - **G4** `Config` du lot : les nouveaux champs (`amis`, `limiteParExemplaire`, `limiteNoms`) sont **optionnels** (absents = aucun ami, aucune limite) pour ne pas casser les tests existants (`lot-encheres.test.ts`, `revision.test.ts`).
 
@@ -16,7 +16,7 @@ Garde-fous communs (tout dev les lit) :
 | T-104 | `lot.ts` : étiquettes d’échange et de thème, limites, retraits | logique | dev-core | T-101, T-102, T-103 | SC-008 à SC-011, SC-021, SC-022, SC-025 | [P] |
 | T-105 | `revision.ts` : revérification des étiquettes de thème et d’échange | logique | dev-core | T-104 | SC-012 | [P] |
 | T-106 | Regroupement d’aperçu, totaux et durée | logique | dev-core | T-104 | SC-014 (logique), SC-016, SC-017 | [P] |
-| T-107 | Amis initiaux : fusion automatique (Benjamin, Anatole) | données | dev-core | T-103 | SC-024 | [P] |
+| T-107 | Amis initiaux : fusion automatique (Léa, Hugo) | données | dev-core | T-103 | SC-024 | [P] |
 | T-108 | UI : « Étiquettes prévues » dans l’aperçu | ui | dev-ui | T-105, T-106, T-107 | SC-014, SC-015, SC-016, SC-019 | — |
 | T-109 | E2e et captures | tests | dev-test | T-108 | SC-014, SC-015, SC-017, SC-019, SC-020 | [P] |
 | T-110 | Documentation (AGENTS.md, notes synchro-complete) | docs | dev-core | T-108 | — | [P] |
@@ -50,7 +50,7 @@ Contrôles : aucun fichier dans deux tâches d’une même vague ; graphe acycli
 - **Tests attendus**
   - `tests/unit/themes.test.ts` : AC1 à AC7. `tests/unit/exports.test.ts` : AC8.
 - **Brief de contexte**
-  - *Pourquoi* : fournir les thèmes précis, base des étiquettes et des intérêts des amis (dont Tibet, Ukraine, Barrage pour Benjamin et Anatole).
+  - *Pourquoi* : fournir les thèmes précis, base des étiquettes et des intérêts des amis (dont Tibet, Ukraine, Barrage pour Léa et Hugo).
   - *État actuel* : `src/lib/themes.ts` : 57 définitions (`DEFINITIONS_THEMES`, l.16-98), `LIBELLES_THEMES`, `IDS_THEMES`, regex `(^|[^a-z0-9])(motifs)` compilée une fois, texte normalisé sans accents (`normaliser`). `architecture` porte déjà `pont `, `chateau`, `cathedrale`.
   - *À faire* : ajouter les 60 thèmes (tableau du § Taxonomie ; `ukraine` : parents `pays`, `geographie`) ; ajuster les motifs pour tenir SC-004 à SC-006 et SC-023 (motifs plus longs ou espace finale ; « chevalier » ne doit pas donner `cheval`, « château » pas `chat`). Ne jamais retirer ni renommer un identifiant ou libellé existant ; ne retirer aucun motif d’un parent. Écrire les tests d’abord.
   - *Contrats* : AGENTS.md (taxonomie en français, calcul local sans service externe) ; H10 (motifs indicatifs).
@@ -120,7 +120,7 @@ Contrôles : aucun fichier dans deux tâches d’une même vague ; graphe acycli
   5. Limite du site (SC-010) : avec `limiteParExemplaire` N, un exemplaire n’attend que les N premières étiquettes de H5 (Statut et échanges jamais écartés au profit d’un thème) ; avec `limiteNoms` M, au plus M noms distincts, registre compris, dans l’ordre de H6 ; chaque étiquette écartée est rapportée dans `LotConstruit.nonPosees` avec la raison `au-dela-limite` (nouvelle valeur de `RaisonEcart`). Limite `null` ou absente : rien n’est écarté.
   6. Retraits (SC-011, SC-022) : toute étiquette du registre pour un exemplaire et qui n’est plus attendue (thème disparu, ami retiré, ami qui ne suit plus, carte plus à échanger, « Ami · … » héritée) reçoit un retrait ; une étiquette absente du registre n’en reçoit jamais ; un couple déjà au registre ne produit aucune action.
   7. Lot : l’ordre des actions reste créations, retraits, poses, enchères, défausses ; ordre des poses selon H5.
-  8. Pour Benjamin (`barrage`, `tibet`) et Anatole (`ukraine`), une carte `echanger` correspondante reçoit « Statut · Échanger », « #À échanger Benjamin » (resp. Anatole), puis ses thèmes (SC-025).
+  8. Pour Léa (`barrage`, `tibet`) et Hugo (`ukraine`), une carte `echanger` correspondante reçoit « Statut · Échanger », « #À échanger Léa » (resp. Hugo), puis ses thèmes (SC-025).
   9. Performance : lot de 5 000 cartes et 20 amis × 10 thèmes < 500 ms (SC-017).
 - **Tests attendus**
   - `tests/unit/lot.test.ts` (adapter les attentes « Ami · … » des l.137-150 et l.187-190) ; `tests/unit/lot-etiquettes.test.ts` (créé) : AC1 à AC9.
@@ -178,7 +178,7 @@ Contrôles : aucun fichier dans deux tâches d’une même vague ; graphe acycli
   - *Pièges* : un exemplaire non relié n’est pas compté ; une carte `idsSite` en conflit est écartée comme dans le lot.
   - *Vérifier* : `npx vitest run tests/unit/apercu-etiquettes.test.ts && npm run check`
 
-## T-107 — Amis initiaux : fusion automatique (Benjamin, Anatole)
+## T-107 — Amis initiaux : fusion automatique (Léa, Hugo)
 - **Couche** : données · **Agent** : dev-core
 - **Dépend de** : T-103 · **Parallélisable** : [P]
 - **SC couverts** : SC-024 · **Règles design** : —
@@ -187,16 +187,16 @@ Contrôles : aucun fichier dans deux tâches d’une même vague ; graphe acycli
   - `src/lib/stockage.ts`
   - `tests/unit/stockage.test.ts`
 - **Critères d’acceptation**
-  1. `src/config/amis.ts` exporte `AMIS_INITIAUX: Ami[]` (Benjamin : `barrage`, `tibet` ; Anatole : `ukraine`) et `VERSION_AMIS_INITIAUX = 1`.
+  1. `src/config/amis.ts` exporte `AMIS_INITIAUX: Ami[]` (Léa : `barrage`, `tibet` ; Hugo : `ukraine`) et `VERSION_AMIS_INITIAUX = 1`.
   2. `chargerPreferences()` : si le drapeau `amisInitiaux` du stockage est absent ou inférieur à `VERSION_AMIS_INITIAUX`, applique `fusionnerAmisInitiaux` aux préférences lues (ou aux valeurs par défaut si aucune), écrit **en une seule opération** les préférences fusionnées et le drapeau, puis les renvoie.
   3. Drapeau à jour : les préférences sont renvoyées telles que stockées, sans fusion (un thème décoché n’est pas rajouté).
   4. Préférences illisibles : valeurs par défaut en mémoire, rien n’est écrit ni écrasé.
   5. Un échec d’écriture renvoie quand même les préférences fusionnées en mémoire et ne pose pas le drapeau.
   6. `AMIS_INITIAUX` n’est importé que par `stockage.ts`.
 - **Tests attendus**
-  - `tests/unit/stockage.test.ts` (extension, `chrome.storage` simulé) : AC1 à AC6 avec préférences vides, existantes avec Benjamin partiel, avec un ami « benjamin » en minuscules, et avec un thème décoché après fusion.
+  - `tests/unit/stockage.test.ts` (extension, `chrome.storage` simulé) : AC1 à AC6 avec préférences vides, existantes avec Léa partiel, avec un ami « benjamin » en minuscules, et avec un thème décoché après fusion.
 - **Brief de contexte**
-  - *Pourquoi* : Alexis veut que Benjamin aime les barrages et le Tibet et Anatole l’Ukraine, ajoutés automatiquement (2026-11-09).
+  - *Pourquoi* : Alexis veut que Léa aime les barrages et le Tibet et Hugo l’Ukraine, ajoutés automatiquement (2026-11-09).
   - *État actuel* : `stockage.ts` `chargerPreferences` (l.125-128) appelle `lirePreferences` ; `enregistrerPreferences` écrit sous la clé `preferences`.
   - *À faire* : clé séparée pour le drapeau (les `Preferences` `version: 2` ne changent pas) ; utiliser `fusionnerAmisInitiaux` de T-103. Ne pas modifier `preferencesParDefaut`.
   - *Contrats* : `chrome.storage` confiné à `stockage.ts` ; fichier de réglages d’Alexis comme `src/config/prix.ts`.

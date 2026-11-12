@@ -13,7 +13,7 @@ Tout se joue en logique pure et dans l’aperçu : **aucune requête, aucun type
 4. **Limites du site** (SC-010) : appliquées dans `exemplairesAttendus` (par exemplaire) et dans `construireLot` (par compte, H6). Une étiquette écartée est rapportée dans un nouveau champ `LotConstruit.nonPosees` (nom, carte, raison). Raisons existantes réutilisées (`nom-trop-long`, `homonyme`) et une nouvelle `au-dela-limite`.
 5. **Registre v2** (`src/lib/registre.ts`) : `VERSION_REGISTRE = 2`, plafond de 256 couples (forme), migration v1 → v2 sans perte, idempotente ; `poserCouple` ne refuse plus le 3ᵉ couple.
 6. **Aperçu** : fonction pure `regrouperEtiquettes(lot, collection, registre, config)` (`src/lib/apercuEtiquettes.ts`) → lignes, totaux, volumes, non posées ; composant `EtiquettesPrevues.tsx` ; `Synchronisation.tsx` l’insère et passe les amis au lot (`CONFIG_LOT` devient dérivé des préférences). `App.tsx` transmet `preferences`.
-7. **Amis initiaux** (`src/config/amis.ts`, `stockage.ts`) : Benjamin (`barrage`, `tibet`), Anatole (`ukraine`), fusionnés automatiquement une seule fois dans les préférences, même déjà stockées (SC-024, décision d’Alexis du 2026-11-09). Fonction pure `fusionnerAmisInitiaux` dans `tri.ts` (T-103), drapeau `amisInitiaux` séparé dans `stockage.ts` (T-107).
+7. **Amis initiaux** (`src/config/amis.ts`, `stockage.ts`) : Léa (`barrage`, `tibet`), Hugo (`ukraine`), fusionnés automatiquement une seule fois dans les préférences, même déjà stockées (SC-024, décision d’Alexis du 2026-11-09). Fonction pure `fusionnerAmisInitiaux` dans `tri.ts` (T-103), drapeau `amisInitiaux` séparé dans `stockage.ts` (T-107).
 
 ### Flux de données
 ```mermaid
@@ -104,5 +104,5 @@ Contextes inchangés (page `collection.html` pour lot et aperçu ; pas de servic
 - Chemin critique : T-101 → T-103 → T-104 → T-106 → T-108 → T-109 (≈ 22 h).
 
 ## 5. Quick wins vs long terme
-- **Quick wins** : T-101 (thèmes disponibles tout de suite dans l’assistant et le filtre), T-107 (Benjamin et Anatole prêts dès le premier usage).
+- **Quick wins** : T-101 (thèmes disponibles tout de suite dans l’assistant et le filtre), T-107 (Léa et Hugo prêts dès le premier usage).
 - **Long terme** (hors de cette feature) : pose réelle (T-024 de synchro-complete), vue par carte de l’aperçu (variante 2), arbre des thèmes (variante 3), forme compacte du registre si le quota l’exige.
