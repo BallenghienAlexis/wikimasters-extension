@@ -46,7 +46,7 @@ const ECARTEES_MAX = 50;
 /** Espace insécable : typographie française avant « : » (D-40). */
 const NB = ' ';
 
-export const CADENCE_TEXTE = `Cadence variable${NB}: 2 à 3,5 s entre deux étiquettes (6 à 10 s pour une enchère ou une défausse), 30 par minute au plus · arrêt après 3 erreurs`;
+export const CADENCE_TEXTE = `Cadence variable${NB}: 2 à 3,5 s entre deux étiquettes (6 à 10 s pour une enchère ou une défausse), 30 par minute au plus pour les étiquettes, 10 pour une enchère ou une défausse · arrêt après 3 erreurs`;
 
 const RAISONS: Record<RaisonEcart, string> = {
   'non-reliee': 'non reliée au site',

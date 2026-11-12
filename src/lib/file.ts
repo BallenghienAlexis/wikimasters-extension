@@ -3,7 +3,8 @@
  *
  * Logique pure : horloge, transport, confirmation, revérification, application
  * locale et journal sont **injectés**. Aucun accès à `chrome.*`, au réseau ni au
- * jeton. Cadence : 6 s au minimum entre deux débuts de requête, plus un délai
+ * jeton. Cadence : 6 s au minimum entre deux débuts de requête (2 s pour les seules écritures
+ * d’étiquettes, voir `cadenceDe`), plus un délai
  * supplémentaire variable fourni par l’appelant (décision d’Alexis du 2026-11-11),
  * si bien que ce module ne tire aucun nombre aléatoire lui-même. Les échéances sont en temps absolu, si bien qu’un minuteur
  * ralenti (onglet masqué) ne peut jamais rendre l’exécution plus rapide.
@@ -198,7 +199,7 @@ export function creerFile(deps: DependancesFile): File {
     await journal.passer(id)
   }
 
-  /** Date de début autorisée : cadence de 6 s plus supplément, réponse précédente, confirmation, fenêtre de 60 s. */
+  /** Date de début autorisée : cadence de l’action (`cadenceDe`) plus supplément, réponse précédente, confirmation, fenêtre de 60 s. */
   function debutAutorise(plancher: number, action: Action): number {
     const { intervalle, maxParFenetre, supplementMax } = cadenceDe(action)
     // Entre deux actions de cadences différentes, la plus lente s’applique (jamais plus rapide qu’avant).

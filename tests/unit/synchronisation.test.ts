@@ -83,7 +83,7 @@ describe('libellés', () => {
   })
 
   it('rappelle la cadence fixe', () => {
-    expect(CADENCE_TEXTE).toBe(`Cadence variable${NB}: 2 à 3,5 s entre deux étiquettes (6 à 10 s pour une enchère ou une défausse), 30 par minute au plus · arrêt après 3 erreurs`)
+    expect(CADENCE_TEXTE).toBe(`Cadence variable${NB}: 2 à 3,5 s entre deux étiquettes (6 à 10 s pour une enchère ou une défausse), 30 par minute au plus pour les étiquettes, 10 pour une enchère ou une défausse · arrêt après 3 erreurs`)
   })
 })
 
