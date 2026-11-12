@@ -69,7 +69,7 @@ Je lance `dev-infra` quand il aura terminé.
 > <task-notification>
 > <task-id>a2fff04fdc7a0c2b5</task-id>
 > <tool-use-id>toolu_01V3oVSGC6WDkbiNNeh2daWd</tool-use-id>
-> <output-file>C:\Users\alexi\AppData\Local\Temp\claude\f9e284dc7f9f3b97\dcbcac7c-e41a-4068-afee-f7d688a0e7a2\tasks\a2fff04fdc7a0c2b5.output</output-file>
+> <output-file>C:\Users\<utilisateur>\AppData\Local\Temp\claude\f9e284dc7f9f3b97\dcbcac7c-e41a-4068-afee-f7d688a0e7a2\tasks\a2fff04fdc7a0c2b5.output</output-file>
 > <status>completed</status>
 > <summary>Agent "dev-infra T-003 config ESLint" is waiting on its own background work</summary>
 > <note>This agent stopped with background work of its own still running. It may resume on its own when that work completes or reports, and the same task-id notifies again if it does; the result below may be interim.</note>
