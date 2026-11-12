@@ -19,11 +19,12 @@ import { progression, texteProgression, type Synchro } from '../lib/synchro';
 import { LIBELLES_THEMES, IDS_THEMES, definirThemesWikipedia, themesDeCarte } from '../lib/themes';
 import { cacheVide, themesParTitre, type CacheWikipedia } from '../lib/wikipedia';
 import VerificationWikipedia from './VerificationWikipedia';
-import { appliquerTri, preferencesParDefaut, type Preferences } from '../lib/tri';
+import { appliquerTri, plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
 import type { Registre } from '../lib/actions';
 import type { EvenementVente } from '../lib/affluence';
 import { registreVide } from '../lib/registre';
 import AssistantTri from './AssistantTri';
+import PlafondDefausse from './PlafondDefausse';
 import Synchronisation, { lancerSuppressionEtiquettes } from './Synchronisation';
 import SynchroAuto from './SynchroAuto';
 import EtiquettesPreexistantes from './EtiquettesPreexistantes';
@@ -175,13 +176,22 @@ const App: React.FC = () => {
 
   const editer = (id: string, edition: EditionCarte): void => appliquer(appliquerEdition(collection, id, edition));
 
-  const appliquerAssistant = (choix: Preferences): void => {
+  const appliquerAssistant = (reponses: Preferences): void => {
+    // Le plafond de défausse n'est pas une réponse de l'assistant : il garde la valeur réglée (autre onglet comprise).
+    const choix = { ...reponses, plafondDefausse: preferences.plafondDefausse };
     setPreferences(choix);
-    enregistrerPreferences(choix).catch(() => setMessage('Enregistrement de vos réponses impossible.'));
-    appliquer(appliquerTri(collection, choix));
-    setRevision((r) => r + 1);
     setAssistantOuvert(false);
-    setMessage('Tri appliqué. À vous d’agir sur WikiMasters : les repères vous guident sur chaque carte.');
+    void chargerPreferences()
+      .catch(() => choix)
+      .then((stockees) => {
+        const final = { ...choix, plafondDefausse: stockees.plafondDefausse };
+        setPreferences(final);
+        enregistrerPreferences(final).catch(() => setMessage('Enregistrement de vos réponses impossible.'));
+        // Le tri applique le plafond relu dans le stockage (autre onglet compris).
+        appliquer(appliquerTri(collection, final));
+        setRevision((r) => r + 1);
+        setMessage('Tri appliqué. À vous d’agir sur WikiMasters : les repères vous guident sur chaque carte.');
+      });
   };
 
   const importer = async (fichier: File): Promise<void> => {
@@ -330,6 +340,17 @@ const App: React.FC = () => {
               noterVente('fin');
             }}
           />
+
+          {preferencesLues && (
+          <PlafondDefausse
+            plafond={plafondDefausse(preferences)}
+            onChange={(plafond) => {
+              const suivantes = { ...preferences, plafondDefausse: plafond };
+              setPreferences(suivantes);
+              enregistrerPreferences(suivantes).catch(() => setMessage('Enregistrement du plafond impossible.'));
+            }}
+          />
+          )}
 
           <SynchroAuto collection={collection} preferences={preferences} cacheWiki={cacheWiki} />
 
