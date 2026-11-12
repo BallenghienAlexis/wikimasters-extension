@@ -15,6 +15,7 @@ export const TYPES_ACTION = [
   'pose-etiquette',
   'enchere',
   'defausse',
+  'suppression-etiquette',
 ] as const
 
 export type TypeAction = (typeof TYPES_ACTION)[number]
@@ -63,6 +64,17 @@ export interface ActionDefausse extends ActionBase {
   idExemplaire: string
 }
 
+/**
+ * Suppression d’une étiquette du compte (RPC `delete_tag`, relevé du 2026-11-12). Opération hors carte :
+ * `idCarte` vaut toujours `ID_CARTE_ETIQUETTES`. L’identifiant d’étiquette est obligatoire.
+ */
+export const ID_CARTE_ETIQUETTES = 'etiquettes'
+export interface ActionSuppressionEtiquette extends ActionBase {
+  type: 'suppression-etiquette'
+  nomEtiquette: string
+  idEtiquette: string
+}
+
 /** Action du lot, discriminée par `type`. */
 export type Action =
   | ActionLecture
@@ -71,6 +83,7 @@ export type Action =
   | ActionPoseEtiquette
   | ActionEnchere
   | ActionDefausse
+  | ActionSuppressionEtiquette
 
 /** Raison pour laquelle une carte (ou une partie de ses exemplaires) est écartée du lot. */
 export type RaisonEcart =

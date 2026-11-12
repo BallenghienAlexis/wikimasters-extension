@@ -8,7 +8,7 @@
  *
  * Logique pure : pas de `chrome.runtime` ici.
  */
-import { TYPES_ACTION, type Action, type ResultatAction, type TypeAction } from './actions'
+import { ID_CARTE_ETIQUETTES, TYPES_ACTION, type Action, type ResultatAction, type TypeAction } from './actions'
 
 const LONGUEUR_MAX = 200
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -155,6 +155,13 @@ export function validerOrdre(brut: unknown): Action | null {
       if (!cles(ordre, ['type', 'idCarte', 'idExemplaire', 'prix']) || idExemplaire === null) return null
       if (typeof prix !== 'number' || !Number.isSafeInteger(prix) || prix < 1 || prix > PRIX_MAX) return null
       return { type: 'enchere' as const, idCarte, idExemplaire, prix }
+    }
+    case 'suppression-etiquette': {
+      const nomEtiquette = texte(ordre.nomEtiquette)
+      const idEtiquette = uuid(ordre.idEtiquette)
+      if (!cles(ordre, ['type', 'idCarte', 'nomEtiquette', 'idEtiquette']) || nomEtiquette === null || idEtiquette === null) return null
+      if (idCarte !== ID_CARTE_ETIQUETTES) return null
+      return { type: 'suppression-etiquette', idCarte, nomEtiquette, idEtiquette }
     }
     case 'defausse': {
       const idExemplaire = texte(ordre.idExemplaire)

@@ -3,6 +3,7 @@ import type { EtatExecution, Registre } from './actions';
 import { validerJournal, type Journal } from './journal';
 import { cacheVide, validerCache, type CacheWikipedia } from './wikipedia';
 import { registreVide, validerRegistre } from './registre';
+import { validerEtiquettesSite, type EtiquetteSite } from './etiquettesPreexistantes';
 import { lireSynchro, noterPage, type Pagination, type Synchro } from './synchro';
 import type { EtatOrdonnanceur, RaisonArretSynchro } from './ordonnanceur';
 import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../config/amis';
@@ -30,6 +31,7 @@ const CLE_VENTES = 'ventes';
 const CLE_AFFLUENCE_SITE = 'affluenceSite';
 const MAX_RELEVES_SITE = 2000;
 const CLE_RELEVE_MARCHE = 'releveMarche';
+const CLE_ETIQUETTES_SITE = 'etiquettesSite';
 
 /** Version de l’enveloppe du journal stocké. */
 export const VERSION_JOURNAL = 1;
@@ -56,10 +58,30 @@ export const CLES_STOCKAGE = {
   ventes: CLE_VENTES,
   affluenceSite: CLE_AFFLUENCE_SITE,
   releveMarche: CLE_RELEVE_MARCHE,
+  etiquettesSite: CLE_ETIQUETTES_SITE,
 } as const;
 
 function illisible(detail: string): Error {
   return new Error(`Données stockées illisibles. ${detail}`);
+}
+
+/** Étiquettes du compte lues sur le site (identifiant, nom, nombre de cartes) ; illisible ou absent : `null`. */
+export async function chargerEtiquettesSite(): Promise<EtiquetteSite[] | null> {
+  const contenu = await chrome.storage.local.get(CLE_ETIQUETTES_SITE);
+  return validerEtiquettesSite(contenu[CLE_ETIQUETTES_SITE]);
+}
+
+export async function enregistrerEtiquettesSite(liste: EtiquetteSite[]): Promise<void> {
+  if (validerEtiquettesSite(liste) === null) throw new Error('Liste d’étiquettes invalide.');
+  await chrome.storage.local.set({ [CLE_ETIQUETTES_SITE]: liste });
+}
+
+export function ecouterEtiquettesSite(rappel: () => void): () => void {
+  const ecouteur = (changes: Record<string, unknown>, zone: string): void => {
+    if (zone === 'local' && CLE_ETIQUETTES_SITE in changes) rappel();
+  };
+  chrome.storage.onChanged.addListener(ecouteur);
+  return () => chrome.storage.onChanged.removeListener(ecouteur);
 }
 
 /** Cache des catégories Wikipédia : un cache illisible vaut « vide » (il se reconstruit, rien d'irremplaçable). */

@@ -14,7 +14,7 @@ import {
   type Collection,
 } from './collection'
 import { exemplairesAttendus, type Config } from './lot'
-import { enregistrerEtiquette, poserCouple, purgerCarte, purgerExemplaire, retirerCouple } from './registre'
+import { enregistrerEtiquette, poserCouple, purgerCarte, purgerExemplaire, retirerCouple, supprimerEtiquetteDuRegistre } from './registre'
 import { prixDepart, valeurDeCarte } from './tri'
 
 /** Résultat d’une action, avec l’identifiant d’étiquette renvoyé par une création réussie. */
@@ -45,7 +45,8 @@ export function reverifierAction(
   // Amis et limites du site : l’étiquette doit être attendue selon la même `Config` que le lot (H12).
   config: Config,
 ): 'ok' | 'passee' {
-  if (action.type === 'lecture') return 'ok'
+  // Suppression d’étiquette : hors carte, validée par la liste que le joueur a confirmée.
+  if (action.type === 'lecture' || action.type === 'suppression-etiquette') return 'ok'
   const carte = collection.cartes.find((c) => c.id === action.idCarte)
   if (!carte || carte.favori) return 'passee'
 
@@ -85,6 +86,8 @@ export function appliquerResultat(
   switch (action.type) {
     case 'lecture':
       return { collection, registre }
+    case 'suppression-etiquette':
+      return { collection, registre: supprimerEtiquetteDuRegistre(registre, action.nomEtiquette) }
     case 'enchere':
       if (!carte) return { collection, registre }
       return { collection: appliquerEdition(collection, carte.id, { statut: 'en-vente' }), registre }

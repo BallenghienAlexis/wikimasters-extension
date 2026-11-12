@@ -26,6 +26,17 @@ function idCree(json: unknown): string | null {
   return typeof id === 'string' && UUID.test(id) ? id : null
 }
 
+export const ENTREE_SUPPRESSION: EntreeContrat = {
+  methode: 'POST',
+  modeleChemin: '/rest/v1/rpc/delete_tag',
+  construireChemin: () => '/rest/v1/rpc/delete_tag',
+  // Corps relevé le 2026-11-12 : { p_tag_id: <uuid> }, réponse 204 sans corps.
+  construireCorps: (action) =>
+    action.type === 'suppression-etiquette' && UUID.test(action.idEtiquette) ? { p_tag_id: action.idEtiquette } : null,
+  auth: { entete: 'session' },
+  validerReponse: (statut) => (statut === 204 ? 'reussie' : 'hors-contrat'),
+}
+
 export const ENTREES_ETIQUETTES: Partial<Record<TypeAction, EntreeContrat>> = {
   'creation-etiquette': {
     methode: 'POST',
@@ -51,6 +62,7 @@ export const ENTREES_ETIQUETTES: Partial<Record<TypeAction, EntreeContrat>> = {
     auth: { entete: 'session' },
     validerReponse: (statut) => (statut === 201 ? 'reussie' : 'hors-contrat'),
   },
+  'suppression-etiquette': ENTREE_SUPPRESSION,
   'retrait-etiquette': {
     methode: 'DELETE',
     modeleChemin: '/rest/v1/user_card_tags?user_card_id=eq.<id>&tag_id=eq.<id>',
