@@ -46,6 +46,8 @@ import {
   chargerEtatSynchro,
   enregistrerEtatSynchro,
   enregistrerArretSynchro,
+  enregistrerRelanceSynchro,
+  ecouterRelanceSynchro,
   ecouterArretSynchro,
   chargerStatutSynchro,
   enregistrerStatutSynchro,
@@ -178,7 +180,7 @@ describe('affluenceSite', () => {
 describe('CLES_STOCKAGE', () => {
   it('AC4 : énumère exactement les clés locales de l’extension', () => {
     expect([...cles()].sort()).toEqual([
-      'affluenceSite', 'amisInitiaux', 'arretSynchro', 'bailSynchro', 'collection', 'derniereSynchro', 'etatSynchro', 'etiquettesSite', 'execution', 'journal', 'preferences', 'registre', 'releveMarche', 'signalSynchro', 'statutSynchro', 'syncAuto', 'synchro', 'ventes', 'wikipedia',
+      'affluenceSite', 'amisInitiaux', 'arretSynchro', 'bailSynchro', 'collection', 'derniereRelance', 'derniereSynchro', 'etatSynchro', 'etiquettesSite', 'execution', 'journal', 'preferences', 'registre', 'relanceSynchro', 'releveMarche', 'signalSynchro', 'statutSynchro', 'syncAuto', 'synchro', 'ventes', 'wikipedia',
     ]);
   });
 
@@ -567,6 +569,22 @@ describe('T-205 : état de l’ordonnanceur et demande d’arrêt', () => {
     ecouteur({ arretSynchro: { newValue: 1700000000002 } }, 'sync');
     ecouteur({ autre: { newValue: 1 } }, 'local');
     ecouteur({ arretSynchro: { newValue: 'x' } }, 'local');
+    expect(rappel).toHaveBeenCalledTimes(1);
+    stop();
+    expect(faux.retires).toHaveLength(1);
+  });
+
+  it('la demande de relance écrit un horodatage et prévient les écouteurs', async () => {
+    await enregistrerRelanceSynchro(1700000000000);
+    expect(faux.set).toHaveBeenCalledWith({ relanceSynchro: 1700000000000 });
+    await expect(enregistrerRelanceSynchro(-1)).rejects.toThrow();
+    const rappel = vi.fn();
+    const stop = ecouterRelanceSynchro(rappel);
+    const ecouteur = faux.ajoutes[0] as (c: Record<string, unknown>, zone: string) => void;
+    ecouteur({ relanceSynchro: { newValue: 1700000000001 } }, 'local');
+    ecouteur({ relanceSynchro: { newValue: 1700000000002 } }, 'sync');
+    ecouteur({ arretSynchro: { newValue: 1700000000003 } }, 'local');
+    ecouteur({ relanceSynchro: { newValue: 'x' } }, 'local');
     expect(rappel).toHaveBeenCalledTimes(1);
     stop();
     expect(faux.retires).toHaveLength(1);

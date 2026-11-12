@@ -85,6 +85,25 @@ describe('analyserImport', () => {
   });
 });
 
+describe('description en deux phases', () => {
+  const avec = (description: string) => ({ version: 3 as const, cartes: [carte({ description })] });
+  const lire = (collection: ReturnType<typeof avec>, description: string) =>
+    fusionnerImport(collection, [{ id: 'c1', titre: 'T', rarete: null, quantite: 1, url: null, description }]).cartes[0]?.description;
+  it('une lecture vide n’efface pas la description complète', () => {
+    expect(lire(avec('Un barrage en France.'), '')).toBe('Un barrage en France.');
+  });
+  it('une version tronquée ne remplace pas la complète', () => {
+    expect(lire(avec('Un barrage en France, construit en 1950.'), 'Un barrage en…')).toBe('Un barrage en France, construit en 1950.');
+  });
+  it('la version complète remplace la concise', () => {
+    expect(lire(avec('Un barrage…'), 'Un barrage en France, construit en 1950.')).toBe('Un barrage en France, construit en 1950.');
+    expect(lire(avec(''), 'Un barrage.')).toBe('Un barrage.');
+  });
+  it('une description réellement différente est adoptée', () => {
+    expect(lire(avec('Ancienne.'), 'Autre texte plus court')).toBe('Autre texte plus court');
+  });
+});
+
 describe('fusionnerImport', () => {
   it('initialise une nouvelle carte à trier', () => {
     const c = fusionnerImport(collectionVide(), [{ id: 'a', titre: 'A', rarete: null, quantite: 1, url: null }]);

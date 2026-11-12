@@ -68,6 +68,7 @@ describe('actions : types partagés', () => {
       | 'homonyme'
       | 'exemplaires-non-relies'
       | 'valeur-defausse-elevee'
+      | 'en-vente-sur-site'
     >()
     expectTypeOf<TypesDisponibles>().toEqualTypeOf<ReadonlySet<TypeAction>>()
     expectTypeOf<EtatExecution>().toBeObject()

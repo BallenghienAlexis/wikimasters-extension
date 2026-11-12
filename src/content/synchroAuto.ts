@@ -10,11 +10,15 @@ import {
   chargerBailSynchro,
   chargerCollection,
   chargerDerniereSynchro,
+  chargerDerniereRelance,
+  enregistrerDerniereRelance,
+  chargerStatutSynchro,
   chargerEtatSynchro,
   chargerCacheWikipedia,
   chargerPreferences,
   chargerSyncAuto,
   ecouterArretSynchro,
+  ecouterRelanceSynchro,
   enregistrerBailSynchro,
   enregistrerCollection,
   enregistrerDerniereSynchro,
@@ -40,6 +44,8 @@ import { proposerTri, type Preferences } from '../lib/tri';
 /** Délai minimal entre deux synchronisations, et période du minuteur tant que l'onglet est visible. */
 export const DELAI_SYNCHRO_MS = 30 * 60_000;
 const MAX_ECHECS_RELEVE = 3;
+/** Délai minimal entre deux relances demandées par le joueur. */
+export const DELAI_RELANCE_MS = 60_000;
 
 export interface DependancesSynchroAuto {
   /** Mémorise la liste des étiquettes du compte lue dans `stats` (optionnel). */
@@ -58,6 +64,10 @@ export interface DependancesSynchroAuto {
   chargerPreferences: () => Promise<Preferences>;
   /** Statut détaillé pour l'interface (page en cours, cause d'arrêt) ; une erreur d'écriture est sans effet. */
   noterStatut?: (statut: StatutSynchro) => Promise<void>;
+  /** Dernière relance exécutée (commune aux onglets) : limite d'une relance par minute. Absent : limite par page seulement. */
+  derniereRelance?: { lire: () => Promise<number | null>; ecrire: (horodatage: number) => Promise<void> };
+  /** Dernier statut écrit : la relance ne contourne la pause que pour un arrêt manuel ou un 403. Absent : pas de contrôle. */
+  chargerStatut?: () => Promise<StatutSynchro | null>;
   /** Événements fixes (début, fin, arrêt et cause) pour le journal existant ; une erreur d'écriture est sans effet. */
   journaliser?: (evenement: EvenementSynchro) => Promise<void>;
   journal?: (message: string) => void;
@@ -74,6 +84,12 @@ export interface DependancesSynchroAuto {
 export interface SynchroAuto {
   /** Lance une synchronisation si l'option est active et la dernière a plus de 30 min ; sinon `null`, sans requête. */
   declencher: () => Promise<ResultatSynchro | null>;
+  /**
+   * Relance demandée par le joueur : comme `declencher`, mais sans attendre les 30 min depuis la dernière synchro
+   * et en passant outre la pause qui suit un arrêt. Bail, arrêts automatiques (401, 403, 429, 3 échecs) et option
+   * désactivée restent en vigueur. Sans effet si une synchro tourne déjà dans cette page.
+   */
+  relancer: () => Promise<ResultatSynchro | null>;
   /** Arrêt immédiat : plus aucune requête n'est émise après celle en vol. */
   arreter: () => void;
 }
@@ -153,6 +169,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
   let enCours = false;
   let arretDemande = false;
   let dernierEssai: number | null = null;
+  let derniereRelance: number | null = null;
 
   /**
    * Une requête `GET` vers le listing du marché, seulement après une synchro terminée, hors pause, bail pris,
@@ -207,16 +224,16 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
     }
   }
 
-  async function declencher(): Promise<ResultatSynchro | null> {
+  async function declencher(forcer = false): Promise<ResultatSynchro | null> {
     if (enCours) return null;
     enCours = true;
     arretDemande = false;
     try {
       if (!(await deps.actif())) return null;
       const maintenant = deps.horloge.now();
-      if (dernierEssai !== null && maintenant - dernierEssai < DELAI_SYNCHRO_MS) return null;
+      if (!forcer && dernierEssai !== null && maintenant - dernierEssai < DELAI_SYNCHRO_MS) return null;
       const derniere = await deps.derniereSynchro();
-      if (derniere !== null && maintenant - derniere < DELAI_SYNCHRO_MS) return null;
+      if (!forcer && derniere !== null && maintenant - derniere < DELAI_SYNCHRO_MS) return null;
 
       const etat = (await deps.chargerEtat()) ?? etatInitial();
       const collection = await deps.chargerCollection();
@@ -243,7 +260,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
       const transport = async (chemin: string): Promise<ReponseApi> => {
         if (!demarree) {
           demarree = true;
-          await journaliser({ titre: 'Synchronisation automatique : début', parametre: null, resultat: 'reussie', codeHttp: null });
+          await journaliser({ titre: forcer ? 'Synchronisation automatique : relance demandée' : 'Synchronisation automatique : début', parametre: null, resultat: 'reussie', codeHttp: null });
         }
         const page = /[?&]page=(\d+)/.exec(chemin);
         if (page) await noter({ etat: 'en-cours', page: pages === null ? Number(page[1]) + 1 : Math.min(Number(page[1]) + 1, pages) });
@@ -273,6 +290,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         journal,
         gigue: deps.gigue,
         arretDemande: () => arretDemande,
+        forcer,
         enregistrer: async (produite, courant) => {
           const stockee = await deps.chargerCollection();
           const valeurChangee = produite.cartes.some((c) => c.valeurMarchande !== (depart.get(c.id)?.valeurMarchande ?? null));
@@ -304,7 +322,23 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
   }
 
   return {
-    declencher,
+    declencher: () => declencher(),
+    relancer: async () => {
+      try {
+        const maintenant = deps.horloge.now();
+        const commune = (await deps.derniereRelance?.lire()) ?? null;
+        const derniere = Math.max(derniereRelance ?? 0, commune ?? 0);
+        if (derniere > 0 && maintenant - derniere < DELAI_RELANCE_MS) return null;
+        // Seuls un arrêt manuel et un 403 se relancent : 401, 429 et échecs gardent la pause de 30 min.
+        const statut = (await deps.chargerStatut?.()) ?? null;
+        if (statut?.etat === 'arret' && statut.raison !== 'manuel' && !(statut.raison === 'code-http' && statut.codeHttp === 403)) return null;
+        derniereRelance = maintenant;
+        await deps.derniereRelance?.ecrire(maintenant);
+      } catch {
+        return null;
+      }
+      return declencher(true);
+    },
     arreter: () => {
       arretDemande = true;
     },
@@ -322,6 +356,8 @@ export interface OptionsDemarrage {
   visibilite: SourceVisibilite;
   /** Demande d'arrêt venue de l'interface. */
   ecouterArret: (rappel: () => void) => () => void;
+  /** Demande de relance venue de l'interface. */
+  ecouterRelance: (rappel: () => void) => () => void;
 }
 
 const horlogeReelle: Horloge = {
@@ -364,6 +400,8 @@ const synchroDuNavigateur = (): SynchroAuto =>
     },
     noterStatut: enregistrerStatutSynchro,
     noterEtiquettesSite: enregistrerEtiquettesSite,
+    chargerStatut: chargerStatutSynchro,
+    derniereRelance: { lire: chargerDerniereRelance, ecrire: enregistrerDerniereRelance },
     journaliser: (evenement) => ecrireEvenementJournal(evenement),
     routeMarche: CONFIG_AFFLUENCE.routeMarche,
     champsHorodatage: CONFIG_AFFLUENCE.champsHorodatage,
@@ -390,6 +428,7 @@ export function demarrerSynchroAuto(options: Partial<OptionsDemarrage> = {}): ()
   const synchro = options.synchro ?? synchroDuNavigateur();
   const visibilite = options.visibilite ?? visibiliteDuNavigateur();
   const ecouterArret = options.ecouterArret ?? ecouterArretSynchro;
+  const ecouterRelance = options.ecouterRelance ?? ecouterRelanceSynchro;
 
   const lancer = (): void => void synchro.declencher().catch(() => undefined);
   let minuteur: ReturnType<typeof setInterval> | undefined;
@@ -410,6 +449,7 @@ export function demarrerSynchroAuto(options: Partial<OptionsDemarrage> = {}): ()
     }
   });
   const retirerArret = ecouterArret(() => synchro.arreter());
+  const retirerRelance = ecouterRelance(() => void synchro.relancer().catch(() => undefined));
 
   armer();
   lancer();
@@ -418,5 +458,6 @@ export function demarrerSynchroAuto(options: Partial<OptionsDemarrage> = {}): ()
     desarmer();
     retirerVisibilite();
     retirerArret();
+    retirerRelance();
   };
 }

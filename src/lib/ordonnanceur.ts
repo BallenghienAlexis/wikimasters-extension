@@ -90,6 +90,8 @@ export interface DependancesSynchro {
   journal: (message: string) => void;
   /** Arrêt demandé par le joueur, vérifié avant chaque requête. */
   arretDemande?: () => boolean;
+  /** Relance explicite du joueur : ignore la pause de 30 min après un arrêt (le bail et les arrêts automatiques restent). */
+  forcer?: boolean;
   /** Plafond de prix par exécution (défaut : MAX_PRIX_PAR_EXECUTION). */
   maxPrix?: number;
   /** Millisecondes ajoutées à l’intervalle minimal entre deux requêtes (délai variable). Absent : 0. */
@@ -198,7 +200,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
 
   let echecs = 0;
 
-  if (etat.arretJusqua !== null && horloge.now() < etat.arretJusqua) {
+  if (!deps.forcer && etat.arretJusqua !== null && horloge.now() < etat.arretJusqua) {
     journal('Synchronisation en pause après un arrêt : pas de reprise avant la fin du délai.');
     resultat.issue = 'repos';
     return resultat;

@@ -23,6 +23,8 @@ const CLE_DERNIERE_SYNCHRO = 'derniereSynchro';
 const CLE_BAIL_SYNCHRO = 'bailSynchro';
 const CLE_ETAT_SYNCHRO = 'etatSynchro';
 const CLE_ARRET_SYNCHRO = 'arretSynchro';
+const CLE_RELANCE_SYNCHRO = 'relanceSynchro';
+const CLE_DERNIERE_RELANCE = 'derniereRelance';
 const CLE_STATUT_SYNCHRO = 'statutSynchro';
 const CLE_WIKIPEDIA = 'wikipedia';
 const CLE_VENTES = 'ventes';
@@ -49,6 +51,8 @@ export const CLES_STOCKAGE = {
   bailSynchro: CLE_BAIL_SYNCHRO,
   etatSynchro: CLE_ETAT_SYNCHRO,
   arretSynchro: CLE_ARRET_SYNCHRO,
+  relanceSynchro: CLE_RELANCE_SYNCHRO,
+  derniereRelance: CLE_DERNIERE_RELANCE,
   statutSynchro: CLE_STATUT_SYNCHRO,
   wikipedia: CLE_WIKIPEDIA,
   ventes: CLE_VENTES,
@@ -198,6 +202,10 @@ async function enregistrerHorodatage(cle: string, valeur: number | null): Promis
 export const chargerDerniereSynchro = (): Promise<number | null> => chargerHorodatage(CLE_DERNIERE_SYNCHRO);
 export const enregistrerDerniereSynchro = (horodatage: number | null): Promise<void> => enregistrerHorodatage(CLE_DERNIERE_SYNCHRO, horodatage);
 
+/** Horodatage (ms) de la dernière relance exécutée, commun aux onglets (limite d’une relance par minute). */
+export const chargerDerniereRelance = (): Promise<number | null> => chargerHorodatage(CLE_DERNIERE_RELANCE);
+export const enregistrerDerniereRelance = (horodatage: number): Promise<void> => enregistrerHorodatage(CLE_DERNIERE_RELANCE, horodatage);
+
 /** Horodatage (ms) d’expiration du bail qui empêche deux synchronisations simultanées, ou `null`. */
 export const chargerBailSynchro = (): Promise<number | null> => chargerHorodatage(CLE_BAIL_SYNCHRO);
 export const enregistrerBailSynchro = (expiration: number | null): Promise<void> => enregistrerHorodatage(CLE_BAIL_SYNCHRO, expiration);
@@ -266,6 +274,22 @@ export async function enregistrerArretSynchro(horodatage: number): Promise<void>
 export function ecouterArretSynchro(rappel: () => void): () => void {
   const ecouteur = (changements: Record<string, chrome.storage.StorageChange>, zone: string): void => {
     const changement = changements[CLE_ARRET_SYNCHRO];
+    if (zone === 'local' && changement && horodatageValide(changement.newValue)) rappel();
+  };
+  chrome.storage.onChanged.addListener(ecouteur);
+  return () => chrome.storage.onChanged.removeListener(ecouteur);
+}
+
+/** Demande de relance de l’interface (« Relancer la synchro ») : un horodatage, aucune autre donnée. */
+export async function enregistrerRelanceSynchro(horodatage: number): Promise<void> {
+  if (!horodatageValide(horodatage)) throw new Error('Horodatage invalide.');
+  await chrome.storage.local.set({ [CLE_RELANCE_SYNCHRO]: horodatage });
+}
+
+/** Ne signale que les demandes faites pendant l’écoute (une ancienne demande ne relance rien). */
+export function ecouterRelanceSynchro(rappel: () => void): () => void {
+  const ecouteur = (changements: Record<string, chrome.storage.StorageChange>, zone: string): void => {
+    const changement = changements[CLE_RELANCE_SYNCHRO];
     if (zone === 'local' && changement && horodatageValide(changement.newValue)) rappel();
   };
   chrome.storage.onChanged.addListener(ecouteur);

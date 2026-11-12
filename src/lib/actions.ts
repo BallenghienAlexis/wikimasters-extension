@@ -98,6 +98,7 @@ export type RaisonEcart =
   | 'homonyme'
   | 'exemplaires-non-relies'
   | 'valeur-defausse-elevee'
+  | 'en-vente-sur-site'
 
 export interface CarteEcartee {
   idCarte: string
