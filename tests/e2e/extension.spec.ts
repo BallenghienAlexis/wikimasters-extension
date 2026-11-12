@@ -7,7 +7,7 @@ test.describe('extension chargée', () => {
   test('le manifeste reste minimal : stockage seulement, script limité à WikiMasters', async ({ serviceWorker }) => {
     const manifeste = await serviceWorker.evaluate(() => chrome.runtime.getManifest());
     expect(manifeste.permissions).toEqual(['storage']);
-    expect(manifeste.host_permissions).toEqual(['https://fr.wikipedia.org/*']);
+    expect(manifeste.host_permissions).toEqual(['https://fr.wikipedia.org/*', 'https://www.wikidata.org/*']);
     expect(manifeste.content_scripts?.flatMap((c) => c.matches)).toEqual(['https://www.wiki-masters.com/*', 'https://wiki-masters.com/*']);
   });
 
