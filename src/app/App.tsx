@@ -14,7 +14,7 @@ import {
   type Filtres,
 } from '../lib/collection';
 import { versCsv, versJson } from '../lib/exports';
-import { chargerCacheWikipedia, chargerCollection, chargerExecution, chargerPreferences, chargerRegistre, chargerSynchro, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences, chargerAffluenceSite, chargerVentes, noterEvenementVente, lireCollectionBrute, reinitialiserCollection } from '../lib/stockage';
+import { chargerCacheWikipedia, chargerCollection, chargerExecution, chargerPreferences, chargerRegistre, chargerSynchro, chargerEtiquettesSite, ecouterEtiquettesSite, ecouterCollection, ecouterSynchro, enregistrerCollection, enregistrerPreferences, chargerAffluenceSite, chargerVentes, noterEvenementVente, lireCollectionBrute, reinitialiserCollection } from '../lib/stockage';
 import { progression, texteProgression, type Synchro } from '../lib/synchro';
 import { LIBELLES_THEMES, IDS_THEMES, definirThemesWikipedia, themesDeCarte } from '../lib/themes';
 import { cacheVide, themesParTitre, type CacheWikipedia } from '../lib/wikipedia';
@@ -24,9 +24,10 @@ import type { Registre } from '../lib/actions';
 import type { EvenementVente } from '../lib/affluence';
 import { registreVide } from '../lib/registre';
 import AssistantTri from './AssistantTri';
-import Synchronisation from './Synchronisation';
+import Synchronisation, { lancerSuppressionEtiquettes } from './Synchronisation';
 import SynchroAuto from './SynchroAuto';
 import EtiquettesPreexistantes from './EtiquettesPreexistantes';
+import type { EtiquetteSite } from '../lib/etiquettesPreexistantes';
 import FileVente from './FileVente';
 import CarteLigne from './CarteLigne';
 
@@ -65,6 +66,7 @@ const App: React.FC = () => {
   const [releveSite, setReleveSite] = useState<EvenementVente[]>([]);
   const ventes = useMemo(() => [...ventesJoueur, ...releveSite], [ventesJoueur, releveSite]);
   const [synchro, setSynchro] = useState<Synchro | null>(null);
+  const [etiquettesSite, setEtiquettesSite] = useState<EtiquetteSite[] | null>(null);
   const [registre, setRegistre] = useState<Registre>(registreVide);
   const [executionEnCours, setExecutionEnCours] = useState(false);
   const [registreIllisible, setRegistreIllisible] = useState(false);
@@ -122,7 +124,14 @@ const App: React.FC = () => {
     void chargerAffluenceSite().then(setReleveSite).catch(() => undefined);
     void chargerSynchro().then(setSynchro);
     void lireStockageSynchro().then(appliquerStockageSynchro);
-    return ecouterSynchro(setSynchro);
+    const relireEtiquettes = (): void => void chargerEtiquettesSite().then(setEtiquettesSite).catch(() => setEtiquettesSite(null));
+    relireEtiquettes();
+    const arreterEtiquettes = ecouterEtiquettesSite(relireEtiquettes);
+    const arreterSynchro = ecouterSynchro(setSynchro);
+    return () => {
+      arreterEtiquettes();
+      arreterSynchro();
+    };
   }, []);
 
   // La surcouche des thèmes est posée avant l'état : les rendus qui suivent lisent déjà le nouveau cache.
@@ -324,7 +333,14 @@ const App: React.FC = () => {
 
           <SynchroAuto collection={collection} preferences={preferences} cacheWiki={cacheWiki} />
 
-          <EtiquettesPreexistantes cartes={collection.cartes} registre={registre} amis={preferences.amis} />
+          <EtiquettesPreexistantes
+            cartes={collection.cartes}
+            registre={registre}
+            amis={preferences.amis}
+            site={etiquettesSite}
+            occupe={executionEnCours}
+            onSupprimer={(liste) => void lancerSuppressionEtiquettes(liste).catch((e: unknown) => setMessage(e instanceof Error ? e.message : 'La suppression n’a pas pu démarrer.'))}
+          />
 
           <VerificationWikipedia titres={titresConsultes} onCache={appliquerCacheWiki} />
 

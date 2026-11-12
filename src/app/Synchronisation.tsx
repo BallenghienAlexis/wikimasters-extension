@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CONFIG_PRIX, PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
+import { ID_CARTE_ETIQUETTES } from '../lib/actions';
 import type {
   Action,
   CarteEcartee,
@@ -26,6 +27,8 @@ import {
   chargerPreferences,
   chargerEtatSynchro,
   chargerRegistre,
+  chargerEtiquettesSite,
+  enregistrerEtiquettesSite,
   enregistrerCollection,
   enregistrerBailSynchro,
   enregistrerExecution,
@@ -446,6 +449,11 @@ function contexteExecution(): ContexteExecution {
     },
     appliquer: async (action, resultat) => {
       const [collection, registre] = await Promise.all([chargerCollection(), chargerRegistre()]);
+      if (action.type === 'suppression-etiquette' && resultat.classe === 'reussie') {
+        // L’étiquette n’existe plus sur le site : on la retire aussi de la liste lue.
+        const liste = await chargerEtiquettesSite();
+        if (liste !== null) await enregistrerEtiquettesSite(liste.filter((e) => e.id !== action.idEtiquette));
+      }
       const suivant = appliquerResultat(collection, registre, action, resultat);
       if (suivant.collection !== collection) await enregistrerCollection(suivant.collection);
       if (suivant.registre !== registre) await enregistrerRegistre(suivant.registre);
@@ -551,6 +559,20 @@ async function executerLot(ctx: ContexteExecution, actions: readonly Action[], i
 }
 
 const nouvelIdLot = (prefixe: string): string => `${prefixe}-${Date.now()}`;
+
+/**
+ * Lance la suppression des étiquettes que le joueur a validées une à une (RPC `delete_tag`). Même file, même cadence,
+ * mêmes arrêts (401, 403, 429, 3 échecs) et même journal que les autres écritures ; à n’appeler qu'après confirmation.
+ */
+export function lancerSuppressionEtiquettes(etiquettes: ReadonlyArray<{ id: string; nom: string }>): Promise<void> {
+  const actions: Action[] = etiquettes.map((e) => ({
+    type: 'suppression-etiquette',
+    idCarte: ID_CARTE_ETIQUETTES,
+    nomEtiquette: e.nom,
+    idEtiquette: e.id,
+  }));
+  return lancerLot(actions, nouvelIdLot('suppression'));
+}
 
 /** Actions de retrait pour un couple (carte, étiquette) encore posé au registre ; aucune si le retrait n’est pas disponible. */
 export function actionsRetrait(couple: CoupleRetrait, collection: Collection, registre: Registre, retraitDisponible: boolean): Action[] {

@@ -28,3 +28,68 @@ describe('trierEtiquettes', () => {
     expect(t.preexistantes).toEqual([{ nom: 'constructor', nbCartes: 1 }])
   })
 })
+
+import { trierEtiquettesSite, validerEtiquettesSite } from '../../src/lib/etiquettesPreexistantes'
+import { supprimerEtiquetteDuRegistre, poserCouple } from '../../src/lib/registre'
+import { ENTREE_SUPPRESSION } from '../../src/lib/contrat/etiquettes'
+import { validerOrdre } from '../../src/lib/messages'
+import { ID_CARTE_ETIQUETTES, type Action } from '../../src/lib/actions'
+
+const ID1 = '11111111-1111-4111-8111-111111111111'
+const ID2 = '22222222-2222-4222-8222-222222222222'
+const ID3 = '33333333-3333-4333-8333-333333333333'
+
+describe('trierEtiquettesSite', () => {
+  it('garde les étiquettes sans carte et reconnaît celles de l’extension par id, préfixe ou nom', () => {
+    const r = enregistrerEtiquette(registreVide(), 'Chiens', ID1)
+    const t = trierEtiquettesSite(
+      [
+        { id: ID1, nom: 'Renommée', nbCartes: 0 },
+        { id: ID2, nom: 'Statut · À garder', nbCartes: 3 },
+        { id: ID3, nom: 'Ancienne', nbCartes: 0 },
+      ],
+      [],
+      r,
+    )
+    expect(t.filter((e) => e.origine === 'preexistante').map((e) => e.nom)).toEqual(['Ancienne'])
+    expect(t).toHaveLength(3)
+  })
+})
+
+describe('validerEtiquettesSite', () => {
+  it('rejette une forme inattendue ou un doublon', () => {
+    expect(validerEtiquettesSite([{ id: ID1, nom: 'A', nbCartes: 1 }])).toEqual([{ id: ID1, nom: 'A', nbCartes: 1 }])
+    expect(validerEtiquettesSite([{ id: 'x', nom: 'A', nbCartes: 1 }])).toBeNull()
+    expect(validerEtiquettesSite([{ id: ID1, nom: 'A', nbCartes: 1 }, { id: ID1, nom: 'B', nbCartes: 1 }])).toBeNull()
+    expect(validerEtiquettesSite('x')).toBeNull()
+  })
+})
+
+describe('suppression d’une étiquette', () => {
+  const action: Action = { type: 'suppression-etiquette', idCarte: ID_CARTE_ETIQUETTES, nomEtiquette: 'Ancienne', idEtiquette: ID3 }
+
+  it('contrat : POST rpc/delete_tag avec p_tag_id seul, 204 attendu', () => {
+    expect(ENTREE_SUPPRESSION.methode).toBe('POST')
+    expect(ENTREE_SUPPRESSION.construireChemin(action)).toBe('/rest/v1/rpc/delete_tag')
+    expect(ENTREE_SUPPRESSION.construireCorps(action, { idJoueur: '', couleurEtiquette: '' })).toEqual({ p_tag_id: ID3 })
+    expect(ENTREE_SUPPRESSION.construireCorps({ ...action, idEtiquette: 'x' } as Action, { idJoueur: '', couleurEtiquette: '' })).toBeNull()
+    expect(ENTREE_SUPPRESSION.validerReponse(204, null)).toBe('reussie')
+    expect(ENTREE_SUPPRESSION.validerReponse(200, null)).toBe('hors-contrat')
+  })
+
+  it('protocole : ordre valide, champ en trop ou id invalide rejetés', () => {
+    expect(validerOrdre({ message: 'ordre', ordre: action })).toEqual(action)
+    expect(validerOrdre({ message: 'ordre', ordre: { ...action, idEtiquette: 'x' } })).toBeNull()
+    expect(validerOrdre({ message: 'ordre', ordre: { ...action, extra: 1 } })).toBeNull()
+    expect(validerOrdre({ message: 'ordre', ordre: { ...action, idCarte: 'R|T' } })).toBeNull()
+  })
+
+  it('registre : oublie le nom et ses couples', () => {
+    let r = enregistrerEtiquette(registreVide(), 'Ancienne', ID3)
+    r = poserCouple(r, 'ex1', 'Ancienne')
+    r = poserCouple(r, 'ex1', 'Autre')
+    const apres = supprimerEtiquetteDuRegistre(r, 'Ancienne')
+    expect(Object.keys(apres.etiquettes)).toEqual([])
+    expect(apres.couples).toEqual([{ ex: 'ex1', nom: 'Autre' }])
+  })
+})

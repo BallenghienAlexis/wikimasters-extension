@@ -22,6 +22,7 @@ import {
   enregistrerJournal,
   chargerJournal,
   enregistrerStatutSynchro,
+  enregistrerEtiquettesSite,
   noterAffluenceSite,
   chargerReleveMarche,
   enregistrerReleveMarche,
@@ -41,6 +42,8 @@ export const DELAI_SYNCHRO_MS = 30 * 60_000;
 const MAX_ECHECS_RELEVE = 3;
 
 export interface DependancesSynchroAuto {
+  /** Mémorise la liste des étiquettes du compte lue dans `stats` (optionnel). */
+  noterEtiquettesSite?: (liste: Array<{ id: string; nom: string; nbCartes: number }>) => Promise<void>;
   horloge: Horloge;
   /** `GET` même origine : reçoit un chemin relatif, ne renvoie que le statut et le JSON. */
   transport: (chemin: string) => Promise<ReponseApi>;
@@ -248,6 +251,10 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         const reponse = await deps.transport(chemin);
         if (!page && chemin.startsWith('/api/my-collection/stats')) {
           const total = reponse.statut === 200 ? analyserStats(reponse.json)?.total : undefined;
+          const stats = reponse.statut === 200 ? analyserStats(reponse.json) : null;
+          if (stats !== null) {
+            await (deps.noterEtiquettesSite?.(stats.etiquettes.map((e) => ({ id: e.id, nom: e.nom, nbCartes: e.nbCartes }))) ?? Promise.resolve()).catch(() => undefined);
+          }
           if (total !== undefined) {
             pages = Math.ceil(total / CARTES_PAR_PAGE);
             await noter({ etat: 'en-cours' });
@@ -355,6 +362,7 @@ const synchroDuNavigateur = (): SynchroAuto =>
       return chargerPreferences();
     },
     noterStatut: enregistrerStatutSynchro,
+    noterEtiquettesSite: enregistrerEtiquettesSite,
     journaliser: (evenement) => ecrireEvenementJournal(evenement),
     routeMarche: CONFIG_AFFLUENCE.routeMarche,
     champsHorodatage: CONFIG_AFFLUENCE.champsHorodatage,
