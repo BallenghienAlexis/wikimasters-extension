@@ -408,6 +408,21 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(b.enVolMax()).toBe(1);
   });
 
+  it('attend l’intervalle minimal depuis la dernière requête d’une exécution précédente', async () => {
+    const etat = etatInitial();
+    etat.requetes = [T0 - 50];
+    const b = banc(siteFictif(1), collectionDe([]), etat);
+    await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect((b.departs[0]?.t ?? 0) - (T0 - 50)).toBeGreaterThanOrEqual(INTERVALLE_MS);
+  });
+
+  it('borne l’historique des requêtes conservé dans l’état à 20 entrées', async () => {
+    const b = banc(siteFictif(8000));
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(b.departs.length).toBeGreaterThan(20);
+    expect(r.etat.requetes.length).toBeLessThanOrEqual(20);
+  });
+
   it.each([401, 403, 429])('arrêt immédiat sur %i, sans reprise avant 30 min', async (code) => {
     const b = banc((chemin, n) => (n === 2 ? { statut: code, json: null } : siteFictif(10)(chemin)));
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });

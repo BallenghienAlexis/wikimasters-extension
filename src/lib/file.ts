@@ -19,7 +19,7 @@ import type { Action, EtatExecution, ResultatAction } from './actions'
 export const INTERVALLE_MS = 200
 /** Délai supplémentaire maximal, ajouté à l’intervalle minimal (jamais en dessous de l’intervalle minimal). */
 export const SUPPLEMENT_MAX_MS = 100
-/** Plus de plafond de requêtes par minute (décision d’Alexis, 2026-11-12) : seul l’intervalle minimal limite le débit. */
+// Plus de plafond de requêtes par minute (décision d’Alexis, 2026-11-12) : seul l’intervalle minimal limite le débit.
 /** Nombre d’échecs cumulés (actions passées exclues) qui arrête la file. */
 export const MAX_ECHECS = 3
 /** Codes HTTP qui arrêtent la file dès la première occurrence. */

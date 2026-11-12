@@ -239,7 +239,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     if (deps.arretDemande?.()) throw new Interruption('manuel', null);
     // Cadence : 0,2 s depuis la dernière requête (budget commun), sans plafond par minute.
     const t = horloge.now();
-    const derniere = etat.requetes.at(-1);
+    const derniere = etat.requetes.length === 0 ? undefined : Math.max(...etat.requetes);
     const echeance = derniere === undefined ? t : Math.max(t, derniere + INTERVALLE_MS + gigue());
     await horloge.attendreJusqua(echeance);
     if (deps.arretDemande?.()) throw new Interruption('manuel', null);
