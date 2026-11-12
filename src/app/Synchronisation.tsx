@@ -36,8 +36,8 @@ import { avecIdEtiquette } from '../lib/registre';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
 import Journal, { type CoupleRetrait } from './Journal';
 
-/** Secondes entre deux requêtes en moyenne : 6 s minimales plus une gigue de 0 à 6 s (moyenne 3 s). */
-const SECONDES_PAR_ACTION = 9;
+/** Secondes par action en moyenne : 1 s minimale plus un supplément de 0 à 0,5 s (moyenne 0,25 s). */
+const SECONDES_PAR_ACTION = 1.25;
 /** Nombre maximal de lignes d’actions affichées (SC-025). */
 const LIGNES_MAX = 100;
 /** Au-delà, les cartes écartées sont regroupées par raison. */
@@ -46,7 +46,7 @@ const ECARTEES_MAX = 50;
 /** Espace insécable : typographie française avant « : » (D-40). */
 const NB = ' ';
 
-export const CADENCE_TEXTE = `Cadence variable${NB}: 6 à 12 s entre deux actions, 10 par minute au plus · arrêt après 3 erreurs`;
+export const CADENCE_TEXTE = `Cadence variable${NB}: 1 à 1,5 s entre deux actions, 60 par minute au plus · arrêt après 3 erreurs`;
 
 const RAISONS: Record<RaisonEcart, string> = {
   'non-reliee': 'non reliée au site',
@@ -416,7 +416,7 @@ function contexteExecution(): ContexteExecution {
     (await chargerCollection()).cartes.find((c) => c.id === idCarte)?.titre ?? idCarte;
   const file = creerFile({
     horloge: horlogeReelle,
-    // Délai variable entre les requêtes (décision d’Alexis du 2026-11-11), en plus des 6 s minimales.
+    // Délai variable entre les requêtes (décision d’Alexis du 2026-11-11), en plus de la seconde minimale.
     delaiSupplementaire: () => Math.floor(Math.random() * (SUPPLEMENT_MAX_MS + 1)),
     transport: async (ordre) => {
       if (ordre.type !== 'pose-etiquette' && ordre.type !== 'retrait-etiquette') return execution.transport(ordre);

@@ -82,8 +82,8 @@ describe('libellés', () => {
     expect(titreApercu(0)).toBe('Aucune action à envoyer')
   })
 
-  it('rappelle la cadence fixe', () => {
-    expect(CADENCE_TEXTE).toBe(`Cadence variable${NB}: 6 à 12 s entre deux actions, 10 par minute au plus · arrêt après 3 erreurs`)
+  it('rappelle la cadence', () => {
+    expect(CADENCE_TEXTE).toBe(`Cadence variable${NB}: 1 à 1,5 s entre deux actions, 60 par minute au plus · arrêt après 3 erreurs`)
   })
 })
 
@@ -143,13 +143,13 @@ describe('totaux et durée', () => {
     expect(texteTotaux({ etiquettes: 0, encheres: 2, defausses: 0, lectures: 0 })).toBe('2 enchères')
   })
 
-  it('arrondit la durée à la minute supérieure (9 s par requête en moyenne)', () => {
+  it('arrondit la durée à la minute supérieure (1,25 s par action en moyenne)', () => {
     expect(dureeMinutes(0)).toBe(0)
     expect(dureeMinutes(1)).toBe(1)
-    expect(dureeMinutes(6)).toBe(1)
-    expect(dureeMinutes(7)).toBe(2)
-    expect(dureeMinutes(13)).toBe(2)
-    expect(texteDuree(7)).toBe(`Durée estimée${NB}: 2 min`)
+    expect(dureeMinutes(48)).toBe(1)
+    expect(dureeMinutes(49)).toBe(2)
+    expect(dureeMinutes(96)).toBe(2)
+    expect(texteDuree(49)).toBe(`Durée estimée${NB}: 2 min`)
   })
 })
 

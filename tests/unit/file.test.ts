@@ -87,13 +87,13 @@ function banc(
 }
 
 describe('délai supplémentaire variable (décision du 2026-11-11)', () => {
-  it('ajoute le supplément tiré à l’intervalle de 6 000 ms, jamais en dessous', async () => {
+  it('ajoute le supplément tiré à l’intervalle de 1 000 ms, jamais en dessous', async () => {
     const tirages = [0, 1500, 4000, 2500]
     let i = 0
     const b = banc({ delaiSupplementaire: () => tirages[i++ % tirages.length]! })
     await creerFile(b.deps).demarrer(lot(5), 'lot-1')
     // Le supplément tiré après la requête n s'applique avant la requête n + 1.
-    expect(b.departs.slice(1).map((d, n) => d - b.departs[n]!)).toEqual([6000, 7500, 10_000, 8500])
+    expect(b.departs.slice(1).map((d, n) => d - b.departs[n]!)).toEqual([1000, 1500, 1500, 1500])
   })
 
   it('borne un tirage hors limites, négatif ou non numérique', async () => {
@@ -101,38 +101,38 @@ describe('délai supplémentaire variable (décision du 2026-11-11)', () => {
     let i = 0
     const b = banc({ delaiSupplementaire: () => tirages[i++]! })
     await creerFile(b.deps).demarrer(lot(5), 'lot-1')
-    expect(b.departs.slice(1).map((d, n) => d - b.departs[n]!)).toEqual([10_000, 6000, 6000, 10_000])
+    expect(b.departs.slice(1).map((d, n) => d - b.departs[n]!)).toEqual([1500, 1000, 1000, 1500])
   })
 
-  it('reste à 6 000 ms si la source lève une exception', async () => {
+  it('reste à 1 000 ms si la source lève une exception', async () => {
     const b = banc({
       delaiSupplementaire: () => {
         throw new Error('x')
       },
     })
     await creerFile(b.deps).demarrer(lot(3), 'lot-1')
-    expect(b.departs[1]! - b.departs[0]!).toBe(6000)
+    expect(b.departs[1]! - b.departs[0]!).toBe(1000)
   })
 
-  it('garde au plus 10 requêtes par fenêtre de 60 s avec un supplément', async () => {
+  it('garde au plus 60 requêtes par fenêtre de 60 s avec un supplément', async () => {
     const b = banc({ delaiSupplementaire: () => 1000 })
-    await creerFile(b.deps).demarrer(lot(30), 'lot-1')
-    for (let n = 0; n + 10 < b.departs.length; n++) {
-      expect(b.departs[n + 10]! - b.departs[n]!).toBeGreaterThanOrEqual(60_000)
+    await creerFile(b.deps).demarrer(lot(130), 'lot-1')
+    for (let n = 0; n + 60 < b.departs.length; n++) {
+      expect(b.departs[n + 60]! - b.departs[n]!).toBeGreaterThanOrEqual(60_000)
     }
   })
 })
 
 describe('cadence fixe (AC2)', () => {
-  it('espace les débuts de requête de 6 000 ms quand tout répond vite', async () => {
+  it('espace les débuts de requête de 1 000 ms quand tout répond vite', async () => {
     const b = banc();
     const file = creerFile(b.deps);
     await file.demarrer(lot(5), 'lot-1');
     expect(b.requetes).toHaveLength(5);
     for (let i = 1; i < b.departs.length; i++) {
       const ecart = b.departs[i]! - b.departs[i - 1]!;
-      expect(ecart).toBeGreaterThanOrEqual(5950);
-      expect(ecart).toBeLessThanOrEqual(6050);
+      expect(ecart).toBeGreaterThanOrEqual(950);
+      expect(ecart).toBeLessThanOrEqual(1050);
     }
   });
 
@@ -155,13 +155,13 @@ describe('cadence fixe (AC2)', () => {
     expect(b.departs[1]! - b.departs[0]!).toBeGreaterThanOrEqual(20_000);
   });
 
-  it('émet au plus 10 requêtes dans toute fenêtre de 60 s', async () => {
+  it('émet au plus 60 requêtes dans toute fenêtre de 60 s', async () => {
     const b = banc();
     const file = creerFile(b.deps);
-    await file.demarrer(lot(30), 'lot-1');
-    expect(b.requetes).toHaveLength(30);
-    for (let i = 0; i + 10 < b.departs.length; i++) {
-      expect(b.departs[i + 10]! - b.departs[i]!).toBeGreaterThanOrEqual(60_000);
+    await file.demarrer(lot(130), 'lot-1');
+    expect(b.requetes).toHaveLength(130);
+    for (let i = 0; i + 60 < b.departs.length; i++) {
+      expect(b.departs[i + 60]! - b.departs[i]!).toBeGreaterThanOrEqual(60_000);
     }
   });
 
@@ -170,7 +170,7 @@ describe('cadence fixe (AC2)', () => {
     const file = creerFile(b.deps);
     await file.demarrer(lot(3), 'lot-1');
     expect(b.requetes.map((a) => a.idCarte)).toEqual(['Rare|Carte 1', 'Rare|Carte 3']);
-    expect(b.departs[1]! - b.departs[0]!).toBe(6000);
+    expect(b.departs[1]! - b.departs[0]!).toBe(1000);
   });
 
   it('une action arrêtée faute de jeton n’est pas comptée et la file s’arrête', async () => {
@@ -187,7 +187,7 @@ describe('cadence fixe (AC2)', () => {
     await file.demarrer(lot(2), 'lot-1');
     await file.demarrer(lot(1), 'lot-2');
     expect(b.departs).toHaveLength(3);
-    expect(b.departs[2]! - b.departs[0]!).toBe(6000);
+    expect(b.departs[2]! - b.departs[0]!).toBe(1000);
   });
 
   it('une requête dont le transport lève une exception compte pour la cadence', async () => {
@@ -203,7 +203,7 @@ describe('cadence fixe (AC2)', () => {
     const etat = await file.demarrer(lot(2), 'lot-1');
     expect(etat.etat).toBe('arretee');
     await file.demarrer(lot(1), 'lot-2');
-    expect(b.departs[1]! - b.departs[0]!).toBe(6000);
+    expect(b.departs[1]! - b.departs[0]!).toBe(1000);
   });
 
   it('n’utilise aucun aléa : deux exécutions identiques donnent les mêmes écarts', async () => {
@@ -468,7 +468,7 @@ describe('robustesse', () => {
       return Promise.resolve();
     };
     await creerFile(b.deps).demarrer(lot(2), 'lot-1');
-    expect(b.departs[1]! - b.departs[0]!).toBeGreaterThanOrEqual(6000);
+    expect(b.departs[1]! - b.departs[0]!).toBeGreaterThanOrEqual(1000);
   });
 
   it('ajouter renvoie false après arreter()', async () => {
@@ -597,3 +597,12 @@ describe('état observable', () => {
     expect(vus).toEqual([0, 1, 2, 2]);
   });
 });
+
+describe('cadence unique pour toutes les actions (2026-11-12)', () => {
+  it('espace de 1 s une pose, une enchère et une défausse', async () => {
+    const e = (n: number): Action => ({ type: 'enchere', idCarte: `Rare|Carte ${n}`, idExemplaire: 'x', prix: 5 })
+    const b = banc({ delaiSupplementaire: () => 0, confirmer: () => 'defausser' })
+    await creerFile(b.deps).demarrer([pose(1), e(2), defausse(3)], 'lot-1')
+    expect(b.departs.slice(1).map((d, n) => d - b.departs[n]!)).toEqual([1000, 1000])
+  })
+})

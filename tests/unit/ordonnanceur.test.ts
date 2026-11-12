@@ -399,8 +399,8 @@ describe('ordonnanceur — critère 3 : prix', () => {
 });
 
 describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
-  it('sépare deux requêtes d’au moins 6 s, au plus 10 par 60 s, une seule en vol', async () => {
-    const b = banc(siteFictif(600));
+  it('sépare deux requêtes d’au moins 1 s, au plus 60 par 60 s, une seule en vol', async () => {
+    const b = banc(siteFictif(4000));
     await synchroniser({ ...b.deps, maxPrix: 0 });
     const t = b.departs.map((d) => d.t);
     expect(t.length).toBeGreaterThan(MAX_PAR_FENETRE);
@@ -411,7 +411,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
 
   it('respecte la fenêtre de 60 s même quand des requêtes récentes viennent d’une exécution précédente', async () => {
     const etat = etatInitial();
-    etat.requetes = Array.from({ length: MAX_PAR_FENETRE }, (_, i) => T0 - 1000 + i); // 10 requêtes à l’instant
+    etat.requetes = Array.from({ length: MAX_PAR_FENETRE }, (_, i) => T0 - 1000 + i); // MAX_PAR_FENETRE requêtes à l’instant
     const b = banc(siteFictif(1), collectionDe([]), etat);
     await synchroniser({ ...b.deps, maxPrix: 0 });
     expect((b.departs[0]?.t ?? 0) - (T0 - 1000)).toBeGreaterThanOrEqual(FENETRE_MS);
