@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyserFenetreEnchere, analyserTexteCarte, identifiantCarte, regrouperCartes } from '../../src/lib/lecteur';
+import { analyserFenetreEnchere, analyserTexteCarte, descriptionProvisoire, identifiantCarte, regrouperCartes } from '../../src/lib/lecteur';
 
 const AJOUTER = 'Ajouter aux favoris (verrouille la carte : ni défausse, ni vente, ni échange)';
 const RETIRER = 'Retirer des favoris (déverrouille la carte)';
@@ -94,5 +94,14 @@ describe('regrouperCartes', () => {
     expect(carte).not.toHaveProperty('statut');
     expect(carte).not.toHaveProperty('prixCible');
     expect(carte).not.toHaveProperty('note');
+  });
+});
+
+describe('descriptionProvisoire', () => {
+  it('repère une description vide ou tronquée', () => {
+    expect(descriptionProvisoire('')).toBe(true);
+    expect(descriptionProvisoire('Un grand barrage…')).toBe(true);
+    expect(descriptionProvisoire('Un grand barrage...')).toBe(true);
+    expect(descriptionProvisoire('Un grand barrage.')).toBe(false);
   });
 });

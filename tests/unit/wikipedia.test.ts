@@ -8,7 +8,12 @@ const page = (extra: object) => ({ query: { pages: [{ title: 'X', ...extra }] } 
 
 describe('lireReponse', () => {
   it('retient les titres de catégories sans leur préfixe', () => {
-    expect(lireReponse(page({ categories: [{ ns: 14, title: 'Catégorie:Barrage en France' }] }))).toEqual({ type: 'ok', categories: ['Barrage en France'] });
+    expect(lireReponse(page({ categories: [{ ns: 14, title: 'Catégorie:Barrage en France' }] }))).toEqual({ type: 'ok', categories: ['Barrage en France'], resume: '' });
+  });
+  it('retient le résumé de la page, borné', () => {
+    expect(lireReponse(page({ extract: 'Un barrage.' }))).toEqual({ type: 'ok', categories: [], resume: 'Un barrage.' });
+    const long = lireReponse(page({ extract: 'x'.repeat(5000) }));
+    expect(long.type === 'ok' && long.resume.length).toBe(2000);
   });
   it('repère page absente, homonymie et forme inattendue', () => {
     expect(lireReponse(page({ missing: true })).type).toBe('introuvable');
@@ -24,6 +29,18 @@ describe('themesDepuisCategories', () => {
     expect(themes).toContain('barrage');
     expect(themes).toContain('architecture');
     expect(themes).not.toContain('chat');
+  });
+});
+
+describe('résumé Wikipédia', () => {
+  it('complète les catégories par le résumé', () => {
+    expect(themesDepuisCategories([], 'Le Mont Blanc est un massif dominé par le ski et les barrages.')).toContain('barrage');
+    expect(themesDepuisCategories(['Barrage en France'], '')).toContain('barrage');
+  });
+  it('relit une fois une entrée sans thème enregistrée avant le résumé', () => {
+    const ancien = validerCache({ version: 1, entrees: { A: { themes: [], verifieLe: 1000 }, B: { themes: ['barrage'], verifieLe: 1000 } } })!;
+    expect(titresAVerifier(['A', 'B'], ancien, 2000)).toEqual(['A']);
+    expect(titresAVerifier(['A'], ajouterEntree(ancien, 'A', [], 2000), 3000)).toEqual([]);
   });
 });
 

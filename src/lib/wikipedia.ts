@@ -7,11 +7,14 @@ export const HOTE_WIKIPEDIA = 'https://fr.wikipedia.org';
 export const DUREE_CACHE_MS = 30 * 24 * 3600 * 1000;
 const MAX_ENTREES = 20_000;
 const MAX_CATEGORIES = 500;
+const MAX_RESUME = 2000;
 
 export interface EntreeWikipedia {
   /** Identifiants de thèmes (parents compris) ; liste vide = page lue, aucun thème reconnu. */
   themes: string[];
   verifieLe: number;
+  /** Vrai quand le résumé de la page a aussi servi (entrées plus anciennes : catégories seules, relues une fois). */
+  avecResume?: true;
 }
 
 export interface CacheWikipedia {
@@ -21,7 +24,7 @@ export interface CacheWikipedia {
 }
 
 export type LectureWikipedia =
-  | { type: 'ok'; categories: string[] }
+  | { type: 'ok'; categories: string[]; resume: string }
   | { type: 'introuvable' }
   | { type: 'ambigue' }
   | { type: 'invalide' };
@@ -35,7 +38,10 @@ export function urlRequete(titre: string): string {
     format: 'json',
     formatversion: '2',
     redirects: '1',
-    prop: 'categories|pageprops',
+    prop: 'categories|pageprops|extracts',
+    exintro: '1',
+    explaintext: '1',
+    exsentences: '5',
     ppprop: 'disambiguation',
     cllimit: 'max',
     clshow: '!hidden',
@@ -53,23 +59,28 @@ export function lireReponse(brut: unknown): LectureWikipedia {
   if (!estObjet(page)) return { type: 'invalide' };
   if (page.missing === true || page.invalid === true) return { type: 'introuvable' };
   if (estObjet(page.pageprops) && 'disambiguation' in page.pageprops) return { type: 'ambigue' };
-  if (page.categories === undefined) return { type: 'ok', categories: [] };
+  // Résumé : introduction de la page en texte brut, bornée ; utile quand les catégories ne disent rien.
+  const resume = typeof page.extract === 'string' ? page.extract.slice(0, MAX_RESUME) : '';
+  if (page.categories === undefined) return { type: 'ok', categories: [], resume };
   if (!Array.isArray(page.categories) || page.categories.length > MAX_CATEGORIES) return { type: 'invalide' };
   const categories: string[] = [];
   for (const c of page.categories) {
     if (!estObjet(c) || typeof c.title !== 'string' || c.title.length > 300) return { type: 'invalide' };
     categories.push(c.title.replace(/^[^:]+:/, ''));
   }
-  return { type: 'ok', categories };
+  return { type: 'ok', categories, resume };
 }
 
 // Catégories de maintenance ou d'organisation du site : aucune information sur le sujet.
 const CATEGORIE_TECHNIQUE = /^(articles? |pages? |wikipedia|portail|ebauche|homonymie)/;
 
 /** Thèmes déduits des catégories, avec les mêmes règles que les mots-clés locaux. */
-export function themesDepuisCategories(categories: string[]): string[] {
+export function themesDepuisCategories(categories: string[], resume = ''): string[] {
   const utiles = categories.filter((c) => !CATEGORIE_TECHNIQUE.test(c.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()));
-  return themesDeTexte(utiles.join(' . '), true);
+  const themes = new Set(themesDeTexte(utiles.join(' . '), true));
+  // Le résumé complète les catégories (mots-clés ordinaires, sans les motifs réservés aux catégories).
+  for (const id of themesDeTexte(resume)) themes.add(id);
+  return [...themes];
 }
 
 export function validerCache(brut: unknown): CacheWikipedia | null {
@@ -82,13 +93,17 @@ export function validerCache(brut: unknown): CacheWikipedia | null {
     const e = brut.entrees[cle];
     if (!estObjet(e) || !Array.isArray(e.themes) || typeof e.verifieLe !== 'number' || !Number.isSafeInteger(e.verifieLe) || e.verifieLe < 0) return null;
     // Un identifiant inconnu (thème retiré depuis) est écarté sans invalider le reste.
-    entrees[cle] = { themes: e.themes.filter((t): t is string => typeof t === 'string' && connus.has(t)), verifieLe: e.verifieLe };
+    entrees[cle] = {
+      themes: e.themes.filter((t): t is string => typeof t === 'string' && connus.has(t)),
+      verifieLe: e.verifieLe,
+      ...(e.avecResume === true ? { avecResume: true as const } : {}),
+    };
   }
   return { version: 1, entrees: { ...entrees } };
 }
 
 export function ajouterEntree(cache: CacheWikipedia, titre: string, themes: string[], maintenant: number): CacheWikipedia {
-  return { version: 1, entrees: { ...cache.entrees, [titre]: { themes: [...themes], verifieLe: maintenant } } };
+  return { version: 1, entrees: { ...cache.entrees, [titre]: { themes: [...themes], verifieLe: maintenant, avecResume: true } } };
 }
 
 /** Titres sans entrée valide dans le cache, sans doublon, dans l'ordre des cartes. */
@@ -99,7 +114,8 @@ export function titresAVerifier(titres: string[], cache: CacheWikipedia, mainten
     if (vus.has(titre)) continue;
     vus.add(titre);
     const entree = Object.hasOwn(cache.entrees, titre) ? cache.entrees[titre] : undefined;
-    if (entree === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS) resultat.push(titre);
+    // Une entrée sans thème et sans résumé (ancienne version) est relue une fois pour profiter du résumé.
+    if (entree === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS || (entree.themes.length === 0 && entree.avecResume !== true)) resultat.push(titre);
   }
   return resultat;
 }

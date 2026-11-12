@@ -32,6 +32,9 @@ export function analyserTexteCarte(texte: string, libelleFavori: string): CarteA
   return { rarete, titre, description, favori: libelleFavori.startsWith('Retirer') };
 }
 
+/** Description absente ou tronquée : le site n'a peut-être pas fini de charger la version complète. */
+export const descriptionProvisoire = (description: string): boolean => description === '' || /(…|\.{3})\s*$/.test(description);
+
 // Une carte présente plusieurs fois sur la page compte comme autant d'exemplaires.
 export function regrouperCartes(cartes: CarteAffichee[]): CarteImportee[] {
   const parId = new Map<string, CarteImportee>();
