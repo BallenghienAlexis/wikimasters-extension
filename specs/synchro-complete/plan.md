@@ -33,7 +33,7 @@ Logique pure dans `src/lib/` (sans `chrome.*`, testable avec horloge, transport 
 | `src/lib/lot.ts` (créé) | `construireLot(collection, registre, config, tableContrat)` : garde-fous, étiquettes, enchères, défausses (un exemplaire et un `user_card_id` par action), écartées avec raison, ordre H9 ; `revérifierAction` (SC-022) ; `appliquerResultat` (SC-014). Réutilise `prixDepart` de `src/lib/tri.ts` et `LIBELLES_STATUT`. | A |
 | `src/lib/registre.ts` (créé) | Registre des étiquettes de l'extension (identifiant d'étiquette du site, liens posés par exemplaire), purge par carte, borne SC-026. | A |
 | `src/lib/journal.ts` (créé) | Entrée « en cours » puis complétion, FIFO 1 000, lecture validée, entrée la plus récente par couple (carte, étiquette) pour SC-016, clôture « interrompue ». Construit ses entrées à partir de champs listés (pas d'étalement d'objet reçu). | A |
-| `src/lib/file.ts` (créé) | Exécuteur pur : une requête en vol, départ = max(début précédent + 6 000 ms, réponse précédente, confirmation), arrêt sur 3 échecs cumulés ou cas SC-011 (b), arrêt manuel, ajout en fin de file. Horloge, transport, confirmation, lecture d'état et journal **injectés**. Aucun tirage aléatoire, aucun délai variable. | A |
+| `src/lib/file.ts` (créé) | Exécuteur pur : une requête en vol, départ = max(début précédent + 200 ms + supplément de 0 à 100 ms, réponse précédente, confirmation), arrêt sur 3 échecs cumulés ou cas SC-011 (b), arrêt manuel, ajout en fin de file. Horloge, transport, confirmation, lecture d'état et journal **injectés**. Tirage aléatoire de la gigue injecté hors de `file.ts` (avenant du 2026-11-12). | A |
 | `src/lib/reseau.ts` (créé) | **Seul** module autorisé à appeler `fetch`. Refuse sans émettre : origine autre que `https://www.wiki-masters.com`, méthode/chemin hors table, identifiant invalide (non vide, ≤ 200 caractères, forme du contrat). `encodeURIComponent` des identifiants (chemin et filtre en query), en-têtes fixés : `Content-Type`, `Accept` et, en partie B, l'en-tête d'authentification **dont la valeur vient de `jeton.ts`** ; jamais `User-Agent`, `Referer`, `Origin`, `Cookie`. `redirect: 'manual'`, `credentials: 'same-origin'`, délai 30 s par `AbortController`, classement des réponses (SC-011). | A (squelette) / B |
 | `src/lib/contrat.ts` (créé) | Table du contrat : par type, méthode + modèle de chemin + constructeur de corps + exigence d'authentification + validateur de réponse. **Livrée vide en partie A** ; remplie en B depuis `contrat-api.md` (écritures `POST /rest/v1/tags`, `POST`/`DELETE /rest/v1/user_card_tags`, `POST /api/marketplace`, `POST /api/user-cards/<user_card_id>/discard`, lecture `GET /api/my-collection` si B2 la retient). Un type dont un paramètre reste « non relevé » n'entre pas dans la table. | B |
 | `src/lib/jeton.ts` (créé) | **Module jeton unique** (voir ci-dessus). | B |
@@ -69,7 +69,7 @@ sequenceDiagram
   P->>S: lire collection v2, registre, journal
   P->>P: construireLot() — figé à l'ouverture de l'aperçu (H24)
   Note over P: « Lancer » : verrou Web Locks, état « en cours »
-  loop chaque action, cadence fixe 6 s
+  loop chaque action, cadence 0,2 s + gigue
     P->>S: relire la carte → revérifierAction (SC-022)
     opt défausse
       P->>P: DialogueDefausse (confirmation)
@@ -92,7 +92,7 @@ sequenceDiagram
 - **Une seule exécution** (SC-023) : verrou `navigator.locks` ; à l'ouverture, un état « en cours » sans verrou détenu est clos « interrompue » (SC-013).
 - **Identifiant de lot** : horodatage + compteur, jamais `crypto.randomUUID`.
 - **Exemplaires** : le contrat montre que `user_card_id` désigne l'exemplaire possédé et sert à l'étiquette comme à la défausse. Une défausse = un `user_card_id`. Pour les étiquettes et l'enchère, la granularité (tous les exemplaires ou un seul) est une **question pour `refine`** (voir « Incohérences à lever ») : A3 encapsule ce choix dans une fonction unique.
-- **Cadence** : fixe, 6 000 ms, aucun délai aléatoire, aucune simulation de comportement humain, aucune falsification d'en-tête. Les appels que le site fait lui-même autour d'une action (par exemple la relecture du profil après une défausse, la relecture d'une enchère) **ne sont pas reproduits** : seules les actions du lot partent.
+- **Cadence** : 0,2 s au minimum plus 0 à 0,1 s de gigue injectée (avenant du 2026-11-12), sans plafond par minute, aucune simulation de comportement humain, aucune falsification d'en-tête. Les appels que le site fait lui-même autour d'une action (par exemple la relecture du profil après une défausse, la relecture d'une enchère) **ne sont pas reproduits** : seules les actions du lot partent.
 - **Rendu de l'aperçu** (SC-025) : lot calculé une fois (mémoïsé), rendu paginé, totaux sur tout le lot.
 - **Focus** : le piège de focus du dialogue vit dans `src/app/` (le lint n'interdit `focus` que dans le code exécuté sur le site).
 
@@ -102,7 +102,7 @@ sequenceDiagram
 - `chrome.tabs.query` pour compter les onglets : exige `tabs` ou des `host_permissions`.
 - Verrou par clé `chrome.storage.local` : non atomique entre deux onglets.
 - Jeton lu dans `collection.html` puis transmis par message : multiplie les contextes qui le voient, contraire à « un seul module ».
-- Jeton mis en cache en mémoire dans le content script : inutile à 10 requêtes par minute, élargit la fenêtre de fuite.
+- Jeton mis en cache en mémoire dans le content script : inutile à ce débit (historique : 10 requêtes par minute), élargit la fenêtre de fuite.
 - Exécution de code dans le monde principal de la page pour atteindre un jeton : hors du cadre décidé (code injecté dans la page), escalade si c'est la seule voie.
 - `chrome.cookies` : permission supplémentaire, et cookies hors du module jeton.
 - Bibliothèque de piège de focus ou de tests de composants : aucune nouvelle dépendance.
@@ -245,3 +245,17 @@ Conflits de fichiers à surveiller dans `tasks` : `reseau.ts` (A6, B1, B5), `esl
 
 ## Avenant du 2026-11-11
 Décision d’Alexis (voir AGENTS.md) : synchronisation automatique **activée par défaut**, `GET /api/marketplace/mine` ajouté au périmètre de lecture, délai variable (gigue de 0 à 6 s) ajouté à l’intervalle de 6 s. L’écriture sur le site est autorisée ; ses contrats attendent les relevés de `specs/synchro-complete/releves-a-faire.md`. En cas d’écart avec le texte ci-dessus, AGENTS.md prime.
+
+## Avenant du 2026-11-12 : cadence actuelle
+
+Décisions d’Alexis du 2026-11-12, les PR #72 à #76 sont livrées ; les deux puces « Défausse » et « Étiquettes préexistantes » sont **en cours** (PR #79 et #77, non fusionnées à la rédaction) ; `AGENTS.md` prime sur tout texte de ce document. Les passages historiques de ce document (revues `R-13`, `R-48`, hypothèse `H28`, etc.) qui parlent de 6 s, de 10 par minute ou de « cadence fixe » sont **remplacés** par ce qui suit.
+
+- **Cadence** : 0,2 s au minimum entre deux débuts de requête (`INTERVALLE_MS`) plus un supplément aléatoire de 0 à 0,1 s (`SUPPLEMENT_MAX_MS`, `GIGUE_MAX_MS`), tiré hors de `file.ts` (source injectée) ; **aucun plafond par minute** ni par session. Le délai n’est donc plus « fixe » et le code contient un tirage aléatoire (injecté). SC-010 se lit : début de requête ≥ max(début précédent + 0,2 s + supplément, réponse précédente), sans fenêtre glissante de 60 s.
+- **Parallélisme** : poses et retraits d’étiquettes en parallèle par défaut, 3 en vol (`CONCURRENCE_MAX` = 4 en plafond ; 4 ordres en attente au plus côté page, chacun avec un identifiant de corrélation dans le protocole page ↔ content script). Les débuts de requête restent espacés de 0,2 s plus la gigue. Création d’étiquettes, enchères, défausses et lectures : une seule requête en vol.
+- **Arrêts** : 401, 403, 429 (et 409 sur enchère ou défausse) et 3 échecs arrêtent le lot ; pause de 30 min. En parallèle, un arrêt bloque tout nouveau départ, les requêtes en vol vont à leur terme (le seuil de 3 échecs peut être dépassé de 2 au plus).
+- **Bail** : un lot d’écriture prend le bail de la synchro automatique pour toute sa durée, et ne démarre pas si la synchro tourne (et inversement), pour ne pas additionner les débits.
+- **Relance** : le bouton « Relancer la synchro » (spec `synchro-auto`) n’est proposé qu’après un arrêt manuel ou un 403.
+- **Durée estimée** (SC-008, H28) : nombre de requêtes × 0,25 s en moyenne (`SECONDES_PAR_REQUETE`), arrondi à la minute supérieure (`dureeMinutesApercu`).
+- **Défausse** : plafond de valeur marchande de 5 (`PLAFOND_VALEUR_DEFAUSSE`, décision du 2026-11-11), jamais dépassé même sur décision manuelle. La confirmation individuelle de chaque défausse (SC-009, G2, D-xx du dialogue) est supprimée sur demande d’Alexis le 2026-11-12 (PR #79, T-906) ; la réécriture détaillée de ces passages suit cette PR.
+- **Cartes en vente** : une carte `en-vente` ne reçoit aucune étiquette (ni création, ni pose, ni retrait), le site refusant la pose (403) ; elle est écartée avec la raison « en vente sur le site » (PR #71). « Statut · En vente » n’est donc plus posée par l’extension, ce qui remplace H17 et les lignes qui disent qu’elle est posée au lot suivant.
+- **Étiquettes préexistantes (en cours, PR #77, non fusionnée ; `AGENTS.md` de `main` ne la couvre pas encore)** : suppression d’étiquettes du compte non posées par l’extension (action `suppression-etiquette`, `POST /rest/v1/rpc/delete_tag`), demandée par Alexis le 2026-11-12 : uniquement sur étiquettes cochées une à une puis confirmées, même file, mêmes arrêts et même cadence, non parallèle.

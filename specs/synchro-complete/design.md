@@ -188,3 +188,19 @@ Composants d'interface (3:1) :
 | SC-016 (Retirer l’étiquette, non annulable) | D-28 à D-31 |
 | SC-020 (Lancer désactivé, vide) | D-12, D-18 |
 | SC-021 (accessibilité, thèmes, captures) | D-07, D-08, D-33 à D-44 |
+
+## Avenant du 2026-11-12 : cadence actuelle et défausse
+
+Décisions d’Alexis du 2026-11-12, les PR #72 à #76 sont livrées ; les deux puces « Défausse » et « Étiquettes préexistantes » sont **en cours** (PR #79 et #77, non fusionnées à la rédaction) ; `AGENTS.md` prime sur tout texte de ce document. Les passages historiques de ce document (revues `R-13`, `R-48`, hypothèse `H28`, etc.) qui parlent de 6 s, de 10 par minute ou de « cadence fixe » sont **remplacés** par ce qui suit.
+
+- **Cadence** : 0,2 s au minimum entre deux débuts de requête (`INTERVALLE_MS`) plus un supplément aléatoire de 0 à 0,1 s (`SUPPLEMENT_MAX_MS`, `GIGUE_MAX_MS`), tiré hors de `file.ts` (source injectée) ; **aucun plafond par minute** ni par session. Le délai n’est donc plus « fixe » et le code contient un tirage aléatoire (injecté). SC-010 se lit : début de requête ≥ max(début précédent + 0,2 s + supplément, réponse précédente), sans fenêtre glissante de 60 s.
+- **Parallélisme** : poses et retraits d’étiquettes en parallèle par défaut, 3 en vol (`CONCURRENCE_MAX` = 4 en plafond ; 4 ordres en attente au plus côté page, chacun avec un identifiant de corrélation dans le protocole page ↔ content script). Les débuts de requête restent espacés de 0,2 s plus la gigue. Création d’étiquettes, enchères, défausses et lectures : une seule requête en vol.
+- **Arrêts** : 401, 403, 429 (et 409 sur enchère ou défausse) et 3 échecs arrêtent le lot ; pause de 30 min. En parallèle, un arrêt bloque tout nouveau départ, les requêtes en vol vont à leur terme (le seuil de 3 échecs peut être dépassé de 2 au plus).
+- **Bail** : un lot d’écriture prend le bail de la synchro automatique pour toute sa durée, et ne démarre pas si la synchro tourne (et inversement), pour ne pas additionner les débits.
+- **Relance** : le bouton « Relancer la synchro » (spec `synchro-auto`) n’est proposé qu’après un arrêt manuel ou un 403.
+- **Durée estimée** (SC-008, H28) : nombre de requêtes × 0,25 s en moyenne (`SECONDES_PAR_REQUETE`), arrondi à la minute supérieure (`dureeMinutesApercu`).
+- **Défausse** : plafond de valeur marchande de 5 (`PLAFOND_VALEUR_DEFAUSSE`, décision du 2026-11-11), jamais dépassé même sur décision manuelle. La confirmation individuelle de chaque défausse (SC-009, G2, D-xx du dialogue) est supprimée sur demande d’Alexis le 2026-11-12 (PR #79, T-906) ; la réécriture détaillée de ces passages suit cette PR.
+- **Cartes en vente** : une carte `en-vente` ne reçoit aucune étiquette (ni création, ni pose, ni retrait), le site refusant la pose (403) ; elle est écartée avec la raison « en vente sur le site » (PR #71). « Statut · En vente » n’est donc plus posée par l’extension, ce qui remplace H17 et les lignes qui disent qu’elle est posée au lot suivant.
+- **Étiquettes préexistantes (en cours, PR #77, non fusionnée ; `AGENTS.md` de `main` ne la couvre pas encore)** : suppression d’étiquettes du compte non posées par l’extension (action `suppression-etiquette`, `POST /rest/v1/rpc/delete_tag`), demandée par Alexis le 2026-11-12 : uniquement sur étiquettes cochées une à une puis confirmées, même file, mêmes arrêts et même cadence, non parallèle.
+
+- **Interface** : la zone d’exécution n’a plus l’état « attente de confirmation » (D-19 à D-23, D-27) ni le dialogue de défausse (PR #79). Le décompte « prochaine action » (D-20) reste à faire (`retouches.md`).
