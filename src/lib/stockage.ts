@@ -1,3 +1,4 @@
+import type { Donnees } from './sauvegarde';
 import { analyserStockage,appliquerEdition, collectionVide, fusionnerImport, type CarteImportee, type Collection } from './collection';
 import type { EtatExecution, Registre } from './actions';
 import { validerJournal, type Journal } from './journal';
@@ -535,4 +536,25 @@ export async function chargerReleveMarche(): Promise<ReleveMarche> {
 export async function enregistrerReleveMarche(releve: ReleveMarche): Promise<void> {
   if (releve.le !== null && !horodatageValide(releve.le)) throw new Error('Horodatage invalide.');
   await chrome.storage.local.set({ [CLE_RELEVE_MARCHE]: { le: releve.le, echecs: Math.min(100, Math.max(0, Math.trunc(releve.echecs))) } });
+}
+
+/** Remplace le journal des ventes du joueur (écritures chaînées avec `noterEvenementVente`). */
+export function enregistrerVentes(evenements: EvenementVente[]): Promise<void> {
+  const tache = fileVentes.then(() => chrome.storage.local.set({ [CLE_VENTES]: { version: VERSION_VENTES, evenements: validerEvenements(evenements).filter((e) => e.type !== 'site') } }));
+  fileVentes = tache.catch(() => undefined);
+  return tache;
+}
+
+/** Lit ce que couvre la sauvegarde complète (voir `sauvegarde.ts`) ; une donnée illisible fait échouer la lecture. */
+export async function lireDonneesSauvegarde(): Promise<Donnees> {
+  const [collection, preferences, syncAuto, ventes] = await Promise.all([chargerCollection(), chargerPreferences(), chargerSyncAuto(), chargerVentes()]);
+  return { collection, preferences, syncAuto, ventes };
+}
+
+/** Écrit les données fusionnées. La collection d’abord : en cas d’échec, rien d’autre n’a bougé. */
+export async function ecrireDonneesSauvegarde(donnees: Donnees): Promise<void> {
+  await enregistrerCollection(donnees.collection);
+  await enregistrerPreferences(donnees.preferences);
+  await enregistrerVentes(donnees.ventes);
+  await enregistrerSyncAuto(donnees.syncAuto);
 }

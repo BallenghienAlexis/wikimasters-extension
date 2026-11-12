@@ -27,9 +27,10 @@ test.describe('page de collection', () => {
     await expect(pageCollection.getByTestId('resume')).toContainText('7 exemplaires · 3 doublons');
   });
 
-  test('ne propose plus ni import ni export', async ({ pageCollection }) => {
+  test('ne propose plus l’import ni l’export de cartes (seule la sauvegarde complète reste)', async ({ pageCollection }) => {
     await chargerCollectionFictive(pageCollection);
-    await expect(pageCollection.locator('input[type="file"]')).toHaveCount(0);
+    await expect(pageCollection.locator('input[type="file"]')).toHaveCount(1);
+    await expect(pageCollection.getByRole('button', { name: 'Exporter une sauvegarde' })).toBeVisible();
     for (const nom of ['Importer un fichier', 'Exporter en CSV', 'Exporter en JSON']) {
       await expect(pageCollection.getByRole('button', { name: nom })).toHaveCount(0);
     }

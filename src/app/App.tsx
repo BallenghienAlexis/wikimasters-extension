@@ -23,6 +23,7 @@ import { registreVide } from '../lib/registre';
 import AssistantTri from './AssistantTri';
 import Synchronisation, { lancerSuppressionEtiquettes } from './Synchronisation';
 import SynchroAuto from './SynchroAuto';
+import Sauvegarde from './Sauvegarde';
 import EtiquettesPreexistantes from './EtiquettesPreexistantes';
 import type { EtiquetteSite } from '../lib/etiquettesPreexistantes';
 import FileVente from './FileVente';
@@ -254,6 +255,15 @@ const App: React.FC = () => {
       {synchro && <p className="mt-2 font-medium" data-testid="synchro">{texteProgression(progression(synchro))}</p>}
 
       <p role="status" className="mt-2 min-h-6">{message}</p>
+
+      <Sauvegarde
+        onImportee={(donnees) => {
+          setCollection(donnees.collection);
+          setPreferences(donnees.preferences);
+          setVentes(donnees.ventes);
+          setRevision((r) => r + 1);
+        }}
+      />
 
       {assistantOuvert ? (
         <AssistantTri

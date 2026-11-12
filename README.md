@@ -31,6 +31,12 @@ Pour l’activer :
 - Le bouton « Arrêter » coupe tout de suite. Si le site répond 401, 403 ou 429, ou après 3 échecs, la synchro s’arrête et ne reprend pas avant 30 min.
 - Vos décisions et vos valeurs saisies à la main ne sont jamais écrasées. Les étiquettes lues sur le site servent à afficher les « Écarts avec le site » ; rien n’est corrigé sur le site.
 
+## Sauvegarde complète (changer de PC)
+
+La section « Sauvegarde complète » de la page de gestion écrit un seul fichier JSON (`wm-sauvegarde-AAAA-MM-JJ.json`) avec ce que vous avez saisi : statut, prix cible, note, ami, valeur marchande et favori de chaque carte, vos thèmes et amis, le réglage de la synchro automatique et le journal des ventes. **Jamais** de jeton, de cookie ni d’identifiant du site ; les caches (Wikipédia, marché) et les étiquettes du site se reconstruisent par la synchronisation. Le plafond de défausse et les prix restent dans `src/config/prix.ts` (à copier avec le dépôt).
+
+Sur l’autre PC : « Importer une sauvegarde », lisez l’aperçu (cartes nouvelles, complétées, identiques, en conflit), choisissez quoi faire en cas de conflit, puis « Appliquer ». Par défaut, ce que vous avez saisi sur ce PC est gardé ; une carte sans saisie reçoit celle de la sauvegarde ; les thèmes, amis et ventes sont réunis. Un fichier invalide, trop gros ou d’une version plus récente est refusé sans rien modifier.
+
 ## Régler les prix
 
 Tout se trouve dans [src/config/prix.ts](src/config/prix.ts) : seuil de défausse, limite d'enchères, matrice valeur marchande → prix de départ. Après une modification, lancez `npm run build` puis rechargez l'extension.
@@ -47,7 +53,7 @@ npm run build
 
 Puis dans Chrome : `chrome://extensions` › mode développeur › « Charger l'extension non empaquetée » › dossier `dist/`. Un clic sur l'icône ouvre la collection.
 
-Les données viennent de la lecture de `/collection` et de la synchronisation automatique (voir [AGENTS.md](AGENTS.md)). Il n’y a plus d’import ni d’export de fichier. Pour essayer sans données réelles, les tests e2e écrivent des cartes fictives (`tests/e2e/fixtures/`) dans le stockage de l’extension.
+Les données viennent de la lecture de `/collection` et de la synchronisation automatique (voir [AGENTS.md](AGENTS.md)). L’import et l’export de cartes (CSV, JSON) ont été retirés ; la **sauvegarde complète** les remplace (voir ci-dessous). Pour essayer sans données réelles, les tests e2e écrivent des cartes fictives (`tests/e2e/fixtures/`) dans le stockage de l’extension.
 
 ## Développer avec des agents
 
