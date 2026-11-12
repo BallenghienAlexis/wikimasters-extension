@@ -323,6 +323,38 @@ describe('relance explicite du joueur', () => {
     expect(b.chemins).toHaveLength(2);
   });
 
+  it.each([
+    ['429', { etat: 'arret', raison: 'code-http', codeHttp: 429 }],
+    ['401', { etat: 'arret', raison: 'code-http', codeHttp: 401 }],
+    ['échecs', { etat: 'arret', raison: 'echecs', codeHttp: null }],
+  ] as const)('après %s : relancer() ne fait aucune requête (pause gardée)', async (_nom, partiel) => {
+    const b = banc();
+    b.deps.chargerStatut = async () => ({ version: 1, page: null, pages: null, le: T0, ajoutees: 0, etiquettes: 0, prix: 0, ...partiel });
+    b.stockage.etat = { ...etatInitial(), arretJusqua: T0 + 10 * MIN };
+    expect(await creerSynchroAuto(b.deps).relancer()).toBeNull();
+    expect(b.chemins).toEqual([]);
+  });
+
+  it('après un 403 ou un arrêt manuel : la relance passe la pause', async () => {
+    for (const partiel of [{ raison: 'code-http', codeHttp: 403 }, { raison: 'manuel', codeHttp: null }] as const) {
+      const b = banc();
+      b.deps.chargerStatut = async () => ({ version: 1, etat: 'arret', page: null, pages: null, le: T0, ajoutees: 0, etiquettes: 0, prix: 0, ...partiel });
+      b.stockage.etat = { ...etatInitial(), arretJusqua: T0 + 10 * MIN };
+      expect((await creerSynchroAuto(b.deps).relancer())?.issue).toBe('termine');
+    }
+  });
+
+  it('la limite d’une relance par minute est commune aux onglets (stockage)', async () => {
+    const b = banc();
+    let stockee: number | null = b.horloge.t - 10_000;
+    b.deps.derniereRelance = { lire: async () => stockee, ecrire: async (t) => { stockee = t; } };
+    expect(await creerSynchroAuto(b.deps).relancer()).toBeNull();
+    expect(b.chemins).toEqual([]);
+    stockee = b.horloge.t - DELAI_RELANCE_MS;
+    expect((await creerSynchroAuto(b.deps).relancer())?.issue).toBe('termine');
+    expect(stockee).toBeGreaterThanOrEqual(T0);
+  });
+
   it('relancer() pendant une synchro en cours ne démarre rien de plus', async () => {
     const b = banc();
     const synchro = creerSynchroAuto(b.deps);

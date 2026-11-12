@@ -86,11 +86,11 @@ const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded 
 
 /** « Relancer la synchro » : proposé seulement quand la dernière synchro s’est arrêtée (par le joueur, refus du site ou échecs). */
 export const relancePossible = (entree: EntreeEtat): boolean =>
-  entree.actif && !synchroEnCours(entree) && entree.statut?.etat === 'arret' && !(entree.statut.raison === 'code-http' && entree.statut.codeHttp !== 403);
+  entree.actif && !synchroEnCours(entree) && entree.statut?.etat === 'arret' && (entree.statut.raison === 'manuel' || (entree.statut.raison === 'code-http' && entree.statut.codeHttp === 403));
 
-/** Après un 401 ou un 429, la pause de 30 min est gardée : pas de bouton, un texte explique pourquoi. */
+/** Après un 401, un 429 ou des échecs, la pause de 30 min est gardée : pas de bouton, un texte explique pourquoi. */
 export const relanceRefusee = (entree: EntreeEtat): boolean =>
-  entree.actif && !synchroEnCours(entree) && entree.statut?.etat === 'arret' && entree.statut.raison === 'code-http' && entree.statut.codeHttp !== 403;
+  entree.actif && !synchroEnCours(entree) && entree.statut?.etat === 'arret' && !(entree.statut.raison === 'manuel' || (entree.statut.raison === 'code-http' && entree.statut.codeHttp === 403));
 
 /** Avertissement affiché près du bouton quand le site a refusé : la relance passe outre la pause de 30 min. */
 export function texteRelance(statut: StatutSynchro | null): string {
@@ -169,7 +169,7 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
       {relancePossible(entree) && <p className="mt-1 text-sm text-muted">{texteRelance(statut)}</p>}
       {relanceRefusee(entree) && (
         <p className="mt-1 text-sm text-muted">
-          {statut?.codeHttp === 401 ? 'Session expirée : reconnectez-vous sur WikiMasters.' : 'Le site limite les requêtes.'} Reprise automatique après 30{NB}min de pause.
+          {statut?.codeHttp === 401 ? 'Session expirée : reconnectez-vous sur WikiMasters.' : statut?.codeHttp === 429 ? 'Le site limite les requêtes.' : 'La lecture a échoué plusieurs fois.'} Reprise automatique après 30{NB}min de pause.
         </p>
       )}
       {enCours && (

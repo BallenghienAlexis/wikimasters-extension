@@ -10,6 +10,9 @@ import {
   chargerBailSynchro,
   chargerCollection,
   chargerDerniereSynchro,
+  chargerDerniereRelance,
+  enregistrerDerniereRelance,
+  chargerStatutSynchro,
   chargerEtatSynchro,
   chargerCacheWikipedia,
   chargerPreferences,
@@ -58,6 +61,10 @@ export interface DependancesSynchroAuto {
   chargerPreferences: () => Promise<Preferences>;
   /** Statut détaillé pour l'interface (page en cours, cause d'arrêt) ; une erreur d'écriture est sans effet. */
   noterStatut?: (statut: StatutSynchro) => Promise<void>;
+  /** Dernière relance exécutée (commune aux onglets) : limite d'une relance par minute. Absent : limite par page seulement. */
+  derniereRelance?: { lire: () => Promise<number | null>; ecrire: (horodatage: number) => Promise<void> };
+  /** Dernier statut écrit : la relance ne contourne la pause que pour un arrêt manuel ou un 403. Absent : pas de contrôle. */
+  chargerStatut?: () => Promise<StatutSynchro | null>;
   /** Événements fixes (début, fin, arrêt et cause) pour le journal existant ; une erreur d'écriture est sans effet. */
   journaliser?: (evenement: EvenementSynchro) => Promise<void>;
   journal?: (message: string) => void;
@@ -309,9 +316,19 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
   return {
     declencher: () => declencher(),
     relancer: async () => {
-      const maintenant = deps.horloge.now();
-      if (derniereRelance !== null && maintenant - derniereRelance < DELAI_RELANCE_MS) return null;
-      derniereRelance = maintenant;
+      try {
+        const maintenant = deps.horloge.now();
+        const commune = (await deps.derniereRelance?.lire()) ?? null;
+        const derniere = Math.max(derniereRelance ?? 0, commune ?? 0);
+        if (derniere > 0 && maintenant - derniere < DELAI_RELANCE_MS) return null;
+        // Seuls un arrêt manuel et un 403 se relancent : 401, 429 et échecs gardent la pause de 30 min.
+        const statut = (await deps.chargerStatut?.()) ?? null;
+        if (statut?.etat === 'arret' && statut.raison !== 'manuel' && !(statut.raison === 'code-http' && statut.codeHttp === 403)) return null;
+        derniereRelance = maintenant;
+        await deps.derniereRelance?.ecrire(maintenant);
+      } catch {
+        return null;
+      }
       return declencher(true);
     },
     arreter: () => {
@@ -374,6 +391,8 @@ const synchroDuNavigateur = (): SynchroAuto =>
       return chargerPreferences();
     },
     noterStatut: enregistrerStatutSynchro,
+    chargerStatut: chargerStatutSynchro,
+    derniereRelance: { lire: chargerDerniereRelance, ecrire: enregistrerDerniereRelance },
     journaliser: (evenement) => ecrireEvenementJournal(evenement),
     routeMarche: CONFIG_AFFLUENCE.routeMarche,
     champsHorodatage: CONFIG_AFFLUENCE.champsHorodatage,
