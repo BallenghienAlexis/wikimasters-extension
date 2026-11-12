@@ -3,7 +3,7 @@
  *
  * Logique pure : horloge, transport, confirmation, revérification, application
  * locale et journal sont **injectés**. Aucun accès à `chrome.*`, au réseau ni au
- * jeton. Cadence : 0,4 s au minimum entre deux débuts de requête (décision d’Alexis du
+ * jeton. Cadence : 0,2 s au minimum entre deux débuts de requête (décision d’Alexis du
  * 2026-11-12, toutes actions), plus un délai
  * supplémentaire variable fourni par l’appelant (décision d’Alexis du 2026-11-11),
  * si bien que ce module ne tire aucun nombre aléatoire lui-même. Les échéances sont en temps absolu, si bien qu’un minuteur
@@ -16,12 +16,10 @@
 import type { Action, EtatExecution, ResultatAction } from './actions'
 
 /** Intervalle minimal entre deux débuts de requête. */
-export const INTERVALLE_MS = 400
+export const INTERVALLE_MS = 200
 /** Délai supplémentaire maximal, ajouté à l’intervalle minimal (jamais en dessous de l’intervalle minimal). */
-export const SUPPLEMENT_MAX_MS = 200
-/** Fenêtre glissante et plafond de requêtes dans cette fenêtre. */
-export const FENETRE_MS = 60_000
-export const MAX_PAR_FENETRE = 120
+export const SUPPLEMENT_MAX_MS = 100
+/** Plus de plafond de requêtes par minute (décision d’Alexis, 2026-11-12) : seul l’intervalle minimal limite le débit. */
 /** Nombre d’échecs cumulés (actions passées exclues) qui arrête la file. */
 export const MAX_ECHECS = 3
 /** Codes HTTP qui arrêtent la file dès la première occurrence. */
@@ -120,7 +118,6 @@ export function creerFile(deps: DependancesFile): File {
   // Mémoire de cadence, conservée tant que la file vit (mêmes règles d’une exécution à l’autre).
   let dernierDebut = Number.NEGATIVE_INFINITY
   let derniereReponse = Number.NEGATIVE_INFINITY
-  const debuts: number[] = []
   /** Supplément tiré après la dernière requête, appliqué avant la suivante. */
   let supplement = 0
 
@@ -170,14 +167,9 @@ export function creerFile(deps: DependancesFile): File {
     await journal.passer(id)
   }
 
-  /** Date de début autorisée : cadence unique (0,4 s plus supplément), réponse précédente, confirmation, fenêtre de 60 s. */
+  /** Date de début autorisée : cadence unique (0,2 s plus supplément), réponse précédente, confirmation. */
   function debutAutorise(plancher: number): number {
-    let debut = Math.max(dernierDebut + INTERVALLE_MS + supplement, derniereReponse, plancher)
-    const recents = debuts.filter((d) => d > debut - FENETRE_MS)
-    if (recents.length >= MAX_PAR_FENETRE) {
-      debut = Math.max(debut, recents[recents.length - MAX_PAR_FENETRE]! + FENETRE_MS)
-    }
-    return debut
+    return Math.max(dernierDebut + INTERVALLE_MS + supplement, derniereReponse, plancher)
   }
 
   async function traiter(action: Action, echecs: { n: number }): Promise<void> {
@@ -223,8 +215,6 @@ export function creerFile(deps: DependancesFile): File {
       dernierDebut = debut
       supplement = tirerSupplement()
       derniereReponse = horloge.now()
-      debuts.push(debut)
-      if (debuts.length > MAX_PAR_FENETRE * 2) debuts.splice(0, debuts.length - MAX_PAR_FENETRE * 2)
     }
     await journal.completer(id, resultat)
     if (exception) throw new Arret('transport')

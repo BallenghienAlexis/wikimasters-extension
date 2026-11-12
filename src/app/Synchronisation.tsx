@@ -36,8 +36,8 @@ import { avecIdEtiquette } from '../lib/registre';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
 import Journal, { type CoupleRetrait } from './Journal';
 
-/** Secondes par action en moyenne : 0,4 s minimale plus un supplément de 0 à 0,2 s (moyenne 0,1 s). */
-const SECONDES_PAR_ACTION = 0.5;
+/** Secondes par action en moyenne : 0,2 s minimale plus un supplément de 0 à 0,1 s (moyenne 0,05 s). */
+const SECONDES_PAR_ACTION = 0.25;
 /** Nombre maximal de lignes d’actions affichées (SC-025). */
 const LIGNES_MAX = 100;
 /** Au-delà, les cartes écartées sont regroupées par raison. */
@@ -46,7 +46,7 @@ const ECARTEES_MAX = 50;
 /** Espace insécable : typographie française avant « : » (D-40). */
 const NB = ' ';
 
-export const CADENCE_TEXTE = `Cadence variable${NB}: 0,4 à 0,6 s entre deux actions, 120 par minute au plus · arrêt après 3 erreurs`;
+export const CADENCE_TEXTE = `Cadence variable${NB}: 0,2 à 0,3 s entre deux actions, sans plafond par minute · arrêt après 3 erreurs`;
 
 const RAISONS: Record<RaisonEcart, string> = {
   'non-reliee': 'non reliée au site',

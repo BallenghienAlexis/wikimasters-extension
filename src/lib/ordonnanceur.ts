@@ -13,7 +13,7 @@
  * `decidePar`) ; il met à jour les faits du site (quantité, favori, identifiants, étiquettes) et,
  * au prix, `valeurMarchande` — sans écraser une valeur saisie à la main.
  */
-import { CODES_ARRET, FENETRE_MS, INTERVALLE_MS, MAX_ECHECS, MAX_PAR_FENETRE, type Horloge } from './file';
+import { CODES_ARRET, INTERVALLE_MS, MAX_ECHECS, type Horloge } from './file';
 import { VERSION_SCHEMA, type Carte, type Collection } from './collection';
 import { analyserPage, analyserPrix, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
 
@@ -237,18 +237,15 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
 
   async function requete(chemin: string, tolerant = false): Promise<ReponseApi | null> {
     if (deps.arretDemande?.()) throw new Interruption('manuel', null);
-    // Cadence : 0,4 s depuis la dernière requête, 120 au plus par fenêtre de 60 s (budget commun).
+    // Cadence : 0,2 s depuis la dernière requête (budget commun), sans plafond par minute.
     const t = horloge.now();
-    const recentes = etat.requetes.filter((x) => x > t - FENETRE_MS);
-    const derniere = recentes.at(-1);
-    let echeance = derniere === undefined ? t : derniere + INTERVALLE_MS + gigue();
-    const dixieme = recentes.at(-MAX_PAR_FENETRE);
-    if (recentes.length >= MAX_PAR_FENETRE && dixieme !== undefined) echeance = Math.max(echeance, dixieme + FENETRE_MS);
+    const derniere = etat.requetes.at(-1);
+    const echeance = derniere === undefined ? t : Math.max(t, derniere + INTERVALLE_MS + gigue());
     await horloge.attendreJusqua(echeance);
     if (deps.arretDemande?.()) throw new Interruption('manuel', null);
 
     const debut = horloge.now();
-    etat.requetes = [...recentes, debut];
+    etat.requetes = [...etat.requetes, debut].slice(-20);
     await deps.bail.ecrire(debut + DUREE_BAIL_MS);
     resultat.requetes += 1;
     let reponse: ReponseApi;
