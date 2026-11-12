@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { verifierTitres, type Transport } from '../../src/app/verifierWikipedia';
 import { themesDeCarte, definirThemesWikipedia } from '../../src/lib/themes';
 import { creerPlanificateur } from '../../src/app/verifierWikipedia';
-import { cacheVide, lireReponse, themesDepuisCategories, titresAVerifier, urlRequete, validerCache, ajouterEntree, DUREE_CACHE_MS } from '../../src/lib/wikipedia';
+import { cacheVide, lireReponse, lireReponseWikidata, themesDepuisWikidata, urlRequeteWikidata, themesDepuisCategories, titresAVerifier, urlRequete, validerCache, ajouterEntree, DUREE_CACHE_MS } from '../../src/lib/wikipedia';
 
 const page = (extra: object) => ({ query: { pages: [{ title: 'X', ...extra }] } });
 
@@ -40,7 +40,7 @@ describe('résumé Wikipédia', () => {
   it('relit une fois une entrée sans thème enregistrée avant le résumé', () => {
     const ancien = validerCache({ version: 1, entrees: { A: { themes: [], verifieLe: 1000 }, B: { themes: ['barrage'], verifieLe: 1000 } } })!;
     expect(titresAVerifier(['A', 'B'], ancien, 2000)).toEqual(['A']);
-    expect(titresAVerifier(['A'], ajouterEntree(ancien, 'A', [], 2000), 3000)).toEqual([]);
+    expect(titresAVerifier(['A'], ajouterEntree(ancien, 'A', [], 2000, true), 3000)).toEqual([]);
   });
 });
 
@@ -64,6 +64,49 @@ describe('cache et surcouche', () => {
   it('construit une URL GET vers fr.wikipedia.org', () => {
     expect(urlRequete('Tour Eiffel')).toMatch(/^https:\/\/fr\.wikipedia\.org\/w\/api\.php\?.*titles=Tour\+Eiffel/);
     expect(urlRequete('X')).toContain('exsentences=2');
+  });
+});
+
+describe('Wikidata', () => {
+  const reponse = (search: object[]) => ({ search });
+  it('construit un GET vers wikidata.org avec le seul titre', () => {
+    const url = urlRequeteWikidata('Serre-Ponçon');
+    expect(url).toMatch(/^https:\/\/www\.wikidata\.org\/w\/api\.php\?action=wbsearchentities/);
+    expect(url).toContain('search=Serre-Pon%C3%A7on');
+  });
+  it('ne retient que les descriptions des entités au même titre, sans tenir compte de la casse ni des accents', () => {
+    const l = lireReponseWikidata(reponse([{ label: 'serre-ponçon', description: 'barrage hydroélectrique' }, { label: 'Autre', description: 'chat' }, { label: 'Serre-Ponçon' }]), 'Serre-Poncon');
+    expect(l).toEqual({ type: 'ok', descriptions: ['barrage hydroélectrique'] });
+    expect(themesDepuisWikidata(['barrage hydroélectrique'])).toContain('barrage');
+  });
+  it('refuse une forme inattendue', () => {
+    expect(lireReponseWikidata({}, 'X').type).toBe('invalide');
+    expect(lireReponseWikidata({ search: [3] }, 'X').type).toBe('invalide');
+  });
+  it('interroge Wikidata seulement si Wikipédia ne donne aucun thème, puis mémorise', async () => {
+    const urls: string[] = [];
+    const transport: Transport = async (url) => {
+      urls.push(url);
+      return { status: 200, json: async () => (url.includes('wikidata') ? reponse([{ label: 'A', description: 'barrage hydroélectrique' }]) : page({ categories: [] })) };
+    };
+    let dernier = cacheVide();
+    await verifierTitres({ titres: ['A'], cache: cacheVide(), signal: new AbortController().signal, surProgres: (c) => { dernier = c; }, attendre: async () => undefined, transport, maintenant: () => 5 });
+    expect(urls).toHaveLength(2);
+    expect(dernier.entrees.A).toMatchObject({ avecWikidata: true });
+    expect(dernier.entrees.A?.themes).toContain('barrage');
+    const deja: string[] = [];
+    await verifierTitres({ titres: ['B'], cache: cacheVide(), signal: new AbortController().signal, surProgres: () => undefined, attendre: async () => undefined, maintenant: () => 5, transport: async (u) => { deja.push(u); return { status: 200, json: async () => page({ categories: [{ title: 'Catégorie:Barrage en France' }] }) }; } });
+    expect(deja).toHaveLength(1);
+  });
+  it('s’arrête sur 429 de Wikidata', async () => {
+    const transport: Transport = async (url) => (url.includes('wikidata') ? { status: 429, json: async () => ({}) } : { status: 200, json: async () => page({ categories: [] }) });
+    const r = await verifierTitres({ titres: ['A', 'B'], cache: cacheVide(), signal: new AbortController().signal, surProgres: () => undefined, attendre: async () => undefined, transport });
+    expect(r).toEqual({ verifiees: 0, arret: 'code-http', codeHttp: 429 });
+  });
+  it('relit une fois une entrée sans thème enregistrée avant Wikidata', () => {
+    const c = validerCache({ version: 1, entrees: { A: { themes: [], verifieLe: 1000, avecResume: true } } })!;
+    expect(titresAVerifier(['A'], c, 2000)).toEqual(['A']);
+    expect(titresAVerifier(['A'], ajouterEntree(c, 'A', [], 2000, true), 3000)).toEqual([]);
   });
 });
 

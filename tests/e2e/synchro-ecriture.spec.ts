@@ -67,7 +67,7 @@ async function ouvrirSite(
     (url) => url.protocol.startsWith('http') && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1',
     (route) => {
       // La vérification Wikipédia (titre de carte seul, voir AGENTS.md) est la seule requête externe permise.
-      if (!route.request().url().startsWith('https://fr.wikipedia.org/w/api.php?')) externes.push(route.request().url());
+      if (!route.request().url().startsWith('https://fr.wikipedia.org/w/api.php?') && !route.request().url().startsWith('https://www.wikidata.org/w/api.php?')) externes.push(route.request().url());
       return route.abort();
     },
   );

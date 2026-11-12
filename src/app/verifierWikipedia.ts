@@ -1,6 +1,6 @@
 // Exécuteur de la vérification Wikipédia : seul fichier de l'application qui appelle `fetch` vers Wikipédia.
 // GET en lecture seule vers fr.wikipedia.org, un titre de carte par requête, sans cookie ni en-tête ajouté.
-import { ajouterEntree, lireReponse, themesDepuisCategories, titresAVerifier, urlRequete, type CacheWikipedia } from '../lib/wikipedia';
+import { ajouterEntree, lireReponse, lireReponseWikidata, themesDepuisCategories, themesDepuisWikidata, titresAVerifier, urlRequete, urlRequeteWikidata, type CacheWikipedia } from '../lib/wikipedia';
 
 export type Transport = (url: string, signal: AbortSignal) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
@@ -70,7 +70,32 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
     } else {
       echecs = 0;
       // Page absente ou ambiguë : on mémorise « aucun thème » pour ne pas la redemander avant 30 jours.
-      cache = ajouterEntree(cache, titre, lecture.type === 'ok' ? themesDepuisCategories(lecture.categories, lecture.resume) : [], maintenant());
+      let themes = lecture.type === 'ok' ? themesDepuisCategories(lecture.categories, lecture.resume) : [];
+      // Wikipédia n'a rien donné : courte description Wikidata (même cadence, titre seul), sinon l'entrée sera relue une fois.
+      let wikidata = themes.length > 0;
+      if (themes.length === 0) {
+        await attendre(PAUSE_MS, signal);
+        let r2;
+        try {
+          r2 = await transport(urlRequeteWikidata(titre), signal);
+        } catch {
+          if (signal.aborted) return { verifiees, arret: 'manuel', codeHttp: null };
+          r2 = null;
+        }
+        if (r2 && (r2.status === 403 || r2.status === 429)) return { verifiees, arret: 'code-http', codeHttp: r2.status };
+        if (r2 && r2.status === 200) {
+          try {
+            const l2 = lireReponseWikidata(await r2.json(), titre);
+            if (l2.type === 'ok') {
+              themes = themesDepuisWikidata(l2.descriptions);
+              wikidata = true;
+            }
+          } catch {
+            // Réponse illisible : l'entrée reste sans marque Wikidata et sera relue.
+          }
+        }
+      }
+      cache = ajouterEntree(cache, titre, themes, maintenant(), wikidata);
       verifiees += 1;
       await surProgres(cache, verifiees);
     }

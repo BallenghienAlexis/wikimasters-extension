@@ -3,6 +3,7 @@
 import { IDS_THEMES, themesDeTexte } from './themes';
 
 export const HOTE_WIKIPEDIA = 'https://fr.wikipedia.org';
+export const HOTE_WIKIDATA = 'https://www.wikidata.org';
 /** Durée de validité d'une entrée du cache : 30 jours. */
 export const DUREE_CACHE_MS = 30 * 24 * 3600 * 1000;
 const MAX_ENTREES = 20_000;
@@ -15,6 +16,8 @@ export interface EntreeWikipedia {
   verifieLe: number;
   /** Vrai quand le résumé de la page a aussi servi (entrées plus anciennes : catégories seules, relues une fois). */
   avecResume?: true;
+  /** Vrai quand Wikidata a été interrogé (page Wikipédia sans thème) ; sans lui, une entrée sans thème est relue une fois. */
+  avecWikidata?: true;
 }
 
 export interface CacheWikipedia {
@@ -49,6 +52,31 @@ export function urlRequete(titre: string): string {
   });
   return `${HOTE_WIKIPEDIA}/w/api.php?${params.toString()}`;
 }
+
+/** GET en lecture seule : recherche d'une entité par son titre ; seuls l'étiquette et la courte description sont lues. */
+export function urlRequeteWikidata(titre: string): string {
+  const params = new URLSearchParams({ action: 'wbsearchentities', format: 'json', language: 'fr', uselang: 'fr', type: 'item', limit: '5', search: titre });
+  return `${HOTE_WIKIDATA}/w/api.php?${params.toString()}`;
+}
+
+export type LectureWikidata = { type: 'ok'; descriptions: string[] } | { type: 'invalide' };
+
+const cle = (texte: string): string => texte.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
+
+/** Liste blanche : seules les descriptions des entités dont l'étiquette est exactement le titre sont retenues. */
+export function lireReponseWikidata(brut: unknown, titre: string): LectureWikidata {
+  if (!estObjet(brut) || !Array.isArray(brut.search) || brut.search.length > 50) return { type: 'invalide' };
+  const descriptions: string[] = [];
+  for (const e of brut.search) {
+    if (!estObjet(e)) return { type: 'invalide' };
+    if (typeof e.label !== 'string' || typeof e.description !== 'string' || e.description.length > 300) continue;
+    if (cle(e.label) === cle(titre)) descriptions.push(e.description);
+  }
+  return { type: 'ok', descriptions };
+}
+
+/** Thèmes déduits des courtes descriptions Wikidata (« barrage en France »), avec les mots-clés ordinaires. */
+export const themesDepuisWikidata = (descriptions: string[]): string[] => themesDeTexte(descriptions.join(' . '));
 
 const estObjet = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
@@ -97,13 +125,15 @@ export function validerCache(brut: unknown): CacheWikipedia | null {
       themes: e.themes.filter((t): t is string => typeof t === 'string' && connus.has(t)),
       verifieLe: e.verifieLe,
       ...(e.avecResume === true ? { avecResume: true as const } : {}),
+      ...(e.avecWikidata === true ? { avecWikidata: true as const } : {}),
     };
   }
   return { version: 1, entrees: { ...entrees } };
 }
 
-export function ajouterEntree(cache: CacheWikipedia, titre: string, themes: string[], maintenant: number): CacheWikipedia {
-  return { version: 1, entrees: { ...cache.entrees, [titre]: { themes: [...themes], verifieLe: maintenant, avecResume: true } } };
+export function ajouterEntree(cache: CacheWikipedia, titre: string, themes: string[], maintenant: number, wikidata = false): CacheWikipedia {
+  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, ...(wikidata ? { avecWikidata: true as const } : {}) };
+  return { version: 1, entrees: { ...cache.entrees, [titre]: entree } };
 }
 
 /** Titres sans entrée valide dans le cache, sans doublon, dans l'ordre des cartes. */
@@ -115,7 +145,7 @@ export function titresAVerifier(titres: string[], cache: CacheWikipedia, mainten
     vus.add(titre);
     const entree = Object.hasOwn(cache.entrees, titre) ? cache.entrees[titre] : undefined;
     // Une entrée sans thème et sans résumé (ancienne version) est relue une fois pour profiter du résumé.
-    if (entree === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS || (entree.themes.length === 0 && entree.avecResume !== true)) resultat.push(titre);
+    if (entree === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS || (entree.themes.length === 0 && (entree.avecResume !== true || entree.avecWikidata !== true))) resultat.push(titre);
   }
   return resultat;
 }
