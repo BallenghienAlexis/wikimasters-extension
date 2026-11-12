@@ -50,4 +50,4 @@ Mode d'authentification de `/api/` (étiquettes : relevées le 2026-11-11), born
 ## Relevé du 2026-11-12 : étiquettes du compte (fourni par Alexis, sans en-tête)
 
 - **Lecture** : `GET /rest/v1/tags?select=*&user_id=eq.<id joueur>&order=name.asc` → 200, une ligne par étiquette du compte (107 relevées), y compris celles sans carte.
-- **Suppression d'une étiquette** : `POST /rest/v1/rpc/delete_tag` → 204, `content-type: application/json`, corps de 51 octets. Le nom du paramètre n'est **pas** vu. Hypothèse à confirmer : `{"p_tag_id":"<uuid>"}` (51 octets exactement). Tant que non confirmé : « action non disponible ».
+- **Suppression d'une étiquette** : `POST /rest/v1/rpc/delete_tag` → 204, `content-type: application/json`, corps de 51 octets. Corps **confirmé par Alexis le 2026-11-12** (onglet Charge utile) : `{"p_tag_id":"<uuid>"}`, ce champ seul (51 octets).

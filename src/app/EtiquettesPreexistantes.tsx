@@ -1,7 +1,16 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import type { Registre } from '../lib/actions'
 import type { Carte } from '../lib/collection'
-import { trierEtiquettes, trierEtiquettesSite, type EtiquetteSite } from '../lib/etiquettesPreexistantes'
+import {
+  aSupprimer,
+  annulerConfirmation,
+  basculerSelection,
+  demanderConfirmation,
+  selectionVide,
+  trierEtiquettes,
+  trierEtiquettesSite,
+  type EtiquetteSite,
+} from '../lib/etiquettesPreexistantes'
 import type { Ami } from '../lib/tri'
 
 interface Props {
@@ -23,29 +32,28 @@ const BOUTON = 'inline-flex min-h-11 cursor-pointer items-center justify-center 
  * Étiquettes du compte qui ne viennent pas de l’extension. Rien n’est supprimé sans deux étapes : cocher les
  * étiquettes une à une, puis confirmer la liste exacte. La suppression est définitive sur le site.
  */
-const EtiquettesPreexistantes: React.FC<Props> = ({ cartes, registre, amis, site = null, onSupprimer, occupe = false }) => {
-  const [cochees, setCochees] = useState<ReadonlySet<string>>(new Set())
-  const [confirmation, setConfirmation] = useState(false)
+const Contenu: React.FC<Props> = ({ cartes, registre, amis, site = null, onSupprimer, occupe = false }) => {
+  const [selection, setSelection] = useState(selectionVide)
+  const annuler = useRef<HTMLButtonElement>(null)
   const config = useMemo(() => ({ amis, limiteParExemplaire: null }), [amis])
   const triSite = useMemo(() => (site === null ? null : trierEtiquettesSite(site, cartes, registre, config)), [site, cartes, registre, config])
   const triCartes = useMemo(() => trierEtiquettes(cartes, registre, config), [cartes, registre, config])
 
-  const preexistantes = triSite === null ? [] : triSite.filter((e) => e.origine === 'preexistante')
+  const preexistantes = useMemo(() => (triSite === null ? [] : triSite.filter((e) => e.origine === 'preexistante')), [triSite])
   const nbExtension = triSite === null ? triCartes.extension.length : triSite.length - preexistantes.length
-  const choisies = preexistantes.filter((e) => cochees.has(e.id))
+  const supprimables = useMemo(() => new Set(preexistantes.map((e) => e.id)), [preexistantes])
+  const choisies = preexistantes.filter((e) => selection.cochees.has(e.id))
+  const confirmation = selection.confirmation
 
-  const basculer = (id: string): void => {
-    setConfirmation(false)
-    setCochees((avant) => {
-      const apres = new Set(avant)
-      if (!apres.delete(id)) apres.add(id)
-      return apres
-    })
-  }
+  // Le focus passe sur « Annuler » à l’ouverture de la confirmation (navigation au clavier).
+  useEffect(() => {
+    if (confirmation) annuler.current?.focus()
+  }, [confirmation])
+
+  const basculer = (id: string): void => setSelection((s) => basculerSelection(s, id))
 
   return (
-    <section aria-labelledby="titre-preexistantes" className="rounded border border-line p-4">
-      <h2 id="titre-preexistantes" className="text-lg font-semibold">Étiquettes préexistantes</h2>
+    <>
       {triSite === null ? (
         <>
           <p className="text-sm text-muted">
@@ -71,7 +79,7 @@ const EtiquettesPreexistantes: React.FC<Props> = ({ cartes, registre, amis, site
               {preexistantes.map((e) => (
                 <li key={e.id}>
                   <label className="flex min-h-11 cursor-pointer items-center gap-2">
-                    <input type="checkbox" checked={cochees.has(e.id)} onChange={() => basculer(e.id)} disabled={occupe} />
+                    <input type="checkbox" checked={selection.cochees.has(e.id)} onChange={() => basculer(e.id)} disabled={occupe} />
                     <span>{e.nom} · {pluriel(e.nbCartes, 'carte', 'cartes')}</span>
                   </label>
                 </li>
@@ -79,7 +87,7 @@ const EtiquettesPreexistantes: React.FC<Props> = ({ cartes, registre, amis, site
             </ul>
           )}
           {onSupprimer && !confirmation && (
-            <button type="button" className={`${BOUTON} mt-2 border-line`} disabled={choisies.length === 0 || occupe} onClick={() => setConfirmation(true)}>
+            <button type="button" className={`${BOUTON} mt-2 border-line`} disabled={choisies.length === 0 || occupe} onClick={() => setSelection((s) => demanderConfirmation(s, supprimables))}>
               Supprimer {pluriel(choisies.length, 'étiquette', 'étiquettes')} du site…
             </button>
           )}
@@ -94,15 +102,15 @@ const EtiquettesPreexistantes: React.FC<Props> = ({ cartes, registre, amis, site
                 ))}
               </ul>
               <div className="flex gap-2">
-                <button type="button" className={`${BOUTON} border-line`} onClick={() => setConfirmation(false)}>Annuler</button>
+                <button type="button" ref={annuler} className={`${BOUTON} border-line`} onClick={() => setSelection(annulerConfirmation)}>Annuler</button>
                 <button
                   type="button"
                   className={`${BOUTON} border-line`}
                   disabled={choisies.length === 0 || occupe}
                   onClick={() => {
-                    setConfirmation(false)
-                    setCochees(new Set())
-                    onSupprimer(choisies.map((e) => ({ id: e.id, nom: e.nom })))
+                    const ids = new Set(aSupprimer(selection, supprimables, occupe))
+                    setSelection(selectionVide())
+                    if (ids.size > 0) onSupprimer(preexistantes.filter((e) => ids.has(e.id)).map((e) => ({ id: e.id, nom: e.nom })))
                   }}
                 >
                   Confirmer la suppression
@@ -112,7 +120,21 @@ const EtiquettesPreexistantes: React.FC<Props> = ({ cartes, registre, amis, site
           )}
         </>
       )}
-    </section>
+    </>
+  )
+}
+
+/** Dépliée à la demande : le tri (toutes les cartes) n’est calculé qu’à l’ouverture, pour ne pas ralentir la page. */
+const EtiquettesPreexistantes: React.FC<Props> = (props) => {
+  const [ouverte, setOuverte] = useState(false)
+  return (
+    <details
+      className="rounded border border-line p-4"
+      onToggle={(e) => setOuverte((e.currentTarget as HTMLDetailsElement).open)}
+    >
+      <summary id="titre-preexistantes" className="cursor-pointer text-lg font-semibold">Étiquettes préexistantes</summary>
+      {ouverte && <Contenu {...props} />}
+    </details>
   )
 }
 

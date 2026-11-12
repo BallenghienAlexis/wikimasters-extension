@@ -68,6 +68,36 @@ export function trierEtiquettesSite(
     .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
 }
 
+/** Sélection et confirmation de la suppression : rien ne part sans cocher, puis confirmer. */
+export interface SelectionSuppression {
+  cochees: ReadonlySet<string>
+  confirmation: boolean
+}
+export const selectionVide = (): SelectionSuppression => ({ cochees: new Set(), confirmation: false })
+
+/** Cocher ou décocher une étiquette annule toute confirmation en cours. */
+export function basculerSelection(s: SelectionSuppression, id: string): SelectionSuppression {
+  const cochees = new Set(s.cochees)
+  if (!cochees.delete(id)) cochees.add(id)
+  return { cochees, confirmation: false }
+}
+
+/** Ouvre le second écran, seulement si au moins une étiquette supprimable est cochée. */
+export function demanderConfirmation(s: SelectionSuppression, supprimables: ReadonlySet<string>): SelectionSuppression {
+  return [...s.cochees].some((id) => supprimables.has(id)) ? { ...s, confirmation: true } : s
+}
+
+export const annulerConfirmation = (s: SelectionSuppression): SelectionSuppression => ({ ...s, confirmation: false })
+
+/**
+ * Identifiants à envoyer : uniquement après confirmation, hors exécution en cours, et seulement parmi les
+ * étiquettes supprimables (préexistantes). Sinon liste vide.
+ */
+export function aSupprimer(s: SelectionSuppression, supprimables: ReadonlySet<string>, occupe: boolean): string[] {
+  if (!s.confirmation || occupe) return []
+  return [...s.cochees].filter((id) => supprimables.has(id))
+}
+
 const PREFIXES_PLAN = ['Statut · ', '#À échanger ']
 
 export interface EtiquetteTriee {

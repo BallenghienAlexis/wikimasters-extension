@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CONFIG_PRIX, PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
 import { ID_CARTE_ETIQUETTES } from '../lib/actions';
+import { trierEtiquettesSite } from '../lib/etiquettesPreexistantes';
 import type {
   Action,
   CarteEcartee,
@@ -304,6 +305,8 @@ export function detailsDuLot(actions: readonly Action[], cartes: ReadonlyMap<str
         return `création${NB}: ${a.nomEtiquette}`;
       case 'pose-etiquette':
         return a.nomEtiquette;
+      case 'suppression-etiquette':
+        return `suppression${NB}: ${a.nomEtiquette}`;
       default:
         return '';
     }
@@ -564,8 +567,18 @@ const nouvelIdLot = (prefixe: string): string => `${prefixe}-${Date.now()}`;
  * Lance la suppression des étiquettes que le joueur a validées une à une (RPC `delete_tag`). Même file, même cadence,
  * mêmes arrêts (401, 403, 429, 3 échecs) et même journal que les autres écritures ; à n’appeler qu'après confirmation.
  */
-export function lancerSuppressionEtiquettes(etiquettes: ReadonlyArray<{ id: string; nom: string }>): Promise<void> {
-  const actions: Action[] = etiquettes.map((e) => ({
+export async function lancerSuppressionEtiquettes(etiquettes: ReadonlyArray<{ id: string; nom: string }>): Promise<void> {
+  // Revérification juste avant l’envoi : seules restent les étiquettes encore connues du site et toujours préexistantes.
+  const [site, registre, collection, preferences] = await Promise.all([chargerEtiquettesSite(), chargerRegistre(), chargerCollection(), chargerPreferences()]);
+  if (site === null) throw new Error('La liste des étiquettes du site n’est pas lue : lancez une synchronisation.');
+  const preexistantes = new Set(
+    trierEtiquettesSite(site, collection.cartes, registre, configDuLot(preferences))
+      .filter((e) => e.origine === 'preexistante')
+      .map((e) => e.id),
+  );
+  const retenues = etiquettes.filter((e) => preexistantes.has(e.id));
+  if (retenues.length === 0) throw new Error('Aucune des étiquettes choisies n’est encore supprimable (liste du site changée).');
+  const actions: Action[] = retenues.map((e) => ({
     type: 'suppression-etiquette',
     idCarte: ID_CARTE_ETIQUETTES,
     nomEtiquette: e.nom,

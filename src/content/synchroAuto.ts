@@ -250,10 +250,11 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         else await noter({ etat: 'en-cours' });
         const reponse = await deps.transport(chemin);
         if (!page && chemin.startsWith('/api/my-collection/stats')) {
-          const total = reponse.statut === 200 ? analyserStats(reponse.json)?.total : undefined;
           const stats = reponse.statut === 200 ? analyserStats(reponse.json) : null;
+          const total = stats?.total;
           if (stats !== null) {
-            await (deps.noterEtiquettesSite?.(stats.etiquettes.map((e) => ({ id: e.id, nom: e.nom, nbCartes: e.nbCartes }))) ?? Promise.resolve()).catch(() => undefined);
+            // Liste rejetée par le stockage : on efface l’ancienne plutôt que de proposer une liste périmée.
+            await (deps.noterEtiquettesSite?.(stats.etiquettes.map((e) => ({ id: e.id, nom: e.nom, nbCartes: e.nbCartes }))) ?? Promise.resolve()).catch(() => deps.noterEtiquettesSite?.([]).catch(() => undefined));
           }
           if (total !== undefined) {
             pages = Math.ceil(total / CARTES_PAR_PAGE);

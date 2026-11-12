@@ -93,3 +93,34 @@ describe('suppression d’une étiquette', () => {
     expect(apres.couples).toEqual([{ ex: 'ex1', nom: 'Autre' }])
   })
 })
+
+import { aSupprimer, annulerConfirmation, basculerSelection, demanderConfirmation, selectionVide } from '../../src/lib/etiquettesPreexistantes'
+
+describe('sélection de suppression', () => {
+  const sup = new Set(['a', 'b'])
+
+  it('rien à envoyer sans confirmation', () => {
+    const s = basculerSelection(selectionVide(), 'a')
+    expect(aSupprimer(s, sup, false)).toEqual([])
+  })
+
+  it('pas de confirmation sans étiquette supprimable cochée', () => {
+    expect(demanderConfirmation(selectionVide(), sup).confirmation).toBe(false)
+    expect(demanderConfirmation(basculerSelection(selectionVide(), 'zz'), sup).confirmation).toBe(false)
+  })
+
+  it('envoie les seules étiquettes supprimables cochées, après confirmation', () => {
+    let s = basculerSelection(basculerSelection(selectionVide(), 'a'), 'zz')
+    s = demanderConfirmation(s, sup)
+    expect(aSupprimer(s, sup, false)).toEqual(['a'])
+  })
+
+  it('annuler ou cocher/décocher retire la confirmation ; occupé : rien', () => {
+    let s = demanderConfirmation(basculerSelection(selectionVide(), 'a'), sup)
+    expect(aSupprimer(annulerConfirmation(s), sup, false)).toEqual([])
+    expect(aSupprimer(basculerSelection(s, 'b'), sup, false)).toEqual([])
+    expect(aSupprimer(s, sup, true)).toEqual([])
+    s = basculerSelection(s, 'a')
+    expect(s.cochees.size).toBe(0)
+  })
+})
