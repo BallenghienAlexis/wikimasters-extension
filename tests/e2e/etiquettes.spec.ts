@@ -77,7 +77,7 @@ test('liste les étiquettes prévues avec leurs nombres, sans requête ni lectur
   const externes: string[] = [];
   context.on('request', (r) => {
     // La vérification Wikipédia (titre de carte seul, voir AGENTS.md) est la seule requête externe permise.
-    if (!r.url().startsWith('chrome-extension:') && !r.url().startsWith('data:') && !r.url().startsWith('blob:') && !r.url().startsWith('https://fr.wikipedia.org/w/api.php?')) externes.push(r.url());
+    if (!r.url().startsWith('chrome-extension:') && !r.url().startsWith('data:') && !r.url().startsWith('blob:') && !r.url().startsWith('https://fr.wikipedia.org/w/api.php?') && !r.url().startsWith('https://www.wikidata.org/w/api.php?')) externes.push(r.url());
   });
   await page.addInitScript(() => {
     const w = window as unknown as { __cookies: number };

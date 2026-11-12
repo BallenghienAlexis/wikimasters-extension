@@ -9,13 +9,13 @@
 - **Rien n'est prévu pour une lecture automatique** : `synchro-complete` couvre l'*écriture* (étiquettes, enchères, défausses), pas la lecture. La seule trace est `plan.md` T-B2, qui envisage `GET /api/my-collection` comme action de lecture dans la file, **uniquement** pour récupérer les `user_card_id`, et seulement après « Lancer ».
 - `specs/theme-etiquettes` (PR #24, documents seulement) ne touche pas à la lecture.
 - Le contrat relevé le 2026-11-07 (`synchro-complete/contrat-api.md`) contient déjà `GET /api/my-collection?sort=rarity&page=N&stats=0` (page à partir de 0) et `GET /api/my-collection/stats?sort=rarity`. **Forme des réponses et mode d'authentification de `/api/` : non relevés.**
-- Briques réutilisables : `file.ts` (cadence fixe 6 s, 10 requêtes max par 60 s, arrêt sur 401/403/429, 3 échecs), `jeton.ts` (seul module qui lit le jeton, content script, origine du site), journal et registre.
+- Briques réutilisables : `file.ts` (cadence 0,2 s plus gigue de 0 à 0,1 s, sans plafond par minute, arrêt sur 401/403/429, 3 échecs), `jeton.ts` (seul module qui lit le jeton, content script, origine du site), journal et registre.
 
 ## 0 bis. Relevé du 2026-11-09 (voir `releve-api.md`)
 - L'API `/api/` s'authentifie par **cookies de même origine** : la lecture n'a pas besoin du jeton. Le service worker resterait inutilisable (hôte non autorisé dans le manifeste), l'option A tient.
 - Les **étiquettes** sont déjà dans `my-collection` (`tags`) et `stats` (`tagOptions`) : pas de lecture Supabase, pas de requête en plus.
 - Le **prix du marché** vient de `GET /api/marketplace/cards/<card_id>/sales?scope=summary` (`summary.<rareté>.average`), lisible **sans compte PRO**. Une requête par carte : relevé progressif et priorisé.
-- Une lecture complète = 134 pages ≈ 14 min à 6 s la requête.
+- Une lecture complète = 134 pages, environ 35 s à 0,25 s la requête (14 min à 6 s avant le 2026-11-12).
 
 ## 1. Goals
 - G1 — La collection locale se met à jour **sans que le joueur ouvre ni tourne une page `/collection`**.
@@ -37,7 +37,7 @@
 ## 3. Scope
 **Inclus**
 - Entrée `lecture` dans la table du contrat (`GET /api/my-collection`) avec validateur de réponse écrit d'après un relevé réel.
-- Exécuteur de synchro de lecture dans le content script, réutilisant la cadence de `file.ts` (jamais plus vite que 6 s entre deux requêtes).
+- Exécuteur de synchro de lecture dans le content script, réutilisant la cadence de `file.ts` (jamais plus vite que 0,2 s entre deux requêtes).
 - Déclencheurs : chargement d'une page du site, puis minuteur (périodicité à fixer, par défaut 30 min) tant que l'onglet reste ouvert ; pas de relance si une synchro a eu lieu depuis moins de N minutes (horodatage dans `chrome.storage.local`).
 - Mode incrémental : `GET /api/my-collection/stats` d'abord (une requête) ; si le total n'a pas bougé et qu'une synchro complète existe, on ne relit rien ; sinon relecture des pages (ou arrêt dès qu'une page est identique à celle déjà stockée, si le tri s'y prête : à vérifier au relevé).
 - Fusion dans la collection locale par le même chemin que la lecture visuelle (`fusionnerDansStockage`), sans jamais écraser une décision `decidePar: 'moi'`.
@@ -60,7 +60,7 @@
 | SC-002 | Page du site ouverte, option activée, aucune synchro récente : la collection locale est mise à jour sans interaction, et le nombre de requêtes émises est égal au nombre de pages à relire. | e2e (site fictif) |
 | SC-003 | Total inchangé depuis la dernière synchro complète : une seule requête (`stats`) est émise. | unitaire + e2e |
 | SC-004 | Une carte ajoutée : seules les pages touchées sont relues (ou arrêt dès la première page identique, selon le relevé). | unitaire |
-| SC-005 | Deux requêtes sont toujours séparées d'au moins 6 s ; jamais plus de 10 par minute ; une seule synchro à la fois, même avec plusieurs onglets ouverts. | unitaire (horloge simulée) |
+| SC-005 | Deux requêtes sont toujours séparées d'au moins 0,2 s ; aucun plafond par minute ; une seule synchro à la fois, même avec plusieurs onglets ouverts. | unitaire (horloge simulée) |
 | SC-006 | Réponse 401, 403 ou 429, ou 3 échecs : arrêt immédiat, aucune reprise automatique avant le prochain déclencheur espacé d'au moins 30 min ; entrée au journal. | unitaire |
 | SC-007 | Option désactivée (défaut) : aucune requête n'est émise. | e2e |
 | SC-008 | Une décision `decidePar: 'moi'` n'est jamais modifiée par la synchro. | unitaire |
@@ -93,3 +93,13 @@
 
 ## Avenant du 2026-11-11
 Décision d’Alexis (voir AGENTS.md) : synchronisation automatique **activée par défaut**, `GET /api/marketplace/mine` ajouté au périmètre de lecture, délai variable (gigue de 0 à 6 s) ajouté à l’intervalle de 6 s. L’écriture sur le site est autorisée ; ses contrats attendent les relevés de `specs/synchro-complete/releves-a-faire.md`. En cas d’écart avec le texte ci-dessus, AGENTS.md prime.
+
+## Avenant du 2026-11-12 : cadence actuelle
+
+Décisions d’Alexis du 2026-11-12, livrées (PR #72 à #76) ; `AGENTS.md` prime. Les passages de ce document qui parlent de 6 s, de 10 par minute, de 134 pages en 14 min ou d’un plafond par fenêtre de 60 s sont remplacés par ce qui suit.
+
+- **Cadence** : 0,2 s au minimum entre deux requêtes (`INTERVALLE_MS`) plus une gigue de 0 à 0,1 s (`gigue.ts`, injectée dans l’ordonnanceur), **sans plafond par minute**, une seule requête en vol, une seule synchro à la fois (bail dans `chrome.storage.local`). SC-005 se lit : deux requêtes sont séparées d’au moins 0,2 s ; une seule synchro à la fois, même avec plusieurs onglets. Une lecture complète de 134 pages dure donc quelques dizaines de secondes (134 × environ 0,25 s) au lieu de 14 min, et un lot d’écriture prend le bail pour toute sa durée.
+- **Arrêts** : 401, 403, 429 ou 3 échecs arrêtent la synchro ; aucune reprise automatique avant 30 min. Inchangé.
+- **Relance explicite** : le bouton « Relancer la synchro » (PR #76) est proposé seulement après un arrêt manuel ou un 403 ; il passe outre la pause de 30 min et le délai de 30 min depuis la dernière synchro, avec un avertissement, au plus une relance par minute commune aux onglets (`derniereRelance`). Après un 401, un 429 ou des échecs, la pause est gardée. Le bail, l’option désactivée et les arrêts automatiques restent en vigueur.
+- **Relevé d’affluence** (`affluence-site`) : une requête au plus toutes les 30 min, 0,2 s après la précédente (au lieu de 6 s).
+- **Écarts d’étiquettes** : une carte `en-vente` n’attend aucune étiquette (PR #71) ; `calculerEcarts` doit l’ignorer (voir `retouches.md` de `synchro-complete`).

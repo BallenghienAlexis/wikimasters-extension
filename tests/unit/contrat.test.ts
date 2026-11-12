@@ -25,11 +25,11 @@ const entreeFictive: EntreeContrat = {
 
 describe('table du contrat', () => {
   it('ne rend disponibles que les types relevés : étiquettes, enchère et défausse (SC-020)', () => {
-    expect([...typesDisponibles()].sort()).toEqual(['creation-etiquette', 'defausse', 'enchere', 'pose-etiquette', 'retrait-etiquette'])
+    expect([...typesDisponibles()].sort()).toEqual(['creation-etiquette', 'defausse', 'enchere', 'pose-etiquette', 'retrait-etiquette', 'suppression-etiquette'])
     expect(Object.keys(ENTREES_LECTURE)).toHaveLength(0)
     expect(Object.keys(ENTREES_ENCHERE)).toEqual(['enchere'])
     expect(Object.keys(ENTREES_DEFAUSSE)).toEqual(['defausse'])
-    expect(Object.keys(ENTREES_ETIQUETTES)).toHaveLength(3)
+    expect(Object.keys(ENTREES_ETIQUETTES)).toHaveLength(4)
   })
 
   it('ne renvoie que les types présents dans une table injectée', () => {

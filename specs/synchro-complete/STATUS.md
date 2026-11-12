@@ -13,4 +13,4 @@
 - Décisions postérieures à la spec : cadence la plus rapide (plancher 0,2 s, sans plafond par minute), poses et retraits en parallèle, `PLAFOND_VALEUR_DEFAUSSE` = 5.
 
 ## Reste (détail dans `retouches.md` § « À reprendre »)
-Décompte « prochaine action » (D-20), cartes déjà en vente exclues de l’aperçu, `ventesSite` non affiché dans `FileVente`, première défausse réelle à confirmer, libellés 401/403/429, retrait d’étiquette non couvert en e2e, `LONGUEUR_MAX_ETIQUETTE` non relevée, bail de la synchro non atomique, alignement des specs sur la cadence actuelle.
+Décompte « prochaine action » (D-20), cartes déjà en vente exclues de l’aperçu, `ventesSite` non affiché dans `FileVente`, première défausse réelle à confirmer, libellés 401/403/429, retrait d’étiquette non couvert en e2e, `LONGUEUR_MAX_ETIQUETTE` non relevée, bail de la synchro non atomique. Alignement des specs sur la cadence actuelle : fait le 2026-11-12 (avenants), détail restant dans `retouches.md`.

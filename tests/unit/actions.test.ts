@@ -26,12 +26,13 @@ describe('actions : types partagés', () => {
         'pose-etiquette',
         'enchere',
         'defausse',
+        'suppression-etiquette',
       ].sort(),
     )
-    expect(new Set(TYPES_ACTION).size).toBe(6)
+    expect(new Set(TYPES_ACTION).size).toBe(7)
   })
 
-  it('SC-015 : TypeAction est l’union des 6 types', () => {
+  it('SC-015 : TypeAction est l’union des 7 types', () => {
     expectTypeOf<TypeAction>().toEqualTypeOf<
       | 'lecture'
       | 'creation-etiquette'
@@ -39,6 +40,7 @@ describe('actions : types partagés', () => {
       | 'pose-etiquette'
       | 'enchere'
       | 'defausse'
+      | 'suppression-etiquette'
     >()
     expectTypeOf<(typeof TYPES_ACTION)[number]>().toEqualTypeOf<TypeAction>()
   })

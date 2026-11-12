@@ -101,11 +101,11 @@ Le second lot réel a reproduit le 403 sur la pose de « Statut · En vente » (
 
 ## À reprendre (cadence du 2026-11-12, PR #72)
 
-- `specs/synchro-complete/spec.refined.md` (SC-008 « × 6 s », l.54, 135, 220, 268), `spec.md:52` et `tasks.md:9, 411`, ainsi que les décisions `D-xx` de `specs/synchro-auto/*` : ils donnent encore 6 s et 10 par minute. Depuis le 2026-11-12 (décision d'Alexis) la cadence est de 0,2 s + 0 à 0,1 s, sans plafond par minute (ajustée le 2026-11-12), pour toutes les actions (`AGENTS.md` prime). À mettre à jour dans une PR de documents de l'orchestrateur.
+- ~~Alignement des specs sur la cadence actuelle~~ : fait le 2026-11-12 (PR de documents) : lignes corrigées dans `spec.md`, `spec.refined.md`, `plan.md`, `tasks.md` de `synchro-complete` et `synchro-auto`, plus un « Avenant du 2026-11-12 » en fin de chaque document (cadence, parallélisme, arrêts, bail, relance, défausse, cartes en vente, étiquettes préexistantes). Reste : les passages historiques (revues `R-13`, `R-48`, relevé `releve-api.md`) gardent 6 s, remplacés par l'avenant ; la réécriture détaillée de la confirmation de défausse (SC-009, G2, D-19 à D-27) suit la PR #79 ; `H17` et `spec.refined.md:50, 205, 257` (« Statut · En vente ») à réécrire en détail.
 - `AGENTS.md:30-31` et `:36` : fusionner les puces « Cadence la plus rapide » et « Délais variables » (redondantes).
 - Revue de la PR #74 : la file d'écriture (`src/app/Synchronisation.tsx`) et la synchro automatique (`src/content/synchroAuto.ts`) ont chacune leur cadence et ne s'excluent pas. Sans plafond par minute, le débit cumulé peut dépasser celui d'un seul exécuteur. À faire : refuser « Lancer » tant que le bail de synchro est actif (et l'inverse), ou accepter la règle « par exécuteur » (écrite dans `AGENTS.md`).
 
-- Parallélisme (PR « poses et retraits en parallèle », 2026-11-12) : les specs `synchro-complete` et `synchro-auto` décrivent encore une seule requête en vol, 6 s et 10 par minute ; à aligner dans une PR de documents de l’orchestrateur.
+- ~~Parallélisme : specs à aligner~~ : fait par l'avenant du 2026-11-12.
 - Bail de la synchro (`src/app/Synchronisation.tsx` `lancerLot`, `src/lib/ordonnanceur.ts`) : lecture puis écriture non atomiques entre contextes, sans identifiant de détenteur ; deux démarrages dans la même boucle d’évènements peuvent s’additionner (rare). À reprendre : relire le bail après écriture avec un identifiant.
 
 ## À reprendre (suppression de la confirmation de défausse, 2026-11-12, T-906)
@@ -116,3 +116,11 @@ Un amendement daté est en tête de `spec.md`, `spec.refined.md`, `design.md` et
 - `design.md` : D-24 à D-27 et D-43 (l.58-59, 97-100, 179, 186) à marquer retirés.
 - `plan.md` : l.12, 36, 75 (état « attente de confirmation », `DialogueDefausse`, cadence).
 - Ajouter T-906 au suivi de `synchro-complete` (`tasks.md`, `STATUS.md`).
+
+## À reprendre — PR #77 (suppression d’étiquettes préexistantes)
+
+- `src/content/synchroAuto.ts:257` : si le stockage rejette la liste lue, le repli enregistre `[]` ; préférable d’effacer la clé pour que l’interface affiche « pas encore lue ».
+- `src/content/synchroAuto.ts:253-258` : pas de test unitaire de `noterEtiquettesSite` (appel depuis `stats` et repli).
+- `src/app/Synchronisation.tsx:605-610` et `:430-431` : une suppression apparaît sous le texte « etiquettes » (`ID_CARTE_ETIQUETTES`) dans le journal ; prévoir le libellé « Étiquettes du compte ».
+- `src/app/EtiquettesPreexistantes.tsx` : pas de test e2e ni de captures aux 3 tailles.
+- `src/lib/revision.ts:89` : après une suppression, les `etiquettesSite` des cartes gardent le nom supprimé jusqu’à la prochaine synchro.

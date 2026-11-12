@@ -40,6 +40,13 @@ export function enregistrerEtiquette(r: Registre, nom: string, idEtiquette: stri
   return { ...r, etiquettes, couples: r.couples }
 }
 
+/** Oublie une étiquette supprimée du site : son nom et tous ses couples. */
+export function supprimerEtiquetteDuRegistre(r: Registre, nom: string): Registre {
+  const etiquettes = tableVide()
+  for (const [cle, id] of Object.entries(r.etiquettes)) if (cle !== nom) etiquettes[cle] = id
+  return { ...r, etiquettes, couples: r.couples.filter((c) => c.nom !== nom) }
+}
+
 export function couplesDe(r: Registre, idExemplaire: string): Array<{ ex: string; nom: string }> {
   return r.couples.filter((c) => c.ex === idExemplaire).map((c) => ({ ex: c.ex, nom: c.nom }))
 }

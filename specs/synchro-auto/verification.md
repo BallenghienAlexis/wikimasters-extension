@@ -47,3 +47,7 @@ Aucun SC en ❌.
 
 ## Captures
 `specs/synchro-auto/captures/T-206/synchro-auto-{light,dark}-{mobile,tablet,desktop}.png` (6 captures, régénérées par `synchro-auto-ui.spec.ts`).
+
+## Note du 2026-11-12
+
+Cette vérification date du 2026-11-09 : elle atteste la cadence de l’époque (6 s, 10 par minute), remplacée depuis par 0,2 s plus gigue de 0 à 0,1 s, sans plafond (voir l’avenant de `spec.md`). Le test cité en SC-005 date de la même époque : à relire si besoin.
