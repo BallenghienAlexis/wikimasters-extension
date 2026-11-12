@@ -70,7 +70,7 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
     } else {
       echecs = 0;
       // Page absente ou ambiguë : on mémorise « aucun thème » pour ne pas la redemander avant 30 jours.
-      cache = ajouterEntree(cache, titre, lecture.type === 'ok' ? themesDepuisCategories(lecture.categories) : [], maintenant());
+      cache = ajouterEntree(cache, titre, lecture.type === 'ok' ? themesDepuisCategories(lecture.categories, lecture.resume) : [], maintenant());
       verifiees += 1;
       await surProgres(cache, verifiees);
     }
