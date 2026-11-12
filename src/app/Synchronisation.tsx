@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CONFIG_PRIX, PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
+import { CONFIG_PRIX } from '../config/prix';
 import { ID_CARTE_ETIQUETTES } from '../lib/actions';
 import { trierEtiquettesSite } from '../lib/etiquettesPreexistantes';
 import type {
@@ -36,7 +36,7 @@ import {
   enregistrerJournal,
   enregistrerRegistre,
 } from '../lib/stockage';
-import { preferencesParDefaut, type Preferences } from '../lib/tri';
+import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
 import EtiquettesPrevues from './EtiquettesPrevues';
 import { avecIdEtiquette } from '../lib/registre';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
@@ -66,7 +66,7 @@ const RAISONS: Record<RaisonEcart, string> = {
   homonyme: 'une étiquette du même nom existe déjà sur le site',
   'exemplaires-non-relies': 'exemplaires non reliés au site',
   'en-vente-sur-site': 'en vente sur le site : l’exemplaire n’est plus dans la collection, aucune étiquette n’est envoyée',
-  'valeur-defausse-elevee': `valeur marchande inconnue ou supérieure au plafond de défausse (${PLAFOND_VALEUR_DEFAUSSE})`,
+  'valeur-defausse-elevee': `valeur marchande inconnue ou supérieure au plafond de défausse réglé`,
 };
 
 export const libelleRaison = (raison: RaisonEcart): string => RAISONS[raison];
@@ -235,6 +235,7 @@ export type ResultatLot = { lot: LotConstruit } | { erreur: string };
 export function configDuLot(preferences: Preferences, ventesSite: { enCours: number; max: number } | null = null): Config {
   return {
     maxVentesSimultanees: CONFIG_PRIX.maxVentesSimultanees,
+    plafondDefausse: plafondDefausse(preferences),
     longueurMaxEtiquette: null,
     nomsExistants: [],
     amis: preferences.amis,

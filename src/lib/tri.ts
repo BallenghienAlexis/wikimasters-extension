@@ -1,6 +1,6 @@
 // Règles de l'assistant de tri : transforme les préférences du joueur en propositions locales.
 // Rien n'est exécuté sur le site : le joueur défausse, vend et échange lui-même.
-import { CONFIG_PRIX, type ConfigPrix } from '../config/prix';
+import { CONFIG_PRIX, PLAFOND_DEFAUSSE_MAX, PLAFOND_DEFAUSSE_MIN, PLAFOND_VALEUR_DEFAUSSE, type ConfigPrix, type TranchePrix } from '../config/prix';
 import type { Carte, Collection, Statut } from './collection';
 import { normaliser } from './collection';
 import { DEFINITIONS_THEMES, THEME_AUTRES, themesDeCarte } from './themes';
@@ -14,6 +14,14 @@ export interface Preferences {
   version: 2;
   mesThemes: string[];
   amis: Ami[];
+  /** Plafond de défausse réglé par le joueur (1 à 20) ; absent : valeur par défaut de `config/prix.ts`. */
+  plafondDefausse?: number;
+}
+
+/** Plafond de défausse effectif : la valeur réglée si elle est valide, sinon la valeur par défaut (5). */
+export function plafondDefausse(preferences: Pick<Preferences, 'plafondDefausse'>): number {
+  const v = preferences.plafondDefausse;
+  return typeof v === 'number' && Number.isInteger(v) && v >= PLAFOND_DEFAUSSE_MIN && v <= PLAFOND_DEFAUSSE_MAX ? v : PLAFOND_VALEUR_DEFAUSSE;
 }
 
 export const preferencesParDefaut = (): Preferences => ({ version: 2, mesThemes: [], amis: [] });
@@ -80,8 +88,12 @@ export function proposerTri(carte: Carte, preferences: Preferences, config: Conf
   // Sans valeur connue, on ne propose rien : une défausse ne se rattrape pas.
   const valeur = valeurDeCarte(carte);
   if (valeur === null) return { statut: 'a-trier', ami: null, prixCible: null };
-  if (valeur < config.seuilDefausse) return { statut: 'defausser', ami: null, prixCible: null };
-  return { statut: 'vendre', ami: null, prixCible: prixDepart(valeur, config) };
+  // Le seuil suit le plafond réglé : l'assistant ne propose rien que l'envoi refuserait.
+  const seuil = preferences.plafondDefausse === undefined ? config.seuilDefausse : plafondDefausse(preferences) + 1;
+  if (valeur < seuil) return { statut: 'defausser', ami: null, prixCible: null };
+  // Plafond abaissé : une carte sous la première tranche de la matrice se vend au prix de cette tranche.
+  const basse = config.matricePrixDepart.reduce<TranchePrix | null>((m, t) => (m === null || t.valeurMin < m.valeurMin ? t : m), null);
+  return { statut: 'vendre', ami: null, prixCible: prixDepart(valeur, config) ?? basse?.prixDepart ?? null };
 }
 
 // Une décision prise à la main n'est jamais remplacée.
@@ -141,11 +153,12 @@ const estListeTextes = (v: unknown): v is string[] => Array.isArray(v) && v.ever
 // Valide des préférences stockées ; retourne les valeurs par défaut si elles sont illisibles.
 export function lirePreferences(brut: unknown): Preferences {
   if (typeof brut !== 'object' || brut === null) return preferencesParDefaut();
-  const { version, mesThemes, amis } = brut as Partial<Preferences>;
+  const { version, mesThemes, amis, plafondDefausse: plafond } = brut as Partial<Preferences>;
   const amisValides =
     Array.isArray(amis) && amis.every((a) => typeof a === 'object' && a !== null && typeof a.nom === 'string' && estListeTextes(a.themes));
   if (version !== 2 || !estListeTextes(mesThemes) || !amisValides) return preferencesParDefaut();
-  return { version, mesThemes, amis };
+  const base: Preferences = { version, mesThemes, amis };
+  return typeof plafond === 'number' && plafondDefausse({ plafondDefausse: plafond }) === plafond ? { ...base, plafondDefausse: plafond } : base;
 }
 
 const cleAmi = (nom: string): string => normaliser(nom.trim());

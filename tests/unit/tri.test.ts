@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ConfigPrix } from '../../src/config/prix';
 import { CONFIG_PRIX, PLAFOND_VALEUR_DEFAUSSE } from '../../src/config/prix';
 import type { Carte } from '../../src/lib/collection';
-import { amisConcernes, apercuTri, appliquerTri, fusionnerAmisInitiaux, fileDeVente, lirePreferences, preferencesParDefaut, prixDepart, proposerTri, themesAimesDesFavoris, valeurDeCarte, type Preferences } from '../../src/lib/tri';
+import { amisConcernes, apercuTri, appliquerTri, fusionnerAmisInitiaux, fileDeVente, lirePreferences, plafondDefausse, preferencesParDefaut, prixDepart, proposerTri, themesAimesDesFavoris, valeurDeCarte, type Preferences } from '../../src/lib/tri';
 
 const carte = (surcharge: Partial<Carte> = {}): Carte => ({
   id: 'c1',
@@ -176,6 +176,35 @@ describe('apercuTri', () => {
     expect(apercu.defausser.exemples).toHaveLength(5);
   });
 });
+
+describe('plafond de défausse réglable', () => {
+  it('plafondDefausse : valeur réglée valide, sinon 5', () => {
+    expect(plafondDefausse(prefs())).toBe(5)
+    expect(plafondDefausse(prefs({ plafondDefausse: 12 }))).toBe(12)
+    for (const v of [0, 21, 2.5, Number.NaN]) expect(plafondDefausse(prefs({ plafondDefausse: v }))).toBe(5)
+  })
+
+  it('le seuil de l’assistant suit le plafond réglé', () => {
+    const c = carte({ valeurMarchande: 10 })
+    expect(proposerTri(c, prefs(), CONFIG_PRIX).statut).toBe('vendre')
+    expect(proposerTri(c, prefs({ plafondDefausse: 10 }), CONFIG_PRIX).statut).toBe('defausser')
+    expect(proposerTri(carte({ valeurMarchande: 11 }), prefs({ plafondDefausse: 10 }), CONFIG_PRIX).statut).toBe('vendre')
+  })
+
+  it('plafond abaissé : une carte sous la première tranche garde un prix de départ', () => {
+    const c = carte({ valeurMarchande: 4 })
+    const p = proposerTri(c, prefs({ plafondDefausse: 3 }), CONFIG_PRIX)
+    expect(p.statut).toBe('vendre')
+    expect(p.prixCible).toBe(Math.min(...CONFIG_PRIX.matricePrixDepart.filter((t) => t.valeurMin === Math.min(...CONFIG_PRIX.matricePrixDepart.map((x) => x.valeurMin))).map((t) => t.prixDepart)))
+  })
+
+  it('lirePreferences conserve un plafond valide et ignore un plafond invalide', () => {
+    const base = { version: 2, mesThemes: [], amis: [] }
+    expect(lirePreferences({ ...base, plafondDefausse: 8 }).plafondDefausse).toBe(8)
+    expect(lirePreferences({ ...base, plafondDefausse: 99 }).plafondDefausse).toBeUndefined()
+    expect(lirePreferences({ ...base, plafondDefausse: 'x' }).plafondDefausse).toBeUndefined()
+  })
+})
 
 describe('lirePreferences', () => {
   it.each([[undefined], [null], ['texte'], [{ version: 1 }], [{ version: 2, mesThemes: 'x', amis: [] }], [{ version: 2, mesThemes: [], amis: [{ nom: 1 }] }]])(

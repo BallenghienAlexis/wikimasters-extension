@@ -56,7 +56,7 @@ export function reverifierAction(
       return prixCourant(carte) === action.prix ? 'ok' : 'passee'
     case 'defausse':
       if (carte.statut !== 'defausser' || carte.quantite < 1) return 'passee'
-      if (!(typeof carte.valeurMarchande === 'number' && carte.valeurMarchande <= PLAFOND_VALEUR_DEFAUSSE)) return 'passee'
+      if (!(typeof carte.valeurMarchande === 'number' && carte.valeurMarchande <= (config.plafondDefausse ?? PLAFOND_VALEUR_DEFAUSSE))) return 'passee'
       return carte.idsSite?.includes(action.idExemplaire) ? 'ok' : 'passee'
     case 'creation-etiquette':
       return exemplairesAttendus(carte, config).some((e) => e.etiquettes.includes(action.nomEtiquette)) ? 'ok' : 'passee'

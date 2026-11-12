@@ -19,11 +19,12 @@ import { progression, texteProgression, type Synchro } from '../lib/synchro';
 import { LIBELLES_THEMES, IDS_THEMES, definirThemesWikipedia, themesDeCarte } from '../lib/themes';
 import { cacheVide, themesParTitre, type CacheWikipedia } from '../lib/wikipedia';
 import VerificationWikipedia from './VerificationWikipedia';
-import { appliquerTri, preferencesParDefaut, type Preferences } from '../lib/tri';
+import { appliquerTri, plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
 import type { Registre } from '../lib/actions';
 import type { EvenementVente } from '../lib/affluence';
 import { registreVide } from '../lib/registre';
 import AssistantTri from './AssistantTri';
+import PlafondDefausse from './PlafondDefausse';
 import Synchronisation, { lancerSuppressionEtiquettes } from './Synchronisation';
 import SynchroAuto from './SynchroAuto';
 import EtiquettesPreexistantes from './EtiquettesPreexistantes';
@@ -328,6 +329,15 @@ const App: React.FC = () => {
             onTerminee={(id) => {
               appliquer(terminerEnchere(collection, id));
               noterVente('fin');
+            }}
+          />
+
+          <PlafondDefausse
+            plafond={plafondDefausse(preferences)}
+            onChange={(plafond) => {
+              const suivantes = { ...preferences, plafondDefausse: plafond };
+              setPreferences(suivantes);
+              enregistrerPreferences(suivantes).catch(() => setMessage('Enregistrement du plafond impossible.'));
             }}
           />
 

@@ -18,6 +18,10 @@ export interface ConfigPrix {
  */
 export const PLAFOND_VALEUR_DEFAUSSE = 5;
 
+/** Bornes du plafond réglable depuis la page de gestion (Alexis, 2026-11-12). Au-dessus de la valeur par défaut : avertissement. */
+export const PLAFOND_DEFAUSSE_MIN = 1;
+export const PLAFOND_DEFAUSSE_MAX = 20;
+
 export const CONFIG_PRIX: ConfigPrix = {
   // Une carte qui n'intéresse personne et vaut moins que ce seuil (donc 5 ou moins) est à défausser.
   // Aligné sur PLAFOND_VALEUR_DEFAUSSE (Alexis, 2026-11-11) : l'assistant ne propose rien que l'envoi refuserait.

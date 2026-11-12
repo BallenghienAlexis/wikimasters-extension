@@ -253,6 +253,16 @@ describe('plafond de valeur de la défausse (Alexis, 2026-11-11)', () => {
   })
 })
 
+describe('plafond de défausse réglé', () => {
+  it('une carte de valeur 12 est défaussée avec un plafond de 12, écartée avec 11', () => {
+    const c = carte('a', { statut: 'defausser', valeurMarchande: 12, idsSite: ['ex-a'] })
+    expect(construireLot(coll(c), registre(), config({ plafondDefausse: 12 }), TOUS).actions.map((a) => a.type)).toEqual(['defausse'])
+    const lot = construireLot(coll(c), registre(), config({ plafondDefausse: 11 }), TOUS)
+    expect(lot.actions).toEqual([])
+    expect(lot.ecartees).toEqual([{ idCarte: 'a', titre: 'Carte a', raison: 'valeur-defausse-elevee' }])
+  })
+})
+
 describe('types non disponibles', () => {
   it('une carte dont l’action n’est pas disponible est listée « action non disponible »', () => {
     const lot = construireLot(coll(carte('a', { statut: 'defausser', valeurMarchande: 1 }), carte('b')), registre(), config(), types())

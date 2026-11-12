@@ -41,6 +41,8 @@ export interface Config {
   limiteParExemplaire?: number | null
   /** Limite de noms d’étiquettes distincts sur le compte ; `null` ou absent = inconnue. */
   limiteNoms?: number | null
+  /** Plafond de valeur de défausse réglé par le joueur ; absent : `PLAFOND_VALEUR_DEFAUSSE` (5). */
+  plafondDefausse?: number
 }
 
 /** Raison pour laquelle une étiquette précise n’est pas posée. */
@@ -329,7 +331,7 @@ export function construireLot(
     if (c.statut === 'defausser') {
       // Aucun retrait d’étiquette avant défausse (H19).
       const ids = c.idsSite.slice(0, Math.max(0, c.quantite))
-      if (ids.length > 0 && !(c.valeurMarchande !== null && c.valeurMarchande <= PLAFOND_VALEUR_DEFAUSSE)) {
+      if (ids.length > 0 && !(c.valeurMarchande !== null && c.valeurMarchande <= (config.plafondDefausse ?? PLAFOND_VALEUR_DEFAUSSE))) {
         ecarter('valeur-defausse-elevee')
       } else if (ids.length > 0) {
         if (dispo('defausse')) {
