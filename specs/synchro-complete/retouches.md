@@ -93,5 +93,5 @@ Carte « Primaire présidentielle socialiste française de 2026 » : création d
 
 ## À reprendre (cadence du 2026-11-12, PR #72)
 
-- `specs/synchro-complete/spec.refined.md` (SC-008 « × 6 s », l.54, 135, 220, 268), `spec.md:52` et `tasks.md:9, 411`, ainsi que les décisions `D-xx` de `specs/synchro-auto/*` : ils donnent encore 6 s et 10 par minute. Depuis le 2026-11-12 (décision d'Alexis) la cadence est de 1 s + 0 à 0,5 s, 60 par minute, pour toutes les actions (`AGENTS.md` prime). À mettre à jour dans une PR de documents de l'orchestrateur.
+- `specs/synchro-complete/spec.refined.md` (SC-008 « × 6 s », l.54, 135, 220, 268), `spec.md:52` et `tasks.md:9, 411`, ainsi que les décisions `D-xx` de `specs/synchro-auto/*` : ils donnent encore 6 s et 10 par minute. Depuis le 2026-11-12 (décision d'Alexis) la cadence est de 0,4 s + 0 à 0,2 s, 120 par minute (ajustée le 2026-11-12), pour toutes les actions (`AGENTS.md` prime). À mettre à jour dans une PR de documents de l'orchestrateur.
 - `AGENTS.md:30-31` et `:36` : fusionner les puces « Cadence la plus rapide » et « Délais variables » (redondantes).
