@@ -97,6 +97,8 @@ async function amorcer(page: Page): Promise<void> {
       collection: { version: 2, cartes: [carte] },
       preferences: { version: 2, mesThemes: [], amis: [] },
       amisInitiaux: 999,
+      // Le lot refuse de démarrer tant que la synchro automatique tient le bail : elle est coupée ici.
+      syncAuto: false,
     });
   }, CARTE);
   await page.reload();

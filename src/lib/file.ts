@@ -146,6 +146,8 @@ export function creerFile(deps: DependancesFile): File {
 
   // Mémoire de cadence, conservée tant que la file vit (mêmes règles d’une exécution à l’autre).
   let dernierDebut = Number.NEGATIVE_INFINITY
+  /** Heure réelle du dernier envoi d’un lot parallèle (garantit l’écart de 0,2 s avec l’action suivante). */
+  let dernierEnvoi = Number.NEGATIVE_INFINITY
   let derniereReponse = Number.NEGATIVE_INFINITY
   /** Supplément tiré après la dernière requête, appliqué avant la suivante. */
   let supplement = 0
@@ -198,15 +200,13 @@ export function creerFile(deps: DependancesFile): File {
 
   /** Date de début autorisée : cadence unique (0,2 s plus supplément), réponse précédente, confirmation. */
   function debutAutorise(plancher: number): number {
-    return Math.max(dernierDebut + INTERVALLE_MS + supplement, derniereReponse, plancher)
+    return Math.max(dernierDebut + INTERVALLE_MS + supplement, derniereReponse, plancher, dernierEnvoi + INTERVALLE_MS)
   }
 
   /**
    * `lotParallele` : l’action fait partie d’un lot de poses en vol en même temps. Son créneau de départ est
    * réservé tout de suite (intervalle minimal entre deux départs), sans attendre la réponse des autres.
    */
-  let dernierEnvoi = Number.NEGATIVE_INFINITY
-
   async function traiter(action: Action, echecs: { n: number }, lotParallele = false, apresReponse = Number.NEGATIVE_INFINITY): Promise<void> {
     if ((await verifier(action)) === 'passee') return inscrirePassee(action)
 
