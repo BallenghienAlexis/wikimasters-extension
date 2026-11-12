@@ -63,7 +63,6 @@ function banc(
       horloge.t += latence;
       return r;
     },
-    confirmer: () => 'defausser',
     reverifier: () => 'ok',
     appliquer: (action, resultat) => {
       appliquees.push([action, resultat]);
@@ -141,17 +140,6 @@ describe('cadence fixe (AC2)', () => {
     await file.demarrer(lot(3), 'lot-1');
     expect(b.departs[1]! - b.departs[0]!).toBe(9000);
     expect(b.departs[2]! - b.departs[1]!).toBe(9000);
-  });
-
-  it('attend la confirmation (défausse) avant de partir', async () => {
-    const b = banc();
-    b.deps.confirmer = async (): Promise<'defausser'> => {
-      b.horloge.t += 20_000;
-      return 'defausser';
-    };
-    const file = creerFile(b.deps);
-    await file.demarrer([lecture(1), defausse(2)], 'lot-1');
-    expect(b.departs[1]! - b.departs[0]!).toBeGreaterThanOrEqual(20_000);
   });
 
   it('une action passée n’avance pas la date de cadence', async () => {
@@ -434,19 +422,6 @@ describe('revérification tardive', () => {
     expect(b.journal.slice(-2)).toEqual(['ouvrir:e2:lecture', 'passer:e2']);
     expect(etat.etat).toBe('terminee');
   });
-
-  it('carte modifiée pendant la confirmation de défausse : aucune requête', async () => {
-    const b = banc();
-    let modifiee = false;
-    b.deps.reverifier = () => (modifiee ? 'passee' : 'ok');
-    b.deps.confirmer = () => {
-      modifiee = true;
-      return 'defausser';
-    };
-    await creerFile(b.deps).demarrer([defausse(1)], 'lot-1');
-    expect(b.requetes).toHaveLength(0);
-    expect(b.journal).toEqual(['ouvrir:e1:defausse', 'passer:e1']);
-  });
 });
 
 describe('robustesse', () => {
@@ -486,18 +461,6 @@ describe('robustesse', () => {
     expect(b.requetes).toHaveLength(0);
   });
 
-  it('une exception de confirmer n’est pas classée comme échec d’écriture', async () => {
-    const b = banc({
-      confirmer: () => {
-        throw new Error('fenêtre');
-      },
-    });
-    const etat = await creerFile(b.deps).demarrer([defausse(1)], 'lot-1');
-    expect(etat.etat).toBe('arretee');
-    expect(etat.raison).toBe('confirmation-indisponible');
-    expect(b.requetes).toHaveLength(0);
-  });
-
   it('s’arrête quand journal.completer échoue', async () => {
     const b = banc();
     b.deps.journal.completer = () => {
@@ -521,49 +484,19 @@ describe('robustesse', () => {
   });
 });
 
-describe('défausse (AC7)', () => {
-  it('appelle confirmer avant toute requête de défausse', async () => {
+describe('défausse (sans confirmation, 2026-11-12)', () => {
+  it('part directement, sans attente de décision', async () => {
     const b = banc();
-    const ordre: string[] = [];
-    b.deps.confirmer = () => {
-      ordre.push('confirmer');
-      return 'defausser';
-    };
-    const t = b.deps.transport;
-    b.deps.transport = (a) => {
-      ordre.push('transport');
-      return t(a);
-    };
-    await creerFile(b.deps).demarrer([defausse(1)], 'lot-1');
-    expect(ordre).toEqual(['confirmer', 'transport']);
-  });
-
-  it('ne demande pas de confirmation pour une autre action', async () => {
-    let appels = 0;
-    const b = banc({
-      confirmer: () => {
-        appels++;
-        return 'defausser';
-      },
-    });
-    await creerFile(b.deps).demarrer([lecture(1), pose(2)], 'lot-1');
-    expect(appels).toBe(0);
-  });
-
-  it('« passer » : aucune requête, journal « passée »', async () => {
-    const b = banc({ confirmer: () => 'passer' });
-    const etat = await creerFile(b.deps).demarrer([defausse(1), lecture(2)], 'lot-1');
-    expect(b.requetes.map((a) => a.type)).toEqual(['lecture']);
-    expect(b.journal[0]).toBe('ouvrir:e1:defausse');
-    expect(b.journal[1]).toBe('passer:e1');
+    const etat = await creerFile(b.deps).demarrer([defausse(1)], 'lot-1');
+    expect(b.requetes.map((a) => a.type)).toEqual(['defausse']);
     expect(etat.etat).toBe('terminee');
   });
 
-  it('« arreter » : fin comme un arrêt manuel, rien d’autre n’est émis', async () => {
-    const b = banc({ confirmer: () => 'arreter' });
-    const etat = await creerFile(b.deps).demarrer([lecture(1), defausse(2), lecture(3)], 'lot-1');
-    expect(b.requetes.map((a) => a.idCarte)).toEqual(['Rare|Carte 1']);
-    expect(etat.etat).toBe('arretee');
+  it('une carte modifiée avant l’envoi reste passée, sans requête', async () => {
+    const b = banc({ reverifier: () => 'passee' });
+    await creerFile(b.deps).demarrer([defausse(1)], 'lot-1');
+    expect(b.requetes).toHaveLength(0);
+    expect(b.journal).toEqual(['ouvrir:e1:defausse', 'passer:e1']);
   });
 });
 
@@ -590,7 +523,7 @@ describe('état observable', () => {
 describe('cadence unique pour toutes les actions (2026-11-12)', () => {
   it('espace de 0,2 s une pose, une enchère et une défausse', async () => {
     const e = (n: number): Action => ({ type: 'enchere', idCarte: `Rare|Carte ${n}`, idExemplaire: 'x', prix: 5 })
-    const b = banc({ delaiSupplementaire: () => 0, confirmer: () => 'defausser' })
+    const b = banc({ delaiSupplementaire: () => 0 })
     await creerFile(b.deps).demarrer([pose(1), e(2), defausse(3)], 'lot-1')
     expect(b.departs.slice(1).map((d, n) => d - b.departs[n]!)).toEqual([200, 200])
   })

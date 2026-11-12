@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CONFIG_PRIX, PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
 import type {
   Action,
@@ -13,7 +13,7 @@ import type {
 import type { Carte, Collection } from '../lib/collection';
 import { typesDisponibles } from '../lib/contrat';
 import { DUREE_BAIL_MS } from '../lib/ordonnanceur';
-import { CODES_ARRET, CODE_CONFLIT, SUPPLEMENT_MAX_MS, creerFile, type Decision, type EtatFile, type File as FileLot, type RaisonArret } from '../lib/file';
+import { CODES_ARRET, CODE_CONFLIT, SUPPLEMENT_MAX_MS, creerFile, type EtatFile, type File as FileLot, type RaisonArret } from '../lib/file';
 import { regrouperEtiquettes, type ApercuEtiquettes } from '../lib/apercuEtiquettes';
 import { completerEntree, ouvrirEntree, passerEntree } from '../lib/journal';
 import { construireLot, type Config, type EtiquetteObsolete, type LotConstruit } from '../lib/lot';
@@ -33,7 +33,6 @@ import {
   enregistrerRegistre,
 } from '../lib/stockage';
 import { preferencesParDefaut, type Preferences } from '../lib/tri';
-import DialogueDefausse from './DialogueDefausse';
 import EtiquettesPrevues from './EtiquettesPrevues';
 import { avecIdEtiquette } from '../lib/registre';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
@@ -316,9 +315,7 @@ const CAUSES_ARRET: Record<RaisonArret, string> = {
   resultat: 'résultat hors contrat ou inconnu',
   ecriture: 'enregistrement local impossible',
   transport: 'erreur de transport',
-  confirmation: 'arrêt demandé à la confirmation',
   verification: 'revérification impossible',
-  'confirmation-indisponible': 'confirmation indisponible',
 };
 
 /** Libellé fixe de la cause d’un arrêt (D-41) : jamais le texte d’une réponse du site. */
@@ -391,12 +388,9 @@ export function texteFin(etat: EtatFile, bilan: Bilan, deconnecte: boolean): { t
 }
 
 interface Pont {
-  confirmer: ((action: Action) => Promise<Decision>) | null;
   idLot: string;
   bilan: Bilan;
   deconnecte: boolean;
-  /** Répond « Arrêter le lot » à une confirmation ouverte (arrêt ou déconnexion). */
-  annuler: (() => void) | null;
 }
 
 interface ContexteExecution {
@@ -420,7 +414,7 @@ let contexte: ContexteExecution | null = null;
 function contexteExecution(): ContexteExecution {
   if (contexte) return contexte;
   const execution = creerExecutionReelle();
-  const pont: Pont = { confirmer: null, idLot: '', bilan: bilanVide(), deconnecte: false, annuler: null };
+  const pont: Pont = { idLot: '', bilan: bilanVide(), deconnecte: false };
   const titreDe = async (idCarte: string): Promise<string> =>
     (await chargerCollection()).cartes.find((c) => c.id === idCarte)?.titre ?? idCarte;
   const file = creerFile({
@@ -435,10 +429,6 @@ function contexteExecution(): ContexteExecution {
       const complete = avecIdEtiquette(ordre, await chargerRegistre());
       if (complete === null) return { classe: 'echec', codeHttp: null, cause: 'action non disponible' };
       return execution.transport(complete);
-    },
-    confirmer: (action) => {
-      if (!pont.confirmer) throw new Error('Confirmation indisponible.');
-      return pont.confirmer(action);
     },
     reverifier: async (action) => {
       const [collection, registre, preferences] = await Promise.all([chargerCollection(), chargerRegistre(), chargerPreferences()]);
@@ -538,7 +528,6 @@ async function executerLot(ctx: ContexteExecution, actions: readonly Action[], i
     const arreter = (): void => {
       ctx.pont.deconnecte = true;
       ctx.file.arreter();
-      ctx.pont.annuler?.();
     };
     interruption.addEventListener('abort', arreter);
     try {
@@ -596,17 +585,9 @@ function BandeauRisque({ avertirAmis }: { avertirAmis: boolean }): React.ReactEl
   );
 }
 
-interface ConfirmationOuverte {
-  carte: string;
-  rang: number;
-  total: number;
-  resoudre: (d: Decision) => void;
-}
-
 interface PropsZone {
   exec: { etat: EtatFile; bilan: Bilan; deconnecte: boolean } | null;
   interrompu: boolean;
-  attenteDecision: boolean;
   titreRef: React.RefObject<HTMLHeadingElement | null>;
   arreterRef: React.RefObject<HTMLButtonElement | null>;
   onArreter: () => void;
@@ -614,7 +595,7 @@ interface PropsZone {
 }
 
 /** Zone d’exécution (D-19 à D-23) : progression, arrêt, états de fin. Aucune animation (D-39). */
-const ZoneExecution: React.FC<PropsZone> = ({ exec, interrompu, attenteDecision, titreRef, arreterRef, onArreter, onFermer }) => {
+const ZoneExecution: React.FC<PropsZone> = ({ exec, interrompu, titreRef, arreterRef, onArreter, onFermer }) => {
   const enCours = exec?.etat.etat === 'en-cours';
   const termine = exec?.etat.etat === 'terminee';
   const fin = exec && !enCours ? texteFin(exec.etat, exec.bilan, exec.deconnecte) : null;
@@ -628,7 +609,7 @@ const ZoneExecution: React.FC<PropsZone> = ({ exec, interrompu, attenteDecision,
       className={`mt-4 rounded border border-line border-l-4 ${bordure} bg-ink-2 p-4`}
       data-testid="zone-execution"
       onKeyDown={(e) => {
-        if (e.key === 'Escape' && enCours && !attenteDecision) {
+        if (e.key === 'Escape' && enCours) {
           e.preventDefault();
           onArreter();
         }
@@ -641,7 +622,7 @@ const ZoneExecution: React.FC<PropsZone> = ({ exec, interrompu, attenteDecision,
       {enCours && (
         <>
           <p className="mt-2 font-semibold">
-            {attenteDecision ? 'En attente de votre décision' : texteEnCours(traitees, total, erreurs)}
+            {texteEnCours(traitees, total, erreurs)}
           </p>
           <div className="mt-2 h-2 rounded bg-line">
             <div
@@ -662,7 +643,7 @@ const ZoneExecution: React.FC<PropsZone> = ({ exec, interrompu, attenteDecision,
           >
             Arrêter
           </button>
-          {!attenteDecision && <p className="mt-2 text-sm text-muted">Échap{NB}: arrêter le lot</p>}
+          <p className="mt-2 text-sm text-muted">Échap{NB}: arrêter le lot</p>
         </>
       )}
 
@@ -764,30 +745,13 @@ const Synchronisation: React.FC<Props> = ({
     };
   }, []);
   const [erreurLancement, setErreurLancement] = useState<string | null>(null);
-  const [confirmation, setConfirmation] = useState<ConfirmationOuverte | null>(null);
   const [entrees, setEntrees] = useState<EntreeJournal[]>([]);
   const [journalIllisible, setJournalIllisible] = useState(false);
   const [registreMaj, setRegistreMaj] = useState<Registre | null>(null);
-  const confirmationRef = useRef<ConfirmationOuverte | null>(null);
-  const rangsRef = useRef<Map<Action, { k: number; n: number }>>(new Map());
-  const collectionRef = useRef(collection);
-  useEffect(() => {
-    collectionRef.current = collection;
-  }, [collection]);
   const arreterRef = useRef<HTMLButtonElement>(null);
   const titreExecRef = useRef<HTMLHeadingElement>(null);
 
   const registreCourant = registreMaj ?? registre;
-
-  const decider = useCallback((d: Decision): void => {
-    const c = confirmationRef.current;
-    if (!c) return;
-    confirmationRef.current = null;
-    setConfirmation(null);
-    c.resoudre(d);
-    // Le focus revient à « Arrêter », ou au titre de la zone après « Arrêter le lot ».
-    setTimeout(() => (d === 'arreter' ? titreExecRef : arreterRef).current?.focus(), 0);
-  }, []);
 
   useEffect(() => {
     let actif = true;
@@ -809,15 +773,6 @@ const Synchronisation: React.FC<Props> = ({
         /* le registre reste celui de la page */
       }
     };
-    ctx.pont.confirmer = (action) =>
-      new Promise<Decision>((resoudre) => {
-        const rang = rangsRef.current.get(action) ?? { k: 1, n: 1 };
-        const cartesCourantes = new Map(collectionRef.current.cartes.map((x) => [x.id, x]));
-        const c: ConfirmationOuverte = { carte: carteTexte(action.idCarte, cartesCourantes), rang: rang.k, total: rang.n, resoudre };
-        confirmationRef.current = c;
-        setConfirmation(c);
-      });
-    ctx.pont.annuler = () => decider('arreter');
     const majOnglets = (): void => setOngletsLive(ctx.execution.nbOngletsWikiMasters());
     majOnglets();
     const desabonnerOnglets = ctx.execution.abonner(majOnglets);
@@ -841,11 +796,8 @@ const Synchronisation: React.FC<Props> = ({
       actif = false;
       desabonnerOnglets();
       desabonnerFile();
-      ctx.pont.annuler?.();
-      ctx.pont.confirmer = null;
-      ctx.pont.annuler = null;
     };
-  }, [decider]);
+  }, []);
 
   const dispo = useMemo(() => disponibles ?? typesDisponibles(), [disponibles]);
   const cartes = useMemo(() => new Map(collection.cartes.map((c) => [c.id, c])), [collection.cartes]);
@@ -930,17 +882,6 @@ const Synchronisation: React.FC<Props> = ({
     setErreurLancement(null);
     setInterrompu(false);
     setFermee(false);
-    const total = new Map<string, number>();
-    for (const a of actions) if (a.type === 'defausse') total.set(a.idCarte, (total.get(a.idCarte) ?? 0) + 1);
-    const vus = new Map<string, number>();
-    const rangs = new Map<Action, { k: number; n: number }>();
-    for (const a of actions) {
-      if (a.type !== 'defausse') continue;
-      const k = (vus.get(a.idCarte) ?? 0) + 1;
-      vus.set(a.idCarte, k);
-      rangs.set(a, { k, n: total.get(a.idCarte) ?? k });
-    }
-    rangsRef.current = rangs;
     lancerLot(actions, idLot).catch((e: unknown) =>
       setErreurLancement(libelleErreurLancement(e)),
     );
@@ -949,7 +890,7 @@ const Synchronisation: React.FC<Props> = ({
 
   const arreter = (): void => {
     contexteExecution().file.arreter();
-    decider('arreter');
+    setTimeout(() => titreExecRef.current?.focus(), 0);
   };
 
   const retirer = (couple: CoupleRetrait): void => {
@@ -983,7 +924,6 @@ const Synchronisation: React.FC<Props> = ({
         <ZoneExecution
           exec={exec}
           interrompu={interrompu}
-          attenteDecision={confirmation !== null}
           titreRef={titreExecRef}
           arreterRef={arreterRef}
           onArreter={arreter}
@@ -1139,15 +1079,6 @@ const Synchronisation: React.FC<Props> = ({
         onRetirer={retirer}
         onVider={vider}
       />
-
-      {confirmation && (
-        <DialogueDefausse
-          carte={confirmation.carte}
-          rang={confirmation.rang}
-          total={confirmation.total}
-          onDecision={decider}
-        />
-      )}
     </div>
   );
 };
