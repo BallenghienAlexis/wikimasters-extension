@@ -360,7 +360,7 @@ export const texteInterrompu = (): string => `${TITRE_INTERROMPU}${SUITE_INTERRO
 /** Poses et retraits en vol en même temps. */
 const CONCURRENCE_PAR_DEFAUT = 3;
 
-const SYNCHRO_EN_COURS = 'La synchronisation automatique est en cours : réessaie quand elle est terminée.';
+const SYNCHRO_EN_COURS = 'Une synchronisation ou un autre lot est en cours : réessaie quand il est terminé.';
 
 /** Message affiché au lancement : libellé fixe de l’extension, jamais un texte venu d’ailleurs (D-41). */
 const ERREURS_LANCEMENT = new Set([
@@ -489,21 +489,47 @@ function contexteExecution(): ContexteExecution {
 
 /** Lance un lot sous le verrou unique ; l’exécution s’arrête si l’onglet WikiMasters se ferme. */
 async function lancerLot(actions: readonly Action[], idLot: string): Promise<void> {
-  const ctx = contexteExecution();
-  ctx.pont.idLot = idLot;
-  ctx.pont.bilan = bilanVide();
-  ctx.pont.deconnecte = false;
-  // Une seule source de débit à la fois : le lot prend le bail de la synchro automatique (qui ne démarre pas tant qu’il est tenu).
-  const bailTenu = await chargerBailSynchro();
-  if (bailTenu !== null && bailTenu > Date.now()) throw new Error(SYNCHRO_EN_COURS);
-  await enregistrerBailSynchro(Date.now() + DUREE_BAIL_MS);
-  // Le bail expire au bout de 2 min : il est renouvelé tant que le lot tourne.
-  const renouvellement = setInterval(() => void enregistrerBailSynchro(Date.now() + DUREE_BAIL_MS).catch(() => undefined), DUREE_BAIL_MS / 4);
+  if (lotEnCours) throw new Error('Une exécution est déjà en cours.');
+  lotEnCours = true;
   try {
-    await executerLot(ctx, actions, idLot);
+    await sousBail(
+      { lire: chargerBailSynchro, ecrire: enregistrerBailSynchro, maintenant: () => Date.now() },
+      async () => {
+        const ctx = contexteExecution();
+        ctx.pont.idLot = idLot;
+        ctx.pont.bilan = bilanVide();
+        ctx.pont.deconnecte = false;
+        await executerLot(ctx, actions, idLot);
+      },
+    );
+  } finally {
+    lotEnCours = false;
+  }
+}
+
+let lotEnCours = false;
+
+export interface DependancesBail {
+  lire: () => Promise<number | null>;
+  ecrire: (expiration: number | null) => Promise<void>;
+  maintenant: () => number;
+}
+
+/**
+ * Exécute `f` en tenant le bail de la synchro automatique (une seule source de débit à la fois) : refus si le bail
+ * est tenu, renouvellement tant que `f` tourne, libération dans tous les cas.
+ */
+export async function sousBail(deps: DependancesBail, f: () => Promise<void>): Promise<void> {
+  const tenu = await deps.lire();
+  if (tenu !== null && tenu > deps.maintenant()) throw new Error(SYNCHRO_EN_COURS);
+  await deps.ecrire(deps.maintenant() + DUREE_BAIL_MS);
+  // Le bail expire au bout de 2 min : il est renouvelé tant que le lot tourne.
+  const renouvellement = setInterval(() => void deps.ecrire(deps.maintenant() + DUREE_BAIL_MS).catch(() => undefined), DUREE_BAIL_MS / 4);
+  try {
+    await f();
   } finally {
     clearInterval(renouvellement);
-    await enregistrerBailSynchro(null).catch(() => undefined);
+    await deps.ecrire(null).catch(() => undefined);
   }
 }
 

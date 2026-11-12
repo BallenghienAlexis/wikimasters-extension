@@ -56,7 +56,7 @@ export interface JournalFile {
 /** Nombre maximal d’écritures d’étiquettes simultanément en vol (décision d’Alexis, 2026-11-12). */
 export const CONCURRENCE_MAX = 4
 
-/** Seules les poses et retraits d’étiquettes déjà identifiées peuvent partir en parallèle ; tout le reste est un point de passage. */
+/** Seules les poses et retraits d’étiquettes (selon leur type) peuvent partir en parallèle ; tout le reste est un point de passage. */
 const parallelisable = (action: Action): boolean => action.type === 'pose-etiquette' || action.type === 'retrait-etiquette'
 
 export interface DependancesFile {
@@ -205,6 +205,8 @@ export function creerFile(deps: DependancesFile): File {
    * `lotParallele` : l’action fait partie d’un lot de poses en vol en même temps. Son créneau de départ est
    * réservé tout de suite (intervalle minimal entre deux départs), sans attendre la réponse des autres.
    */
+  let dernierEnvoi = Number.NEGATIVE_INFINITY
+
   async function traiter(action: Action, echecs: { n: number }, lotParallele = false, apresReponse = Number.NEGATIVE_INFINITY): Promise<void> {
     if ((await verifier(action)) === 'passee') return inscrirePassee(action)
 
@@ -237,10 +239,28 @@ export function creerFile(deps: DependancesFile): File {
     if (stoppe) throw new Annulee()
 
     const id = await journal.ouvrir(action)
+    if (stoppe) {
+      // Un autre ordre du lot a reçu un arrêt pendant l’écriture du journal : rien n’est émis.
+      await journal.passer(id)
+      throw new Annulee()
+    }
     if (arretDemande) {
       // Arrêt survenu pendant l’écriture du journal : rien n’est émis.
       await journal.passer(id)
       throw new Arret('manuel')
+    }
+
+    if (lotParallele) {
+      // Le journal et les écritures locales étant en série, un départ a pu glisser : on garantit l’écart réel
+      // entre deux envois juste avant d’émettre (aucun await entre la dernière vérification et l’envoi).
+      while (horloge.now() < dernierEnvoi + INTERVALLE_MS) {
+        await attendre(dernierEnvoi + INTERVALLE_MS)
+        if (stoppe) {
+          await journal.passer(id)
+          throw new Annulee()
+        }
+      }
+      dernierEnvoi = horloge.now()
     }
 
     const debut = horloge.now()
@@ -260,22 +280,22 @@ export function creerFile(deps: DependancesFile): File {
       }
       derniereReponse = Math.max(derniereReponse, horloge.now())
     }
-    await journal.completer(id, resultat)
-    if (exception) throw new Arret('transport')
-
-    switch (resultat.classe) {
-      case 'reussie':
-        await appliquer(action, resultat)
-        return
-      case 'echec':
-        if (arreteLeLot(action, resultat.codeHttp)) throw new Arret('code-http')
+    // Raison d’arrêt connue dès la réponse : le drapeau passe avant toute attente de journal, pour qu’aucun
+    // ordre du lot parallèle ne parte entre-temps.
+    let arretApres: Arret | null = null
+    if (exception) arretApres = new Arret('transport')
+    else if (resultat.classe === 'echec') {
+      if (arreteLeLot(action, resultat.codeHttp)) arretApres = new Arret('code-http')
+      else {
         echecs.n++
-        if (echecs.n >= MAX_ECHECS) throw new Arret('echecs')
-        return
-      default:
-        // arrêt, forme hors contrat, redirection, délai, erreur réseau, résultat inconnu.
-        throw new Arret('resultat')
-    }
+        if (echecs.n >= MAX_ECHECS) arretApres = new Arret('echecs')
+      }
+    } else if (resultat.classe !== 'reussie') arretApres = new Arret('resultat')
+    if (arretApres) stoppe = true
+
+    await journal.completer(id, resultat)
+    if (arretApres) throw arretApres
+    if (resultat.classe === 'reussie') await appliquer(action, resultat)
   }
 
   /** Prend la prochaine action, ou jusqu’à `concurrence` poses/retraits consécutifs si la file est parallèle. */

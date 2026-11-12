@@ -86,6 +86,36 @@ describe('executant (content script)', () => {
     expect(port.envoyes[1]).toEqual({ message: 'resultat', resultat });
   });
 
+  it('deux ordres en attente : chaque résultat repart avec l’id de son ordre, même dans le désordre', async () => {
+    const lent: Array<() => void> = [];
+    const emettre = vi.fn(
+      (ordre: Action) =>
+        new Promise<ResultatAction>((r) => {
+          lent.push(() => r({ classe: 'reussie', codeHttp: ordre.type === 'lecture' && ordre.idCarte === 'a|1' ? 201 : 202, cause: 'ok' }));
+        }),
+    );
+    demarrerExecutant({ emettre });
+    port.recevoir({ message: 'ordre', ordre: { type: 'lecture', idCarte: 'a|1' }, id: 7 });
+    port.recevoir({ message: 'ordre', ordre: { type: 'lecture', idCarte: 'a|2' }, id: 8 });
+    await attendre();
+    lent[1]!();
+    await attendre();
+    lent[0]!();
+    await attendre();
+    expect(port.envoyes.slice(1)).toEqual([
+      { message: 'resultat', resultat: { classe: 'reussie', codeHttp: 202, cause: 'ok' }, id: 8 },
+      { message: 'resultat', resultat: { classe: 'reussie', codeHttp: 201, cause: 'ok' }, id: 7 },
+    ]);
+  });
+
+  it('un id invalide rend l’ordre invalide : aucun appel', async () => {
+    const emettre = vi.fn();
+    demarrerExecutant({ emettre });
+    for (const id of [-1, 1.5, 2_147_483_648, '1', null]) port.recevoir({ message: 'ordre', ordre: ordreValide, id });
+    await attendre();
+    expect(emettre).not.toHaveBeenCalled();
+  });
+
   it('si emettre lève, renvoie un résultat « inconnu » sans fuite du message d’erreur', async () => {
     demarrerExecutant({
       emettre: async () => {

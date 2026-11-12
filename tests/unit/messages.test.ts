@@ -203,3 +203,24 @@ describe('idEtiquette dans les ordres et les résultats', () => {
     expect(validerResultat({ message: 'resultat', resultat: { ...r, corps: 'x' } })).toBeNull()
   })
 })
+
+describe('identifiant de corrélation', () => {
+  const ordre: Action = { type: 'lecture', idCarte: 'a|b' }
+  const res: ResultatAction = { classe: 'reussie', codeHttp: 200, cause: 'action réussie' }
+
+  it('accepte un id valide, avec ou sans', () => {
+    expect(validerOrdre(messageOrdre(ordre, 3))).toEqual(ordre)
+    expect(validerOrdre(messageOrdre(ordre))).toEqual(ordre)
+    expect(validerResultat(messageResultat(res, 0))).toEqual(res)
+    expect(validerResultat(messageResultat(res))).toEqual(res)
+  })
+
+  it.each([-1, 1.5, 2_147_483_648, '1', null, Number.NaN])('refuse l’id %s', (id) => {
+    expect(validerOrdre({ message: 'ordre', ordre, id })).toBeNull()
+    expect(validerResultat({ message: 'resultat', resultat: res, id })).toBeNull()
+  })
+
+  it('refuse une clé supplémentaire à côté de l’id', () => {
+    expect(validerOrdre({ message: 'ordre', ordre, id: 1, extra: 1 })).toBeNull()
+  })
+})
