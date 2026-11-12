@@ -120,7 +120,6 @@ export function texteTotaux(t: Totaux): string {
   return parts.join(' · ');
 }
 
-
 export const dureeMinutes = (nbRequetes: number): number => Math.ceil((nbRequetes * SECONDES_PAR_ACTION) / 60);
 
 export const texteDuree = (nbRequetes: number): string => `Durée estimée${NB}: ${dureeMinutes(nbRequetes)} min`;

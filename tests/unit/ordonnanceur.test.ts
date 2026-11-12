@@ -411,7 +411,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
 
   it('respecte la fenêtre de 60 s même quand des requêtes récentes viennent d’une exécution précédente', async () => {
     const etat = etatInitial();
-    etat.requetes = Array.from({ length: MAX_PAR_FENETRE }, (_, i) => T0 - 1000 + i); // 10 requêtes à l’instant
+    etat.requetes = Array.from({ length: MAX_PAR_FENETRE }, (_, i) => T0 - 1000 + i); // MAX_PAR_FENETRE requêtes à l’instant
     const b = banc(siteFictif(1), collectionDe([]), etat);
     await synchroniser({ ...b.deps, maxPrix: 0 });
     expect((b.departs[0]?.t ?? 0) - (T0 - 1000)).toBeGreaterThanOrEqual(FENETRE_MS);

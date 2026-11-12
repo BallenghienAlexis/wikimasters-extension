@@ -82,7 +82,7 @@ describe('libellés', () => {
     expect(titreApercu(0)).toBe('Aucune action à envoyer')
   })
 
-  it('rappelle la cadence fixe', () => {
+  it('rappelle la cadence', () => {
     expect(CADENCE_TEXTE).toBe(`Cadence variable${NB}: 1 à 1,5 s entre deux actions, 60 par minute au plus · arrêt après 3 erreurs`)
   })
 })
