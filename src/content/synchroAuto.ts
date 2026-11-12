@@ -15,6 +15,7 @@ import {
   chargerPreferences,
   chargerSyncAuto,
   ecouterArretSynchro,
+  ecouterRelanceSynchro,
   enregistrerBailSynchro,
   enregistrerCollection,
   enregistrerDerniereSynchro,
@@ -71,6 +72,12 @@ export interface DependancesSynchroAuto {
 export interface SynchroAuto {
   /** Lance une synchronisation si l'option est active et la dernière a plus de 30 min ; sinon `null`, sans requête. */
   declencher: () => Promise<ResultatSynchro | null>;
+  /**
+   * Relance demandée par le joueur : comme `declencher`, mais sans attendre les 30 min depuis la dernière synchro
+   * et en passant outre la pause qui suit un arrêt. Bail, arrêts automatiques (401, 403, 429, 3 échecs) et option
+   * désactivée restent en vigueur. Sans effet si une synchro tourne déjà dans cette page.
+   */
+  relancer: () => Promise<ResultatSynchro | null>;
   /** Arrêt immédiat : plus aucune requête n'est émise après celle en vol. */
   arreter: () => void;
 }
@@ -204,16 +211,16 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
     }
   }
 
-  async function declencher(): Promise<ResultatSynchro | null> {
+  async function declencher(forcer = false): Promise<ResultatSynchro | null> {
     if (enCours) return null;
     enCours = true;
     arretDemande = false;
     try {
       if (!(await deps.actif())) return null;
       const maintenant = deps.horloge.now();
-      if (dernierEssai !== null && maintenant - dernierEssai < DELAI_SYNCHRO_MS) return null;
+      if (!forcer && dernierEssai !== null && maintenant - dernierEssai < DELAI_SYNCHRO_MS) return null;
       const derniere = await deps.derniereSynchro();
-      if (derniere !== null && maintenant - derniere < DELAI_SYNCHRO_MS) return null;
+      if (!forcer && derniere !== null && maintenant - derniere < DELAI_SYNCHRO_MS) return null;
 
       const etat = (await deps.chargerEtat()) ?? etatInitial();
       const collection = await deps.chargerCollection();
@@ -240,7 +247,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
       const transport = async (chemin: string): Promise<ReponseApi> => {
         if (!demarree) {
           demarree = true;
-          await journaliser({ titre: 'Synchronisation automatique : début', parametre: null, resultat: 'reussie', codeHttp: null });
+          await journaliser({ titre: forcer ? 'Synchronisation automatique : relance demandée' : 'Synchronisation automatique : début', parametre: null, resultat: 'reussie', codeHttp: null });
         }
         const page = /[?&]page=(\d+)/.exec(chemin);
         if (page) await noter({ etat: 'en-cours', page: pages === null ? Number(page[1]) + 1 : Math.min(Number(page[1]) + 1, pages) });
@@ -265,6 +272,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         journal,
         gigue: deps.gigue,
         arretDemande: () => arretDemande,
+        forcer,
         enregistrer: async (produite, courant) => {
           const stockee = await deps.chargerCollection();
           const valeurChangee = produite.cartes.some((c) => c.valeurMarchande !== (depart.get(c.id)?.valeurMarchande ?? null));
@@ -296,7 +304,8 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
   }
 
   return {
-    declencher,
+    declencher: () => declencher(),
+    relancer: () => declencher(true),
     arreter: () => {
       arretDemande = true;
     },
@@ -314,6 +323,8 @@ export interface OptionsDemarrage {
   visibilite: SourceVisibilite;
   /** Demande d'arrêt venue de l'interface. */
   ecouterArret: (rappel: () => void) => () => void;
+  /** Demande de relance venue de l'interface. */
+  ecouterRelance: (rappel: () => void) => () => void;
 }
 
 const horlogeReelle: Horloge = {
@@ -381,6 +392,7 @@ export function demarrerSynchroAuto(options: Partial<OptionsDemarrage> = {}): ()
   const synchro = options.synchro ?? synchroDuNavigateur();
   const visibilite = options.visibilite ?? visibiliteDuNavigateur();
   const ecouterArret = options.ecouterArret ?? ecouterArretSynchro;
+  const ecouterRelance = options.ecouterRelance ?? ecouterRelanceSynchro;
 
   const lancer = (): void => void synchro.declencher().catch(() => undefined);
   let minuteur: ReturnType<typeof setInterval> | undefined;
@@ -401,6 +413,7 @@ export function demarrerSynchroAuto(options: Partial<OptionsDemarrage> = {}): ()
     }
   });
   const retirerArret = ecouterArret(() => synchro.arreter());
+  const retirerRelance = ecouterRelance(() => void synchro.relancer().catch(() => undefined));
 
   armer();
   lancer();
@@ -409,5 +422,6 @@ export function demarrerSynchroAuto(options: Partial<OptionsDemarrage> = {}): ()
     desarmer();
     retirerVisibilite();
     retirerArret();
+    retirerRelance();
   };
 }

@@ -8,6 +8,7 @@ import {
   chargerSyncAuto,
   ecouterSynchroAuto,
   enregistrerArretSynchro,
+  enregistrerRelanceSynchro,
   enregistrerSyncAuto,
   type StatutSynchro,
 } from '../lib/stockage';
@@ -83,6 +84,18 @@ export function texteDerniereSynchro(derniere: number | null, statut: StatutSync
 
 const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded border border-line bg-ink px-4';
 
+/** « Relancer la synchro » : proposé seulement quand la dernière synchro s’est arrêtée (par le joueur, refus du site ou échecs). */
+export const relancePossible = (entree: EntreeEtat): boolean => entree.actif && !synchroEnCours(entree) && entree.statut?.etat === 'arret';
+
+/** Avertissement affiché près du bouton quand le site a refusé : la relance passe outre la pause de 30 min. */
+export function texteRelance(statut: StatutSynchro | null): string {
+  if (statut?.etat !== 'arret') return '';
+  if (statut.raison === 'code-http') {
+    return `Relancer ignore la pause de 30${NB}min qui suit un refus du site${statut.codeHttp !== null ? ` (${statut.codeHttp})` : ''} : il peut refuser de nouveau. La lecture reprend avec les cartes déjà enregistrées, dans un onglet WikiMasters ouvert.`;
+  }
+  return 'La lecture reprend avec les cartes déjà enregistrées, dans un onglet WikiMasters ouvert.';
+}
+
 export interface VueSynchroAutoProps {
   actif: boolean;
   statut: StatutSynchro | null;
@@ -92,12 +105,13 @@ export interface VueSynchroAutoProps {
   ecarts: readonly EcartCarte[];
   onBascule: (actif: boolean) => void;
   onArreter: () => void;
+  onRelancer: () => void;
   /** Message d’échec d’écriture ou de lecture, affiché tel quel. */
   erreur?: string | null;
 }
 
 /** Vue sans accès au stockage : les noms d’étiquettes du site sont toujours rendus comme du texte. */
-export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, bail, derniere, maintenant, ecarts, onBascule, onArreter, erreur = null }) => {
+export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, bail, derniere, maintenant, ecarts, onBascule, onArreter, onRelancer, erreur = null }) => {
   const [limite, setLimite] = useState(PAS_ECARTS);
   const entree: EntreeEtat = { actif, statut, bail, maintenant };
   const enCours = synchroEnCours(entree);
@@ -137,11 +151,17 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
             Arrêter
           </button>
         )}
+        {relancePossible(entree) && (
+          <button type="button" className={CLASSE_BOUTON} onClick={onRelancer}>
+            Relancer la synchro
+          </button>
+        )}
       </div>
 
       <p id="etat-synchro-auto" aria-live="polite" className="mt-3 font-medium" data-testid="etat-synchro-auto">
         {texteEtatSynchro(entree)}
       </p>
+      {relancePossible(entree) && <p className="mt-1 text-sm text-muted">{texteRelance(statut)}</p>}
       {enCours && (
         <p aria-hidden="true" className="mt-1 text-muted motion-safe:animate-pulse">
           …
@@ -251,6 +271,11 @@ const SynchroAuto: React.FC<Props> = ({ collection, preferences, cacheWiki }) =>
     enregistrerArretSynchro(Date.now()).catch(() => setErreur('La demande d’arrêt n’a pas pu être enregistrée.'));
   };
 
+  const relancer = (): void => {
+    setErreur(null);
+    enregistrerRelanceSynchro(Date.now()).catch(() => setErreur('La demande de relance n’a pas pu être enregistrée.'));
+  };
+
   return (
     <VueSynchroAuto
       actif={actif}
@@ -261,6 +286,7 @@ const SynchroAuto: React.FC<Props> = ({ collection, preferences, cacheWiki }) =>
       ecarts={ecarts}
       onBascule={basculer}
       onArreter={arreter}
+      onRelancer={relancer}
       erreur={erreur}
     />
   );

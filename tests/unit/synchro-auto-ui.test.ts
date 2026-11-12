@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import type { EcartCarte } from '../../src/lib/ecarts';
 import type { StatutSynchro } from '../../src/lib/stockage';
-import { VueSynchroAuto, texteDerniereSynchro, texteEtatSynchro } from '../../src/app/SynchroAuto';
+import { VueSynchroAuto, relancePossible, texteDerniereSynchro, texteEtatSynchro, texteRelance } from '../../src/app/SynchroAuto';
 
 // Données fictives uniquement. Espace insécable avant « : » et autour de « h » (typographie française).
 const NB = ' ';
@@ -101,6 +101,7 @@ const rendre = (props: Partial<React.ComponentProps<typeof VueSynchroAuto>> = {}
       ecarts: [],
       onBascule: () => undefined,
       onArreter: () => undefined,
+      onRelancer: () => undefined,
       ...props,
     }),
   );
@@ -187,5 +188,42 @@ describe('T-206 : garde-fous du fichier', () => {
     expect(source).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgb\(|hsl\(/);
     expect(source).not.toMatch(/\.(click|focus|submit|requestSubmit|dispatchEvent)\(/);
     expect(source).not.toMatch(/fetch\(|XMLHttpRequest/);
+  });
+});
+
+describe('bouton « Relancer la synchro »', () => {
+  const arret = (surcharge: Partial<StatutSynchro> = {}) => statut({ etat: 'arret', ...surcharge });
+
+  it('proposé après un arrêt manuel, un refus du site (403, 401, 429) ou des échecs', () => {
+    for (const s of [arret({ raison: 'manuel' }), arret({ raison: 'code-http', codeHttp: 403 }), arret({ raison: 'code-http', codeHttp: 429 }), arret({ raison: 'echecs' })]) {
+      const html = rendre({ actif: true, statut: s });
+      expect(html).toContain('Relancer la synchro');
+      expect(html).toMatch(/<button[^>]*type="button"[^>]*>Relancer la synchro/);
+    }
+  });
+
+  it('absent quand la synchro tourne, est terminée, désactivée ou sans statut', () => {
+    const bail = MAINTENANT + 60_000;
+    expect(rendre({ actif: true, statut: statut({ etat: 'en-cours' }), bail })).not.toContain('Relancer');
+    expect(rendre({ actif: true, statut: statut({ etat: 'termine' }) })).not.toContain('Relancer');
+    expect(rendre({ actif: false, statut: arret({ raison: 'manuel' }) })).not.toContain('Relancer');
+    expect(rendre({ actif: true, statut: null })).not.toContain('Relancer');
+  });
+
+  it('pas proposé quand un statut « en cours » est resté sans bail : seul un arrêt compte', () => {
+    expect(relancePossible({ actif: true, statut: statut({ etat: 'en-cours' }), bail: null, maintenant: MAINTENANT })).toBe(false);
+  });
+
+  it('après un refus, le message dit que la pause de 30 min est ignorée et que le site peut refuser de nouveau', () => {
+    const texte = texteRelance(arret({ raison: 'code-http', codeHttp: 403 }));
+    expect(texte).toContain(`pause de 30${NB}min`);
+    expect(texte).toContain('(403)');
+    expect(texte).toContain('refuser de nouveau');
+    expect(rendre({ actif: true, statut: arret({ raison: 'code-http', codeHttp: 403 }) })).toContain('refuser de nouveau');
+  });
+
+  it('après un arrêt manuel, pas d’avertissement de pause', () => {
+    expect(texteRelance(arret({ raison: 'manuel' }))).not.toContain('pause');
+    expect(texteRelance(null)).toBe('');
   });
 });

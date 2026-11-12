@@ -265,6 +265,61 @@ describe('T-205 AC4 : arrêt immédiat', () => {
   });
 });
 
+describe('relance explicite du joueur', () => {
+  it('relance après un 403, malgré la pause de 30 min et les 30 min depuis le dernier essai', async () => {
+    const b = banc({ reponse: (c, n) => (n === 2 ? { statut: 403, json: null } : siteFictif(2)(c)) });
+    const synchro = creerSynchroAuto(b.deps);
+    expect((await synchro.declencher())?.issue).toBe('arret');
+    expect(await synchro.declencher()).toBeNull();
+    const avant = b.chemins.length;
+    b.deps.transport = async (c) => {
+      b.chemins.push(c);
+      return siteFictif(2)(c);
+    };
+    expect((await synchro.relancer())?.issue).toBe('termine');
+    expect(b.chemins.length).toBeGreaterThan(avant);
+    expect(b.stockage.etat?.arretJusqua).toBeNull();
+    expect(b.evenements.map((e) => e.titre)).toContain('Synchronisation automatique : relance demandée');
+  });
+
+  it('relance après un arrêt manuel, sans attendre 30 min', async () => {
+    const b = banc({ derniere: T0 - MIN });
+    const synchro = creerSynchroAuto(b.deps);
+    expect(await synchro.declencher()).toBeNull();
+    expect((await synchro.relancer())?.issue).toBe('termine');
+  });
+
+  it('option désactivée : aucune requête, même relancée', async () => {
+    const b = banc({ actif: false });
+    expect(await creerSynchroAuto(b.deps).relancer()).toBeNull();
+    expect(b.chemins).toEqual([]);
+  });
+
+  it('bail tenu par un autre onglet : pas de requête', async () => {
+    const b = banc();
+    b.stockage.bail = T0 + MIN;
+    expect((await creerSynchroAuto(b.deps).relancer())?.issue).toBe('bail-occupe');
+    expect(b.chemins).toEqual([]);
+  });
+
+  it('un nouveau refus pendant la relance arrête tout de suite et rouvre la pause', async () => {
+    const b = banc({ reponse: () => ({ statut: 429, json: null }) });
+    b.stockage.etat = { ...etatInitial(), arretJusqua: T0 + 10 * MIN };
+    const r = await creerSynchroAuto(b.deps).relancer();
+    expect(r?.issue).toBe('arret');
+    expect(b.chemins).toHaveLength(1);
+    expect(b.stockage.etat?.arretJusqua).toBe(b.horloge.t + 30 * MIN);
+  });
+
+  it('relancer() pendant une synchro en cours ne démarre rien de plus', async () => {
+    const b = banc();
+    const synchro = creerSynchroAuto(b.deps);
+    const premiere = synchro.declencher();
+    expect(await synchro.relancer()).toBeNull();
+    await premiere;
+  });
+});
+
 describe('T-205 AC1 : déclencheurs de page', () => {
   function visibilite(depart: boolean) {
     const etat = { visible: depart, rappel: null as null | (() => void) };
@@ -288,7 +343,7 @@ describe('T-205 AC1 : déclencheurs de page', () => {
   const options = (declencher = vi.fn(async () => null), arreter = vi.fn()) => {
     let arret: (() => void) | null = null;
     return {
-      synchro: { declencher, arreter },
+      synchro: { declencher, arreter, relancer: vi.fn(async () => null) },
       declencherArret: () => arret?.(),
       ecouterArret: (rappel: () => void) => {
         arret = rappel;
@@ -305,7 +360,7 @@ describe('T-205 AC1 : déclencheurs de page', () => {
     vi.useFakeTimers();
     const v = visibilite(true);
     const o = options();
-    demarrerSynchroAuto({ synchro: o.synchro, visibilite: v.source, ecouterArret: o.ecouterArret });
+    demarrerSynchroAuto({ synchro: o.synchro, visibilite: v.source, ecouterArret: o.ecouterArret, ecouterRelance: () => () => undefined });
     expect(o.declencher).toHaveBeenCalledTimes(1);
     vi.advanceTimersByTime(DELAI_SYNCHRO_MS);
     expect(o.declencher).toHaveBeenCalledTimes(2);
@@ -317,7 +372,7 @@ describe('T-205 AC1 : déclencheurs de page', () => {
     vi.useFakeTimers();
     const v = visibilite(false);
     const o = options();
-    demarrerSynchroAuto({ synchro: o.synchro, visibilite: v.source, ecouterArret: o.ecouterArret });
+    demarrerSynchroAuto({ synchro: o.synchro, visibilite: v.source, ecouterArret: o.ecouterArret, ecouterRelance: () => () => undefined });
     vi.advanceTimersByTime(3 * DELAI_SYNCHRO_MS);
     expect(o.declencher).toHaveBeenCalledTimes(1); // chargement de la page seulement
     v.changer(true);
@@ -332,16 +387,36 @@ describe('T-205 AC1 : déclencheurs de page', () => {
   it('la demande d’arrêt de l’interface appelle arreter()', () => {
     vi.useFakeTimers();
     const o = options();
-    demarrerSynchroAuto({ synchro: o.synchro, visibilite: visibilite(true).source, ecouterArret: o.ecouterArret });
+    demarrerSynchroAuto({ synchro: o.synchro, visibilite: visibilite(true).source, ecouterArret: o.ecouterArret, ecouterRelance: () => () => undefined });
     o.declencherArret();
     expect(o.arreter).toHaveBeenCalledTimes(1);
+  });
+
+  it('la demande de relance de l’interface appelle relancer()', () => {
+    const o = options();
+    let relance: (() => void) | null = null;
+    const stop = demarrerSynchroAuto({
+      synchro: o.synchro,
+      visibilite: visibilite(true).source,
+      ecouterArret: o.ecouterArret,
+      ecouterRelance: (rappel) => {
+        relance = rappel;
+        return () => {
+          relance = null;
+        };
+      },
+    });
+    (relance as unknown as () => void)();
+    expect(o.synchro.relancer).toHaveBeenCalledTimes(1);
+    stop();
+    expect(relance).toBeNull();
   });
 
   it('la fonction d’arrêt renvoyée supprime minuteur et écouteurs', () => {
     vi.useFakeTimers();
     const v = visibilite(true);
     const o = options();
-    const stop = demarrerSynchroAuto({ synchro: o.synchro, visibilite: v.source, ecouterArret: o.ecouterArret });
+    const stop = demarrerSynchroAuto({ synchro: o.synchro, visibilite: v.source, ecouterArret: o.ecouterArret, ecouterRelance: () => () => undefined });
     stop();
     vi.advanceTimersByTime(3 * DELAI_SYNCHRO_MS);
     expect(o.declencher).toHaveBeenCalledTimes(1);
