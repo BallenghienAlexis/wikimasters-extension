@@ -316,7 +316,7 @@ Contrôles : aucun fichier n'apparaît dans deux tâches d'une même vague (vér
   5. Ajout en fin de file possible pendant l’exécution (retraits du journal).
   6. Revérification avant chaque requête (`reverifier`) ; si « passée », aucune requête, journal « passée (carte modifiée) ».
   7. Défausse : `confirmer` est appelé avant toute requête de défausse ; « passer » → journal « passée », aucune requête ; « arreter » → fin comme un arrêt manuel.
-  8. Aucun `Math.random` / `crypto.*` aléatoire ni délai variable (le lint de T-003 le vérifie).
+  8. Aucun `Math.random` / `crypto.*` aléatoire dans `file.ts` : la gigue est injectée (avenant du 2026-11-12).
 - **Tests attendus**
   - `tests/unit/file.test.ts` (horloge simulée) : intervalle exact (AC2), cas réponse lente, passées sans effet de cadence, 3 échecs, chaque cas d’arrêt immédiat (AC4), arrêt manuel < 100 ms, 2e `demarrer` refusé (AC3), ajout en fin de file (AC5), revérification (AC6), défausse sans confirmation = 0 requête (AC7).
 - **Brief de contexte**
@@ -691,7 +691,7 @@ Contrôles : aucun fichier n'apparaît dans deux tâches d'une même vague (vér
 
 ## Avenant du 2026-11-12 : cadence actuelle
 
-Décisions d’Alexis du 2026-11-12, déjà livrées (PR #72 à #76) ; `AGENTS.md` prime sur tout texte de ce document. Les passages historiques de ce document (revues `R-13`, `R-48`, hypothèse `H28`, etc.) qui parlent de 6 s, de 10 par minute ou de « cadence fixe » sont **remplacés** par ce qui suit.
+Décisions d’Alexis du 2026-11-12, les PR #72 à #76 sont livrées ; les deux puces « Défausse » et « Étiquettes préexistantes » sont **en cours** (PR #79 et #77, non fusionnées à la rédaction) ; `AGENTS.md` prime sur tout texte de ce document. Les passages historiques de ce document (revues `R-13`, `R-48`, hypothèse `H28`, etc.) qui parlent de 6 s, de 10 par minute ou de « cadence fixe » sont **remplacés** par ce qui suit.
 
 - **Cadence** : 0,2 s au minimum entre deux débuts de requête (`INTERVALLE_MS`) plus un supplément aléatoire de 0 à 0,1 s (`SUPPLEMENT_MAX_MS`, `GIGUE_MAX_MS`), tiré hors de `file.ts` (source injectée) ; **aucun plafond par minute** ni par session. Le délai n’est donc plus « fixe » et le code contient un tirage aléatoire (injecté). SC-010 se lit : début de requête ≥ max(début précédent + 0,2 s + supplément, réponse précédente), sans fenêtre glissante de 60 s.
 - **Parallélisme** : poses et retraits d’étiquettes en parallèle par défaut, 3 en vol (`CONCURRENCE_MAX` = 4 en plafond ; 4 ordres en attente au plus côté page, chacun avec un identifiant de corrélation dans le protocole page ↔ content script). Les débuts de requête restent espacés de 0,2 s plus la gigue. Création d’étiquettes, enchères, défausses et lectures : une seule requête en vol.
@@ -701,4 +701,4 @@ Décisions d’Alexis du 2026-11-12, déjà livrées (PR #72 à #76) ; `AGENTS.m
 - **Durée estimée** (SC-008, H28) : nombre de requêtes × 0,25 s en moyenne (`SECONDES_PAR_REQUETE`), arrondi à la minute supérieure (`dureeMinutesApercu`).
 - **Défausse** : plafond de valeur marchande de 5 (`PLAFOND_VALEUR_DEFAUSSE`, décision du 2026-11-11), jamais dépassé même sur décision manuelle. La confirmation individuelle de chaque défausse (SC-009, G2, D-xx du dialogue) est supprimée sur demande d’Alexis le 2026-11-12 (PR #79, T-906) ; la réécriture détaillée de ces passages suit cette PR.
 - **Cartes en vente** : une carte `en-vente` ne reçoit aucune étiquette (ni création, ni pose, ni retrait), le site refusant la pose (403) ; elle est écartée avec la raison « en vente sur le site » (PR #71). « Statut · En vente » n’est donc plus posée par l’extension, ce qui remplace H17 et les lignes qui disent qu’elle est posée au lot suivant.
-- **Étiquettes préexistantes** : la suppression d’étiquettes du compte non posées par l’extension (action `suppression-etiquette`, `POST /rest/v1/rpc/delete_tag`) est décidée par Alexis le 2026-11-12 (PR #77) : uniquement sur étiquettes cochées une à une puis confirmées, même file, mêmes arrêts et même cadence, non parallèle.
+- **Étiquettes préexistantes (en cours, PR #77, non fusionnée ; `AGENTS.md` de `main` ne la couvre pas encore)** : suppression d’étiquettes du compte non posées par l’extension (action `suppression-etiquette`, `POST /rest/v1/rpc/delete_tag`), demandée par Alexis le 2026-11-12 : uniquement sur étiquettes cochées une à une puis confirmées, même file, mêmes arrêts et même cadence, non parallèle.

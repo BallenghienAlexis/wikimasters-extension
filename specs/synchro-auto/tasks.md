@@ -6,7 +6,7 @@ Vagues : V1 : T-201 [P], T-202 [P] · V2 : T-203 [P], T-204 [P] · V3 : T-205 ·
 - **G1** Aucun test ne contacte le vrai site. Unitaire : transport et horloge injectés. E2e : `page.route` sert des réponses **fictives** conformes à `releve-api.md` et abandonne toute autre requête.
 - **G2** `GET` uniquement. Aucun `POST`, `PUT`, `PATCH`, `DELETE`. Jamais la route `/sales` sans `?scope=summary`.
 - **G3** Aucun en-tête ajouté (ni `Authorization`, ni jeton), `credentials: 'same-origin'`, aucune lecture de cookie ni du jeton ; `jeton.ts` n'est pas importé.
-- **G4** Intervalle minimal 200 ms plus gigue injectée de 0 à 100 ms (avenants des 2026-11-11 et 2026-11-12), aucun plafond par minute, une seule requête en vol, arrêt sur 401/403/429 et après 3 échecs, aucune reprise avant 30 min. Aucune valeur aléatoire.
+- **G4** Intervalle minimal 200 ms plus gigue injectée de 0 à 100 ms (avenants des 2026-11-11 et 2026-11-12), aucun plafond par minute, une seule requête en vol, arrêt sur 401/403/429 et après 3 échecs, aucune reprise avant 30 min. Tirage aléatoire injecté (`gigue.ts`), jamais dans la file.
 - **G5** `click`, `submit`, `requestSubmit`, `dispatchEvent`, `focus` interdits dans le code du site. Pas de `innerHTML`. Permission `storage` seule, aucun `host_permissions`.
 - **G6** Option activée par défaut depuis le 2026-11-11 (avenant) : 0 requête si le joueur la désactive.
 - **G7** Données fictives dans les tests ; jamais de contenu de `captures-site/`.
