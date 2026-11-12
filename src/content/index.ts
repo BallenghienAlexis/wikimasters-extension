@@ -53,7 +53,7 @@ async function lirePage(): Promise<void> {
   if (location.pathname !== '/collection' && !location.pathname.startsWith('/collection/')) return;
   const cartes = trouverCartes(document).map(({ carte }) => carte);
   if (cartes.length > 0) {
-    // Une carte sans description est un cas normal : au pire 3 relectures locales (sans requête), puis arrêt.
+    // Une carte sans description est un cas normal : au pire une relecture locale (sans requête) par palier de DELAIS_RELECTURE_MS, puis arrêt.
     const delai = delaiRelecture(cartes.map((c) => c.description), relectures, DELAIS_RELECTURE_MS);
     if (delai !== null) {
       relectures += 1;

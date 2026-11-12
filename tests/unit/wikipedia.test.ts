@@ -63,6 +63,7 @@ describe('cache et surcouche', () => {
   });
   it('construit une URL GET vers fr.wikipedia.org', () => {
     expect(urlRequete('Tour Eiffel')).toMatch(/^https:\/\/fr\.wikipedia\.org\/w\/api\.php\?.*titles=Tour\+Eiffel/);
+    expect(urlRequete('X')).toContain('exsentences=2');
   });
 });
 
