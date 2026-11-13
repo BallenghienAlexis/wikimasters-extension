@@ -19,6 +19,27 @@ Contrat visuel. Tokens existants uniquement (`src/styles/tokens.css`) ; aucune n
 - D-04 Mouvement (demande d’Alexis, 2026-11-13) : courbes `cubic-bezier(.22,1,.36,1)` (sortie douce, 350 à 500 ms) pour les apparitions, barres et dépliages ; `cubic-bezier(.34,1.56,.64,1)` (léger rebond) pour les déplacements de cartes et les boutons ; apparition des blocs par fondu et glissement de 10 px ; barres de progression actives avec reflet qui défile ; dépliage des panneaux en hauteur fluide (`grid-template-rows` 0fr → 1fr). **Tableau de tri** (onglet Collection, vue « Tableau de tri ») : colonnes Garder / Échanger / Vendre / Défausser / À trier ; glisser-déposer d’une carte vers une colonne ou entre deux cartes ; déplacement fluide avec rebond, flou de mouvement (`blur` 1,6 px, 0,7 s) et ombre pendant le trajet, colonne cible mise en évidence ; **alternative clavier et tactile obligatoire** : flèches ← → de 44 px sur chaque carte ; les décisions restent locales (`decidePar: 'moi'`). Les animations ne passent que par `transform`, `opacity`, `filter` et les positions ; `prefers-reduced-motion` les coupe toutes, et un réglage « Animations » permet de les désactiver.
 - D-05 Tri de tableau animé (Alexis, 2026-11-13) : en-têtes de colonnes cliquables (`aria-sort`), cycle croissant → décroissant → aucun ; les lignes glissent vers leur nouvelle place avec rebond et léger flou de mouvement ; un filtre fait disparaître les lignes en fondu, sans saut. S’applique aux tableaux de la Collection, de la File de vente et aux lots (ordre d’application) : même critère d’ordre que les colonnes du tableau. Le réordonnancement par glisser-déposer du tableau de tri (D-04) reste possible.
 - D-06 Barre de répartition avec légende intégrée (Alexis, 2026-11-13) : l’étiquette (« Garder 40 % ») est écrite dans chaque segment ; au survol ou au focus d’un segment, il s’agrandit (zoom en hauteur et en largeur), les autres s’estompent, et une bulle de détail suit le segment avec un déplacement fluide : nombre d’exemplaires, part, valeur estimée, exemples de cartes. Chaque segment est un bouton avec `aria-label` complet (accessible au clavier et au lecteur d’écran).
+- D-07 Catalogue des effets par élément (revue complète, Alexis, 2026-11-13) :
+  | Élément | Effet |
+  |---|---|
+  | Page, en-tête, blocs | apparition en fondu glissé (10 px), blocs décalés de 50 ms ; changement de thème en fondu de 0,5 s |
+  | Onglets | indicateur qui glisse d’un onglet à l’autre avec rebond |
+  | Bandeau d’activité | dépliage en hauteur fluide, apparition de la ligne |
+  | Cartes et sections | ombre et bordure qui se renforcent au survol |
+  | Chiffres clés | compte à rebours ascendant (0 → valeur, 0,5 s) à chaque affichage |
+  | Barres de progression | remplissage animé depuis la gauche, reflet qui défile sur celles en cours |
+  | Graphiques (colonnes, pistes) | croissance depuis la base, décalée colonne par colonne |
+  | Répartition des décisions | zoom du segment et bulle de détail (D-06) |
+  | Listes (tâches, journal, ventes) | lignes qui arrivent en cascade, surlignage au survol |
+  | Tableaux | lignes qui glissent au tri, surlignage au survol (D-05) |
+  | Tableau de tri | rebond, flou, soulèvement au survol, colonne cible (D-04) |
+  | Interrupteurs | bouton qui glisse avec rebond, fond qui s’inverse |
+  | Champs | halo de focus progressif |
+  | Boutons | léger soulèvement au survol, enfoncement à l’appui |
+  | Réglages | sections qui se déplient en hauteur, chevron qui pivote |
+  | Erreur | entrée avec courte secousse, `role="alert"` |
+  | Statut « À jour » | pastille qui pulse |
+  Tout est coupé par `prefers-reduced-motion` et par le réglage « Animations ».
 - D-10 Barre de progression : `role="progressbar"` avec `aria-valuenow/min/max` et `aria-label` ; contour et remplissage en `paper` ; le pourcentage et l’étape sont **écrits** à côté ; version fine (8 px) pour la barre globale.
 - D-11 Étapes : « ✓ Lecture / ▶ Pages / ○ Prix / ✕ Ignorées » : symbole + mot + couleur (garder = fait, echanger = en cours, muted = attente, defausser = erreur). Mise à jour annoncée dans une zone `aria-live="polite"` (au plus toutes les 2 s).
 - D-20 Tâches : trois listes En cours / À venir (par lot : type, nombre) / Terminées (dernières 20), puis lien vers l’historique filtrable (type, résultat, carte, lot).
