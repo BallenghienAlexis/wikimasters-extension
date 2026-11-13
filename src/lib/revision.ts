@@ -138,11 +138,10 @@ export function appliquerIndisponible(collection: Collection, registre: Registre
   if (!carte || !carte.idsSite?.includes(action.idExemplaire)) return { collection, registre }
   // Le registre n’est jamais vidé sur un simple refus : un faux positif (session refusée) ferait perdre la trace des
   // étiquettes posées, seules retirables. Un couple périmé est inoffensif (un retrait sur un identifiant périmé répond 204).
-  const registreSans = registre
   const sansId = retirerIdSite(collection, carte.id, action.idExemplaire)
   const quantite = Math.max(0, carte.quantite - 1)
   if (quantite === 0 && carte.statut !== 'en-vente' && !aEditionLocale(carte)) {
-    return { collection: retirerCarte(sansId, carte.id), registre: registreSans }
+    return { collection: retirerCarte(sansId, carte.id), registre }
   }
   return {
     collection: {
@@ -151,6 +150,6 @@ export function appliquerIndisponible(collection: Collection, registre: Registre
         c.id === carte.id ? { ...c, quantite, ...(quantite === 0 ? { idsSite: null, etiquettesSite: [] } : {}) } : c,
       ),
     },
-    registre: registreSans,
+    registre,
   }
 }
