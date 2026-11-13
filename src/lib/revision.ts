@@ -126,8 +126,8 @@ export function appliquerResultat(
 
 /**
  * Le site a refusé (403, 404) une action sur un exemplaire : il n’est plus dans la collection (vendu, défaussé,
- * échangé ou aux enchères). On le retire du local comme une défausse réussie : identifiant d’exemplaire et couples
- * d’étiquettes oubliés, quantité diminuée ; à zéro, la carte disparaît si elle n’a aucune édition locale, sinon elle
+ * échangé ou aux enchères). On le retire du local comme une défausse réussie : identifiant d’exemplaire oublié,
+ * quantité diminuée ; le registre d’étiquettes n’est jamais touché ; à zéro, la carte disparaît si elle n’a aucune édition locale, sinon elle
  * est gardée mais déliée du site (`idsSite` nul). Une carte `en-vente` n’est jamais retirée. Actions sans exemplaire : rien.
  */
 export function appliquerIndisponible(collection: Collection, registre: Registre, action: Action): EtatLocal {
