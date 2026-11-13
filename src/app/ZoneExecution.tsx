@@ -1,5 +1,5 @@
 import React from 'react';
-import type { EtatFile } from '../lib/file';
+import type { EtatExec } from './useExecution';
 import {
   CLASSE_ACTIF,
   CLASSE_BOUTON,
@@ -10,11 +10,10 @@ import {
   pourcentage,
   texteEnCours,
   texteFin,
-  type Bilan,
 } from './apercuLot';
 
 interface PropsZone {
-  exec: { etat: EtatFile; bilan: Bilan; deconnecte: boolean } | null;
+  exec: EtatExec | null;
   interrompu: boolean;
   titreRef: React.RefObject<HTMLHeadingElement | null>;
   arreterRef: React.RefObject<HTMLButtonElement | null>;

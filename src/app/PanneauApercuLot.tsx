@@ -58,7 +58,7 @@ interface Props {
   onLancer?: (actions: Action[]) => void;
 }
 
-const ApercuLot: React.FC<Props> = ({
+const PanneauApercuLot: React.FC<Props> = ({
   collection,
   registre,
   preferences = preferencesParDefaut(),
@@ -273,9 +273,7 @@ const ApercuLot: React.FC<Props> = ({
             {n === 0 ? (
               <p className="mt-2 text-sm text-muted">{texteLotVide(avecIndisponibles)}</p>
             ) : (
-              <>
-            <ListeActionsLot disponibles={separes.disponibles} n={n} page={page} details={details} cartes={cartes} />
-              </>
+              <ListeActionsLot disponibles={separes.disponibles} n={n} page={page} details={details} cartes={cartes} />
             )}
 
             {apercuEtiquettes && <EtiquettesPrevues apercu={apercuEtiquettes} cartes={cartes} />}
@@ -330,4 +328,4 @@ const ApercuLot: React.FC<Props> = ({
   );
 };
 
-export default ApercuLot;
+export default PanneauApercuLot;

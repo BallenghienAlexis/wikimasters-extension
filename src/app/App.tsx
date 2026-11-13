@@ -22,7 +22,7 @@ import type { EvenementVente } from '../lib/affluence';
 import { registreVide } from '../lib/registre';
 import AssistantTri from './AssistantTri';
 import PlafondDefausse from './PlafondDefausse';
-import ApercuLot from './ApercuLot';
+import PanneauApercuLot from './PanneauApercuLot';
 import { lancerSuppressionEtiquettes } from './pilotageLots';
 import SynchroAuto from './SynchroAuto';
 import Sauvegarde from './Sauvegarde';
@@ -332,7 +332,7 @@ const App: React.FC = () => {
 
           <VerificationWikipedia titres={titresConsultes} onCache={appliquerCacheWiki} />
 
-          <ApercuLot
+          <PanneauApercuLot
             collection={collection}
             registre={registre}
             preferences={preferences}
