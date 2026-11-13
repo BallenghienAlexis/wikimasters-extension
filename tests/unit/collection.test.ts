@@ -8,7 +8,7 @@ import {
   definirIdsSite,
   excedent,
   filtrerCartes,
-  fusionnerImport,
+  fusionnerCartesLues,
   idsSiteDe,
   migrerCollection,
   resumer,
@@ -86,7 +86,7 @@ describe('analyserStockage : validation des cartes', () => {
 describe('description en deux phases', () => {
   const avec = (description: string) => ({ version: 3 as const, cartes: [carte({ description })] });
   const lire = (collection: ReturnType<typeof avec>, description: string) =>
-    fusionnerImport(collection, [{ id: 'c1', titre: 'T', rarete: null, quantite: 1, url: null, description }]).cartes[0]?.description;
+    fusionnerCartesLues(collection, [{ id: 'c1', titre: 'T', rarete: null, quantite: 1, url: null, description }]).cartes[0]?.description;
   it('une lecture vide n’efface pas la description complète', () => {
     expect(lire(avec('Un barrage en France.'), '')).toBe('Un barrage en France.');
   });
@@ -102,27 +102,27 @@ describe('description en deux phases', () => {
   });
 });
 
-describe('fusionnerImport', () => {
+describe('fusionnerCartesLues', () => {
   it('initialise une nouvelle carte à trier', () => {
-    const c = fusionnerImport(collectionVide(), [{ id: 'a', titre: 'A', rarete: null, quantite: 1, url: null }]);
+    const c = fusionnerCartesLues(collectionVide(), [{ id: 'a', titre: 'A', rarete: null, quantite: 1, url: null }]);
     expect(c.cartes[0]).toMatchObject({ statut: 'a-trier', prixCible: null, note: '' });
   });
 
   it('met à jour les données du jeu sans perdre l’édition locale', () => {
     const avant = { version: 3 as const, cartes: [carte({ statut: 'vendre', prixCible: 50, note: 'à garder en tête' })] };
-    const apres = fusionnerImport(avant, [{ id: 'c1', titre: 'Nouveau titre', rarete: null, quantite: 3, url: null }]);
+    const apres = fusionnerCartesLues(avant, [{ id: 'c1', titre: 'Nouveau titre', rarete: null, quantite: 3, url: null }]);
     expect(apres.cartes[0]).toMatchObject({ titre: 'Nouveau titre', quantite: 3, statut: 'vendre', prixCible: 50, note: 'à garder en tête' });
   });
 
   it('applique l’édition fournie par le fichier', () => {
     const avant = { version: 3 as const, cartes: [carte({ statut: 'vendre' })] };
-    const apres = fusionnerImport(avant, [{ id: 'c1', titre: 'T', rarete: null, quantite: 1, url: null, statut: 'garder' }]);
+    const apres = fusionnerCartesLues(avant, [{ id: 'c1', titre: 'T', rarete: null, quantite: 1, url: null, statut: 'garder' }]);
     expect(apres.cartes[0]?.statut).toBe('garder');
   });
 
   it('garde les cartes absentes du fichier', () => {
     const avant = { version: 3 as const, cartes: [carte()] };
-    const apres = fusionnerImport(avant, [{ id: 'c2', titre: 'B', rarete: null, quantite: 1, url: null }]);
+    const apres = fusionnerCartesLues(avant, [{ id: 'c2', titre: 'B', rarete: null, quantite: 1, url: null }]);
     expect(apres.cartes.map((c) => c.id)).toEqual(['c1', 'c2']);
   });
 });
@@ -187,7 +187,7 @@ describe('terminerEnchere', () => {
   it('ne perd pas l’URL d’un import lors d’une lecture du site', () => {
     const avecUrl = { ...base(1), cartes: [{ ...base(1).cartes[0]!, url: 'https://exemple.test/c' }] };
     const lue = { id: 'C|x', titre: 'x', rarete: 'C', quantite: 1, url: null };
-    expect(fusionnerImport(avecUrl, [lue]).cartes[0]?.url).toBe('https://exemple.test/c');
+    expect(fusionnerCartesLues(avecUrl, [lue]).cartes[0]?.url).toBe('https://exemple.test/c');
   });
 });
 
@@ -291,15 +291,15 @@ describe('analyserStockage', () => {
   });
 });
 
-describe('fusionnerImport et idsSite', () => {
+describe('fusionnerCartesLues et idsSite', () => {
   it('SC-019 : conserve idsSite de la carte existante', () => {
-    const f = fusionnerImport(col(carte({ idsSite: ['s1', 's2'] })), [{ id: 'c1', titre: 'Nouveau titre', rarete: null, quantite: 2, url: null }]);
+    const f = fusionnerCartesLues(col(carte({ idsSite: ['s1', 's2'] })), [{ id: 'c1', titre: 'Nouveau titre', rarete: null, quantite: 2, url: null }]);
     expect(f.cartes[0]?.idsSite).toEqual(['s1', 's2']);
     expect(f.cartes[0]?.titre).toBe('Nouveau titre');
   });
 
   it('SC-012 : conserve etiquettesSite de la carte existante, une nouvelle carte en a une liste vide', () => {
-    const f = fusionnerImport(col(carte({ etiquettesSite: ['Ami · Léa'] })), [
+    const f = fusionnerCartesLues(col(carte({ etiquettesSite: ['Ami · Léa'] })), [
       { id: 'c1', titre: 'T', rarete: null, quantite: 1, url: null },
       { id: 'c2', titre: 'U', rarete: null, quantite: 1, url: null },
     ]);
@@ -308,7 +308,7 @@ describe('fusionnerImport et idsSite', () => {
   });
 
   it('SC-019 : une carte nouvelle reçoit idsSite null, la version est 3', () => {
-    const f = fusionnerImport(collectionVide(), [{ id: 'n', titre: 'N', rarete: null, quantite: 1, url: null }]);
+    const f = fusionnerCartesLues(collectionVide(), [{ id: 'n', titre: 'N', rarete: null, quantite: 1, url: null }]);
     expect(f.version).toBe(3);
     expect(f.cartes[0]?.idsSite).toBeNull();
   });

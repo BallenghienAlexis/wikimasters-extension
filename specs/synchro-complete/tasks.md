@@ -1,3 +1,5 @@
+> **Retiré le 2026-11-12** : l'import/export de fichier (`versJson`, `versCsv`, `analyserImport`, `VERSION_ECHANGE`) n'existe plus (voir `specs/retrait-import-export/retouches.md`). Ce passage reste comme historique.
+
 # Tâches — Synchronisation complète : étiquettes, enchères et défausse appliquées sur le site
 
 Vagues : V1 : T-001 [P], T-002 [P], T-003 [P] · V2 : T-004 [P], T-005 [P], T-006 [P], T-007 [P], T-008 [P] · V3 : T-009 [P], T-010 [P], T-011 [P] · V4 : T-012 [P], T-013 [P], T-014 [P], T-015 [P], T-016 [P] · V5 : T-017 · V6 : T-018 · V7 : T-019 · V8 : T-020 [P], T-021 [P]*, T-022 [P]*, T-023 [P]*, T-024 [P]*, T-025 [P]* · V9 : T-026
