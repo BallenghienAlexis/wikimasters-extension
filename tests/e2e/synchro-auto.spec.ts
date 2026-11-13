@@ -151,7 +151,7 @@ test.describe('synchronisation automatique sur site fictif', () => {
     test.setTimeout(90_000);
     const stats = JSON.stringify({ total: 2, totalUnique: 1, tagOptions: [{ id: 'tag-fictif-1', name: 'Étiquette fictive', color: '#808080', cardCount: 1 }] });
     await poser(serviceWorker, {
-      collection: { version: 3, cartes: [carteLocale({ statut: 'a-trier' }), carteLocale({ id: 'C|Carte vendue', titre: 'Carte vendue', rarete: 'C', idsSite: ['exemplaire-vendu'], statut: 'echanger' })] },
+      collection: { version: 3, cartes: [carteLocale({ statut: 'a-trier' }), carteLocale({ id: 'C|Carte vendue', titre: 'Carte vendue', rarete: 'C', idsSite: ['exemplaire-vendu'], statut: 'a-trier' })] },
       syncAuto: true,
     });
     const site = await ouvrirSite(context, {

@@ -308,14 +308,58 @@ describe('ordonnanceur — pages : départ à 0 et plafond', () => {
 });
 
 describe('ordonnanceur — cartes disparues du site (vendues, défaussées)', () => {
-  it('retire de la collection locale les cartes absentes d’une lecture complète', async () => {
-    const locales = [1, 2, 3, 4, 5].map((n) => carteLocale(n, { statut: 'garder', note: `note ${n}` }));
+  const sansEdition = (n: number) => carteLocale(n, { statut: 'a-trier' });
+
+  it('retire les cartes absentes sans édition locale, garde les éditées sans lien au site, ne touche jamais une carte en vente', async () => {
+    const locales = [
+      sansEdition(1),
+      sansEdition(2),
+      sansEdition(3),
+      sansEdition(4),
+      carteLocale(5, { statut: 'garder', note: 'à garder', decidePar: 'moi' }),
+      carteLocale(6, { statut: 'en-vente' }),
+    ];
     const b = banc(siteFictif(3), collectionDe(locales), etatInitial());
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(r.collection.cartes.map((c) => c.id)).toEqual([idCarte(1), idCarte(2), idCarte(3)]);
-    expect(r.collection.cartes[0]!.note).toBe('note 1');
-    expect(r.etat.cardIds[idCarte(4)]).toBeUndefined();
-    expect(b.journal.join('\n')).toMatch(/2 carte\(s\) absente\(s\) du site/);
+    expect(r.collection.cartes.map((c) => c.id)).toEqual([idCarte(1), idCarte(2), idCarte(3), idCarte(5), idCarte(6)]);
+    const editee = r.collection.cartes.find((c) => c.id === idCarte(5))!;
+    expect(editee.idsSite).toBeNull();
+    expect(editee.note).toBe('à garder');
+    expect(editee.decidePar).toBe('moi');
+    expect(r.collection.cartes.find((c) => c.id === idCarte(6))!.idsSite).toEqual(['ex-6']);
+    expect(b.journal.join('\n')).toMatch(/1 retirée\(s\), 1 gardée\(s\)/);
+  });
+
+  it('ne retire rien au-delà de 10 cartes et de 10 % de la collection (changement de forme probable)', async () => {
+    const locales = Array.from({ length: 40 }, (_, i) => sansEdition(i + 1));
+    const b = banc(siteFictif(5), collectionDe(locales), etatInitial());
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.collection.cartes).toHaveLength(40);
+    expect(b.journal.join('\n')).toMatch(/trop pour un retrait automatique/);
+  });
+
+  it('un décalage de pagination (ligne répétée) ne fait rien retirer ni conclure trop tôt', async () => {
+    // 100 exemplaires annoncés ; la page 1 répète la dernière ligne de la page 0 puis s’arrête avant la fin réelle.
+    const tous = Array.from({ length: 100 }, (_, i) => exemplaire(i + 1));
+    const b = banc((chemin) => {
+      if (chemin.includes('/stats')) return { statut: 200, json: statsJson(100) };
+      const p = Number(/page=(\d+)/.exec(chemin)![1]);
+      const lignes = p === 0 ? tous.slice(0, 50) : p === 1 ? tous.slice(49, 98) : tous.slice(98);
+      return { statut: 200, json: { collection: lignes } };
+    }, collectionDe([sansEdition(100), sansEdition(99)]));
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.collection.cartes.some((c) => c.id === idCarte(100) && c.idsSite !== null)).toBe(true);
+    expect(r.collection.cartes.some((c) => c.id === idCarte(99))).toBe(true);
+  });
+
+  it('prix et identifiants d’une carte retirée sont nettoyés', async () => {
+    const etat = etatInitial();
+    etat.cardIds[idCarte(9)] = 'card-9';
+    etat.prix[idCarte(9)] = { valeur: 10, releveLe: T0 };
+    const b = banc(siteFictif(2), collectionDe([sansEdition(9)]), etat);
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.etat.cardIds[idCarte(9)]).toBeUndefined();
+    expect(r.etat.prix[idCarte(9)]).toBeUndefined();
   });
 
   it('retire aussi une carte dont l’exemplaire a été vendu quand le total baisse', async () => {
@@ -536,7 +580,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
 
   it('arrêt après 3 échecs (statut 500, transport en erreur, forme inattendue)', async () => {
     const reponses: Array<() => ReponseApi> = [
-      () => ({ statut: 200, json: statsJson(10) }),
+      () => ({ statut: 200, json: statsJson(200) }),
       () => ({ statut: 500, json: null }),
       () => {
         throw new Error('réseau');
