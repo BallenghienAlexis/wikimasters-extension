@@ -3,8 +3,13 @@ import type { Action, CarteEcartee, Registre, TypeAction } from '../../src/lib/a
 import type { Carte, Collection } from '../../src/lib/collection'
 import { preferencesParDefaut } from '../../src/lib/tri'
 import type { EtatFile } from '../../src/lib/file'
+import { raisonPause } from '../../src/lib/reprise'
 import {
   AVERTISSEMENT_AMIS,
+  RAISON_AUCUN_LOT,
+  actionsDesLotsCoches,
+  texteActionsEcartees,
+  texteDureeLots,
   CADENCE_TEXTE,
   configDuLot,
   contientAmi,
@@ -181,6 +186,62 @@ describe('raison de désactivation de « Lancer »', () => {
   })
   it('signale l’absence d’action disponible', () => {
     expect(raisonDesactivation({ ...base, nbDisponibles: 0 })).toBe('Aucune action n’est disponible pour le moment.')
+  })
+})
+
+describe('T-311 : raison de désactivation avec pause et lots cochés', () => {
+  const base = { nbOnglets: 1, executionEnCours: false, executionIllisible: false, nbDisponibles: 3 }
+  const maintenant = new Date(2026, 10, 13, 10, 0, 0).getTime()
+  const fin = maintenant + 20 * 60_000
+
+  it('SC-016 : pendant la pause, « Reprise possible à HH:MM »', () => {
+    const r = raisonDesactivation({ ...base, pauseJusqua: fin, maintenant })
+    expect(r).toBe(raisonPause(fin, maintenant))
+    expect(r).toBe('Reprise possible à 10:20')
+  })
+  it('SC-016 : la pause l’emporte sur l’absence d’onglet', () => {
+    expect(raisonDesactivation({ ...base, nbOnglets: 0, pauseJusqua: fin, maintenant })).toBe('Reprise possible à 10:20')
+  })
+  it('SC-016 : l’état illisible et l’exécution en cours passent avant la pause', () => {
+    expect(raisonDesactivation({ ...base, executionIllisible: true, pauseJusqua: fin, maintenant })).toBe(`L’état de l’exécution est illisible${NB}: Lancer est impossible.`)
+    expect(raisonDesactivation({ ...base, executionEnCours: true, pauseJusqua: fin, maintenant })).toBe('Une exécution est déjà en cours.')
+  })
+  it('SC-016 : pause échue ou absente, aucune raison de pause', () => {
+    expect(raisonDesactivation({ ...base, pauseJusqua: fin, maintenant: fin })).toBeNull()
+    expect(raisonDesactivation({ ...base, pauseJusqua: null, maintenant })).toBeNull()
+  })
+  it('SC-015 : aucun lot coché, raison écrite', () => {
+    expect(RAISON_AUCUN_LOT).toBe('Aucun lot n’est coché.')
+    expect(raisonDesactivation({ ...base, nbLotsCoches: 0 })).toBe(RAISON_AUCUN_LOT)
+    expect(raisonDesactivation({ ...base, nbLotsCoches: 2 })).toBeNull()
+  })
+  it('SC-015 : sans lots cochés renseignés, comportement existant inchangé', () => {
+    expect(raisonDesactivation(base)).toBeNull()
+    expect(raisonDesactivation({ ...base, nbOnglets: 0 })).toBe('Aucun onglet WikiMasters ouvert.')
+  })
+})
+
+describe('T-311 : lots cochés, durée et actions écartées', () => {
+  const actions: Action[] = [
+    { type: 'creation-etiquette', idCarte: 'R|a', nomEtiquette: 'n' },
+    pose('R|a', 'n'),
+    { type: 'enchere', idCarte: 'R|a', idExemplaire: '1', prix: 5 },
+    defausse('R|b', '2'),
+  ]
+  it('SC-015 : ne garde que les actions des familles cochées, dans l’ordre du lot', () => {
+    expect(actionsDesLotsCoches(actions, new Set(['defausses']))).toEqual([actions[3]])
+    expect(actionsDesLotsCoches(actions, new Set(['etiquettes', 'defausses']))).toEqual([actions[0], actions[1], actions[3]])
+    expect(actionsDesLotsCoches(actions, new Set())).toEqual([])
+    expect(actionsDesLotsCoches(actions, new Set(['etiquettes', 'encheres', 'defausses']))).toEqual(actions)
+  })
+  it('SC-015 : durée « environ N min »', () => {
+    expect(texteDureeLots(241)).toBe(`Durée estimée${NB}: environ 2 min`)
+    expect(texteDureeLots(1)).toBe(`Durée estimée${NB}: environ 1 min`)
+    expect(texteDureeLots(0)).toBe(`Durée estimée${NB}: environ 0 min`)
+  })
+  it('SC-006 : compteur « N actions écartées »', () => {
+    expect(texteActionsEcartees(1)).toBe('1 action écartée')
+    expect(texteActionsEcartees(2)).toBe('2 actions écartées')
   })
 })
 
