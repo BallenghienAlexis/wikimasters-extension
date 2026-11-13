@@ -178,7 +178,7 @@ describe('affluenceSite', () => {
 describe('CLES_STOCKAGE', () => {
   it('AC4 : énumère exactement les clés locales de l’extension', () => {
     expect([...cles()].sort()).toEqual([
-      'affluenceSite', 'amisInitiaux', 'arretSynchro', 'bailSynchro', 'collection', 'derniereRelance', 'derniereSynchro', 'etatSynchro', 'etiquettesSite', 'execution', 'journal', 'preferences', 'registre', 'relanceSynchro', 'releveMarche', 'signalSynchro', 'statutSynchro', 'syncAuto', 'synchro', 'ventes', 'wikipedia',
+      'affichage', 'affluenceSite', 'amisInitiaux', 'arretSynchro', 'bailSynchro', 'collection', 'derniereRelance', 'derniereSynchro', 'etatSynchro', 'etiquettesSite', 'execution', 'historique', 'ignorees', 'journal', 'preferences', 'registre', 'relanceSynchro', 'releveMarche', 'signalSynchro', 'statutSynchro', 'syncAuto', 'synchro', 'ventes', 'wikipedia',
     ]);
   });
 
@@ -241,9 +241,9 @@ describe('journal', () => {
   it('AC1 : écrit l’enveloppe versionnée sous « journal » puis la relit', async () => {
     const j = journalRempli();
     await enregistrerJournal(j);
-    expect(VERSION_JOURNAL).toBe(1);
-    expect(faux.set).toHaveBeenCalledWith({ journal: { version: 1, entrees: j } });
-    expect(faux.donnees.get('journal')).toEqual({ version: 1, entrees: j });
+    expect(VERSION_JOURNAL).toBe(2);
+    expect(faux.set).toHaveBeenCalledWith({ journal: { version: 2, entrees: j } });
+    expect(faux.donnees.get('journal')).toEqual({ version: 2, entrees: j });
     expect(await chargerJournal()).toEqual(j);
   });
 
@@ -257,7 +257,7 @@ describe('journal', () => {
   });
 
   it('AC1 : version inconnue → erreur lisible, valeur non écrasée', async () => {
-    const brut = { version: 2, entrees: journalRempli() };
+    const brut = { version: 3, entrees: journalRempli() };
     faux.donnees.set('journal', brut);
     await expect(chargerJournal()).rejects.toThrow(/^Données stockées illisibles/);
     expect(faux.set).not.toHaveBeenCalled();
@@ -287,9 +287,10 @@ describe('exécution', () => {
 
   it('AC1 : écrit sous « execution », relit, puis efface', async () => {
     const e = execution();
+    const v2 = { ...e, version: 2, lots: [], pauseJusqua: null, erreur: null };
     await enregistrerExecution(e);
-    expect(faux.set).toHaveBeenCalledWith({ execution: e });
-    expect(await chargerExecution()).toEqual(e);
+    expect(faux.set).toHaveBeenCalledWith({ execution: v2 });
+    expect(await chargerExecution()).toEqual(v2);
     await effacerExecution();
     expect(faux.remove).toHaveBeenCalledWith('execution');
     expect(await chargerExecution()).toBeNull();
@@ -298,7 +299,7 @@ describe('exécution', () => {
   it.each([
     ['état inconnu', { ...execution(), etat: 'pause' }],
     ['idLot vide', { ...execution(), idLot: '' }],
-    ['version 2', { ...execution(), version: 2 }],
+    ['version 3', { ...execution(), version: 3 }],
     ['traitees > total', { ...execution(), traitees: 6, total: 5 }],
     ['traitees négatif', { ...execution(), traitees: -1 }],
     ['total non entier', { ...execution(), total: 2.5 }],
@@ -587,13 +588,16 @@ describe('T-206 : statut détaillé de la synchronisation', () => {
 
   it('relit ce qui a été écrit', async () => {
     await enregistrerStatutSynchro(statut({ etat: 'arret', raison: 'code-http', codeHttp: 403, page: null, pages: null }));
-    expect(await chargerStatutSynchro()).toEqual(statut({ etat: 'arret', raison: 'code-http', codeHttp: 403, page: null, pages: null }));
+    expect(await chargerStatutSynchro()).toEqual({
+      ...statut({ etat: 'arret', raison: 'code-http', codeHttp: 403, page: null, pages: null }),
+      version: 2, etape: null, prixFaits: null, prixPrevus: null, debut: null,
+    });
   });
 
   it('traite une valeur illisible comme absente, sans lever d’erreur', async () => {
     for (const brut of [
       'x',
-      { ...statut(), version: 2 },
+      { ...statut(), version: 3 },
       { ...statut(), etat: 'autre' },
       { ...statut(), page: -1 },
       { ...statut(), page: 1.5 },
@@ -611,7 +615,7 @@ describe('T-206 : statut détaillé de la synchronisation', () => {
     await expect(enregistrerStatutSynchro({ ...statut(), etat: 'x' } as unknown as StatutSynchro)).rejects.toThrow();
     await enregistrerStatutSynchro({ ...statut(), cookie: 'secret' } as unknown as StatutSynchro);
     expect(Object.keys(faux.donnees.get('statutSynchro') as object).sort()).toEqual(
-      ['ajoutees', 'codeHttp', 'etat', 'etiquettes', 'le', 'page', 'pages', 'prix', 'raison', 'version'],
+      ['ajoutees', 'codeHttp', 'debut', 'etape', 'etat', 'etiquettes', 'le', 'page', 'pages', 'prix', 'prixFaits', 'prixPrevus', 'raison', 'version'],
     );
   });
 
