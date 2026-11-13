@@ -7,7 +7,10 @@
  * jeton, ni en-tête, ni corps brut, ni identifiant d’exemplaire du site (SC-015).
  */
 
-import { TYPES_ACTION, type EntreeJournal, type ResultatAction, type TypeAction } from './actions'
+import {
+  CAUSES_JOURNAL, FAMILLES_LOT, TYPES_ACTION,
+  type CauseJournal, type EntreeJournal, type FamilleLot, type ResultatAction, type TypeAction,
+} from './actions'
 
 export type Journal = EntreeJournal[]
 
@@ -37,9 +40,10 @@ type Resultat = EntreeJournal['resultat']
 
 const RESULTATS: readonly Resultat[] = ['reussie', 'echouee', 'passee', 'interrompue', 'inconnu', 'en-cours']
 
-const CLES: readonly (keyof EntreeJournal)[] = [
+const CLES_V1: readonly (keyof EntreeJournal)[] = [
   'id', 'horodatage', 'idCarte', 'titre', 'type', 'parametre', 'resultat', 'codeHttp', 'idLot',
 ]
+const CLES_V2: readonly (keyof EntreeJournal)[] = [...CLES_V1, 'rang', 'total', 'lot', 'cause']
 
 const RESULTAT_PAR_CLASSE: Readonly<Record<ResultatAction['classe'], Resultat>> = Object.freeze({
   __proto__: null,
@@ -56,6 +60,8 @@ const resultatDeClasse = (classe: unknown): Resultat =>
 
 const tronquer = (s: string, max: number): string => Array.from(s).slice(0, max).join('')
 
+const entierPositif = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0
+
 const codeValide = (c: unknown): c is number | null =>
   c === null || (typeof c === 'number' && Number.isInteger(c) && c >= 100 && c <= 599)
 
@@ -71,6 +77,10 @@ function copier(e: EntreeJournal): EntreeJournal {
     resultat: e.resultat,
     codeHttp: e.codeHttp,
     idLot: e.idLot,
+    rang: e.rang,
+    total: e.total,
+    lot: e.lot,
+    cause: e.cause,
   }
 }
 
@@ -122,6 +132,10 @@ export function ouvrirEntree(
     resultat: 'en-cours',
     codeHttp: null,
     idLot: tronquer(String(champs.idLot), MAX_ID),
+    rang: null,
+    total: null,
+    lot: null,
+    cause: null,
   }
   return { journal: borner([...journal.map(copier), entree]), id }
 }
@@ -160,7 +174,9 @@ function entreeValide(brut: unknown): EntreeJournal | null {
   if (typeof brut !== 'object' || brut === null || Array.isArray(brut)) return null
   const o = brut as Record<string, unknown>
   const cles = Object.keys(o)
-  if (cles.length !== CLES.length || !CLES.every((k) => Object.hasOwn(o, k))) return null
+  const v2 = cles.length === CLES_V2.length && CLES_V2.every((k) => Object.hasOwn(o, k))
+  const v1 = cles.length === CLES_V1.length && CLES_V1.every((k) => Object.hasOwn(o, k))
+  if (!v1 && !v2) return null
   const { id, horodatage, idCarte, titre, type, parametre, resultat, codeHttp, idLot } = o
   if (typeof id !== 'string' || id.length === 0 || Array.from(id).length > MAX_ID) return null
   if (
@@ -175,6 +191,21 @@ function entreeValide(brut: unknown): EntreeJournal | null {
   if (typeof resultat !== 'string' || !(RESULTATS as readonly string[]).includes(resultat)) return null
   if (!codeValide(codeHttp)) return null
   if (typeof idLot !== 'string' || Array.from(idLot).length > MAX_ID) return null
+  let rang: number | null = null
+  let total: number | null = null
+  let lot: FamilleLot | null = null
+  let cause: CauseJournal | null = null
+  if (v2) {
+    const r = o.rang, t = o.total, l = o.lot, c = o.cause
+    if (r !== null && !entierPositif(r)) return null
+    if (t !== null && !entierPositif(t)) return null
+    if (l !== null && (typeof l !== 'string' || !(FAMILLES_LOT as readonly string[]).includes(l))) return null
+    if (c !== null && (typeof c !== 'string' || !(CAUSES_JOURNAL as readonly string[]).includes(c))) return null
+    rang = r
+    total = t
+    lot = l as FamilleLot | null
+    cause = c as CauseJournal | null
+  }
   return {
     id,
     horodatage,
@@ -185,6 +216,10 @@ function entreeValide(brut: unknown): EntreeJournal | null {
     resultat: resultat as Resultat,
     codeHttp,
     idLot,
+    rang,
+    total,
+    lot,
+    cause,
   }
 }
 
@@ -214,4 +249,29 @@ export function dernierePoseParCouple(journal: Journal): Map<string, EntreeJourn
     if (precedente === undefined || e.horodatage >= precedente.horodatage) sortie.set(cle, copier(e))
   }
   return sortie
+}
+
+/**
+ * Libellé d’historique (H5) : l’exemplaire indisponible (403 ou 404 sur pose, retrait, enchère, défausse)
+ * et les actions sautées ou ignorées se lisent « Passée : … ». La donnée stockée n’est pas modifiée ;
+ * les autres entrées gardent le libellé de leur résultat.
+ */
+const LIBELLE_RESULTAT: Readonly<Record<Resultat, string>> = {
+  reussie: 'Réussie',
+  echouee: 'Échouée',
+  passee: 'Passée',
+  interrompue: 'Interrompue : résultat inconnu',
+  inconnu: 'Résultat inconnu',
+  'en-cours': 'En cours',
+}
+
+export function libelleHistorique(e: EntreeJournal): string {
+  if (e.cause === 'sautee') return 'Passée : sautée'
+  if (e.cause === 'ignoree') return 'Passée : ignorée jusqu’à la prochaine synchro'
+  if (
+    e.resultat === 'echouee' &&
+    (e.codeHttp === 403 || e.codeHttp === 404) &&
+    (e.type === 'pose-etiquette' || e.type === 'retrait-etiquette' || e.type === 'enchere' || e.type === 'defausse')
+  ) return 'Passée : exemplaire indisponible'
+  return LIBELLE_RESULTAT[e.resultat]
 }

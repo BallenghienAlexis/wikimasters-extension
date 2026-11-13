@@ -1,12 +1,17 @@
 import type { Donnees } from './sauvegarde';
 import { analyserStockage,appliquerEdition, collectionVide, fusionnerCartesLues, type CarteLueSite, type Collection } from './collection';
-import type { EtatExecution, Registre } from './actions';
+import type { EtatExecution, EtatExecutionV2, Registre } from './actions';
 import { validerJournal, type Journal } from './journal';
+import { validerExecution } from './etatExecution';
+import { validerStatutSynchro, type StatutSynchro, type StatutSynchroV2 } from './statutSynchro';
+import { validerIgnorees, type Ignoree } from './ignorees';
+import { validerHistorique, type PointHistorique } from './historique';
+import { AFFICHAGE_DEFAUT, validerAffichage, type Affichage } from './affichage';
 import { cacheVide, validerCache, type CacheWikipedia } from './wikipedia';
 import { registreVide, validerRegistre } from './registre';
 import { validerEtiquettesSite, type EtiquetteSite } from './etiquettesPreexistantes';
 import { lireSynchro, noterPage, type Pagination, type Synchro } from './synchro';
-import type { EtatOrdonnanceur, RaisonArretSynchro } from './ordonnanceur';
+import type { EtatOrdonnanceur } from './ordonnanceur';
 import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../config/amis';
 import { ajouterEvenement, validerEvenements, VERSION_VENTES, type EvenementVente } from './affluence';
 import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, proposerTri, type Preferences } from './tri';
@@ -33,9 +38,14 @@ const CLE_AFFLUENCE_SITE = 'affluenceSite';
 const MAX_RELEVES_SITE = 2000;
 const CLE_RELEVE_MARCHE = 'releveMarche';
 const CLE_ETIQUETTES_SITE = 'etiquettesSite';
+const CLE_IGNOREES = 'ignorees';
+const CLE_HISTORIQUE = 'historique';
+const CLE_AFFICHAGE = 'affichage';
+
+export type { StatutSynchro };
 
 /** Version de l’enveloppe du journal stocké. */
-export const VERSION_JOURNAL = 1;
+export const VERSION_JOURNAL = 2;
 
 /** Toutes les clés locales de l’extension. */
 export const CLES_STOCKAGE = {
@@ -60,6 +70,9 @@ export const CLES_STOCKAGE = {
   affluenceSite: CLE_AFFLUENCE_SITE,
   releveMarche: CLE_RELEVE_MARCHE,
   etiquettesSite: CLE_ETIQUETTES_SITE,
+  ignorees: CLE_IGNOREES,
+  historique: CLE_HISTORIQUE,
+  affichage: CLE_AFFICHAGE,
 } as const;
 
 function illisible(detail: string): Error {
@@ -117,7 +130,8 @@ export async function chargerJournal(): Promise<Journal> {
     throw illisible('Le journal est invalide.');
   }
   const enveloppe = brut as Record<string, unknown>;
-  if (enveloppe.version !== VERSION_JOURNAL) throw illisible('La version du journal est inconnue.');
+  // Une enveloppe v1 est lue (entrées complétées à null) ; elle est réécrite en v2 à la prochaine écriture.
+  if (enveloppe.version !== VERSION_JOURNAL && enveloppe.version !== 1) throw illisible('La version du journal est inconnue.');
   const journal = validerJournal(enveloppe.entrees);
   if (journal === null) throw illisible('Le journal est invalide.');
   return journal;
@@ -127,21 +141,7 @@ export async function enregistrerJournal(journal: Journal): Promise<void> {
   await chrome.storage.local.set({ [CLE_JOURNAL]: { version: VERSION_JOURNAL, entrees: journal } });
 }
 
-const ETATS_EXECUTION: readonly string[] = ['en-cours', 'terminee', 'arretee'];
-
-const entierPositif = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0;
-
-function validerExecution(brut: unknown): EtatExecution | null {
-  if (typeof brut !== 'object' || brut === null || Array.isArray(brut)) return null;
-  const o = brut as Record<string, unknown>;
-  if (o.version !== 1) return null;
-  if (typeof o.idLot !== 'string' || o.idLot === '') return null;
-  if (typeof o.etat !== 'string' || !ETATS_EXECUTION.includes(o.etat)) return null;
-  if (!entierPositif(o.traitees) || !entierPositif(o.total) || o.traitees > o.total) return null;
-  return { version: 1, idLot: o.idLot, etat: o.etat as EtatExecution['etat'], traitees: o.traitees, total: o.total };
-}
-
-export async function chargerExecution(): Promise<EtatExecution | null> {
+export async function chargerExecution(): Promise<EtatExecutionV2 | null> {
   const contenu = await chrome.storage.local.get(CLE_EXECUTION);
   const brut = contenu[CLE_EXECUTION];
   if (brut === undefined) return null;
@@ -150,8 +150,11 @@ export async function chargerExecution(): Promise<EtatExecution | null> {
   return etat;
 }
 
-export async function enregistrerExecution(etat: EtatExecution): Promise<void> {
-  await chrome.storage.local.set({ [CLE_EXECUTION]: etat });
+/** Accepte une v1 ou une v2 ; écrit toujours une v2. */
+export async function enregistrerExecution(etat: EtatExecution | EtatExecutionV2): Promise<void> {
+  const valide = validerExecution(etat);
+  if (valide === null) throw new Error('État d’exécution invalide.');
+  await chrome.storage.local.set({ [CLE_EXECUTION]: valide });
 }
 
 export async function effacerExecution(): Promise<void> {
@@ -297,54 +300,8 @@ export function ecouterRelanceSynchro(rappel: () => void): () => void {
   return () => chrome.storage.onChanged.removeListener(ecouteur);
 }
 
-/**
- * Statut détaillé de la dernière synchronisation automatique, pour l’interface : écrit par le content
- * script, lu par la page de gestion. Uniquement des nombres et des codes fixes (aucun secret, aucun
- * corps de réponse, aucun nom venu du site).
- */
-export interface StatutSynchro {
-  version: 1;
-  etat: 'en-cours' | 'termine' | 'arret';
-  /** Page en cours de lecture (à partir de 1), ou `null` tant qu’elle n’est pas connue. */
-  page: number | null;
-  pages: number | null;
-  raison: RaisonArretSynchro | null;
-  /** Code HTTP de l’arrêt (100 à 599), ou `null`. */
-  codeHttp: number | null;
-  /** Horodatage de la dernière mise à jour. */
-  le: number;
-  ajoutees: number;
-  etiquettes: number;
-  prix: number;
-}
-
-const ETATS_STATUT = ['en-cours', 'termine', 'arret'];
-const RAISONS_STATUT = ['manuel', 'code-http', 'echecs'];
-
-function validerStatutSynchro(brut: unknown): StatutSynchro | null {
-  if (!estObjet(brut) || brut.version !== 1) return null;
-  const { etat, page, pages, raison, codeHttp, le, ajoutees, etiquettes, prix } = brut;
-  if (typeof etat !== 'string' || !ETATS_STATUT.includes(etat)) return null;
-  if (!nullOuEntier(page) || !nullOuEntier(pages)) return null;
-  if (raison !== null && (typeof raison !== 'string' || !RAISONS_STATUT.includes(raison))) return null;
-  if (codeHttp !== null && !(typeof codeHttp === 'number' && Number.isSafeInteger(codeHttp) && codeHttp >= 100 && codeHttp <= 599)) return null;
-  if (!horodatageValide(le) || !horodatageValide(ajoutees) || !horodatageValide(etiquettes) || !horodatageValide(prix)) return null;
-  return {
-    version: 1,
-    etat: etat as StatutSynchro['etat'],
-    page,
-    pages,
-    raison: raison as RaisonArretSynchro | null,
-    codeHttp,
-    le,
-    ajoutees,
-    etiquettes,
-    prix,
-  };
-}
-
 /** `null` si jamais écrit ou illisible : l’interface retombe alors sur l’état sans détail. */
-export async function chargerStatutSynchro(): Promise<StatutSynchro | null> {
+export async function chargerStatutSynchro(): Promise<StatutSynchroV2 | null> {
   const contenu = await chrome.storage.local.get(CLE_STATUT_SYNCHRO);
   return validerStatutSynchro(contenu[CLE_STATUT_SYNCHRO]);
 }
@@ -353,6 +310,57 @@ export async function enregistrerStatutSynchro(statut: StatutSynchro): Promise<v
   const valide = validerStatutSynchro(statut);
   if (valide === null) throw new Error('Statut de synchronisation invalide.');
   await chrome.storage.local.set({ [CLE_STATUT_SYNCHRO]: valide });
+}
+
+/** Prévient quand la clé change dans la zone locale (sans lire la valeur). */
+function ecouterCle(cle: string, rappel: () => void): () => void {
+  const ecouteur = (changements: Record<string, chrome.storage.StorageChange>, zone: string): void => {
+    if (zone === 'local' && cle in changements) rappel();
+  };
+  chrome.storage.onChanged.addListener(ecouteur);
+  return () => chrome.storage.onChanged.removeListener(ecouteur);
+}
+
+export const ecouterExecution = (rappel: () => void): (() => void) => ecouterCle(CLE_EXECUTION, rappel);
+export const ecouterJournal = (rappel: () => void): (() => void) => ecouterCle(CLE_JOURNAL, rappel);
+export const ecouterIgnorees = (rappel: () => void): (() => void) => ecouterCle(CLE_IGNOREES, rappel);
+export const ecouterHistorique = (rappel: () => void): (() => void) => ecouterCle(CLE_HISTORIQUE, rappel);
+export const ecouterAffichage = (rappel: () => void): (() => void) => ecouterCle(CLE_AFFICHAGE, rappel);
+
+/** Actions ignorées jusqu’à la prochaine synchro ; absentes ou illisibles : liste vide (sans rien écraser). */
+export async function chargerIgnorees(): Promise<Ignoree[]> {
+  const contenu = await chrome.storage.local.get(CLE_IGNOREES);
+  return validerIgnorees(contenu[CLE_IGNOREES]) ?? [];
+}
+
+export async function enregistrerIgnorees(liste: Ignoree[]): Promise<void> {
+  const entrees = validerIgnorees({ version: 1, entrees: liste });
+  if (entrees === null) throw new Error('Liste d’actions ignorées invalide.');
+  await chrome.storage.local.set({ [CLE_IGNOREES]: { version: 1, entrees } });
+}
+
+/** Historique quotidien des exemplaires ; absent ou illisible : liste vide (sans rien écraser). */
+export async function chargerHistorique(): Promise<PointHistorique[]> {
+  const contenu = await chrome.storage.local.get(CLE_HISTORIQUE);
+  return validerHistorique(contenu[CLE_HISTORIQUE]) ?? [];
+}
+
+export async function enregistrerHistorique(points: PointHistorique[]): Promise<void> {
+  const valides = validerHistorique({ version: 1, points });
+  if (valides === null) throw new Error('Historique invalide.');
+  await chrome.storage.local.set({ [CLE_HISTORIQUE]: { version: 1, points: valides } });
+}
+
+/** Préférence d’affichage ; absente ou illisible : défaut (animations activées), sans rien écraser. */
+export async function chargerAffichage(): Promise<Affichage> {
+  const contenu = await chrome.storage.local.get(CLE_AFFICHAGE);
+  return validerAffichage(contenu[CLE_AFFICHAGE]) ?? { ...AFFICHAGE_DEFAUT };
+}
+
+export async function enregistrerAffichage(affichage: Affichage): Promise<void> {
+  const valide = validerAffichage(affichage);
+  if (valide === null) throw new Error('Préférence d’affichage invalide.');
+  await chrome.storage.local.set({ [CLE_AFFICHAGE]: valide });
 }
 
 const CLES_SYNCHRO_AUTO = [CLE_SYNC_AUTO, CLE_STATUT_SYNCHRO, CLE_BAIL_SYNCHRO, CLE_DERNIERE_SYNCHRO];
