@@ -1,0 +1,39 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="base.css"><title>Variante 3 · Centre d’activité</title>
+<style>.fil{border-left:3px solid var(--line);margin:0 0 0 8px;padding:0 0 0 16px;list-style:none}.fil li{padding:6px 0;position:relative;font-size:14px}.fil li::before{content:"";position:absolute;left:-23px;top:14px;width:10px;height:10px;border-radius:50%;background:var(--paper)}.fil li.attente::before{background:var(--ink);border:2px solid var(--muted)}.fil li.erreur::before{background:var(--defausser)}.fil li.cours::before{background:var(--echanger)}</style></head><body>
+<div class="wf">Wireframe variante 3 · Deux espaces : « Tableaux de bord » (lecture) et « Centre d’activité » (tout ce qui touche le site : synchro, lots, file, erreurs, historique), avec barre d’état toujours visible en haut. Écran montré : Centre d’activité.</div>
+<header style="padding:12px 16px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;align-items:center"><strong>WM Collection</strong>
+<nav class="onglets" aria-label="Espaces" style="border:0"><a href="#">Tableaux de bord</a><a href="#" aria-current="page">Centre d’activité</a><a href="#">Collection</a><a href="#">Réglages</a></nav>
+<span class="pastille-statut s-vendre">⚠ 1 erreur · 83 actions en attente</span></header>
+<main style="padding:16px;display:grid;gap:16px">
+<section aria-labelledby="t1"><h2 id="t1">Étape en cours : écriture sur le site</h2>
+<div class="barre" role="progressbar" aria-valuenow="31" aria-valuemin="0" aria-valuemax="100" aria-label="Progression globale"><i style="width:31%"></i></div>
+<p class="note">Global 31 % · lot 2 / 4 · 37 / 120 actions · cadence 0,2 s + gigue · fin estimée 14:04</p></section>
+<div class="erreur-bloc" role="alert" aria-labelledby="e1">
+  <h3 id="e1" style="margin-top:0">Arrêt : une action a échoué</h3>
+  <dl>
+    <dt>Action</dt><dd>Pose d’étiquette « #À échanger Ami fictif »</dd>
+    <dt>Carte</dt><dd>[R] Titre de carte fictif · lot 2 / 4 · action 37 / 120</dd>
+    <dt>Réponse du site</dt><dd><strong>HTTP 429</strong> · trop de requêtes · reçue à 14:02:13</dd>
+    <dt>Cause probable</dt><dd>Le site demande de ralentir. Aucune reprise automatique avant 14:32.</dd>
+    <dt>Déjà fait</dt><dd>36 actions réussies, 0 interrompue</dd>
+  </dl>
+  <div class="actions">
+    <button class="principal">Réessayer cette action</button>
+    <button>Sauter cette action</button>
+    <button>Sauter ce lot (4 actions)</button>
+    <button>Ignorer jusqu’à la prochaine synchro</button>
+    <button class="danger">Arrêter tout</button>
+  </div>
+  <p class="note">« Sauter » n’envoie rien au site : l’action est marquée « passée » dans le journal. Elle sera reproposée au prochain aperçu sauf si vous choisissez « Ignorer jusqu’à la prochaine synchro ».</p>
+</div>
+<div class="grille g2">
+<section aria-labelledby="t2"><h2 id="t2">Frise du run</h2><ol class="fil">
+<li class="fait">14:00 Lecture : 13 pages, 1 284 exemplaires ✓</li><li class="fait">14:01 Prix : 23 titres ✓</li>
+<li class="fait">14:02 Lot 1 · enchères (6) ✓</li><li class="erreur"><strong>14:02 Lot 2 · étiquettes : HTTP 429 sur l’action 37</strong></li>
+<li class="attente">Lot 2 · 83 actions restantes</li><li class="attente">Lot 3 · défausses (4)</li><li class="attente">Lot 4 · retraits d’étiquettes (7)</li></ol></section>
+<section aria-labelledby="t3"><h2 id="t3">Ignorées</h2>
+<table class="rwd"><thead><tr><th>Action</th><th>Carte</th><th>Jusqu’à</th><th></th></tr></thead><tbody>
+<tr><td>Enchère</td><td>[R] Titre fictif</td><td>prochaine synchro</td><td><button>Reprendre</button></td></tr>
+<tr><td>Défausse</td><td>[C] Titre fictif</td><td>ce lot</td><td><button>Reprendre</button></td></tr></tbody></table>
+<h3>Historique (30 jours)</h3><p class="note">Filtrer par type · résultat · carte · lot. Export du journal en texte (sans secret).</p></section>
+</div></main></body></html>

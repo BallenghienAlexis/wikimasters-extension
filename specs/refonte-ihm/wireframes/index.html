@@ -1,0 +1,10 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="base.css"><title>Wireframes refonte IHM</title><style>iframe{width:100%;border:1px solid var(--line);background:var(--ink)}.l{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}</style></head><body><main style="padding:16px;max-width:1300px;margin:0 auto">
+<h1>Refonte IHM · wireframes</h1><p class="note">Choisissez la variante et la largeur. Le thème suit le système ; les boutons le forcent.</p>
+<div class="l" id="v"></div><div class="l" id="w"></div><div class="l" id="t"></div><iframe id="f" style="height:80vh"></iframe>
+<script>
+const V=[1,2,3],W=[375,768,1280];let v=1,w=1280,th='';
+const f=document.getElementById('f');
+function maj(){f.src='variante-'+v+'.html';f.style.width=w+'px';f.style.maxWidth='100%';f.onload=()=>{try{f.contentDocument.documentElement.dataset.theme=th}catch(e){}}}
+function mk(id,a,fn,lab){const c=document.getElementById(id);a.forEach(x=>{const b=document.createElement('button');b.textContent=lab(x);b.onclick=()=>{fn(x);maj()};c.append(b)})}
+mk('v',V,x=>v=x,x=>'Variante '+x);mk('w',W,x=>w=x,x=>x+' px');mk('t',['','light','dark'],x=>th=x,x=>x||'Système');maj();
+</script></main></body></html>
