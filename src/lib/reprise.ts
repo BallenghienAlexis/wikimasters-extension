@@ -23,7 +23,8 @@ const CODES_PAUSE: readonly number[] = [401, 403, 429]
  * Pause après 401, 429, 403 (refus hors exemplaire, ou seuil de refus par carte atteint : décision 3) et 3 échecs.
  * Aucune pause pour 409, résultat inattendu, transport, écriture, vérification, arrêt manuel : « Réessayer » reste immédiat.
  */
-export function calculerPauseJusqua(arret: { raison: RaisonArret; codeHttp: number | null }, maintenant: number): number | null {
+export function calculerPauseJusqua(arret: { raison: RaisonArret; codeHttp: number | null; seuilRefus?: boolean }, maintenant: number): number | null {
+  if (arret.seuilRefus === true) return maintenant + PAUSE_LOTS_MS
   if (arret.raison === 'echecs') return maintenant + PAUSE_LOTS_MS
   if (arret.raison === 'code-http' && arret.codeHttp !== null && CODES_PAUSE.includes(arret.codeHttp)) return maintenant + PAUSE_LOTS_MS
   return null

@@ -51,6 +51,11 @@ describe('AC3 : pauseJusqua = maintenant + 30 min (SC-016)', () => {
     expect(calculerPauseJusqua({ raison: 'code-http', codeHttp: 403 }, MAINTENANT)).toBe(MAINTENANT + PAUSE_LOTS_MS);
   });
 
+  it('décision 3 : le seuil de refus par carte déclenche la pause même si le dernier refus est un 404', () => {
+    expect(calculerPauseJusqua({ raison: 'code-http', codeHttp: 404, seuilRefus: true }, MAINTENANT)).toBe(MAINTENANT + PAUSE_LOTS_MS)
+    expect(calculerPauseJusqua({ raison: 'code-http', codeHttp: 404 }, MAINTENANT)).toBeNull()
+  })
+
   it.each([
     ['409 (conflit sur enchère ou défausse)', 'code-http', 409],
     ['résultat inconnu ou arrêt de classe `arret`', 'resultat', null],

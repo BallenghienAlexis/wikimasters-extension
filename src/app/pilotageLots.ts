@@ -166,7 +166,7 @@ export function contexteExecution(): ContexteExecution {
           traitees: e.traitees,
           total: e.total,
           lots: e.lots,
-          pauseJusqua: arretee && e.raison !== null ? calculerPauseJusqua({ raison: e.raison, codeHttp: e.erreur?.codeHttp ?? null }, maintenant) : null,
+          pauseJusqua: arretee && e.raison !== null ? calculerPauseJusqua({ raison: e.raison, codeHttp: e.erreur?.codeHttp ?? null, seuilRefus: e.erreur?.seuilRefus === true }, maintenant) : null,
           erreur: arretee && e.erreur !== null ? await construireErreur(e.erreur, maintenant) : null,
         });
       })
@@ -371,6 +371,7 @@ export function abonnerPause(rappel: (enPause: boolean) => void): () => void {
 export async function reessayer(): Promise<void> {
   const tete = restantesMem[0];
   if (tete === undefined || suiteMem === null) throw new Error('Aucune action à reprendre : préparez un nouveau lot.');
+  // Vérifié aussi par `lancerAvec` : ici d'abord, pour que « Reprise possible à HH:MM » l'emporte sur « Résultat inconnu ».
   await verifierPause();
   const entree = { type: tete.type, parametre: parametreDe(tete), idCarte: tete.idCarte };
   if (resultatInconnu(await chargerJournal(), entree, idLotMem)) throw new Error(RAISON_RESULTAT_INCONNU);

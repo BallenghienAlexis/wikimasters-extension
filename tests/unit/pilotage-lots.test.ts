@@ -666,6 +666,13 @@ describe('AC7 : aucun chemin ne contourne la pause de 30 min (SC-016)', () => {
     expect((await api.chargerExecution())?.pauseJusqua).toBe(Date.now() + 30 * 60_000);
   });
 
+  it('décision 3 : seuil de refus par carte avec un 404 en dernier : pause de 30 min aussi', async () => {
+    const api = await frais();
+    banc.reponse = reponses({ 1: echec(403), 2: echec(403), 3: echec(404) });
+    await api.lancerLot(quatreDefausses(), 'lot-1');
+    expect((await api.chargerExecution())?.pauseJusqua).toBe(Date.now() + 30 * 60_000);
+  });
+
   it('à l’heure dite (30 min), Lancer et Réessayer repartent', async () => {
     const { api } = await enPause();
     vi.setSystemTime(Date.now() + 30 * 60_000);

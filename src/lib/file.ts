@@ -125,6 +125,8 @@ export interface ContexteErreur {
   reussies: number
   /** Autres requêtes du même lot parallèle déjà parties et non réussies. */
   autresEchecsEnVol: number
+  /** Présent (vrai) seulement si l’arrêt vient du seuil de refus par carte : la pause de 30 min s’applique alors. */
+  seuilRefus?: true
 }
 
 /** Reprise de la même exécution : identifiant et compteurs conservés (`total` vient de la suite). */
@@ -176,6 +178,8 @@ class Arret extends Error {
   ) {
     super(raison)
   }
+  /** Arrêt dû au seuil de refus par carte (3 d’affilée ou 5 par lot), quel que soit le dernier code (403 ou 404). */
+  seuilRefus = false
 }
 
 /** Action de l’exécution et son suivi interne (identité propre : la même action peut figurer deux fois). */
@@ -430,7 +434,7 @@ export function creerFile(deps: DependancesFile): File {
       if (refusParCarte(action, resultat.codeHttp)) {
         echecs.refus++
         echecs.refusTotal++
-        if (echecs.refus >= MAX_REFUS_CARTE_CONSECUTIFS || echecs.refusTotal >= MAX_REFUS_CARTE_PAR_LOT) arretApres = new Arret('code-http', entree, resultat.codeHttp)
+        if (echecs.refus >= MAX_REFUS_CARTE_CONSECUTIFS || echecs.refusTotal >= MAX_REFUS_CARTE_PAR_LOT) { arretApres = new Arret('code-http', entree, resultat.codeHttp); arretApres.seuilRefus = true }
         else indisponible = true
       } else if (arreteLeLot(action, resultat.codeHttp)) arretApres = new Arret('code-http', entree, resultat.codeHttp)
       else {
@@ -531,6 +535,7 @@ export function creerFile(deps: DependancesFile): File {
           cause: raison,
           reussies,
           autresEchecsEnVol: lotCourant.filter((x) => x !== fautive && x.envoyee && !x.reussie).length,
+          ...(arret.seuilRefus ? { seuilRefus: true as const } : {}),
         }
       }
     }
