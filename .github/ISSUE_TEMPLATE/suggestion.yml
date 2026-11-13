@@ -1,0 +1,34 @@
+name: Suggestion
+description: Proposer une idée ou une amélioration de l'extension
+title: "Suggestion : "
+labels: ["suggestion", "statut:à-trier"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci pour ta suggestion. Ne colle ici aucun jeton, cookie ni donnée privée de ton compte.
+  - type: textarea
+    id: besoin
+    attributes:
+      label: Ce que tu voudrais pouvoir faire
+      description: Le besoin, en une ou deux phrases.
+    validations:
+      required: true
+  - type: textarea
+    id: contexte
+    attributes:
+      label: Pourquoi
+      description: Dans quelle situation cela t'aiderait.
+  - type: dropdown
+    id: zone
+    attributes:
+      label: Zone concernée
+      options:
+        - Page de gestion
+        - Assistant de tri
+        - Synchronisation
+        - Étiquettes
+        - Ventes et enchères
+        - Autre
+    validations:
+      required: true
