@@ -3,7 +3,7 @@ import type { TypeAction } from '../actions'
 
 /**
  * Entrée du contrat pour la défausse (capture d’Alexis du 2026-11-07, `contrat-api.md`) : `POST` sans corps,
- * même origine que l’onglet, cookies du navigateur. Irréversible : la file demande une confirmation avant l’envoi.
+ * même origine que l’onglet, cookies du navigateur. Irréversible, sans confirmation (Alexis, 2026-11-12) : garde-fous = plafond de valeur et arrêts sur erreur.
  */
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

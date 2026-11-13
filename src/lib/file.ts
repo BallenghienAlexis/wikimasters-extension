@@ -1,7 +1,7 @@
 /**
  * Exécuteur à cadence fixe de la synchronisation complète.
  *
- * Logique pure : horloge, transport, confirmation, revérification, application
+ * Logique pure : horloge, transport, revérification, application
  * locale et journal sont **injectés**. Aucun accès à `chrome.*`, au réseau ni au
  * jeton. Cadence : 0,2 s au minimum entre deux débuts de requête (décision d’Alexis du
  * 2026-11-12, toutes actions), plus un délai
@@ -40,7 +40,6 @@ export interface Horloge {
   attendreJusqua: (echeance: number) => Promise<void>
 }
 
-export type Decision = 'defausser' | 'passer' | 'arreter'
 export type Verification = 'ok' | 'passee'
 
 type Ou<T> = T | Promise<T>
@@ -64,9 +63,8 @@ export interface DependancesFile {
   concurrence?: number
   horloge: Horloge
   transport: (ordre: Action) => Promise<ResultatAction>
-  confirmer: (action: Action) => Ou<Decision>
   /**
-   * Revérifie l’action. Appelée deux fois par action (avant la confirmation, puis juste avant
+   * Revérifie l’action. Appelée deux fois par action (avant l’attente de cadence, puis juste avant
    * l’envoi) : elle doit être sans effet de bord.
    */
   reverifier: (action: Action) => Ou<Verification>
@@ -86,9 +84,7 @@ export type RaisonArret =
   | 'resultat'
   | 'ecriture'
   | 'transport'
-  | 'confirmation'
   | 'verification'
-  | 'confirmation-indisponible'
 
 export interface EtatFile extends EtatExecution {
   raison: RaisonArret | null
@@ -116,7 +112,7 @@ class Arret extends Error {
 class Annulee extends Error {}
 
 export function creerFile(deps: DependancesFile): File {
-  const { horloge, transport, confirmer, reverifier, appliquer: appliquerBrut, journal: journalBrut, delaiSupplementaire } = deps
+  const { horloge, transport, reverifier, appliquer: appliquerBrut, journal: journalBrut, delaiSupplementaire } = deps
   const concurrence = Math.min(CONCURRENCE_MAX, Math.max(1, Math.floor(deps.concurrence ?? 1) || 1))
 
   // Les écritures locales (journal, collection, registre) sont enchaînées une à une : des ordres en vol
@@ -198,9 +194,9 @@ export function creerFile(deps: DependancesFile): File {
     await journal.passer(id)
   }
 
-  /** Date de début autorisée : cadence unique (0,2 s plus supplément), réponse précédente, confirmation. */
-  function debutAutorise(plancher: number): number {
-    return Math.max(dernierDebut + INTERVALLE_MS + supplement, derniereReponse, plancher, dernierEnvoi + INTERVALLE_MS)
+  /** Date de début autorisée : cadence unique (0,2 s plus supplément), réponse précédente. */
+  function debutAutorise(): number {
+    return Math.max(dernierDebut + INTERVALLE_MS + supplement, derniereReponse, dernierEnvoi + INTERVALLE_MS)
   }
 
   /**
@@ -210,31 +206,17 @@ export function creerFile(deps: DependancesFile): File {
   async function traiter(action: Action, echecs: { n: number }, lotParallele = false, apresReponse = Number.NEGATIVE_INFINITY): Promise<void> {
     if ((await verifier(action)) === 'passee') return inscrirePassee(action)
 
-    let plancher = Number.NEGATIVE_INFINITY
-    if (action.type === 'defausse') {
-      let decision: Decision
-      try {
-        decision = await confirmer(action)
-      } catch {
-        throw new Arret('confirmation-indisponible')
-      }
-      if (arretDemande) throw new Arret('manuel')
-      if (decision === 'arreter') throw new Arret('confirmation')
-      if (decision === 'passer') return inscrirePassee(action)
-      plancher = horloge.now()
-    }
-
     if (lotParallele) {
-      const creneau = Math.max(dernierDebut + INTERVALLE_MS + supplement, apresReponse, plancher)
+      const creneau = Math.max(dernierDebut + INTERVALLE_MS + supplement, apresReponse)
       dernierDebut = creneau
       supplement = tirerSupplement()
       await attendre(creneau)
       if (stoppe) throw new Annulee()
     } else {
-      await attendre(debutAutorise(plancher))
+      await attendre(debutAutorise())
     }
 
-    // La carte a pu changer pendant la confirmation ou l’attente : dernière revérification avant l’envoi.
+    // La carte a pu changer pendant l’attente : dernière revérification avant l’envoi.
     if ((await verifier(action)) === 'passee') return inscrirePassee(action)
     if (stoppe) throw new Annulee()
 

@@ -87,6 +87,14 @@ describe('reverifierAction (AC1)', () => {
     expect(reverifierAction(defausse, coll({ ...c, quantite: 0 }), reg(), config)).toBe('passee')
   })
 
+  it('défausse : le plafond réglé remplace le plafond par défaut', () => {
+    const c = carte({ statut: 'defausser', valeurMarchande: 12 })
+    expect(reverifierAction(defausse, coll(c), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll(c), reg(), { ...config, plafondDefausse: 12 })).toBe('ok')
+    expect(reverifierAction(defausse, coll(c), reg(), { ...config, plafondDefausse: 11 })).toBe('passee')
+    expect(reverifierAction(defausse, coll({ ...c, valeurMarchande: 4 }), reg(), { ...config, plafondDefausse: 3 })).toBe('passee')
+  })
+
   it('pose : étiquette de statut et d’ami', () => {
     const pose: Action = { type: 'pose-etiquette', idCarte: 'commune|Chat', idExemplaire: 'ex-1', nomEtiquette: 'Statut · Vendre' }
     expect(reverifierAction(pose, coll(carte()), reg(), config)).toBe('ok')

@@ -33,7 +33,7 @@ No response requested.
 
 > <task-notification>
 > <task-id>a59e9b7d92e97312b</task-id>
-> <output-file>C:\Users\alexi\AppData\Local\Temp\claude\c9e2bbe891dd31f9\e051be18-7b8b-4be1-bcd9-a3e314a68809\tasks\a59e9b7d92e97312b.output</output-file>
+> <output-file>C:\Users\<utilisateur>\AppData\Local\Temp\claude\c9e2bbe891dd31f9\e051be18-7b8b-4be1-bcd9-a3e314a68809\tasks\a59e9b7d92e97312b.output</output-file>
 > <status>stopped</status>
 > <summary>Background agent "Spec synchro complète" didn't finish before the previous session ended</summary>
 > <note>No completion record was found for it in the previous session. It may have been stopped, or it may have been running when the previous Claude Code process exited — either way its transcript is saved, so its progress is not lost. Resume it by sending it a message with SendMessage, or check its worktree/output for partial work before assuming the task landed.</note>

@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EtatExecution, Registre } from '../../src/lib/actions';
 import { collectionVide } from '../../src/lib/collection';
 import { ouvrirEntree, type Journal } from '../../src/lib/journal';
-import { DEFINITIONS_THEMES } from '../../src/lib/themes';
 import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../../src/config/amis';
 
 // Noms fictifs : le test ne dépend pas des vrais amis du fichier de réglages.
@@ -353,12 +352,9 @@ describe('signal de synchro', () => {
 describe('amis initiaux (SC-024)', () => {
   const lire = async () => (await chargerPreferences()).amis;
 
-  it('AC1 : le fichier de réglages porte les thèmes barrage, tibet et ukraine, tous connus', async () => {
+  it('AC1 : le fichier de réglages livré ne contient aucun ami en dur (extension vide)', async () => {
     const reel = await vi.importActual<typeof import('../../src/config/amis')>('../../src/config/amis');
-    const themes = reel.AMIS_INITIAUX.flatMap((a) => a.themes);
-    for (const t of ['barrage', 'tibet', 'ukraine']) expect(themes).toContain(t);
-    const connus = new Set(DEFINITIONS_THEMES.map((d) => d.id));
-    for (const t of themes) expect(connus.has(t)).toBe(true);
+    expect(reel.AMIS_INITIAUX).toEqual([]);
     expect(reel.VERSION_AMIS_INITIAUX).toBe(1);
   });
 

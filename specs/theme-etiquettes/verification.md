@@ -47,7 +47,7 @@ Les tests sont dans `tests/unit/` sauf mention. Les numéros de SC-001 à SC-025
 | SC | Constat | Tâche à rouvrir |
 |---|---|---|
 | SC-015 | Le texte est vérifié ; le caractère public ou privé des étiquettes sur le site reste à relever (hors périmètre, T-024 de `synchro-complete`). L’avertissement doit rester affiché. | aucune |
-| SC-024 / SC-025 | La spec cite Benjamin et Anatole ; les tests utilisent des prénoms fictifs (G2) et `AC1` vérifie les thèmes `barrage`, `tibet`, `ukraine` du fichier réel sans citer de prénom. | aucune |
+| SC-024 / SC-025 | La spec cite Léa et Hugo ; les tests utilisent des prénoms fictifs (G2) et `AC1` vérifie les thèmes `barrage`, `tibet`, `ukraine` du fichier réel sans citer de prénom. | aucune |
 | SC-019 | Les contrastes reposent sur les tokens existants ; aucun calcul automatique de ratio n’est joué par la suite de tests. | aucune |
 
 ## Captures

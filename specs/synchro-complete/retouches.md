@@ -108,6 +108,15 @@ Le second lot réel a reproduit le 403 sur la pose de « Statut · En vente » (
 - ~~Parallélisme : specs à aligner~~ : fait par l'avenant du 2026-11-12.
 - Bail de la synchro (`src/app/Synchronisation.tsx` `lancerLot`, `src/lib/ordonnanceur.ts`) : lecture puis écriture non atomiques entre contextes, sans identifiant de détenteur ; deux démarrages dans la même boucle d’évènements peuvent s’additionner (rare). À reprendre : relire le bail après écriture avec un identifiant.
 
+## À reprendre (suppression de la confirmation de défausse, 2026-11-12, T-906)
+
+Un amendement daté est en tête de `spec.md`, `spec.refined.md`, `design.md` et `plan.md`. Les passages suivants décrivent encore la confirmation par carte et sont à réécrire par l'agent spec ou l'orchestrateur :
+- `spec.refined.md` : G2 (l.42), l.52, SC-009 (l.91), SC-010 (l.92), SC-021 (l.103), diagramme d'états (l.223-227), H3 (l.243).
+- `spec.md` : l.34, 40, 50, 76 (SC-009), 77 (SC-010), 88 (SC-021).
+- `design.md` : D-24 à D-27 et D-43 (l.58-59, 97-100, 179, 186) à marquer retirés.
+- `plan.md` : l.12, 36, 75 (état « attente de confirmation », `DialogueDefausse`, cadence).
+- Ajouter T-906 au suivi de `synchro-complete` (`tasks.md`, `STATUS.md`).
+
 ## À reprendre — PR #77 (suppression d’étiquettes préexistantes)
 
 - `src/content/synchroAuto.ts:257` : si le stockage rejette la liste lue, le repli enregistre `[]` ; préférable d’effacer la clé pour que l’interface affiche « pas encore lue ».
@@ -115,3 +124,12 @@ Le second lot réel a reproduit le 403 sur la pose de « Statut · En vente » (
 - `src/app/Synchronisation.tsx:605-610` et `:430-431` : une suppression apparaît sous le texte « etiquettes » (`ID_CARTE_ETIQUETTES`) dans le journal ; prévoir le libellé « Étiquettes du compte ».
 - `src/app/EtiquettesPreexistantes.tsx` : pas de test e2e ni de captures aux 3 tailles.
 - `src/lib/revision.ts:89` : après une suppression, les `etiquettesSite` des cartes gardent le nom supprimé jusqu’à la prochaine synchro.
+
+## À reprendre (plafond de défausse réglable, 2026-11-12, T-907)
+
+- T-907 (plafond réglable, PR #86) est à rattacher au suivi de `synchro-complete` (`tasks.md`, `STATUS.md`), comme T-906.
+- `tests/unit/plafond-defausse.test.ts` : rendu statique seulement ; le refus d'une saisie invalide est couvert par `tests/e2e/plafond-defausse.spec.ts` (non exécuté localement faute de navigateur).
+- `src/app/PlafondDefausse.tsx:15` : la saisie n'est initialisée qu'au montage ; un plafond changé dans un autre onglet n'apparaît qu'au rechargement de la page.
+- `src/app/App.tsx:59-64` : entre la relecture et l'écriture des préférences de l'assistant, un changement du plafond fait dans le même onglet serait écrasé (fenêtre très courte, assistant fermé).
+- `src/lib/tri.ts:94` : sans plafond réglé, l'assistant compare `valeur < seuilDefausse` (6) ; pour une valeur non entière (5,5) il propose une défausse que le lot refuse. Comparer toujours `valeur <= plafond`.
+- Noms des captures : `plafond-<light|dark>-<mobile|tablet|desktop>.png` (artefact `captures` de la CI).
