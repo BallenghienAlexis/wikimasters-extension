@@ -106,7 +106,7 @@ describe('répartition par statut', () => {
   it('SC-022 : un statut à 0 exemplaire est absent, ordre À trier → Défausser', () => {
     const t = calcul([carte('a', { statut: 'defausser' }), carte('b', { statut: 'garder' }), carte('c', { statut: 'a-trier' })])
     expect(t.repartition.map((s) => s.statut)).toEqual(['a-trier', 'garder', 'defausser'])
-    expect(ordre).toContain(t.repartition[0].statut)
+    expect(ordre).toContain(t.repartition[0]?.statut)
   })
 
   it('SC-022 : en-vente exclu des totaux mais présent dans la répartition (H6)', () => {
@@ -239,7 +239,7 @@ describe('cas limites (jamais de NaN)', () => {
     expect(t.exemplaires).toBe(3)
     expect(t.valeur).toBeNull()
     expect(t.partSansPrix).toBe(100)
-    expect(t.repartition[0].valeur).toBeNull()
+    expect(t.repartition[0]?.valeur).toBeNull()
     expect(Number.isNaN(t.partSansPrix)).toBe(false)
   })
 

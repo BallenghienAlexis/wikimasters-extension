@@ -147,7 +147,7 @@ describe('themesFrequents', () => {
     const r = themesFrequents(cartes)
     expect(r.length).toBeLessThanOrEqual(10)
     expect(r.length).toBeGreaterThan(0)
-    for (let i = 1; i < r.length; i++) expect(r[i - 1].nombre).toBeGreaterThanOrEqual(r[i].nombre)
+    for (let i = 1; i < r.length; i++) expect(r[i - 1]?.nombre).toBeGreaterThanOrEqual(r[i]?.nombre as number)
     const attendu = compterThemes(cartes)
     for (const { theme, nombre } of r) expect(nombre).toBe(attendu[theme])
     // Un thème utilisé par une carte au moins ; jamais de thème à zéro.
@@ -157,7 +157,7 @@ describe('themesFrequents', () => {
   it('SC-021 : le thème le plus fréquent vient en tête, égalités départagées de façon stable', () => {
     const musique = (n: number) => carte(`m${n}`, { titre: `Musique ${n}`, description: 'compositeur allemand' })
     const r = themesFrequents([...cartes, musique(1), musique(2), musique(3)])
-    expect(themesDeCarte(musique(1))).toContain(r[0].theme)
+    expect(themesDeCarte(musique(1))).toContain(r[0]?.theme)
     const a = themesFrequents(cartes)
     const b = themesFrequents([...cartes].reverse())
     // Ordre des égalités indépendant de l’ordre des cartes : tri secondaire sur l’identifiant du thème.
