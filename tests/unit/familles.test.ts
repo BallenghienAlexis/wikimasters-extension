@@ -28,7 +28,7 @@ describe('T-302 familles', () => {
   it('SC-002 : découpage dans l’ordre de première apparition', () => {
     const lots = decouperEnLots([a('defausse', 1), a('pose-etiquette', 2), a('enchere', 3), a('defausse', 4)]);
     expect(lots.map((l) => l.famille)).toEqual(['defausses', 'etiquettes', 'encheres']);
-    expect(lots[0].actions.map((x) => x.idCarte)).toEqual(['Rare|Carte 1', 'Rare|Carte 4']);
+    expect(lots[0]!.actions.map((x) => x.idCarte)).toEqual(['Rare|Carte 1', 'Rare|Carte 4']);
   });
 
   it('SC-002 : appartenance et non plage, un retrait ajouté en fin de file rejoint le lot Étiquettes', () => {
@@ -36,7 +36,7 @@ describe('T-302 familles', () => {
       a('pose-etiquette', 1), a('enchere', 2), a('enchere', 3), a('retrait-etiquette', 4),
     ]);
     expect(lots.map((l) => [l.famille, l.actions.length])).toEqual([['etiquettes', 2], ['encheres', 2]]);
-    expect(lots[0].actions.map((x) => x.type)).toEqual(['pose-etiquette', 'retrait-etiquette']);
+    expect(lots[0]!.actions.map((x) => x.type)).toEqual(['pose-etiquette', 'retrait-etiquette']);
   });
 
   it('SC-002 : liste vide, aucun lot', () => {

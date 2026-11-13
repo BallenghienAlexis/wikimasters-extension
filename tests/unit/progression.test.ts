@@ -83,7 +83,7 @@ describe('T-302 progression de la synchro (SC-002)', () => {
 
   it('SC-002 : arrêt anticipé des pages, passer à prix fait de pages une étape faite', () => {
     const p = progressionSynchro(statut({ etape: 'prix', page: 2, pages: 9, prixFaits: 0, prixPrevus: 4 }));
-    expect(p.etapes[1].etat).toBe('faite');
+    expect(p.etapes[1]!.etat).toBe('faite');
     expect(p.pourcent).toBe(50);
   });
 
@@ -198,8 +198,8 @@ describe('T-302 listes de tâches (SC-003)', () => {
     const journal = Array.from({ length: 25 }, (_, i) => entree(i + 1)).reverse().reverse();
     const l = listesTaches({ statut: null, execution: null, journal });
     expect(l.terminees).toHaveLength(20);
-    expect(l.terminees[0].id).toBe('e25');
-    expect(l.terminees[19].id).toBe('e6');
+    expect(l.terminees[0]!.id).toBe('e25');
+    expect(l.terminees[19]!.id).toBe('e6');
   });
 
   it('SC-003 : sans activité, « Aucune activité en cours » et les seules Terminées', () => {
