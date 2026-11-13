@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DUREE_BAIL_MS } from '../../src/lib/ordonnanceur';
-import { libelleErreurLancement, sousBail } from '../../src/app/Synchronisation';
+import { libelleErreurLancement } from '../../src/app/apercuLot';
+import { sousBail } from '../../src/app/pilotageLots';
 
 function faux(initial: number | null) {
   let bail = initial;
