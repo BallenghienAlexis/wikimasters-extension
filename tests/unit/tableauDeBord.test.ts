@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Carte, Collection, Statut } from '../../src/lib/collection'
-import { placesEncheres } from '../../src/lib/lot'
+import { etiquettesDeCarte, placesEncheres } from '../../src/lib/lot'
 import { calculerTableauDeBord, type ContexteTableauDeBord } from '../../src/lib/tableauDeBord'
 
 // Données fictives uniquement.
@@ -82,6 +82,17 @@ describe('chiffres clés', () => {
     const reliee = (id: string) => carte(id, { idsSite: [`ex-${id}`], statut: 'garder', etiquettesSite: [] })
     const t = calcul([reliee('a'), reliee('b'), carte('c', { idsSite: null })])
     expect(t.ecarts).toBe(2)
+  })
+
+  it('SC-001 : écarts calculés avec les amis du contexte (étiquette « #À échanger <ami> » attendue, donc 0 écart)', () => {
+    const amis = [{ nom: 'Zoé', themes: [] }]
+    const base = carte('e', { idsSite: ['ex-e'], statut: 'echanger', ami: 'Zoé' })
+    const attendues = etiquettesDeCarte(base, { amis }).retenues
+    expect(attendues).toContain('#À échanger Zoé')
+    const reliee = { ...base, etiquettesSite: [...attendues] }
+    expect(calcul([reliee], contexte({ amis })).ecarts).toBe(0)
+    // Sans les amis, l’étiquette d’échange serait vue comme en trop.
+    expect(calcul([reliee]).ecarts).toBe(1)
   })
 
   it('SC-001 : places d’enchères occupées / max via placesEncheres, ventesSite plus contraignant', () => {
