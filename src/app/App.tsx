@@ -134,7 +134,7 @@ const App: React.FC = () => {
 
         <Onglets actif={actif} onChoisir={aller} />
 
-        <div role="tabpanel" id={idPanneau(actif)} aria-labelledby={idOnglet(actif)}>
+        <div role="tabpanel" id={idPanneau(actif)} aria-labelledby={idOnglet(actif)} tabIndex={0}>
           {panneau}
         </div>
       </main>

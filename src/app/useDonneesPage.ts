@@ -155,7 +155,12 @@ export function useDonneesPage() {
     void (async () => {
       const [liste, statutSynchro] = await Promise.all([chargerIgnorees(), chargerStatutSynchro()]);
       const gardees = purger(liste, { maintenant: Date.now(), statutSynchro, cartes: new Set(collection.cartes.map((c) => c.id)) });
-      if (actif && gardees.length !== liste.length) await enregistrerIgnorees(gardees);
+      if (!actif || gardees.length === liste.length) return;
+      // Relecture juste avant l’écriture : on ne retire que les entrées purgées, une ignorée ajoutée entre-temps est conservée.
+      const retirees = liste.filter((i) => !gardees.includes(i));
+      const courante = await chargerIgnorees();
+      const suite = courante.filter((i) => !retirees.some((r) => r.type === i.type && r.idCarte === i.idCarte && r.parametre === i.parametre && r.date === i.date));
+      if (suite.length !== courante.length) await enregistrerIgnorees(suite);
     })().catch(() => undefined);
     return () => {
       actif = false;
