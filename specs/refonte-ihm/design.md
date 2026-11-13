@@ -14,6 +14,7 @@ Contrat visuel. Tokens existants uniquement (`src/styles/tokens.css`) ; aucune n
 
 ## Règles
 - D-01 Tableaux de bord : cartes `KPI` (valeur 30 px gras, libellé, sous-texte) ; répartition des décisions en barre empilée + légende texte (« Garder 40 % ») ; tableau par rareté en liste empilée sous 600 px.
+- D-02 Tableau de bord complet (demande d’Alexis, 2026-11-13) : 8 chiffres clés (cartes, valeur, enchères, écarts, doublons, à trier, défaussables, mises en vente) ; évolution de la collection sur 30 jours ; répartition des décisions et valeur par décision ; cartes les plus chères ; enchères en cours avec temps restant ; détail des écarts avec le site ; thèmes principaux ; fraîcheur des prix ; activité récente. Maquette : artefact « Refonte IHM · 3 variantes », variante 1. Données nécessaires : historique quotidien du nombre d’exemplaires (nouvelle clé de stockage, 30 valeurs, avec migration).
 - D-10 Barre de progression : `role="progressbar"` avec `aria-valuenow/min/max` et `aria-label` ; contour et remplissage en `paper` ; le pourcentage et l’étape sont **écrits** à côté ; version fine (8 px) pour la barre globale.
 - D-11 Étapes : « ✓ Lecture / ▶ Pages / ○ Prix / ✕ Ignorées » : symbole + mot + couleur (garder = fait, echanger = en cours, muted = attente, defausser = erreur). Mise à jour annoncée dans une zone `aria-live="polite"` (au plus toutes les 2 s).
 - D-20 Tâches : trois listes En cours / À venir (par lot : type, nombre) / Terminées (dernières 20), puis lien vers l’historique filtrable (type, résultat, carte, lot).
