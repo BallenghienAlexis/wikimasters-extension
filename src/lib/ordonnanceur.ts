@@ -295,7 +295,11 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         signature(stats) === etat.signatureEtiquettes
           ? { exemplaires: stats.total - etat.total, cartes: stats.totalUnique - etat.totalUnique }
           : null;
-      if (!inchange) complet = (await lirePages(stats?.total ?? null, gain)) && complet;
+      if (!inchange) {
+        const lecture = await lirePages(stats?.total ?? null, gain);
+        complet = lecture.ok && complet;
+        if (lecture.vus !== null && lecture.ok && echecs === 0 && resultat.ignorees === 0) retirerDisparues(lecture.vus);
+      }
       if (complet && stats !== null) {
         etat.total = stats.total;
         etat.totalUnique = stats.totalUnique;
@@ -327,9 +331,33 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     return stats;
   }
 
-  /** Vrai si toutes les pages ont été lues sans échec. */
-  async function lirePages(total: number | null, gain: { exemplaires: number; cartes: number } | null): Promise<boolean> {
+  /**
+   * Cartes locales absentes d’une lecture complète et cohérente avec `total` : vendues, défaussées ou échangées
+   * depuis la dernière synchro. On les retire pour ne plus leur poser d’étiquettes (le site répond 403).
+   */
+  function retirerDisparues(vus: ReadonlySet<string>): void {
+    let retirees = 0;
+    for (const id of [...parId.keys()]) {
+      if (vus.has(id)) continue;
+      parId.delete(id);
+      delete etat.cardIds[id];
+      retirees += 1;
+    }
+    if (retirees > 0) journal(`${retirees} carte(s) absente(s) du site (vendues ou cédées) retirée(s) de la collection locale.`);
+  }
+
+  /**
+   * `ok` : toutes les pages lues sans échec. `vus` : identifiants lus, seulement si la lecture est allée
+   * jusqu’au bout (aucun arrêt anticipé) et que le nombre d’exemplaires lus égale `total` ; sinon null.
+   */
+  async function lirePages(
+    total: number | null,
+    gain: { exemplaires: number; cartes: number } | null,
+  ): Promise<{ ok: boolean; vus: Set<string> | null }> {
     let ok = true;
+    const vus = new Set<string>();
+    let exemplairesLus = 0;
+    const fini = (): { ok: boolean; vus: Set<string> | null } => ({ ok, vus: ok && total !== null && exemplairesLus === total ? vus : null });
     let tri: TriSite = 'added';
     // Tant que l’ordre « plus récent d’abord » n’est pas confirmé par la page 0, aucun arrêt anticipé.
     let ordreConfirme = false;
@@ -341,7 +369,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     for (let page = PREMIERE_PAGE; ; page++) {
       if (page - PREMIERE_PAGE >= maxPages) {
         journal(total === null ? `Arrêt de la lecture : plus de ${maxPages} pages (total inconnu).` : `Arrêt de la lecture : plus de ${maxPages} pages pour ${total} exemplaires.`);
-        return false;
+        return { ok: false, vus: null };
       }
       const r = await requete(cheminPage(page, tri));
       if (r === null) {
@@ -354,7 +382,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         ok = false;
         continue;
       }
-      if (lue.fin) return ok;
+      if (lue.fin) return fini();
       if (page === PREMIERE_PAGE && tri === 'added') {
         if (lue.recentDabord) ordreConfirme = true;
         else {
@@ -366,12 +394,15 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         }
       }
       resultat.pagesLues += 1;
+      exemplairesLus += lue.ignorees;
       if (lue.ignorees > 0) {
         resultat.ignorees += lue.ignorees;
         journal(`${lue.ignorees} carte(s) de forme inattendue ignorée(s) (page ${page}).`);
       }
       const toutIdentique = lue.cartes.length > 0 && lue.cartes.every((c) => identique(parId.get(c.id), c));
       for (const c of lue.cartes) {
+        vus.add(c.id);
+        exemplairesLus += c.quantite;
         etat.cardIds[c.id] = c.cardId;
         const locale = parId.get(c.id);
         exemplairesGagnes += c.quantite - (locale?.quantite ?? 0);
@@ -385,7 +416,17 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       }
       await deps.enregistrer(instantane(), etat);
       // Une page identique au local ne suffit pas : tout l’écart de total doit être expliqué par ce qui a été lu.
-      if (gain !== null && ordreConfirme && toutIdentique && exemplairesGagnes === gain.exemplaires && cartesGagnees === gain.cartes) return ok;
+      if (gain !== null && ordreConfirme && toutIdentique && exemplairesGagnes === gain.exemplaires && cartesGagnees === gain.cartes) return { ok, vus: null };
+      // Fin atteinte sans demander la page suivante (le site la refuse parfois en 403) : page incomplète,
+      // ou tous les exemplaires annoncés par `stats` sont lus.
+      if (lue.lignes < CARTES_PAR_PAGE) {
+        if (total !== null && exemplairesLus < total) {
+          journal(`Lecture incomplète : ${exemplairesLus} exemplaire(s) lu(s) pour ${total} annoncé(s).`);
+          ok = false;
+        }
+        return fini();
+      }
+      if (total !== null && exemplairesLus >= total) return fini();
     }
   }
 

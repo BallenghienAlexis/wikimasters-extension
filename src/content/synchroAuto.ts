@@ -102,6 +102,10 @@ export interface SynchroAuto {
  */
 function fusionner(stockee: Collection, produite: Collection, depart: ReadonlyMap<string, Carte>, preferences: Preferences | null): Collection {
   const parId = new Map(stockee.cartes.map((c) => [c.id, c]));
+  // Cartes présentes au départ et retirées par la synchro (vendues ou cédées, absentes d’une lecture complète) :
+  // retirées aussi du stockage. Une carte ajoutée par le joueur pendant la synchro n’était pas au départ : elle reste.
+  const gardees = new Set(produite.cartes.map((c) => c.id));
+  for (const id of depart.keys()) if (!gardees.has(id)) parId.delete(id);
   for (const p of produite.cartes) {
     const s = parId.get(p.id);
     if (!s) {

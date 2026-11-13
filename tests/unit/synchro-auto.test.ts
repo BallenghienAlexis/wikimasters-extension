@@ -602,8 +602,8 @@ describe('T-206 D-03 : événements dans le journal', () => {
     expect(b.evenements.at(-1)).toMatchObject({ resultat: 'interrompue', parametre: 'arrêt demandé', codeHttp: null });
   });
 
-  it('plafond de pages : cause « plafond de pages »', async () => {
-    // Le site annonce 2 exemplaires mais ne signale jamais la fin : le plafond (pages + 2) arrête la lecture.
+  it('page courte avec moins d’exemplaires qu’annoncé : cause « lecture incomplète »', async () => {
+    // Le site annonce 2 exemplaires mais n’en livre qu’un sur une page courte : la lecture est incomplète.
     const reponse = (chemin: string): ReponseApi => {
       if (chemin.startsWith('/api/my-collection/stats')) return { statut: 200, json: { total: 2, totalUnique: 2, tagOptions: [] } };
       if (/page=/.test(chemin)) return { statut: 200, json: { collection: [exemplaire(1)] } };
@@ -611,7 +611,7 @@ describe('T-206 D-03 : événements dans le journal', () => {
     };
     const b = banc({ reponse });
     await creerSynchroAuto(b.deps).declencher();
-    expect(b.evenements.at(-1)).toMatchObject({ titre: 'Synchronisation automatique : arrêt', parametre: 'plafond de pages' });
+    expect(b.evenements.at(-1)).toMatchObject({ titre: 'Synchronisation automatique : arrêt', parametre: 'lecture incomplète' });
   });
 
   it('une erreur d’écriture du journal n’interrompt pas la synchro', async () => {

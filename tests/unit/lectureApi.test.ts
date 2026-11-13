@@ -86,7 +86,7 @@ describe('analyserPage', () => {
   });
 
   it('SC-013 : collection vide = fin du parcours', () => {
-    expect(analyserPage(page([]))).toEqual({ cartes: [], ignorees: 0, fin: true, recentDabord: false });
+    expect(analyserPage(page([]))).toEqual({ cartes: [], ignorees: 0, fin: true, lignes: 0, recentDabord: false });
   });
 
   it('SC-010 : réponse sans tableau collection → null', () => {
