@@ -100,6 +100,7 @@ const Sauvegarde: React.FC<Props> = ({ onImportee }) => {
           type="file"
           accept="application/json,.json"
           className="sr-only"
+          tabIndex={-1}
           aria-label="Fichier de sauvegarde à importer"
           onChange={(e) => {
             const fichier = e.target.files?.[0];
@@ -120,6 +121,11 @@ const Sauvegarde: React.FC<Props> = ({ onImportee }) => {
             <li>{pluriel(a.cartesEnConflit, 'carte en conflit (saisie différente des deux côtés)', 'cartes en conflit (saisie différente des deux côtés)')}</li>
             <li>{pluriel(a.themesAjoutes, 'thème ajouté', 'thèmes ajoutés')}, {pluriel(a.amisAjoutes, 'ami ajouté', 'amis ajoutés')}, {pluriel(a.ventesAjoutees, 'vente notée', 'ventes notées')}</li>
           </ul>
+          {a.plafondRepris !== null && (
+            <p className="mt-2">
+              Le plafond de défausse sera réglé à {a.plafondRepris}{a.plafondRepris > 5 ? ' (attention : au-dessus de 5, des cartes de plus de valeur peuvent être défaussées)' : ''}.
+            </p>
+          )}
           <fieldset className="mt-3">
             <legend className="font-medium">En cas de conflit</legend>
             <label className="flex min-h-11 items-center gap-2">
@@ -128,7 +134,7 @@ const Sauvegarde: React.FC<Props> = ({ onImportee }) => {
             </label>
             <label className="flex min-h-11 items-center gap-2">
               <input type="radio" name="politique-sauvegarde" checked={politique === 'remplacer'} onChange={() => setPolitique('remplacer')} />
-              Prendre la sauvegarde (remplace aussi mes thèmes, mes amis et le réglage de la synchro automatique)
+              Prendre la sauvegarde pour les cartes en conflit (thèmes, amis et ventes sont toujours réunis)
             </label>
           </fieldset>
           <div className="mt-3 flex flex-wrap gap-3">

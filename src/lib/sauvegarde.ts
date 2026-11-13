@@ -168,6 +168,8 @@ export interface Apercu {
   themesAjoutes: number;
   amisAjoutes: number;
   ventesAjoutees: number;
+  /** Plafond de défausse repris de la sauvegarde (absent ici), sinon `null`. */
+  plafondRepris: number | null;
   creeLe: string;
 }
 
@@ -176,7 +178,7 @@ const cleAmi = (nom: string): string => nom.trim().toLowerCase();
 
 export function apercuImport(locales: Donnees, s: Sauvegarde): Apercu {
   const parId = new Map(locales.collection.cartes.map((c) => [c.id, c]));
-  const a: Apercu = { cartesNouvelles: 0, cartesCompletees: 0, cartesIdentiques: 0, cartesEnConflit: 0, themesAjoutes: 0, amisAjoutes: 0, ventesAjoutees: 0, creeLe: s.creeLe };
+  const a: Apercu = { cartesNouvelles: 0, cartesCompletees: 0, cartesIdentiques: 0, cartesEnConflit: 0, themesAjoutes: 0, amisAjoutes: 0, ventesAjoutees: 0, plafondRepris: null, creeLe: s.creeLe };
   for (const c of s.cartes) {
     const k = classer(parId.get(c.id), c);
     if (k === 'nouvelle') a.cartesNouvelles += 1;
@@ -188,6 +190,7 @@ export function apercuImport(locales: Donnees, s: Sauvegarde): Apercu {
   a.themesAjoutes = fusion.mesThemes.length - locales.preferences.mesThemes.length;
   const dejaAmis = new Set(locales.preferences.amis.map((x) => cleAmi(x.nom)));
   a.amisAjoutes = s.preferences.amis.filter((x) => !dejaAmis.has(cleAmi(x.nom))).length;
+  a.plafondRepris = locales.preferences.plafondDefausse === undefined ? s.preferences.plafondDefausse ?? null : null;
   const connues = new Set(locales.ventes.map(cleVente));
   a.ventesAjoutees = new Set(s.ventes.map(cleVente).filter((k) => !connues.has(k))).size;
   return a;
@@ -207,7 +210,8 @@ export type ResultatApplication = { ok: true; donnees: Donnees } | { ok: false; 
  * - carte dont l'édition ici est vierge : reçoit celle de la sauvegarde ;
  * - édition différente des deux côtés : la politique tranche (`garder-ici` par défaut, ou `remplacer`) ;
  * - favori, quantité, identifiants : ceux d'ici (le site fait foi) ; valeur marchande : complétée si absente ici ;
- * - réglages : thèmes et amis réunis (`remplacer` : ceux de la sauvegarde) ; ventes réunies ; synchro auto : ceux de la sauvegarde si `remplacer`.
+ * - réglages (thèmes, amis, plafond de défausse d'ici s'il existe) et ventes : toujours réunis, quelle que soit la politique ; la politique ne tranche que les cartes en conflit ;
+ * - interrupteur de synchro auto : celui d'ici.
  */
 export function appliquerImport(locales: Donnees, s: Sauvegarde, politique: PolitiqueConflit): ResultatApplication {
   const remplacer = politique === 'remplacer';
@@ -234,7 +238,7 @@ export function appliquerImport(locales: Donnees, s: Sauvegarde, politique: Poli
   }
   if (parId.size > MAX_CARTES) return { ok: false, erreur: `La collection dépasserait ${MAX_CARTES} cartes.` };
 
-  const preferences = remplacer ? { ...s.preferences } : fusionnerPreferences(locales.preferences, s.preferences);
+  const preferences = fusionnerPreferences(locales.preferences, s.preferences);
   const ventes = new Map<string, EvenementVente>();
   for (const e of [...locales.ventes, ...s.ventes]) ventes.set(cleVente(e), e);
   const ventesFusionnees = [...ventes.values()].sort((a, b) => a.at - b.at).slice(-MAX_EVENEMENTS);
@@ -243,7 +247,7 @@ export function appliquerImport(locales: Donnees, s: Sauvegarde, politique: Poli
     donnees: {
       collection: { ...locales.collection, cartes: [...parId.values()] },
       preferences,
-      syncAuto: remplacer ? s.syncAuto : locales.syncAuto,
+      syncAuto: locales.syncAuto,
       ventes: ventesFusionnees,
     },
   };

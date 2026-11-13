@@ -131,7 +131,8 @@ describe('fusion', () => {
     const ici = donnees([carte('b', { statut: 'defausser', decidePar: 'moi', idsSite: ['ici'], quantite: 2 })], { syncAuto: false });
     const r = appliquerImport(ici, s, 'remplacer');
     expect(r.ok && r.donnees.collection.cartes[0]).toMatchObject({ statut: 'vendre', note: 'sauvée', favori: false, quantite: 2, idsSite: ['ici'] });
-    expect(r.ok && r.donnees.syncAuto).toBe(true);
+    expect(r.ok && r.donnees.syncAuto).toBe(false);
+    expect(r.ok && r.donnees.preferences.amis.map((a) => a.nom)).toEqual(['Ami1']);
   });
 
   it('complète la valeur marchande absente, sans écraser celle d’ici par défaut', () => {
@@ -165,6 +166,8 @@ describe('fusion', () => {
     const sans = donnees([]);
     const r = appliquerImport(sans, s, 'garder-ici');
     expect(r.ok && r.donnees.preferences.plafondDefausse).toBe(12);
+    expect(apercuImport(sans, s).plafondRepris).toBe(12);
+    expect(apercuImport(avec(7), s).plafondRepris).toBeNull();
     const r2 = appliquerImport(avec(7), s, 'garder-ici');
     expect(r2.ok && r2.donnees.preferences.plafondDefausse).toBe(7);
     const mauvais = JSON.parse(ecrire(avec(12))) as { preferences: { plafondDefausse: number } };
