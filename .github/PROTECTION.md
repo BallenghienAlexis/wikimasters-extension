@@ -15,3 +15,13 @@ Le dépôt est aujourd'hui privé et ces fichiers restent utiles tels quels. Le 
 
 ## Reste à faire
 Épingler les actions par SHA (Dependabot les tient ensuite à jour).
+
+## Projet GitHub (suivi des issues et demandes)
+Projet : https://github.com/users/BallenghienAlexis/projects/1
+
+**Sans jeton (dans le projet, onglet Workflows)** : activer « Auto-add to project » (filtre `is:issue,pr repo:BallenghienAlexis/wikimasters-extension`), « Item added to project » (Status = À trier), « Item closed » et « Pull request merged » (Status = Terminé).
+
+**Avec jeton** : `.github/workflows/projet.yml` ajoute aussi les éléments (au cas où l'auto-ajout est limité) et pose le statut selon les évènements : ouverture d'une issue → À trier, étiquette `statut:accepté` → Accepté (ou À faire), PR ouverte → En cours, issue ou PR fermée → Terminé. Il lit les colonnes du champ « Status » par leur nom (voir `noms` dans le script) : renommer une colonne demande d'ajuster cette liste.
+- Secret de dépôt **`PROJECT_TOKEN`** (Settings › Secrets and variables › Actions), à ajouter aussi en secret **Dependabot** pour les PR de Dependabot.
+- C'est un jeton personnel **classic** avec le seul scope `project` (un jeton fine-grained ne peut pas accéder à un projet d'utilisateur). Durée limitée, jamais committé ni collé dans une issue.
+- Sans le secret, le workflow se termine sans rien faire.
