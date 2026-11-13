@@ -1,4 +1,4 @@
-import { expect, test } from './extension';
+import { allerA, expect, test } from './extension';
 
 // Interface seule (T-206) : l'état est posé dans le stockage, aucune requête vers le site. Données fictives.
 // Le parcours complet sur site fictif (requêtes, arrêt sur 403) est celui de T-207.
@@ -29,6 +29,7 @@ const COLLECTION = {
 const poser = async (page: import('@playwright/test').Page, valeurs: Record<string, unknown>): Promise<void> => {
   await page.evaluate(async (v) => chrome.storage.local.set(v), valeurs);
   await page.reload();
+  await allerA(page, 'synchro');
 };
 
 test('l’interrupteur est activé par défaut et se coupe au clavier', async ({ pageCollection: page }) => {

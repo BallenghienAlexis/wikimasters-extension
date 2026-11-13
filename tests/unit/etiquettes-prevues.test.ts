@@ -196,8 +196,10 @@ describe('EtiquettesPrevues : rendu sûr et responsive (AC6)', () => {
 describe('aperçu et lecture des préférences (revue T-108)', () => {
   it('App attend la lecture des préférences avant de proposer l’aperçu', async () => {
     const { readFileSync } = await import('node:fs')
-    const src = readFileSync('src/app/App.tsx', 'utf8')
+    // T-304 : le chargement passe dans OngletLots, la lecture des préférences dans useDonneesPage (chemins seulement).
+    const src = readFileSync('src/app/OngletLots.tsx', 'utf8')
+    const lecture = readFileSync('src/app/useDonneesPage.ts', 'utf8')
     expect(src).toContain('chargement={!stockageSynchroLu || !preferencesLues}')
-    expect(src).toMatch(/chargerPreferences\(\)\s*\.then\(setPreferences\)\s*\.finally\(\(\) => setPreferencesLues\(true\)\)/)
+    expect(lecture).toMatch(/chargerPreferences\(\)\s*\.then\(setPreferences\)\s*\.finally\(\(\) => setPreferencesLues\(true\)\)/)
   })
 })

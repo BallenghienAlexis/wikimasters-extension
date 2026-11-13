@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { carteComplete as carteCompleteDefaut, expect, test } from './extension';
+import { allerA, carteComplete as carteCompleteDefaut, expect, test } from './extension';
 
 // Tout est fictif et le site n’est jamais contacté : toute requête http(s) est bloquée et comptée.
 const FIXTURE = JSON.parse(fs.readFileSync(path.resolve('tests/e2e/fixtures/collection-etiquettes.json'), 'utf8')) as {
@@ -48,6 +48,7 @@ const amorcerFixture = (page: Page, amis = FIXTURE.preferences.amis): Promise<vo
   amorcer(page, FIXTURE.cartes.map(carteComplete), { ...FIXTURE.preferences, amis });
 
 const ouvrirApercu = async (page: Page): Promise<void> => {
+  await allerA(page, 'lots');
   await page.getByRole('button', { name: 'Voir l’aperçu du lot' }).click();
   await expect(page.getByTestId('etiquettes-prevues')).toBeVisible();
 };
@@ -216,7 +217,9 @@ test('5 000 cartes : l’aperçu s’affiche en moins de 500 ms', async ({ pageC
   });
   const amis = Array.from({ length: 20 }, (_, i) => ({ nom: `Ami fictif ${i}`, themes: ['chien', 'pont', 'barrage', 'tibet', 'ukraine', 'animaux', 'architecture', 'pays', 'geographie', 'nature'] }));
   await amorcer(page, cartes, { version: 2, mesThemes: [], amis });
+  await allerA(page, 'collection');
   await expect(page.getByTestId('resume')).toContainText('5000 exemplaires');
+  await allerA(page, 'lots');
 
   const duree = await page.evaluate(
     () =>

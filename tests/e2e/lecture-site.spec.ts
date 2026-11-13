@@ -1,6 +1,6 @@
 import type { BrowserContext, Page, Worker } from '@playwright/test';
 import path from 'node:path';
-import { expect, test } from './extension';
+import { allerA, expect, test } from './extension';
 
 // Le site est entièrement simulé : ces tests ne contactent jamais le vrai WikiMasters.
 const PAGE_FICTIVE = path.resolve('tests/e2e/fixtures/collection-site.html');
@@ -123,6 +123,7 @@ test.describe('suivi de la synchronisation', () => {
     );
 
   test('indique sur le site et dans l’extension les pages lues et la suivante', async ({ context, pageCollection }) => {
+    await allerA(pageCollection, 'synchro');
     const { page } = await ouvrirSite(context);
     const indicateur = page.locator('.wm-synchro');
     await expect(indicateur).toHaveAttribute('data-wm-texte', /1 page lue sur 3\. Prochaine page à ouvrir : 2/);
@@ -249,6 +250,7 @@ test.describe('repères sur le site', () => {
   });
 
   test('la page de collection se met à jour pendant la lecture', async ({ context, pageCollection }) => {
+    await allerA(pageCollection, 'collection');
     await expect(pageCollection.getByText('Votre collection est vide')).toBeVisible();
     await ouvrirSite(context);
     await expect(pageCollection.getByText('Loutre fictive')).toBeVisible();

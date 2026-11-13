@@ -205,4 +205,30 @@ describe('creerPlanificateur', () => {
     expect(p.etat().suspendue).toContain('échecs');
     expect(appels).toBe(3);
   });
+
+  it('annuler vide la file, laisse finir la requête en vol et permet de redemander les titres annulés', async () => {
+    const vus: string[] = [];
+    let liberer: () => void = () => undefined;
+    const porte = new Promise<void>((r) => { liberer = r; });
+    let premier = true;
+    const transport: Transport = async (url, s) => {
+      vus.push(url);
+      if (premier) { premier = false; await porte; }
+      return reponseOk(url, s);
+    };
+    const p = creerPlanificateur({ chargerCache: async () => cacheVide(), surCache: () => undefined, attendre: sansPause, transport });
+    p.demander(['A', 'B', 'C']);
+    for (let i = 0; i < 20 && vus.length === 0; i++) await new Promise((r) => setTimeout(r, 1));
+    expect(vus).toHaveLength(1);
+    p.annuler();
+    liberer();
+    await attendreFin(p);
+    // Seule la requête en vol est allée à son terme : B et C ne sont jamais partis.
+    expect(vus).toHaveLength(1);
+    expect(p.etat().enCours).toBe(false);
+    p.demander(['A', 'B', 'C']);
+    await attendreFin(p);
+    // A est déjà tenté ; B et C, annulés, sont redemandés au retour.
+    expect(vus).toHaveLength(3);
+  });
 });
