@@ -16,18 +16,21 @@ const OngletLots: React.FC<Props> = ({ donnees }) => {
       </p>
     );
   }
+  // Le repère `apercu` désigne ici l’aperçu du lot ; dans l’onglet Ventes il reste celui de l’aperçu de l’assistant.
   return (
-    <PanneauApercuLot
-      collection={collection}
-      registre={registre}
-      preferences={preferences}
-      chargement={!stockageSynchroLu || !preferencesLues}
-      registreIllisible={registreIllisible}
-      executionIllisible={executionIllisible}
-      nbOnglets={0}
-      executionEnCours={executionEnCours}
-      onReessayer={relireStockageSynchro}
-    />
+    <div data-testid="apercu">
+      <PanneauApercuLot
+        collection={collection}
+        registre={registre}
+        preferences={preferences}
+        chargement={!stockageSynchroLu || !preferencesLues}
+        registreIllisible={registreIllisible}
+        executionIllisible={executionIllisible}
+        nbOnglets={0}
+        executionEnCours={executionEnCours}
+        onReessayer={relireStockageSynchro}
+      />
+    </div>
   );
 };
 

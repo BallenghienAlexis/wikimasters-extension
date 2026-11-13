@@ -1,5 +1,6 @@
 import React from 'react';
 import { terminerEnchere } from '../lib/collection';
+import { fileDeVente } from '../lib/tri';
 import type { Preferences } from '../lib/tri';
 import AssistantTri from './AssistantTri';
 import FileVente from './FileVente';
@@ -24,6 +25,9 @@ const OngletVentes: React.FC<Props> = ({ donnees, assistantOuvert, onAssistant, 
       </p>
     );
   }
+  const fileVide = (({ enCours, prochaines, enAttente }) => enCours.length === 0 && prochaines.length === 0 && enAttente === 0)(
+    fileDeVente(collection.cartes),
+  );
   if (assistantOuvert) {
     return (
       <AssistantTri
@@ -42,6 +46,12 @@ const OngletVentes: React.FC<Props> = ({ donnees, assistantOuvert, onAssistant, 
           Gérer mes thèmes et mes amis
         </button>
       </div>
+      {fileVide && (
+        <section className="mt-4 rounded border border-line bg-ink-2 p-4" data-testid="file-vente">
+          <h2 className="font-semibold">Ventes</h2>
+          <p className="mt-2 text-muted">Aucune vente en cours ni à lancer : décidez « Vendre » pour une carte et elle apparaît ici.</p>
+        </section>
+      )}
       <FileVente
         cartes={collection.cartes}
         ventes={ventes}
