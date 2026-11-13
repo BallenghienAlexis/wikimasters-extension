@@ -114,13 +114,13 @@ describe('fusionnerCartesLues', () => {
     expect(apres.cartes[0]).toMatchObject({ titre: 'Nouveau titre', quantite: 3, statut: 'vendre', prixCible: 50, note: 'à garder en tête' });
   });
 
-  it('applique l’édition fournie par le fichier', () => {
+  it('applique l’édition fournie par la lecture', () => {
     const avant = { version: 3 as const, cartes: [carte({ statut: 'vendre' })] };
     const apres = fusionnerCartesLues(avant, [{ id: 'c1', titre: 'T', rarete: null, quantite: 1, url: null, statut: 'garder' }]);
     expect(apres.cartes[0]?.statut).toBe('garder');
   });
 
-  it('garde les cartes absentes du fichier', () => {
+  it('garde les cartes absentes de la lecture', () => {
     const avant = { version: 3 as const, cartes: [carte()] };
     const apres = fusionnerCartesLues(avant, [{ id: 'c2', titre: 'B', rarete: null, quantite: 1, url: null }]);
     expect(apres.cartes.map((c) => c.id)).toEqual(['c1', 'c2']);
@@ -184,7 +184,7 @@ describe('terminerEnchere', () => {
     const [carte] = terminerEnchere(base(2), 'C|x').cartes;
     expect(carte).toMatchObject({ quantite: 1, statut: 'a-trier', note: 'n', ami: 'a', valeurMarchande: 20, decidePar: null });
   });
-  it('ne perd pas l’URL d’un import lors d’une lecture du site', () => {
+  it('ne perd pas l’URL déjà connue lors d’une lecture du site', () => {
     const avecUrl = { ...base(1), cartes: [{ ...base(1).cartes[0]!, url: 'https://exemple.test/c' }] };
     const lue = { id: 'C|x', titre: 'x', rarete: 'C', quantite: 1, url: null };
     expect(fusionnerCartesLues(avecUrl, [lue]).cartes[0]?.url).toBe('https://exemple.test/c');
