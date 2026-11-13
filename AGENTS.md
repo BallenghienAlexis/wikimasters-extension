@@ -119,7 +119,7 @@ Repris de LifeLog. Artefacts par feature dans `specs/<feature>/` : `spec.md` →
 - Ce gate est appliqué **par l'orchestrateur**. Les garde-fous sont le hook `.claude/hooks/garde-fous.mjs` et cette règle.
 - Boucle dev ↔ revue : 3 itérations au plus, puis escalade (issue `sdd-escalade`).
 - Fin de run sans intervention : les hypothèses non bloquantes de `refine` sont adoptées par défaut ; les points mineurs des revues passent par une tâche `T-9xx retouches` (ou sont déclinés avec leur raison) ; puis vérification, merge sur `main` avec le même gate, et suppression des branches et worktrees du run. Les PR de documents de l'orchestrateur passent par la CI et `security-reviewer`, sans `reviewer`. Alexis n'intervient qu'à la validation de la spec, en cas d'escalade, ou si GitHub refuse réellement une opération.
-- **Dépôt** : `BallenghienAlexis/wikimasters-extension`, privé. Seul le commit initial a été poussé directement sur `main`, car la branche n'existait pas encore.
+- **Dépôt** : `BallenghienAlexis/wikimasters-extension`, privé (protections prêtes pour une éventuelle ouverture : `.github/PROTECTION.md`). Seul le commit initial a été poussé directement sur `main`, car la branche n'existait pas encore.
 
 ### Suivi et communication (Alexis ne cherche jamais)
 

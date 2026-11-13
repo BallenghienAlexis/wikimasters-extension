@@ -91,6 +91,11 @@ async function ouvrirSite(
   return { rest, externes, page };
 }
 
+/**
+ * Amorce le stockage AVANT l'ouverture du site : la synchro automatique est activée par défaut et lirait `/api/`
+ * dès le chargement du content script (réponses simulées invalides, bail tenu quelques secondes, donc « Lancer »
+ * refusé sous charge). Coupée dans le stockage avant que le site ne s'ouvre, elle ne démarre jamais.
+ */
 async function amorcer(page: Page): Promise<void> {
   await page.evaluate(async (carte) => {
     await chrome.storage.local.set({
@@ -116,10 +121,10 @@ test('0 requête avant « Lancer » ; puis création et pose avec les bons en-t�
   test.setTimeout(90_000);
   const consoles: string[] = [];
   context.on('console', (m) => consoles.push(m.text()));
+  await amorcer(page);
   const banc = await ouvrirSite(context, (v) =>
     v.url.includes('/rest/v1/tags') ? { status: 201, corps: { id: ID_ETIQUETTE, user_id: ID_JOUEUR, name: 'x', created_at: '2026-01-01T00:00:00Z', color: COULEUR_ETIQUETTE } } : { status: 201 },
   );
-  await amorcer(page);
 
   await ouvrirApercu(page);
   await expect(page.getByRole('button', { name: /^Lancer/ })).toBeVisible();
@@ -158,8 +163,8 @@ test('0 requête avant « Lancer » ; puis création et pose avec les bons en-t�
 
 test('401 sur la création : arrêt immédiat, une seule requête, aucune autre tentative', async ({ context, pageCollection: page }) => {
   test.setTimeout(90_000);
-  const banc = await ouvrirSite(context, () => ({ status: 401, corps: { message: 'JWT expired' } }));
   await amorcer(page);
+  const banc = await ouvrirSite(context, () => ({ status: 401, corps: { message: 'JWT expired' } }));
   await ouvrirApercu(page);
   await page.getByRole('button', { name: /^Lancer/ }).click();
   await expect.poll(() => banc.rest.length, { timeout: 20_000 }).toBe(1);
@@ -173,8 +178,8 @@ test('401 sur la création : arrêt immédiat, une seule requête, aucune autre 
 
 test('sans session : aucune requête, arrêt « jeton-absent »', async ({ context, pageCollection: page }) => {
   test.setTimeout(90_000);
-  const banc = await ouvrirSite(context, () => ({ status: 201 }), false);
   await amorcer(page);
+  const banc = await ouvrirSite(context, () => ({ status: 201 }), false);
   await ouvrirApercu(page);
   await page.getByRole('button', { name: /^Lancer/ }).click();
   await expect(page.getByTestId('zone-execution')).toContainText(/Lot arrêté.*résultat hors contrat ou inconnu/, { timeout: 20_000 });
