@@ -7,9 +7,9 @@ name: Projet GitHub
 # aucun code de la PR n'est extrait ni exécuté, seules des métadonnées de l'évènement sont lues.
 on:
   issues:
-    types: [opened, reopened, closed, labeled]
+    types: [opened, reopened, closed, labeled, assigned]
   pull_request_target:
-    types: [opened, reopened, ready_for_review, closed]
+    types: [opened, reopened, ready_for_review, converted_to_draft, closed]
 
 permissions:
   contents: read
@@ -36,46 +36,45 @@ jobs:
             echo "present=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Ajouter au projet
-        id: ajout
-        if: steps.secret.outputs.present == 'true'
-        uses: actions/add-to-project@v1
-        with:
-          project-url: https://github.com/users/BallenghienAlexis/projects/1
-          github-token: ${{ secrets.PROJECT_TOKEN }}
-
-      - name: Mettre à jour le statut
+      - name: Ajouter au projet et mettre à jour le statut
         if: steps.secret.outputs.present == 'true'
         uses: actions/github-script@v9
-        env:
-          ITEM_ID: ${{ steps.ajout.outputs.itemId }}
         with:
           github-token: ${{ secrets.PROJECT_TOKEN }}
           script: |
-            // Noms de colonne acceptés pour chaque étape (le premier trouvé est utilisé).
+            // Noms de colonne du champ « Status » (le premier trouvé est utilisé, sans tenir compte de la casse).
             const noms = {
-              triage: ['À trier', 'Todo', 'To do', 'New'],
-              accepte: ['Accepté', 'À faire', 'Ready', 'Backlog'],
-              encours: ['En cours', 'In progress'],
-              termine: ['Terminé', 'Done'],
+              backlog: ['Backlog', 'À trier', 'Todo'],
+              ready: ['Ready', 'Accepté', 'À faire'],
+              encours: ['In progress', 'En cours'],
+              revue: ['In review', 'En revue'],
+              termine: ['Done', 'Terminé'],
             };
             const a = context.payload.action;
-            const estPr = !!context.payload.pull_request;
+            const pr = context.payload.pull_request;
             let cible = null;
-            if (estPr) {
+            if (pr) {
               if (a === 'closed') cible = 'termine';
-              else cible = 'encours';
+              else if (a === 'converted_to_draft' || (a !== 'ready_for_review' && pr.draft)) cible = 'encours';
+              else cible = 'revue';
             } else if (a === 'closed') cible = 'termine';
-            else if (a === 'opened' || a === 'reopened') cible = 'triage';
-            else if (a === 'labeled' && context.payload.label.name === 'statut:accepté') cible = 'accepte';
-            if (!cible) { core.info('Aucun changement de statut pour cet évènement.'); return; }
+            else if (a === 'opened' || a === 'reopened') cible = 'backlog';
+            else if (a === 'assigned') cible = 'encours';
+            else if (a === 'labeled' && context.payload.label.name === 'statut:accepté') cible = 'ready';
 
             const owner = 'BallenghienAlexis';
+            const contenu = (pr ?? context.payload.issue).node_id;
             const res = await github.graphql(
               `query($owner: String!) { user(login: $owner) { projectV2(number: 1) { id
                  field(name: "Status") { ... on ProjectV2SingleSelectField { id options { id name } } } } } }`,
               { owner });
             const projet = res.user.projectV2;
+            // Ajout au projet (sans effet si l'élément y est déjà).
+            const ajout = await github.graphql(
+              `mutation($p: ID!, $c: ID!) { addProjectV2ItemById(input: { projectId: $p, contentId: $c }) { item { id } } }`,
+              { p: projet.id, c: contenu });
+            const itemId = ajout.addProjectV2ItemById.item.id;
+            if (!cible) { core.info('Ajouté au projet ; aucun changement de statut pour cet évènement.'); return; }
             const champ = projet.field;
             if (!champ) { core.setFailed('Champ « Status » introuvable dans le projet.'); return; }
             const option = noms[cible].map((n) => champ.options.find((o) => o.name.toLowerCase() === n.toLowerCase())).find(Boolean);
@@ -83,5 +82,5 @@ jobs:
             await github.graphql(
               `mutation($p: ID!, $i: ID!, $f: ID!, $o: String!) { updateProjectV2ItemFieldValue(input: {
                  projectId: $p, itemId: $i, fieldId: $f, value: { singleSelectOptionId: $o } }) { projectV2Item { id } } }`,
-              { p: projet.id, i: process.env.ITEM_ID, f: champ.id, o: option.id });
+              { p: projet.id, i: itemId, f: champ.id, o: option.id });
             core.info(`Statut : ${option.name}`);
