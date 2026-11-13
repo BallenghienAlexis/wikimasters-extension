@@ -4,6 +4,7 @@ import type { Horloge } from '../../src/lib/file';
 import { etatInitial, type EtatOrdonnanceur, type ReponseApi } from '../../src/lib/ordonnanceur';
 import type { StatutSynchro } from '../../src/lib/stockage';
 import { preferencesParDefaut } from '../../src/lib/tri';
+import { fusionner } from '../../src/content/synchroAuto';
 import {
   DELAI_SYNCHRO_MS,
   DELAI_RELANCE_MS,
@@ -602,8 +603,8 @@ describe('T-206 D-03 : événements dans le journal', () => {
     expect(b.evenements.at(-1)).toMatchObject({ resultat: 'interrompue', parametre: 'arrêt demandé', codeHttp: null });
   });
 
-  it('plafond de pages : cause « plafond de pages »', async () => {
-    // Le site annonce 2 exemplaires mais ne signale jamais la fin : le plafond (pages + 2) arrête la lecture.
+  it('page courte avec moins d’exemplaires qu’annoncé : cause « lecture incomplète »', async () => {
+    // Le site annonce 2 exemplaires mais n’en livre qu’un sur une page courte : la lecture est incomplète.
     const reponse = (chemin: string): ReponseApi => {
       if (chemin.startsWith('/api/my-collection/stats')) return { statut: 200, json: { total: 2, totalUnique: 2, tagOptions: [] } };
       if (/page=/.test(chemin)) return { statut: 200, json: { collection: [exemplaire(1)] } };
@@ -611,7 +612,7 @@ describe('T-206 D-03 : événements dans le journal', () => {
     };
     const b = banc({ reponse });
     await creerSynchroAuto(b.deps).declencher();
-    expect(b.evenements.at(-1)).toMatchObject({ titre: 'Synchronisation automatique : arrêt', parametre: 'plafond de pages' });
+    expect(b.evenements.at(-1)).toMatchObject({ titre: 'Synchronisation automatique : arrêt', parametre: 'lecture incomplète' });
   });
 
   it('une erreur d’écriture du journal n’interrompt pas la synchro', async () => {
@@ -765,5 +766,45 @@ describe('relevé d’affluence du marché', () => {
     await creerSynchroAuto(b.deps).declencher();
     expect(suivi.courant.echecs).toBe(0);
     expect(b.stockage.etat?.arretJusqua).toBe(b.horloge.t + 30 * 60_000);
+  });
+});
+
+describe('fusionner : cartes retirées par la synchro', () => {
+  const carte = (id: string, surcharge: Partial<Carte> = {}): Carte => ({
+    id,
+    titre: id,
+    rarete: 'R',
+    description: '',
+    quantite: 1,
+    url: null,
+    favori: false,
+    idsSite: [`ex-${id}`],
+    etiquettesSite: [],
+    statut: 'a-trier',
+    prixCible: null,
+    note: '',
+    ami: null,
+    valeurMarchande: null,
+    decidePar: null,
+    ...surcharge,
+  });
+  const col = (cartes: Carte[]): Collection => ({ version: VERSION_SCHEMA, cartes });
+
+  it('retire une carte présente au départ et absente du résultat, garde celle ajoutée pendant la synchro', () => {
+    const a = carte('R|a');
+    const b = carte('R|b');
+    const ajoutee = carte('R|ajoutee');
+    const depart = new Map([[a.id, a], [b.id, b]]);
+    const r = fusionner(col([a, b, ajoutee]), col([a]), depart, null);
+    expect(r.cartes.map((c) => c.id)).toEqual(['R|a', 'R|ajoutee']);
+  });
+
+  it('garde une carte retirée que le joueur a éditée pendant la synchro, et une carte en vente', () => {
+    const b = carte('R|b');
+    const v = carte('R|v', { statut: 'en-vente' });
+    const depart = new Map([[b.id, b], [v.id, v]]);
+    const editee = { ...b, note: 'à voir' };
+    const r = fusionner(col([editee, v]), col([]), depart, null);
+    expect(r.cartes.map((c) => c.id)).toEqual(['R|b', 'R|v']);
   });
 });

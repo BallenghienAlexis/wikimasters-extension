@@ -3,7 +3,7 @@
 // tests/unit/synchro-auto-lint.test.ts). Lecture seule : requêtes GET vers l'origine du site, authentifiées
 // par les cookies de même origine du navigateur ; aucun en-tête ajouté, aucun jeton ni cookie lu.
 // Le plan de lecture, la cadence et les arrêts sont dans `src/lib/ordonnanceur.ts`.
-import { VERSION_SCHEMA, type Carte, type Collection } from '../lib/collection';
+import { VERSION_SCHEMA, aEditionLocale, type Carte, type Collection } from '../lib/collection';
 import { INTERVALLE_MS, type Horloge } from '../lib/file';
 import { DUREE_BAIL_MS, PAUSE_APRES_ARRET_MS, etatInitial, synchroniser, type Bail, type EtatOrdonnanceur, type ReponseApi, type ResultatSynchro } from '../lib/ordonnanceur';
 import {
@@ -100,8 +100,16 @@ export interface SynchroAuto {
  * la synchro l'a changée et que le joueur n'y a pas touché. Une carte classée par l'assistant est reclassée
  * comme le fait `enregistrerValeur`.
  */
-function fusionner(stockee: Collection, produite: Collection, depart: ReadonlyMap<string, Carte>, preferences: Preferences | null): Collection {
+export function fusionner(stockee: Collection, produite: Collection, depart: ReadonlyMap<string, Carte>, preferences: Preferences | null): Collection {
   const parId = new Map(stockee.cartes.map((c) => [c.id, c]));
+  // Cartes présentes au départ et retirées par la synchro (vendues ou cédées, absentes d’une lecture complète) :
+  // retirées aussi du stockage. Une carte ajoutée par le joueur pendant la synchro n’était pas au départ : elle reste.
+  const gardees = new Set(produite.cartes.map((c) => c.id));
+  for (const [id, avant] of depart) {
+    const actuelle = parId.get(id);
+    // Jamais une carte éditée (même pendant la synchro) ni aux enchères.
+    if (!gardees.has(id) && actuelle !== undefined && !aEditionLocale(actuelle) && !aEditionLocale(avant) && actuelle.statut !== 'en-vente') parId.delete(id);
+  }
   for (const p of produite.cartes) {
     const s = parId.get(p.id);
     if (!s) {

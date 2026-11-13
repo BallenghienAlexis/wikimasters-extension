@@ -34,6 +34,8 @@ export interface PageLue {
   cartes: CarteLue[];
   ignorees: number;
   fin: boolean;
+  /** Nombre de lignes brutes de la page (50 au plus) ; moins que la taille de page = dernière page. */
+  lignes: number;
   /** Vrai si les dates d’ajout (`obtained_at`) de la page sont lisibles et du plus récent au plus ancien. */
   recentDabord: boolean;
 }
@@ -99,7 +101,7 @@ function dateDecroissante(brut: unknown[]): boolean {
 // Les exemplaires d'une même carte (même identifiant local) sont regroupés.
 export function analyserPage(json: unknown): PageLue | null {
   if (!estObjet(json) || !Array.isArray(json.collection)) return null;
-  if (json.collection.length === 0) return { cartes: [], ignorees: 0, fin: true, recentDabord: false };
+  if (json.collection.length === 0) return { cartes: [], ignorees: 0, fin: true, lignes: 0, recentDabord: false };
 
   const parId = new Map<string, CarteLue>();
   let ignorees = 0;
@@ -119,7 +121,7 @@ export function analyserPage(json: unknown): PageLue | null {
     existante.quantite += lue.quantite;
     existante.favori = existante.favori || lue.favori;
   }
-  return { cartes: [...parId.values()], ignorees, fin: false, recentDabord: dateDecroissante(json.collection) };
+  return { cartes: [...parId.values()], ignorees, fin: false, lignes: json.collection.length, recentDabord: dateDecroissante(json.collection) };
 }
 
 // Lecture de `/api/marketplace/mine` : enchères du joueur en cours et plafond du site.

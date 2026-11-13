@@ -47,6 +47,10 @@ export interface Carte {
   decidePar: DecidePar;
 }
 
+/** Vrai si la carte porte une édition locale du joueur (jamais à perdre en silence). */
+export const aEditionLocale = (c: Carte): boolean =>
+  c.decidePar !== null || c.note !== '' || c.prixCible !== null || c.ami !== null || c.statut !== 'a-trier';
+
 export interface Collection {
   version: typeof VERSION_SCHEMA;
   cartes: Carte[];

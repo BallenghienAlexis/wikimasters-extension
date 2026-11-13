@@ -133,8 +133,10 @@ test.describe('synchronisation automatique sur site fictif', () => {
     });
 
     // Prix en dernier : la carte à décider est relevée une fois la collection lue.
-    await expect.poll(() => site.api.length, { timeout: 60_000, intervals: [500] }).toBeGreaterThanOrEqual(4);
-    expect(chemins(site.api).slice(0, 4)).toEqual([CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_PAGE(1), CHEMIN_PRIX]);
+    await expect.poll(() => site.api.length, { timeout: 60_000, intervals: [500] }).toBeGreaterThanOrEqual(3);
+    // Aucune page au-delà de la fin : la page 0 est courte, la lecture s'arrête là (le site refuse la page suivante en 403).
+    expect(chemins(site.api).slice(0, 3)).toEqual([CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_PRIX]);
+    expect(chemins(site.api)).not.toContain(CHEMIN_PAGE(1));
 
     await expect
       .poll(async () => (await cartesStockees(serviceWorker)).find((c) => c.id === ID_CARTE)?.valeurMarchande, { timeout: 10_000 })
@@ -142,6 +144,31 @@ test.describe('synchronisation automatique sur site fictif', () => {
     const carte = (await cartesStockees(serviceWorker)).find((c) => c.id === ID_CARTE);
     expect(carte?.quantite).toBe(2);
     expect(carte?.etiquettesSite).toEqual(['Étiquette fictive']);
+    verifierLectureSeule(site.api);
+  });
+
+  test('carte vendue depuis la dernière synchro : retirée de la collection locale, sans page au-delà de la fin ni 403', async ({ context, serviceWorker }) => {
+    test.setTimeout(90_000);
+    const stats = JSON.stringify({ total: 2, totalUnique: 1, tagOptions: [{ id: 'tag-fictif-1', name: 'Étiquette fictive', color: '#808080', cardCount: 1 }] });
+    await poser(serviceWorker, {
+      collection: { version: 3, cartes: [carteLocale({ statut: 'a-trier' }), carteLocale({ id: 'C|Carte vendue', titre: 'Carte vendue', rarete: 'C', idsSite: ['exemplaire-vendu'], statut: 'a-trier' })] },
+      syncAuto: true,
+    });
+    const site = await ouvrirSite(context, {
+      [CHEMIN_STATS]: { corps: stats },
+      [CHEMIN_PAGE(0)]: { corps: PAGE_0 },
+      [CHEMIN_PAGE(1)]: { corps: '{"error":"forbidden"}', statut: 403 },
+      [CHEMIN_PRIX]: { corps: PRIX },
+    });
+    await expect
+      .poll(async () => (await cartesStockees(serviceWorker)).map((c) => c.id), { timeout: 60_000, intervals: [500] })
+      .toEqual([ID_CARTE]);
+    await expect.poll(() => chemins(site.api).includes(CHEMIN_PRIX), { timeout: 30_000, intervals: [250] }).toBe(true);
+    expect(chemins(site.api)).not.toContain(CHEMIN_PAGE(1));
+    const etat = await serviceWorker.evaluate(
+      async () => ((await chrome.storage.local.get('etatSynchro')).etatSynchro as { arretJusqua: number | null } | undefined)?.arretJusqua ?? null,
+    );
+    expect(etat).toBeNull();
     verifierLectureSeule(site.api);
   });
 
