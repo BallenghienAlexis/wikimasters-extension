@@ -83,7 +83,7 @@ function banc(n: number): Banc {
   return { deps, horloge, chemins, statuts };
 }
 
-const v2 = (s: StatutSynchro) => s as StatutSynchro & { etape?: string | null; prixFaits?: number | null; prixPrevus?: number | null; debut?: number | null };
+const v2 = (s: StatutSynchro | undefined) => s as StatutSynchro & { etape?: string | null; prixFaits?: number | null; prixPrevus?: number | null; debut?: number | null };
 
 describe('SC-019 / SC-002 : statut v2 écrit par synchroAuto', () => {
   it('SC-019 : le statut écrit est en version 2 avec etape, prixFaits, prixPrevus et debut', async () => {
@@ -102,7 +102,7 @@ describe('SC-019 / SC-002 : statut v2 écrit par synchroAuto', () => {
   it('SC-002 : l’étape est déduite du chemin demandé (stats, pages, prix, ventes)', async () => {
     const b = banc(3);
     await creerSynchroAuto(b.deps).declencher();
-    const etapes = b.statuts.map((s) => v2(s).etape);
+    const etapes = b.statuts.map((s) => v2(s).etape as string | null | undefined);
     expect(etapes).toContain('stats');
     expect(etapes).toContain('pages');
     expect(etapes).toContain('prix');
@@ -122,10 +122,10 @@ describe('SC-019 / SC-002 : statut v2 écrit par synchroAuto', () => {
     const faits = prix.map((s) => v2(s).prixFaits ?? 0);
     expect([...faits].sort((x, y) => x - y)).toEqual(faits);
     expect(Math.max(...faits)).toBeGreaterThanOrEqual(3);
-    const dernier = b.statuts[b.statuts.length - 1];
+    const dernier = v2(b.statuts[b.statuts.length - 1] as StatutSynchro);
     expect(dernier.etat).toBe('termine');
-    expect(v2(dernier).prixFaits).toBe(4);
-    expect(v2(dernier).prixPrevus).toBe(4);
+    expect(dernier.prixFaits).toBe(4);
+    expect(dernier.prixPrevus).toBe(4);
   });
 
   it('SC-002 : debut est l’horodatage de début de synchro, identique à chaque écriture', async () => {
@@ -136,7 +136,7 @@ describe('SC-019 / SC-002 : statut v2 écrit par synchroAuto', () => {
     const [debut] = [...debuts];
     expect(typeof debut).toBe('number');
     expect(debut as number).toBeGreaterThanOrEqual(T0);
-    expect(debut as number).toBeLessThanOrEqual(b.statuts[0].le);
+    expect(debut as number).toBeLessThanOrEqual((b.statuts[0] as StatutSynchro).le);
   });
 
   it('SC-019 : au plus une écriture par seconde sauf changement d’étape ou d’état', async () => {
