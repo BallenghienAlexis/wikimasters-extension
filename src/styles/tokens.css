@@ -92,3 +92,93 @@ body {
   transition: none !important;
   scroll-behavior: auto !important;
 }
+
+/*
+ * Classes communes du mouvement (refonte-ihm, T-315) : elles ne citent que des tokens.
+ * Les règles de coupure ci-dessus (préférence système, réglage « Animations ») les neutralisent.
+ */
+@keyframes wm-reflet {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+@keyframes wm-rayures {
+  from { background-position: 0 0; }
+  to { background-position: 32px 0; }
+}
+
+@keyframes wm-secousse {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+
+@keyframes wm-apparition {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes wm-pulsation {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+}
+
+/* Remplissage d’une barre : la largeur s’anime, un reflet défile sur les barres actives. */
+.wm-barre-remplissage {
+  transition: width var(--d-bar) var(--ease-out);
+}
+
+.wm-reflet {
+  position: relative;
+  overflow: hidden;
+}
+
+.wm-reflet::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-ink) 45%, transparent), transparent);
+  animation: wm-reflet var(--d-bar) var(--ease-out) infinite;
+}
+
+/* Barre indéterminée : rayures qui défilent (aucune couleur nouvelle). */
+.wm-rayures {
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--color-paper) 0 8px,
+    var(--color-ink-2) 8px 16px
+  );
+  background-size: 32px 100%;
+  animation: wm-rayures var(--d-bar) linear infinite;
+}
+
+.wm-secousse {
+  animation: wm-secousse var(--d-shake) var(--ease-out);
+}
+
+.wm-apparition {
+  animation: wm-apparition var(--d-base) var(--ease-out) both;
+}
+
+.wm-pulsation {
+  display: inline-block;
+  animation: wm-pulsation var(--d-bar) var(--ease-out) infinite;
+}
+
+/* Dépliage en hauteur fluide (grid-template-rows 0fr → 1fr). */
+.wm-repli {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--d-base) var(--ease-out);
+}
+
+.wm-repli[data-ouvert='true'] {
+  grid-template-rows: 1fr;
+}
+
+.wm-repli > .wm-repli-contenu {
+  overflow: hidden;
+  min-height: 0;
+}
