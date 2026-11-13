@@ -30,6 +30,7 @@ jobs:
               catch (e) { if (e.status !== 422) throw e; }
             }
             const existants = issue.labels.map((l) => l.name);
+            if (existants.includes('sdd-escalade')) return;
             const aPoser = [];
             if (!existants.includes('statut:à-trier')) aPoser.push('statut:à-trier');
             if (!existants.includes('suggestion') && !existants.includes('bug') && !existants.includes('sdd-escalade')) {
