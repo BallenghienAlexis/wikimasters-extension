@@ -19,7 +19,7 @@ const sources = [
 ].filter((f) => f !== TOKENS && /\.(ts|tsx|css)$/.test(f));
 
 const declaration = (nom: string): string | null => {
-  const m = new RegExp(`${nom.replace(/[-]/g, "\\-")}\\s*:\\s*([^;]+);`).exec(
+  const m = new RegExp(`${nom.replace(/[\\^$.*+?()[\]{}|-]/g, "\\$&")}\\s*:\\s*([^;]+);`).exec(
     css,
   );
   return m?.[1] ? m[1].replace(/\s+/g, "").toLowerCase() : null;

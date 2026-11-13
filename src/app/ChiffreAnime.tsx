@@ -7,7 +7,7 @@ interface Props {
   libelle: string;
 }
 
-const formater = (n: number): string => Math.round(n).toLocaleString('fr-FR').replace(/[\u202f\u00a0]/g, ' ');
+const formater = (n: number): string => Math.round(n).toLocaleString('fr-FR');
 
 /** Chiffre clé (D-61) : le compteur défile en `aria-hidden`, la valeur finale est écrite dès le premier rendu. */
 const ChiffreAnime: React.FC<Props> = ({ valeur, libelle }) => {
@@ -31,7 +31,7 @@ const ChiffreAnime: React.FC<Props> = ({ valeur, libelle }) => {
   const final = formater(valeur);
   return (
     <span className="inline-block whitespace-nowrap">
-      <span className="sr-only">{`${libelle} : ${final}`}</span>
+      <span className="sr-only">{`${libelle}\u00a0: ${final}`}</span>
       <span aria-hidden="true" className="inline-block tabular-nums" style={{ minWidth: `${final.length}ch` }}>
         {formater(mouvement ? affiche : valeur)}
       </span>

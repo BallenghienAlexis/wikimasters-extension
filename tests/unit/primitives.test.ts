@@ -17,6 +17,17 @@ import { ContexteAffichage, useMouvement } from "../../src/app/useMouvement";
 //   onBasculer() sans argument.
 const h = React.createElement;
 const rendre = (el: React.ReactElement) => renderToStaticMarkup(el);
+// Texte visible d'un rendu : parcours caractère par caractère, sans nettoyage par regex.
+const texteDe = (html: string): string => {
+  let dansBalise = false;
+  let texte = "";
+  for (const c of html) {
+    if (c === "<") dansBalise = true;
+    else if (c === ">") dansBalise = false;
+    else if (!dansBalise) texte += c;
+  }
+  return texte;
+};
 const avecAnimations = (animations: boolean, el: React.ReactElement) =>
   rendre(h(ContexteAffichage.Provider, { value: { animations } }, el));
 
@@ -95,7 +106,7 @@ describe("SC-027 : ChiffreAnime", () => {
       h(ChiffreAnime, { valeur: 1240, libelle: "Exemplaires" }),
     );
     expect(html).toMatch(/<span[^>]*aria-hidden="true"/);
-    expect(html.replace(/[  ]/g, " ")).toContain("Exemplaires : 1 240");
+    expect(html.replace(/[\u00a0\u202f]/g, " ")).toContain("Exemplaires : 1 240");
   });
 
   it("SC-027/SC-026 : directement final si mouvement coupé", () => {
@@ -104,7 +115,7 @@ describe("SC-027 : ChiffreAnime", () => {
       h(ChiffreAnime, { valeur: 1240, libelle: "Exemplaires" }),
     );
     const compteur = /<span[^>]*aria-hidden="true"[^>]*>([^<]*)</.exec(html);
-    expect((compteur?.[1] ?? "").replace(/[  ]/g, " ")).toContain("1 240");
+    expect((compteur?.[1] ?? "").replace(/[\u00a0\u202f]/g, " ")).toContain("1 240");
   });
 
   it("SC-027 : largeur stable (tabular-nums)", () => {
@@ -219,8 +230,7 @@ describe("D-13 : PastilleStatutCarte", () => {
       const html = rendre(h(PastilleStatutCarte, { statut: statut as never }));
       expect(html).toContain(mot);
       expect(
-        html
-          .replace(/<[^>]+>/g, "")
+        texteDe(html)
           .replace(mot, "")
           .trim().length,
       ).toBeGreaterThan(0);
