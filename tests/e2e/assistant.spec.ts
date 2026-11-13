@@ -58,7 +58,7 @@ test('la file de vente suit les places libres', async ({ pageCollection: page })
 
   const file = page.getByTestId('file-vente');
   await expect(file).toContainText('0 en cours sur 5, 5 places libres');
-  await expect(file).toContainText('Athlète fictif · valeur 100');
+  await expect(file.getByTestId('ligne-vente').filter({ hasText: 'Athlète fictif' }).first()).toContainText('100');
   await expect(file).toContainText(/heure forte|temps libre|attendre une heure forte/);
   await expect(file).toContainText('Heures fortes par défaut (0 observation)');
 
