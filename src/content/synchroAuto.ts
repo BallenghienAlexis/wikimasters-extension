@@ -5,6 +5,7 @@
 // Le plan de lecture, la cadence et les arrêts sont dans `src/lib/ordonnanceur.ts`.
 import { VERSION_SCHEMA, aEditionLocale, type Carte, type Collection } from '../lib/collection';
 import { INTERVALLE_MS, type Horloge } from '../lib/file';
+import type { EtapeSynchro } from '../lib/statutSynchro';
 import { DUREE_BAIL_MS, PAUSE_APRES_ARRET_MS, etatInitial, synchroniser, type Bail, type EtatOrdonnanceur, type ReponseApi, type ResultatSynchro } from '../lib/ordonnanceur';
 import {
   chargerBailSynchro,
@@ -250,9 +251,32 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
 
       // Statut pour l'interface : écrit à la première requête réelle (une pause ou un bail tenu n'écrasent rien).
       let pages: number | null = null;
-      const noter = (partiel: Partial<StatutSynchro> & Pick<StatutSynchro, 'etat'>): Promise<void> =>
-        (deps.noterStatut?.({
-          version: 1,
+      // Champs v2 : étape déduite du chemin demandé, prix comptés ici, début de synchro fixé une fois.
+      const debut = deps.horloge.now();
+      let etape: EtapeSynchro | null = null;
+      let prixFaits = 0;
+      let prixPrevus: number | null = null;
+      let derniereEcriture = Number.NEGATIVE_INFINITY;
+      let dernierEtat: StatutSynchro['etat'] | null = null;
+      let derniereEtape: EtapeSynchro | null = null;
+      let dernierePage: number | null = null;
+      const noter = async (partiel: Partial<StatutSynchro> & Pick<StatutSynchro, 'etat'>): Promise<void> => {
+        const maintenant = deps.horloge.now();
+        // Au plus une écriture par seconde, sauf changement de position : étape, état ou page (décision n°5 de tasks.md,
+        // au plus une écriture de stockage local par page). Dans l'étape des prix, la limite d'une par seconde s'applique.
+        const page = partiel.page ?? null;
+        const memePosition = partiel.etat === dernierEtat && etape === derniereEtape && page === dernierePage;
+        if (memePosition && maintenant - derniereEcriture < 1000) return;
+        derniereEcriture = maintenant;
+        dernierEtat = partiel.etat;
+        derniereEtape = etape;
+        dernierePage = page;
+        await (deps.noterStatut?.({
+          version: 2,
+          etape,
+          prixFaits,
+          prixPrevus,
+          debut,
           page: null,
           pages,
           raison: null,
@@ -263,6 +287,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
           prix: 0,
           ...partiel,
         }) ?? Promise.resolve()).catch(() => undefined);
+      };
       let demarree = false;
       const journaliser = (e: EvenementSynchro): Promise<void> => (deps.journaliser?.(e) ?? Promise.resolve()).catch(() => undefined);
       const transport = async (chemin: string): Promise<ReponseApi> => {
@@ -271,9 +296,14 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
           await journaliser({ titre: forcer ? 'Synchronisation automatique : relance demandée' : 'Synchronisation automatique : début', parametre: null, resultat: 'reussie', codeHttp: null });
         }
         const page = /[?&]page=(\d+)/.exec(chemin);
+        if (chemin.startsWith('/api/my-collection/stats')) etape = 'stats';
+        else if (page) etape = 'pages';
+        else if (/scope=summary$/.test(chemin)) etape = 'prix';
+        else if (chemin.startsWith('/api/marketplace/mine')) etape = 'ventes';
         if (page) await noter({ etat: 'en-cours', page: pages === null ? Number(page[1]) + 1 : Math.min(Number(page[1]) + 1, pages) });
         else await noter({ etat: 'en-cours' });
         const reponse = await deps.transport(chemin);
+        if (etape === 'prix') prixFaits += 1;
         if (!page && chemin.startsWith('/api/my-collection/stats')) {
           const stats = reponse.statut === 200 ? analyserStats(reponse.json) : null;
           const total = stats?.total;
@@ -299,6 +329,9 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         gigue: deps.gigue,
         arretDemande: () => arretDemande,
         forcer,
+        annoncerPrix: (n) => {
+          prixPrevus = n;
+        },
         enregistrer: async (produite, courant) => {
           const stockee = await deps.chargerCollection();
           const valeurChangee = produite.cartes.some((c) => c.valeurMarchande !== (depart.get(c.id)?.valeurMarchande ?? null));
