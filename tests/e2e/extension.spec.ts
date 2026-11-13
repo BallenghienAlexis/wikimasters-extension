@@ -32,6 +32,7 @@ test.describe('page de collection', () => {
   test('ne propose plus l’import ni l’export de cartes (seule la sauvegarde complète reste)', async ({ pageCollection }) => {
     await chargerCollectionFictive(pageCollection);
     await allerA(pageCollection, 'reglages');
+    await pageCollection.getByRole('button', { name: /^Sauvegarde/ }).click(); // T-309 : section repliée par défaut
     await expect(pageCollection.locator('input[type="file"]')).toHaveCount(1);
     await expect(pageCollection.getByRole('button', { name: 'Exporter une sauvegarde' })).toBeVisible();
     for (const nom of ['Importer un fichier', 'Exporter en CSV', 'Exporter en JSON']) {
