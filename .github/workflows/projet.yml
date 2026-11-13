@@ -7,9 +7,9 @@ name: Projet GitHub
 # aucun code de la PR n'est extrait ni exécuté, seules des métadonnées de l'évènement sont lues.
 on:
   issues:
-    types: [opened, reopened, closed, labeled]
+    types: [opened, reopened, closed, labeled, assigned]
   pull_request_target:
-    types: [opened, reopened, ready_for_review, closed]
+    types: [opened, reopened, ready_for_review, converted_to_draft, closed]
 
 permissions:
   contents: read
@@ -52,22 +52,25 @@ jobs:
         with:
           github-token: ${{ secrets.PROJECT_TOKEN }}
           script: |
-            // Noms de colonne acceptés pour chaque étape (le premier trouvé est utilisé).
+            // Noms de colonne du champ « Status » (le premier trouvé est utilisé, sans tenir compte de la casse).
             const noms = {
-              triage: ['À trier', 'Todo', 'To do', 'New'],
-              accepte: ['Accepté', 'À faire', 'Ready', 'Backlog'],
-              encours: ['En cours', 'In progress'],
-              termine: ['Terminé', 'Done'],
+              backlog: ['Backlog', 'À trier', 'Todo'],
+              ready: ['Ready', 'Accepté', 'À faire'],
+              encours: ['In progress', 'En cours'],
+              revue: ['In review', 'En revue'],
+              termine: ['Done', 'Terminé'],
             };
             const a = context.payload.action;
-            const estPr = !!context.payload.pull_request;
+            const pr = context.payload.pull_request;
             let cible = null;
-            if (estPr) {
+            if (pr) {
               if (a === 'closed') cible = 'termine';
-              else cible = 'encours';
+              else if (a === 'converted_to_draft' || (a !== 'ready_for_review' && pr.draft)) cible = 'encours';
+              else cible = 'revue';
             } else if (a === 'closed') cible = 'termine';
-            else if (a === 'opened' || a === 'reopened') cible = 'triage';
-            else if (a === 'labeled' && context.payload.label.name === 'statut:accepté') cible = 'accepte';
+            else if (a === 'opened' || a === 'reopened') cible = 'backlog';
+            else if (a === 'assigned') cible = 'encours';
+            else if (a === 'labeled' && context.payload.label.name === 'statut:accepté') cible = 'ready';
             if (!cible) { core.info('Aucun changement de statut pour cet évènement.'); return; }
 
             const owner = 'BallenghienAlexis';
