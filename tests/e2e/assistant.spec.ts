@@ -93,8 +93,8 @@ test('une décision manuelle survit, et les thèmes sont retenus pour plus tard'
 test('filtre la liste par thème déduit', async ({ pageCollection: page }) => {
   await allerA(page, 'collection');
   await page.getByLabel('Filtrer par thème').selectOption('sport');
-  await expect(page.locator('main li')).toHaveCount(1);
-  await expect(page.getByText('Athlète fictif')).toBeVisible();
+  await expect(page.getByTestId('tableau-cartes').locator('tbody tr')).toHaveCount(1);
+  await expect(page.getByTestId('tableau-cartes').getByText('Athlète fictif')).toBeVisible();
 });
 
 test.describe('captures de la file de vente (affluence)', () => {

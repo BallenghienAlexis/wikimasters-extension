@@ -253,7 +253,7 @@ test.describe('repères sur le site', () => {
     await allerA(pageCollection, 'collection');
     await expect(pageCollection.getByText('Votre collection est vide')).toBeVisible();
     await ouvrirSite(context);
-    await expect(pageCollection.getByText('Loutre fictive')).toBeVisible();
+    await expect(pageCollection.getByTestId('tableau-cartes').getByText('Loutre fictive')).toBeVisible();
     await expect(pageCollection.getByText('Favori, verrouillé sur le site')).toBeVisible();
   });
 });
