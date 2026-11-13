@@ -6,7 +6,6 @@ import type { EtatFile } from '../../src/lib/file'
 import {
   AVERTISSEMENT_AMIS,
   CADENCE_TEXTE,
-  actionsRetrait,
   configDuLot,
   contientAmi,
   detailsDuLot,
@@ -32,7 +31,8 @@ import {
   texteTotaux,
   titreApercu,
   totauxParType,
-} from '../../src/app/Synchronisation'
+} from '../../src/app/apercuLot'
+import { actionsRetrait } from '../../src/app/pilotageLots'
 
 const NB = ' '
 

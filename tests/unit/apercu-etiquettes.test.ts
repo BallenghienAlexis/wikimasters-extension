@@ -6,7 +6,7 @@ import type { Config } from '../../src/lib/lot'
 import { THEME_AUTRES, themesDeCarte } from '../../src/lib/themes'
 import { meilleureDuree } from './duree'
 import { registreVide } from '../../src/lib/registre'
-import { dureeMinutes } from '../../src/app/Synchronisation'
+import { dureeMinutes } from '../../src/app/apercuLot'
 import { dureeMinutesApercu, regrouperEtiquettes, texteDureeLongue } from '../../src/lib/apercuEtiquettes'
 
 const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({

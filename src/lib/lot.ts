@@ -254,14 +254,28 @@ export function construireEncheres(
   }
 
   valides.sort((a, b) => b.prix - a.prix || b.valeur - a.valeur || comparer(a.carte.id, b.carte.id))
-  const plafond = Math.min(config.maxVentesSimultanees, config.ventesSite?.max ?? Infinity)
-  const places = Math.max(0, Math.floor(plafond - Math.max(enVente, config.ventesSite?.enCours ?? 0)))
+  const occupation = placesEncheres(config, enVente)
+  const places = Math.max(0, Math.floor(occupation.max - occupation.occupees))
   const actions: Action[] = []
   valides.forEach(({ carte, prix, idExemplaire }, rang) => {
     if (rang < places) actions.push({ type: 'enchere', idCarte: carte.id, idExemplaire, prix })
     else ecartees.push({ idCarte: carte.id, titre: carte.titre, raison: 'en-attente-place' })
   })
   return { actions, ecartees }
+}
+
+/**
+ * Places d’enchères : maximum = min(config, site), occupées = max(cartes `en-vente`, enchères en cours du site).
+ * Fonction extraite de `construireEncheres` (T-301), même formule.
+ */
+export function placesEncheres(
+  config: Pick<Config, 'maxVentesSimultanees' | 'ventesSite'>,
+  enVente: number,
+): { occupees: number; max: number } {
+  return {
+    occupees: Math.max(enVente, config.ventesSite?.enCours ?? 0),
+    max: Math.min(config.maxVentesSimultanees, config.ventesSite?.max ?? Infinity),
+  }
 }
 
 /** Construit le lot. Les cartes sont traitées par `id` croissant (H9). */
