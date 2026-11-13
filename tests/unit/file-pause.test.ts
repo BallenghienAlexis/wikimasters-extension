@@ -370,3 +370,53 @@ describe('H18 : au-delà de 15 minutes de pause, arrêt manuel', () => {
     expect(b.requetes).toHaveLength(4);
   });
 });
+
+describe('revérification après une pause attendue', () => {
+  it('SC-014 : une action devenue « passée » pendant la pause n’est jamais envoyée à la reprise', async () => {
+    let file!: File
+    let passee = false
+    const b = banc({
+      reverifier: (a) => (passee && a.type === 'defausse' && a.idExemplaire === 'ex-2' ? 'passee' : 'ok'),
+      transport: async (a) => {
+        b.requetes.push(a)
+        if (b.requetes.length === 1) file.pause()
+        return OK
+      },
+    })
+    file = creerFile(b.deps)
+    const fin = file.demarrer([defausse(1), defausse(2)], 'lot-1')
+    await vide()
+    passee = true
+    file.reprendre()
+    const etat = await fin
+    expect(etat.etat).toBe('terminee')
+    expect(b.requetes).toEqual([defausse(1)])
+    expect(b.journal.some((l) => l.startsWith('passer:'))).toBe(true)
+  })
+
+  it('SC-014 : pause pendant l’écriture du journal, carte devenue « passée » : entrée passée, aucune requête', async () => {
+    let file!: File
+    let ouvertures = 0
+    let passee = false
+    const passees: string[] = []
+    const b = banc({
+      reverifier: () => (passee ? 'passee' : 'ok'),
+      journal: {
+        ouvrir: () => {
+          if (++ouvertures === 1) file.pause()
+          return `e${ouvertures}`
+        },
+        completer: () => undefined,
+        passer: (id) => void passees.push(id),
+      },
+    })
+    file = creerFile(b.deps)
+    const fin = file.demarrer([defausse(1)], 'lot-1')
+    await vide()
+    passee = true
+    file.reprendre()
+    expect((await fin).etat).toBe('terminee')
+    expect(b.requetes).toHaveLength(0)
+    expect(passees).toEqual(['e1'])
+  })
+})

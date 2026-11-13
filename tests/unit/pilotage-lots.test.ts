@@ -690,3 +690,15 @@ describe('AC7 : aucun chemin ne contourne la pause de 30 min (SC-016)', () => {
     expect((await api.chargerExecution())?.etat).toBe('terminee');
   });
 });
+
+describe('état d’exécution illisible : rien ne part', () => {
+  it('Lancer, Réessayer et Sauter sont refusés avec un message lisible', async () => {
+    const api = await frais();
+    await lotArreteSur(api, quatreDefausses(), 2, echec(409));
+    banc.stockage.set('execution', { version: 99 });
+    await expect(api.lancerLot([defausse(9)], 'lot-2')).rejects.toThrow(/illisible/);
+    await expect(api.reessayer()).rejects.toThrow(/illisible/);
+    await expect(api.sauterAction()).rejects.toThrow(/illisible/);
+    expect(banc.appels).toHaveLength(2);
+  });
+});

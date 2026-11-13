@@ -293,9 +293,28 @@ export function creerFile(deps: DependancesFile): File {
   }
 
   /** Point de passage avant tout départ : bloque pendant la pause, lève l’arrêt manuel s’il est demandé. */
-  async function attendrePause(): Promise<void> {
-    while (enPause && !arretDemande) await Promise.race([signalPause, signalArret])
+  async function attendrePause(): Promise<boolean> {
+    let attendu = false
+    while (enPause && !arretDemande) {
+      attendu = true
+      await Promise.race([signalPause, signalArret])
+    }
     if (arretDemande) throw new Arret('manuel')
+    return attendu
+  }
+
+  /**
+   * Après une pause réellement attendue : nouveau créneau (intervalle plus gigue) pour un ordre parallèle, puis
+   * nouvelle revérification, car la carte a pu changer pendant la pause.
+   */
+  async function sortirDePause(entree: Entree, lotParallele: boolean): Promise<Verification> {
+    if (lotParallele) {
+      const creneau = Math.max(dernierDebut + INTERVALLE_MS + supplement, horloge.now())
+      dernierDebut = creneau
+      supplement = tirerSupplement()
+      await attendre(creneau)
+    }
+    return verifier(entree)
   }
 
   /** Revérification dont l’exception est classée à part (ni écriture, ni transport). */
@@ -339,13 +358,18 @@ export function creerFile(deps: DependancesFile): File {
     if ((await verifier(entree)) === 'passee') return inscrirePassee(entree)
     if (stoppe) throw new Annulee()
     // Pause demandée pendant l’attente de cadence : aucune entrée de journal n’est ouverte pour rien.
-    await attendrePause()
+    if (await attendrePause()) {
+      if ((await sortirDePause(entree, lotParallele)) === 'passee') return inscrirePassee(entree)
+    }
     if (stoppe) throw new Annulee()
 
     const id = await journal.ouvrir(action, contexteJournal(entree))
     // Pause demandée pendant l’écriture du journal : l’entrée reste « en cours » jusqu’à la reprise, ou devient « passée ».
     try {
-      await attendrePause()
+      if (await attendrePause() && (await sortirDePause(entree, lotParallele)) === 'passee') {
+        await journal.passer(id)
+        return
+      }
     } catch (e) {
       await journal.passer(id)
       throw e

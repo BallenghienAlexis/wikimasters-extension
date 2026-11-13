@@ -1,6 +1,6 @@
 import { trierEtiquettesSite } from '../lib/etiquettesPreexistantes';
 import { ID_CARTE_ETIQUETTES } from '../lib/actions';
-import type { Action, CauseJournal, ErreurExecution, FamilleLot, Registre, ResultatAction } from '../lib/actions';
+import type { Action, CauseJournal, EtatExecutionV2, ErreurExecution, FamilleLot, Registre, ResultatAction } from '../lib/actions';
 import type { Collection } from '../lib/collection';
 import type { Journal } from '../lib/journal';
 import { DUREE_BAIL_MS } from '../lib/ordonnanceur';
@@ -182,8 +182,17 @@ export function contexteExecution(): ContexteExecution {
  * Un seul point de passage pour tout lancement (nouveau lot, suppression d'étiquettes, reprise) : relit `pauseJusqua`
  * dans l'état stocké (donc valable pour tous les onglets) et refuse pendant les 30 minutes de pause (H11, SC-016).
  */
+async function lireEtatStocke(): Promise<EtatExecutionV2 | null> {
+  try {
+    return await chargerExecution();
+  } catch {
+    // Impossible de savoir si une pause est en cours : rien ne part (la pause de 30 min ne se contourne pas).
+    throw new Error('L’état de l’exécution est illisible : impossible de vérifier la pause de 30 minutes, rien n’est lancé.');
+  }
+}
+
 async function verifierPause(): Promise<void> {
-  const stocke = await chargerExecution().catch(() => null);
+  const stocke = await lireEtatStocke();
   const raison = raisonPause(stocke?.pauseJusqua ?? null, Date.now());
   if (raison !== null) throw new Error(raison);
 }
@@ -421,7 +430,7 @@ async function appliquerSaut(saut: Saut): Promise<SuiteExecution> {
  */
 async function sauter(saut: Saut): Promise<void> {
   if (restantesMem.length === 0 || suiteMem === null) throw new Error('Aucune action à sauter : préparez un nouveau lot.');
-  const stocke = await chargerExecution().catch(() => null);
+  const stocke = await lireEtatStocke();
   if (raisonPause(stocke?.pauseJusqua ?? null, Date.now()) !== null) {
     const suite = await appliquerSaut(saut);
     if (stocke !== null) await enregistrerExecution({ ...stocke, traitees: suite.traitees, lots: suite.lots.map((l) => ({ ...l })) });
