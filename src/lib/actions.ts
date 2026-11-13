@@ -159,3 +159,6 @@ export interface EtatExecution {
   /** Nombre total d’actions du lot. */
   total: number
 }
+
+/** Codes HTTP d’un refus par carte (exemplaire vendu, défaussé ou en vente), tolérés un à un. */
+export const CODES_CARTE_INDISPONIBLE: readonly number[] = [403, 404]

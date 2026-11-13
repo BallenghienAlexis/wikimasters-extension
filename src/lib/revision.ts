@@ -5,7 +5,7 @@
  * les modifications faites ensuite, et l’état local ne bouge qu’après un succès.
  */
 import { plafondDefausse } from './tri'
-import type { Action, Registre, ResultatAction } from './actions'
+import { CODES_CARTE_INDISPONIBLE, type Action, type Registre, type ResultatAction } from './actions'
 import {
   aEditionLocale,
   appliquerEdition,
@@ -14,7 +14,6 @@ import {
   type Carte,
   type Collection,
 } from './collection'
-import { CODES_CARTE_INDISPONIBLE } from './file'
 import { exemplairesAttendus, type Config } from './lot'
 import { enregistrerEtiquette, poserCouple, purgerCarte, purgerExemplaire, retirerCouple, supprimerEtiquetteDuRegistre } from './registre'
 import { prixDepart, valeurDeCarte } from './tri'
@@ -137,7 +136,9 @@ export function appliquerIndisponible(collection: Collection, registre: Registre
   }
   const carte = collection.cartes.find((c) => c.id === action.idCarte)
   if (!carte || !carte.idsSite?.includes(action.idExemplaire)) return { collection, registre }
-  const registreSans = purgerExemplaire(registre, action.idExemplaire)
+  // Le registre n’est jamais vidé sur un simple refus : un faux positif (session refusée) ferait perdre la trace des
+  // étiquettes posées, seules retirables. Un couple périmé est inoffensif (un retrait sur un identifiant périmé répond 204).
+  const registreSans = registre
   const sansId = retirerIdSite(collection, carte.id, action.idExemplaire)
   const quantite = Math.max(0, carte.quantite - 1)
   if (quantite === 0 && carte.statut !== 'en-vente' && !aEditionLocale(carte)) {

@@ -306,6 +306,14 @@ describe('arrêts (AC4)', () => {
     expect(b2.requetes.filter((_, i) => (i + 1) % 3 !== 0)).toHaveLength(5);
   });
 
+  it('en parallèle : 3 refus 403 en vol arrêtent le lot, au plus 3 exemplaires appliqués', async () => {
+    const b = banc({ concurrence: 3 }, () => echec(403));
+    const etat = await creerFile(b.deps).demarrer([1, 2, 3, 4, 5, 6].map(pose), 'lot-par');
+    expect(etat.etat).toBe('arretee');
+    expect(b.requetes.length).toBeLessThanOrEqual(3);
+    expect(b.appliquees.length).toBeLessThanOrEqual(2);
+  });
+
   it('409 : arrête le lot pour une enchère ou une défausse, pas pour une étiquette', async () => {
     const e = (n: number): Action => ({ type: 'enchere', idCarte: `Rare|Carte ${n}`, idExemplaire: 'x', prix: 5 });
     for (const [fab, arrete] of [[e, true], [defausse, true], [pose, false]] as const) {

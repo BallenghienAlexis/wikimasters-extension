@@ -13,7 +13,7 @@
  * requête dont le résultat est inconnu.
  */
 
-import type { Action, EtatExecution, ResultatAction } from './actions'
+import { CODES_CARTE_INDISPONIBLE, type Action, type EtatExecution, type ResultatAction } from './actions'
 
 /** Intervalle minimal entre deux débuts de requête. */
 export const INTERVALLE_MS = 200
@@ -34,7 +34,7 @@ export const arreteLeLot = (action: Action, codeHttp: number | null): boolean =>
  * continue. Une session ou un jeton refusés répondent 403 à toutes les cartes : `MAX_REFUS_CARTE_CONSECUTIFS`
  * refus d’affilée (sans succès entre deux) arrêtent le lot comme avant.
  */
-export const CODES_CARTE_INDISPONIBLE: readonly number[] = [403, 404]
+export { CODES_CARTE_INDISPONIBLE }
 export const MAX_REFUS_CARTE_CONSECUTIFS = 3
 /** Plafond de refus par carte sur tout un lot, qu’un succès intercalé ne remet jamais à zéro. */
 export const MAX_REFUS_CARTE_PAR_LOT = 5

@@ -511,7 +511,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       const r = await requete(cheminPrix(cardId), false, true);
       if (r === null) {
         // Refus par carte : on ne la redemande pas avant la fin de l’ancienneté (30 jours), sans valeur inventée.
-        if (refusPrix > refusAvant) etat.prix[carte.id] = { valeur: null, releveLe: horloge.now() };
+        if (refusPrix > refusAvant) etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() };
         continue;
       }
       refusPrix = 0;

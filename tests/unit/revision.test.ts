@@ -286,12 +286,12 @@ describe('exemplaire indisponible (403/404 sur une action par exemplaire)', () =
   const refus = (codeHttp: number): ResultatAction => ({ classe: 'echec', codeHttp, cause: 'action non disponible' })
   const pose: Action = { type: 'pose-etiquette', idCarte: 'commune|Chat', idExemplaire: 'ex-1', nomEtiquette: 'Statut · Vendre' }
 
-  it('retire l’exemplaire, diminue la quantité et purge le registre ; la carte reste s’il en reste un', () => {
+  it('retire l’exemplaire, diminue la quantité et laisse le registre intact ; la carte reste s’il en reste un', () => {
     const r = reg([{ ex: 'ex-1', nom: 'a' }, { ex: 'ex-2', nom: 'a' }])
     const { collection, registre } = appliquerResultat(coll(carte()), r, pose, refus(403))
     expect(collection.cartes[0]!.idsSite).toEqual(['ex-2'])
     expect(collection.cartes[0]!.quantite).toBe(1)
-    expect(registre.couples).toEqual([{ ex: 'ex-2', nom: 'a' }])
+    expect(registre.couples).toHaveLength(2)
   })
 
   it('dernier exemplaire sans édition locale : la carte disparaît de la collection', () => {

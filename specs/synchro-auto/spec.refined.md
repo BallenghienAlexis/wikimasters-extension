@@ -1,5 +1,8 @@
 > Spec validée par Alexis le 2026-11-09 (« oui », via le chat du projet) ; aucune hypothèse bloquante restante, `spec.md` vaut `spec.refined.md`.
 
+> **Amendement du 2026-11-13 (demande d’Alexis : gérer les cartes vendues ou défaussées)** : un 403/404 isolé sur un exemplaire (pose, retrait, enchère, défausse) ou sur le prix d’une carte n’arrête plus le lot ni la synchro ; 3 refus d’affilée, 5 par lot (10 par exécution pour les prix), 401, 429 ou un refus hors exemplaire arrêtent comme avant. Voir AGENTS.md § « 403 par carte ». Risque de bannissement accru, rappelé.
+
+
 # Spec — Synchronisation automatique de la collection
 
 - **Feature** : `synchro-auto` · **Auteur** : agent spec · **Date** : 2026-11-09
