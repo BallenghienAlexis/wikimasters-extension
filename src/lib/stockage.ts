@@ -333,7 +333,10 @@ export async function chargerIgnorees(): Promise<Ignoree[]> {
   return validerIgnorees(contenu[CLE_IGNOREES]) ?? [];
 }
 
+/** Refuse d’écrire par-dessus une clé présente mais illisible (version inconnue) : elle n’est jamais écrasée (retouche T-303). */
 export async function enregistrerIgnorees(liste: Ignoree[]): Promise<void> {
+  const present = (await chrome.storage.local.get(CLE_IGNOREES))[CLE_IGNOREES];
+  if (present !== undefined && validerIgnorees(present) === null) throw illisible('La liste des actions ignorées est illisible : elle n’est pas modifiée.');
   const entrees = validerIgnorees({ version: 1, entrees: liste });
   if (entrees === null) throw new Error('Liste d’actions ignorées invalide.');
   await chrome.storage.local.set({ [CLE_IGNOREES]: { version: 1, entrees } });
