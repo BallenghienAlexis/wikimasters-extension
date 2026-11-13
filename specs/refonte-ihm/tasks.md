@@ -148,13 +148,13 @@ Graphe acyclique vérifié : V0 sans dépendance ; V1 dépend de V0 ; V2 de V0-V
 - **SC couverts** : SC-010 · **Règles design** : —
 - **Fichiers concernés** (liste fermée) :
   - `src/app/Synchronisation.tsx` (supprimé)
-  - `src/app/apercuLot.ts`, `src/app/pilotageLots.ts`, `src/app/useExecution.ts`, `src/app/BandeauRisque.tsx`, `src/app/ZoneExecution.tsx`, `src/app/ListeActionsLot.tsx`, `src/app/CartesNonIncluses.tsx`, `src/app/ApercuLot.tsx` (créés)
-  - `src/app/App.tsx` (import et usage de `ApercuLot`/`lancerSuppressionEtiquettes` uniquement : l. 25 et 334)
+  - `src/app/apercuLot.ts`, `src/app/pilotageLots.ts`, `src/app/useExecution.ts`, `src/app/BandeauRisque.tsx`, `src/app/ZoneExecution.tsx`, `src/app/ListeActionsLot.tsx`, `src/app/CartesNonIncluses.tsx`, `src/app/PanneauApercuLot.tsx` (créés)
+  - `src/app/App.tsx` (import et usage de `PanneauApercuLot`/`lancerSuppressionEtiquettes` uniquement : l. 25 et 334)
   - `tests/unit/synchronisation.test.ts`, `tests/unit/apercu-etiquettes.test.ts`, `tests/unit/bail-lot.test.ts` (chemin d’import seulement)
 - **Critères d’acceptation**
   1. Fonctions pures (l. 45-396 : libellés, totaux, durée, `raisonDesactivation`, non incluses, `configDuLot`, `preparerLot`, `detailsDuLot`, `libelleCause`, `texteFin`, `libelleErreurLancement`) déplacées dans `apercuLot.ts` avec mêmes noms et signatures.
   2. Contexte, `lancerLot`, `sousBail`, `executerLot`, `lancerSuppressionEtiquettes`, `actionsRetrait` (l. 398-589) dans `pilotageLots.ts`, contexte singleton conservé.
-  3. `BandeauRisque` (l. 603-623), `ZoneExecution` (l. 635-722), abonnements (l. 773-837) dans `useExecution.ts`, liste d’actions et cartes non incluses (l. 1010-1073) dans leurs composants, reste dans `ApercuLot.tsx`.
+  3. `BandeauRisque` (l. 603-623), `ZoneExecution` (l. 635-722), abonnements (l. 773-837) dans `useExecution.ts`, liste d’actions et cartes non incluses (l. 1010-1073) dans leurs composants, reste dans `PanneauApercuLot.tsx`.
   4. Aucun changement de texte, de comportement, de `data-testid` ni d’ordre d’effets ; `Synchronisation.tsx` n’existe plus.
   5. Les trois tests changent seulement leur chemin d’import (`../../src/app/apercuLot`, `../../src/app/pilotageLots`), aucune attente.
 - **Tests attendus**
@@ -163,7 +163,7 @@ Graphe acyclique vérifié : V0 sans dépendance ; V1 dépend de V0 ; V2 de V0-V
 - **Brief de contexte**
   - *Pourquoi* : rendre la suite révisable et débloquer T-304/T-313 (SC-010).
   - *État actuel* : `src/app/Synchronisation.tsx` (1 123 lignes) mêle logique pure, contexte d’exécution, composants et abonnements ; `App.tsx` l. 25 l’importe avec `lancerSuppressionEtiquettes` et le monte l. 334. `Journal.tsx` existe déjà.
-  - *À faire* : suivre le tableau « Découpage » de `plan.md`. `useExecution.ts` regroupe les abonnements (file, onglets, journal, registre, clôture des interrompues) ; `ApercuLot.tsx` appelle `useExecution`. `App.tsx` : ne changer que l’import et le montage pour que le comportement reste identique (T-304 le réécrit ensuite).
+  - *À faire* : suivre le tableau « Découpage » de `plan.md`. `useExecution.ts` regroupe les abonnements (file, onglets, journal, registre, clôture des interrompues) ; `PanneauApercuLot.tsx` appelle `useExecution`. `App.tsx` : ne changer que l’import et le montage pour que le comportement reste identique (T-304 le réécrit ensuite).
   - *Contrats* : refactor pur, pas d’amélioration au passage. `fetch` n’apparaît nulle part.
   - *Pièges* : l’ordre des effets et le focus (zone d’exécution) doivent rester identiques ; ne pas dupliquer le contexte singleton ; vérifier `grep Synchronisation src tests` sans résultat.
   - *Vérifier* : `npm run check && npm run build && npm run test:e2e`
@@ -244,7 +244,7 @@ Graphe acyclique vérifié : V0 sans dépendance ; V1 dépend de V0 ; V2 de V0-V
   - `tests/unit/purge-ignorees-page.test.ts` n’est pas créé : la purge est testée dans `ignorees.test.ts` (T-303) ; ici un cas e2e de purge suffit (AC6).
 - **Brief de contexte**
   - *Pourquoi* : donner un emplacement à chaque contenu avant de le refondre (SC-012) en gardant la CI verte.
-  - *État actuel* : `App.tsx` (403 lignes) charge tout (effets l. 87-157), affiche l’écran de blocage (l. 194-245) et empile les sections ; filtres/liste l. 346-396 ; `titresConsultes` = 200 premières cartes visibles. Après T-316, `ApercuLot` remplace `Synchronisation`.
+  - *État actuel* : `App.tsx` (403 lignes) charge tout (effets l. 87-157), affiche l’écran de blocage (l. 194-245) et empile les sections ; filtres/liste l. 346-396 ; `titresConsultes` = 200 premières cartes visibles. Après T-316, `PanneauApercuLot` remplace `Synchronisation`.
   - *À faire* : découper selon le tableau de `plan.md` ; panneaux = contenu déplacé sans changement ; `allerA(page, 'lots')` dans `tests/e2e/extension.ts` navigue par hash ; adapter les 9 e2e.
   - *Contrats* : D-12 (onglets), D-62, D-17 ; composants `React.FC` ; hooks montés une fois au-dessus des onglets ; la file d’exécution vit dans le contexte module (pas de perte au changement d’onglet).
   - *Pièges* : le démontage du panneau ne doit pas perdre l’aperçu d’un lot ni l’assistant (états remontés) ; `creerPlanificateur` survit au démontage ; ne pas ajouter de requête.
@@ -413,7 +413,7 @@ Graphe acyclique vérifié : V0 sans dépendance ; V1 dépend de V0 ; V2 de V0-V
 - **Dépend de** : T-304, T-313, T-315 · **Parallélisable** : [P] (V3)
 - **SC couverts** : SC-015, SC-016 (Lancer), SC-006 (aperçu), SC-024 (Lots) · **Règles design** : D-09, D-16, D-32
 - **Fichiers concernés** (liste fermée) :
-  - `src/app/OngletLots.tsx`, `src/app/ApercuLot.tsx`, `src/app/apercuLot.ts`, `src/app/TableauLots.tsx` (créé), `src/app/ListeEcarts.tsx` (créé)
+  - `src/app/OngletLots.tsx`, `src/app/PanneauApercuLot.tsx`, `src/app/apercuLot.ts`, `src/app/TableauLots.tsx` (créé), `src/app/ListeEcarts.tsx` (créé)
   - `tests/e2e/etiquettes.spec.ts`, `tests/e2e/synchro-ecriture.spec.ts` (sélecteurs seulement)
   - `tests/unit/synchronisation.test.ts` (ajouts de cas pour `raisonDesactivation` avec pause, sans changer d’attente existante)
   - `tests/e2e/refonte-lots.spec.ts` (créé)
@@ -427,7 +427,7 @@ Graphe acyclique vérifié : V0 sans dépendance ; V1 dépend de V0 ; V2 de V0-V
   - `tests/unit/synchronisation.test.ts` : cas pause (AC3).
 - **Brief de contexte**
   - *Pourquoi* : lancer par lots choisis (SC-015).
-  - *État actuel* : `ApercuLot.tsx` / `apercuLot.ts` (T-316) contiennent aperçu, `raisonDesactivation`, `preparerLot` ; `pilotageLots.ts` (T-313) fournit `lancerLot` (lots cochés) et la pause.
+  - *État actuel* : `PanneauApercuLot.tsx` / `apercuLot.ts` (T-316) contiennent aperçu, `raisonDesactivation`, `preparerLot` ; `pilotageLots.ts` (T-313) fournit `lancerLot` (lots cochés) et la pause.
   - *À faire* : tableau des lots, durée, filtrage des ignorées, raison de pause ; ne pas recréer la logique d’envoi.
   - *Contrats* : D-09, D-16 ; textes de désactivation existants intacts ; revérification avant envoi inchangée.
   - *Pièges* : l’ordre d’application = `lot.ts` ; le panneau d’erreur n’est pas ici (T-307).
