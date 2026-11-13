@@ -1,5 +1,5 @@
 # STATUS — refonte-ihm
-- **Étape courante** : 2.1-refine terminée (RAFFINÉE : 33 corrections, 18 hypothèses H1 à H18, aucun point bloquant) ; arrêt avant 2.2 sur consigne
+- **Étape courante** : 2.4-publication des artefacts (PR #109) puis 3-exécution par vagues. 2.1 refine (33 corrections, H1 à H18), 2.2 design et plan, 2.3 tâches (19 tâches T-301 à T-319, 6 vagues) faits ; « Ok implémente tout » (Alexis, 2026-11-13, 16:45)
 - **Mis à jour** : 2026-11-13
 
 ## Gate design
@@ -18,3 +18,6 @@ Rappel H1 à H5 initiales : H1 valeur estimée = valeurs connues × quantité ; 
 
 ## Suite (non lancée : consigne de s’arrêter après 2.1)
 2.2 designer/architect (design.md et plan.md existent déjà, à réviser si `refine` change la spec) → 2.3 tasks → 2.4 publication des artefacts → 3 exécution par vagues.
+
+## Décisions par défaut du plan (2026-11-13)
+(1) champ `debut` au statut de synchro v2 ; (2) « Réessayer » désactivé après résultat inconnu ; (3) seuil de refus par carte → pause de 30 min ; (4) sauter une création d’étiquette retire les poses de la même étiquette. Détail : `tasks.md` § Décisions par défaut.

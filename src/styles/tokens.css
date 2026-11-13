@@ -12,8 +12,38 @@
   --color-defausser: #a8321f;
 }
 
+/*
+ * Mouvement et relief (refonte-ihm, D-08 et D-17). `static` : les variables sont toujours émises,
+ * même si aucun utilitaire Tailwind ne les cite. Aucune couleur nouvelle : les ombres, le
+ * surlignage et la hachure dérivent des tokens de couleur par `color-mix`.
+ * Attention : `--ease-out` remplace la courbe `ease-out` par défaut de Tailwind (utilitaire `ease-out`).
+ */
+@theme static {
+  --d-fast: 0.2s;
+  --d-base: 0.4s;
+  --d-move: 0.65s;
+  --d-bar: 0.9s;
+  --d-shake: 0.5s;
+  --d-cascade-ligne: 40ms;
+  --d-cascade-bloc: 50ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --shadow-carte: 0 1px 2px color-mix(in srgb, var(--color-paper) 14%, transparent);
+  --shadow-leve: 0 6px 18px color-mix(in srgb, var(--color-paper) 22%, transparent);
+  --shadow-segment: 0 4px 14px color-mix(in srgb, var(--color-paper) 30%, transparent);
+}
+
 :root {
   color-scheme: light dark;
+  /* Surlignage de ligne au survol et halo de focus (D-08, D-19). */
+  --surface-survol: color-mix(in srgb, var(--color-paper) 6%, transparent);
+  --halo-focus: 0 0 0 3px color-mix(in srgb, var(--color-paper) 28%, transparent);
+  /* Hachure du segment « En vente » (D-13) : aucune couleur nouvelle. */
+  --hachure-en-vente: repeating-linear-gradient(
+    135deg,
+    var(--color-vendre) 0 6px,
+    color-mix(in srgb, var(--color-vendre) 55%, var(--color-paper)) 6px 12px
+  );
 }
 
 @media (prefers-color-scheme: dark) {
@@ -43,9 +73,22 @@ body {
   outline-offset: 2px;
 }
 
+/* Mouvement coupé : préférence du système (D-17) ... */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     animation: none !important;
     transition: none !important;
+    scroll-behavior: auto !important;
   }
+}
+
+/* ... ou réglage « Animations » désactivé (clé `affichage`, attribut posé sur <html> par la page). */
+:root[data-animations='off'] *,
+:root[data-animations='off'] *::before,
+:root[data-animations='off'] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
 }
