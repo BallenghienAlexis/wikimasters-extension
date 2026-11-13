@@ -152,6 +152,20 @@ describe('fusion', () => {
     expect(apercuImport(ici, s)).toMatchObject({ themesAjoutes: 1, amisAjoutes: 1, ventesAjoutees: 1 });
   });
 
+  it('transporte le plafond de défausse : valide, sinon refusé ; celui d’ici prime', () => {
+    const avec = (plafondDefausse: number) => donnees([], { preferences: { version: 2, mesThemes: [], amis: [], plafondDefausse } });
+    const s = lire(ecrire(avec(12)));
+    expect(s.preferences.plafondDefausse).toBe(12);
+    const sans = donnees([]);
+    const r = appliquerImport(sans, s, 'garder-ici');
+    expect(r.ok && r.donnees.preferences.plafondDefausse).toBe(12);
+    const r2 = appliquerImport(avec(7), s, 'garder-ici');
+    expect(r2.ok && r2.donnees.preferences.plafondDefausse).toBe(7);
+    const mauvais = JSON.parse(ecrire(avec(12))) as { preferences: { plafondDefausse: number } };
+    mauvais.preferences.plafondDefausse = 99;
+    expect(lireSauvegarde(JSON.stringify(mauvais)).ok).toBe(false);
+  });
+
   it('est idempotente', () => {
     const d = donnees([carte('a', { statut: 'garder', decidePar: 'moi' })]);
     const s = lire(ecrire(d));

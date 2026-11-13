@@ -3,7 +3,7 @@
 // aucun secret (jeton, cookie, clé), aucun identifiant d'exemplaire du site, aucun cache ni état de synchro.
 import { analyserStockage, meilleureDescription, MAX_CARTES, type Carte, type Collection, type DecidePar, type Statut } from './collection';
 import { MAX_EVENEMENTS, validerEvenements, type EvenementVente } from './affluence';
-import { fusionnerAmisInitiaux, type Ami, type Preferences } from './tri';
+import { fusionnerAmisInitiaux, plafondDefausse, type Ami, type Preferences } from './tri';
 
 export const FORMAT_SAUVEGARDE = 'wm-collection-sauvegarde';
 export const VERSION_SAUVEGARDE = 1;
@@ -63,7 +63,12 @@ export function creerSauvegarde(donnees: Donnees, maintenant: Date): Sauvegarde 
     version: VERSION_SAUVEGARDE,
     creeLe: maintenant.toISOString(),
     cartes: donnees.collection.cartes.map(garderChamps),
-    preferences: { version: 2, mesThemes: [...donnees.preferences.mesThemes], amis: donnees.preferences.amis.map((a) => ({ nom: a.nom, themes: [...a.themes]})) },
+    preferences: {
+      version: 2,
+      mesThemes: [...donnees.preferences.mesThemes],
+      amis: donnees.preferences.amis.map((a) => ({ nom: a.nom, themes: [...a.themes] })),
+      ...(donnees.preferences.plafondDefausse === undefined ? {} : { plafondDefausse: donnees.preferences.plafondDefausse }),
+    },
     syncAuto: donnees.syncAuto,
     ventes: donnees.ventes.filter((e) => e.type !== 'site').map((e) => ({ type: e.type, at: e.at })),
   };
@@ -87,7 +92,11 @@ function lirePrefs(brut: unknown): Preferences | string {
     }
     amis.push({ nom: a.nom, themes: [...a.themes] });
   }
-  return { version: 2, mesThemes: [...brut.mesThemes], amis };
+  const plafond = brut.plafondDefausse;
+  if (plafond !== undefined && (typeof plafond !== 'number' || plafondDefausse({ plafondDefausse: plafond }) !== plafond)) {
+    return 'Le plafond de défausse est invalide.';
+  }
+  return { version: 2, mesThemes: [...brut.mesThemes], amis, ...(plafond === undefined ? {} : { plafondDefausse: plafond }) };
 }
 
 export type ResultatLecture = { ok: true; sauvegarde: Sauvegarde } | { ok: false; erreur: string };
@@ -186,7 +195,8 @@ export function apercuImport(locales: Donnees, s: Sauvegarde): Apercu {
 
 function fusionnerPreferences(locales: Preferences, sauvees: Preferences): Preferences {
   const fusion = fusionnerAmisInitiaux(locales, sauvees.amis);
-  return { ...fusion, mesThemes: [...new Set([...locales.mesThemes, ...sauvees.mesThemes])] };
+  const plafond = locales.plafondDefausse ?? sauvees.plafondDefausse;
+  return { ...fusion, mesThemes: [...new Set([...locales.mesThemes, ...sauvees.mesThemes])], ...(plafond === undefined ? {} : { plafondDefausse: plafond }) };
 }
 
 export type ResultatApplication = { ok: true; donnees: Donnees } | { ok: false; erreur: string };
