@@ -37,7 +37,7 @@ Refonte **par couches, sans nouvelle requête** : d’abord la logique pure et l
 | l. 635-722 `ZoneExecution` | `src/app/ZoneExecution.tsx` (remplacé ensuite par `PanneauErreur.tsx` + barres) | T-316, T-307 |
 | l. 773-837 abonnements (file, onglets, journal, registre, clôture des interrompues) | `src/app/useExecution.ts` (hook, monté dans `App`) | T-316 |
 | l. 1010-1073 liste d’actions, cartes non incluses | `src/app/ListeActionsLot.tsx`, `src/app/CartesNonIncluses.tsx` | T-316 |
-| reste du composant (aperçu, Lancer) | `src/app/ApercuLot.tsx` | T-316, puis T-311 |
+| reste du composant (aperçu, Lancer) | `src/app/PanneauApercuLot.tsx` | T-316, puis T-311 |
 | `App.tsx` écran de blocage l. 194-245 | `src/app/BlocageCollection.tsx` (au-dessus des onglets, SC-012, D-62) | T-304 |
 | `App.tsx` effets de chargement l. 87-157 | `src/app/useDonneesPage.ts` | T-304 |
 | `App.tsx` filtres et liste l. 346-396 | `src/app/OngletCollection.tsx` + `src/app/FiltresCollection.tsx` | T-304 |
@@ -60,7 +60,7 @@ Refonte **par couches, sans nouvelle requête** : d’abord la logique pure et l
 | `src/content/synchroAuto.ts` | statut v2, débit ≤ 1/s | T-314 |
 | `src/lib/ordreTableau.ts` (créé), `src/app/useMouvement.ts`, `src/app/useFlip.ts`, `src/app/BarreProgression.tsx`, `src/app/SectionRepliable.tsx`, `src/app/PastilleStatut.tsx`, `src/app/PastilleStatutCarte.tsx`, `src/app/ChiffreAnime.tsx`, `src/app/EnTeteTriable.tsx` (créés) | primitives communes | T-315 |
 | `src/styles/tokens.css` | tokens D-08, D-17 déjà écrits par le designer ; classes communes (reflet de barre, rayures indéterminées, secousse) en tokens | T-315 |
-| `src/app/apercuLot.ts`, `src/app/pilotageLots.ts`, `src/app/useExecution.ts`, `src/app/BandeauRisque.tsx`, `src/app/ZoneExecution.tsx`, `src/app/ListeActionsLot.tsx`, `src/app/CartesNonIncluses.tsx`, `src/app/ApercuLot.tsx` (créés) ; `src/app/Synchronisation.tsx` (supprimé) | découpage sans changement de comportement | T-316 |
+| `src/app/apercuLot.ts`, `src/app/pilotageLots.ts`, `src/app/useExecution.ts`, `src/app/BandeauRisque.tsx`, `src/app/ZoneExecution.tsx`, `src/app/ListeActionsLot.tsx`, `src/app/CartesNonIncluses.tsx`, `src/app/PanneauApercuLot.tsx` (créés) ; `src/app/Synchronisation.tsx` (supprimé) | découpage sans changement de comportement | T-316 |
 | `src/app/App.tsx`, `src/app/onglets.ts`, `src/app/Onglets.tsx`, `src/app/useOngletActif.ts`, `src/app/useDonneesPage.ts`, `src/app/useAffichage.ts`, `src/app/useHistoriqueQuotidien.ts`, `src/app/BlocageCollection.tsx`, `src/app/MessageStockage.tsx`, `src/app/Onglet{TableauDeBord,Synchro,Lots,Collection,Ventes,Reglages}.tsx`, `src/app/FiltresCollection.tsx` (créés) | coquille, onglets, contenu déplacé tel quel | T-304 |
 | `src/app/BandeauActivite.tsx`, `src/app/LigneActivite.tsx`, `src/app/useActiviteSynchro.ts` (créés) | bandeau d’activité | T-317 |
 | `src/app/OngletTableauDeBord.tsx`, `src/app/CarteKpi.tsx`, `src/app/BarreRepartition.tsx`, `src/app/BulleRepartition.tsx`, `src/app/SanteSynchro.tsx` | tableau de bord | T-305 |
@@ -68,7 +68,7 @@ Refonte **par couches, sans nouvelle requête** : d’abord la logique pure et l
 | `src/app/PanneauErreur.tsx`, `src/app/TableIgnorees.tsx`, `src/app/FiltresHistorique.tsx`, `src/app/Journal.tsx`, `src/app/Onglets.tsx` (pastille d’erreur), `src/app/ZoneExecution.tsx` (retiré) | erreur, ignorées, historique | T-307 |
 | `src/app/OngletCollection.tsx`, `src/app/TableauCartes.tsx`, `src/app/CarteLigne.tsx`, `src/app/AnalysesCollection.tsx`, `src/app/GraphiqueEvolution.tsx` | onglet Collection | T-308 |
 | `src/app/OngletReglages.tsx`, `src/app/ReglageAnimations.tsx` | onglet Réglages | T-309 |
-| `src/app/OngletLots.tsx`, `src/app/ApercuLot.tsx`, `src/app/TableauLots.tsx`, `src/app/ListeEcarts.tsx` | onglet Lots | T-311 |
+| `src/app/OngletLots.tsx`, `src/app/PanneauApercuLot.tsx`, `src/app/TableauLots.tsx`, `src/app/ListeEcarts.tsx` | onglet Lots | T-311 |
 | `src/app/TableauTri.tsx`, `src/app/ColonneTri.tsx`, `src/app/CarteTri.tsx`, `src/app/useGlisser.ts`, `src/lib/colonnesTri.ts` (créés), `src/app/OngletCollection.tsx` (sélecteur de vue) | tableau de tri | T-312 |
 | `src/app/OngletVentes.tsx`, `src/app/FileVente.tsx`, `src/app/PlacesEncheres.tsx`, `src/app/HeuresFortes.tsx` | onglet Ventes | T-318 |
 | `tests/e2e/extension.ts` | aide `allerA(page, onglet)` | T-304 |
