@@ -260,17 +260,17 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
       let dernierEtat: StatutSynchro['etat'] | null = null;
       let derniereEtape: EtapeSynchro | null = null;
       let dernierePage: number | null = null;
-      const noter = async (partiel: Partial<StatutSynchro> & Pick<StatutSynchro, 'etat'>, jalon = false): Promise<void> => {
+      const noter = async (partiel: Partial<StatutSynchro> & Pick<StatutSynchro, 'etat'>): Promise<void> => {
         const maintenant = deps.horloge.now();
-        // Au plus une écriture par seconde, sauf changement d'étape ou d'état.
-        const memeEtape = partiel.etat === dernierEtat && etape === derniereEtape && (partiel.page ?? null) === dernierePage;
-        dernierePage = partiel.page ?? null;
-        if (!jalon && memeEtape && maintenant - derniereEcriture < 1000) return;
-        // Les dernières secondes de l'étape des prix : le jalon de fin suit, inutile de le doubler à moins d'une seconde.
-        if (!jalon && memeEtape && etape === 'prix' && prixPrevus !== null && (prixPrevus - prixFaits) * INTERVALLE_MS <= 1000) return;
+        // Au plus une écriture par seconde, sauf changement de position : étape, état ou page (décision n°5 de tasks.md,
+        // au plus une écriture de stockage local par page). Dans l'étape des prix, la limite d'une par seconde s'applique.
+        const page = partiel.page ?? null;
+        const memePosition = partiel.etat === dernierEtat && etape === derniereEtape && page === dernierePage;
+        if (memePosition && maintenant - derniereEcriture < 1000) return;
         derniereEcriture = maintenant;
         dernierEtat = partiel.etat;
         derniereEtape = etape;
+        dernierePage = page;
         await (deps.noterStatut?.({
           version: 2,
           etape,
@@ -303,11 +303,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         if (page) await noter({ etat: 'en-cours', page: pages === null ? Number(page[1]) + 1 : Math.min(Number(page[1]) + 1, pages) });
         else await noter({ etat: 'en-cours' });
         const reponse = await deps.transport(chemin);
-        if (etape === 'prix') {
-          prixFaits += 1;
-          // Fin de l'étape des prix : le compte final est écrit sans attendre la seconde suivante.
-          if (prixPrevus !== null && prixFaits >= prixPrevus) await noter({ etat: 'en-cours' }, true);
-        }
+        if (etape === 'prix') prixFaits += 1;
         if (!page && chemin.startsWith('/api/my-collection/stats')) {
           const stats = reponse.statut === 200 ? analyserStats(reponse.json) : null;
           const total = stats?.total;

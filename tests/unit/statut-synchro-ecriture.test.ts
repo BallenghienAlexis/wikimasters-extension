@@ -121,7 +121,9 @@ describe('SC-019 / SC-002 : statut v2 écrit par synchroAuto', () => {
     expect(v2(prix[0]).prixPrevus).toBe(4);
     const faits = prix.map((s) => v2(s).prixFaits ?? 0);
     expect([...faits].sort((x, y) => x - y)).toEqual(faits);
-    expect(Math.max(...faits)).toBeGreaterThanOrEqual(3);
+    // prixFaits ne recule jamais sur l'ensemble des écritures (au plus 1 écriture par seconde dans l'étape).
+    const tous = b.statuts.map((s) => v2(s).prixFaits ?? 0);
+    expect([...tous].sort((x, y) => x - y)).toEqual(tous);
     const dernier = v2(b.statuts[b.statuts.length - 1] as StatutSynchro);
     expect(dernier.etat).toBe('termine');
     expect(dernier.prixFaits).toBe(4);
@@ -150,6 +152,20 @@ describe('SC-019 / SC-002 : statut v2 écrit par synchroAuto', () => {
     }
     // Plus de 40 requêtes de prix à 0,2 s : bien moins d'écritures que de requêtes.
     expect(b.statuts.length).toBeLessThan(b.chemins.length / 2);
+  });
+
+  it('décision n°5 : au plus une écriture par page, et au plus une par seconde dans l’étape des prix', async () => {
+    const b = banc(120);
+    await creerSynchroAuto(b.deps).declencher();
+    const pagesEcrites = b.statuts.filter((s) => v2(s).etape === 'pages' && s.page !== null);
+    const parPage = new Map<number, number>();
+    for (const s of pagesEcrites) parPage.set(s.page as number, (parPage.get(s.page as number) ?? 0) + 1);
+    expect(parPage.size).toBeGreaterThan(1);
+    for (const [page, n] of parPage) expect(n, `page ${page}`).toBeLessThanOrEqual(1);
+    const prix = b.statuts.filter((s) => v2(s).etape === 'prix');
+    expect(prix.length).toBeGreaterThan(1);
+    for (let i = 1; i < prix.length; i++) expect((prix[i] as StatutSynchro).le - (prix[i - 1] as StatutSynchro).le, `prix ${i}`).toBeGreaterThanOrEqual(1000);
+    expect(prix.length).toBeLessThan(b.chemins.length / 4);
   });
 
   it('SC-019 : aucune requête, chemin ni cadence modifié (mêmes chemins que le plan existant)', async () => {
