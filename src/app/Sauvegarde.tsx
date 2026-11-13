@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { appliquerImport, apercuImport, creerSauvegarde, lireSauvegarde, nomFichierSauvegarde, serialiserSauvegarde, TAILLE_MAX_SAUVEGARDE, type Apercu, type Donnees, type PolitiqueConflit, type Sauvegarde as DonneesSauvegarde } from '../lib/sauvegarde';
+import { PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
 import { ecrireDonneesSauvegarde, lireDonneesSauvegarde } from '../lib/stockage';
 
 const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded border border-line bg-ink-2 px-4';
@@ -123,7 +124,7 @@ const Sauvegarde: React.FC<Props> = ({ onImportee }) => {
           </ul>
           {a.plafondRepris !== null && (
             <p className="mt-2">
-              Le plafond de défausse sera réglé à {a.plafondRepris}{a.plafondRepris > 5 ? ' (attention : au-dessus de 5, des cartes de plus de valeur peuvent être défaussées)' : ''}.
+              Le plafond de défausse sera réglé à {a.plafondRepris}{a.plafondRepris > PLAFOND_VALEUR_DEFAUSSE ? ` (attention : au-dessus de ${PLAFOND_VALEUR_DEFAUSSE}, des cartes de plus de valeur peuvent être défaussées)` : ''}.
             </p>
           )}
           <fieldset className="mt-3">
