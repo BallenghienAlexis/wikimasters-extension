@@ -1,4 +1,4 @@
-import { chargerCartes, expect, test } from './extension';
+import { allerA, chargerCartes, expect, test } from './extension';
 
 const COLLECTION = {
   cartes: [
@@ -18,6 +18,7 @@ test.beforeEach(async ({ pageCollection }) => {
 });
 
 test('trie selon mes thèmes, ceux des amis, le seuil de défausse (5) et la valeur', async ({ pageCollection: page }) => {
+  await allerA(page, 'ventes');
   await page.getByRole('button', { name: OUVRIR }).click();
 
   // Seuls les thèmes présents dans la collection sont demandés.
@@ -39,6 +40,7 @@ test('trie selon mes thèmes, ceux des amis, le seuil de défausse (5) et la val
   await expect(apercu).toContainText('À trier : 1');
   await page.getByRole('button', { name: 'Appliquer ce tri' }).click();
 
+  await allerA(page, 'collection');
   await expect(page.getByLabel('Statut de Planète fictive')).toHaveValue('garder');
   await expect(page.getByLabel('Statut de Peintre fictif')).toHaveValue('garder');
   await expect(page.getByLabel('Statut de Film fictif')).toHaveValue('echanger');
@@ -49,6 +51,7 @@ test('trie selon mes thèmes, ceux des amis, le seuil de défausse (5) et la val
 });
 
 test('la file de vente suit les places libres', async ({ pageCollection: page }) => {
+  await allerA(page, 'ventes');
   await page.getByRole('button', { name: OUVRIR }).click();
   for (let i = 0; i < 2; i += 1) await page.getByRole('button', { name: 'Suivant' }).click();
   await page.getByRole('button', { name: 'Appliquer ce tri' }).click();
@@ -66,23 +69,29 @@ test('la file de vente suit les places libres', async ({ pageCollection: page })
     .toEqual(['debut']);
 
   await file.getByRole('button', { name: 'Enchère terminée' }).click();
+  await allerA(page, 'collection');
   await expect(page.getByLabel('Statut de Athlète fictif')).toHaveCount(0);
 });
 
 test('une décision manuelle survit, et les thèmes sont retenus pour plus tard', async ({ pageCollection: page }) => {
+  await allerA(page, 'collection');
   await page.getByLabel('Statut de Agrume fictif').selectOption('vendre');
+  await allerA(page, 'ventes');
   await page.getByRole('button', { name: OUVRIR }).click();
   await page.getByRole('checkbox', { name: 'Mon thème : #Espace' }).check();
   for (let i = 0; i < 2; i += 1) await page.getByRole('button', { name: 'Suivant' }).click();
   await page.getByRole('button', { name: 'Appliquer ce tri' }).click();
+  await allerA(page, 'collection');
   await expect(page.getByLabel('Statut de Agrume fictif')).toHaveValue('vendre');
 
+  await allerA(page, 'ventes');
   await page.reload();
   await page.getByRole('button', { name: OUVRIR }).click();
   await expect(page.getByRole('checkbox', { name: 'Mon thème : #Espace' })).toBeChecked();
 });
 
 test('filtre la liste par thème déduit', async ({ pageCollection: page }) => {
+  await allerA(page, 'collection');
   await page.getByLabel('Filtrer par thème').selectOption('sport');
   await expect(page.locator('main li')).toHaveCount(1);
   await expect(page.getByText('Athlète fictif')).toBeVisible();
@@ -99,6 +108,7 @@ test.describe('captures de la file de vente (affluence)', () => {
       test(`${colorScheme} ${name}`, async ({ pageCollection: page }) => {
         await page.emulateMedia({ colorScheme });
         await page.setViewportSize({ width, height });
+        await allerA(page, 'ventes');
         await page.getByRole('button', { name: OUVRIR }).click();
         for (let i = 0; i < 2; i += 1) await page.getByRole('button', { name: 'Suivant' }).click();
         await page.getByRole('button', { name: 'Appliquer ce tri' }).click();

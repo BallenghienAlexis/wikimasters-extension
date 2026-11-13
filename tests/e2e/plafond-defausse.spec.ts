@@ -1,4 +1,4 @@
-import { chargerCartes, expect, test } from './extension';
+import { allerA, chargerCartes, expect, test } from './extension';
 
 const COLLECTION = {
   cartes: [
@@ -9,6 +9,7 @@ const COLLECTION = {
 
 test.beforeEach(async ({ pageCollection }) => {
   await chargerCartes(pageCollection, COLLECTION.cartes);
+  await allerA(pageCollection, 'reglages');
 });
 
 const champ = (page: import('@playwright/test').Page) => page.getByRole('spinbutton', { name: /Plafond \(1 à 20\)/ });
