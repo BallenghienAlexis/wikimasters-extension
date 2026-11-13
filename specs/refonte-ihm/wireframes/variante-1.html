@@ -1,0 +1,55 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="base.css"><title>Variante 1 · Onglets et tableau de bord (recommandée)</title></head><body>
+<div class="wf">Wireframe variante 1 · Navigation par onglets : Tableau de bord · Synchro · Collection · Ventes · Réglages. Données fictives.</div>
+<header style="padding:16px 16px 0"><h1>WM Collection</h1><p class="note">Dernière synchro il y a 12 min · <span class="pastille-statut s-garder">À jour</span></p>
+<nav class="onglets" aria-label="Sections"><a href="#" aria-current="page">Tableau de bord</a><a href="#">Synchro</a><a href="#">Collection</a><a href="#">Ventes</a><a href="#">Réglages</a></nav></header>
+<main style="padding:16px;display:grid;gap:16px">
+
+<section aria-labelledby="t-act"><h2 id="t-act">En ce moment</h2>
+  <p><strong>Lot d’écriture en cours</strong> · 37 / 120 actions · il reste environ 1 min 10 s</p>
+  <div class="barre" role="progressbar" aria-valuenow="31" aria-valuemin="0" aria-valuemax="100" aria-label="Lot d’écriture"><i style="width:31%"></i></div>
+  <p class="note">31 % · en cours : pose d’étiquette « Statut · À vendre » sur [SR] Titre de carte fictif</p>
+  <div class="actions"><button>Arrêter</button><button>Voir le détail</button></div>
+</section>
+
+<div class="erreur-bloc" role="alert" aria-labelledby="e1">
+  <h3 id="e1" style="margin-top:0">Arrêt : une action a échoué</h3>
+  <dl>
+    <dt>Action</dt><dd>Pose d’étiquette « #À échanger Benjamin »</dd>
+    <dt>Carte</dt><dd>[R] Titre de carte fictif · lot 2 / 4 · action 37 / 120</dd>
+    <dt>Réponse du site</dt><dd><strong>HTTP 429</strong> · trop de requêtes · reçue à 14:02:13</dd>
+    <dt>Cause probable</dt><dd>Le site demande de ralentir. Aucune reprise automatique avant 14:32.</dd>
+    <dt>Déjà fait</dt><dd>36 actions réussies, 0 interrompue</dd>
+  </dl>
+  <div class="actions">
+    <button class="principal">Réessayer cette action</button>
+    <button>Sauter cette action</button>
+    <button>Sauter ce lot (4 actions)</button>
+    <button>Ignorer jusqu’à la prochaine synchro</button>
+    <button class="danger">Arrêter tout</button>
+  </div>
+  <p class="note">« Sauter » n’envoie rien au site : l’action est marquée « passée » dans le journal. Elle sera reproposée au prochain aperçu sauf si vous choisissez « Ignorer jusqu’à la prochaine synchro ».</p>
+</div>
+
+<div class="grille g4">
+  <div class="carte"><h3>Cartes</h3><div class="kpi">1 284 <small>exemplaires</small></div><p class="note">412 titres · +6 depuis hier</p></div>
+  <div class="carte"><h3>Valeur estimée</h3><div class="kpi">18 240 <small>pièces</small></div><p class="note">prix connus pour 389 / 412 titres</p></div>
+  <div class="carte"><h3>Enchères</h3><div class="kpi">3 / 5 <small>places</small></div><p class="note">2 places libres · prochaine fin 15:10</p></div>
+  <div class="carte"><h3>Écarts avec le site</h3><div class="kpi">14</div><p class="note">étiquettes à poser ou retirer · <a href="#">voir</a></p></div>
+</div>
+
+<div class="grille g2">
+  <section aria-labelledby="t-rep"><h2 id="t-rep">Répartition des décisions</h2>
+    <div class="barres" role="img" aria-label="Garder 40 %, échanger 12 %, vendre 18 %, défausser 5 %, à trier 25 %"><span class="b-garder" style="width:40%"></span><span class="b-echanger" style="width:12%"></span><span class="b-vendre" style="width:18%"></span><span class="b-defausser" style="width:5%"></span><span class="b-neutre" style="width:25%"></span></div>
+    <div class="legende"><span class="s-garder">Garder 40 %</span><span class="s-echanger">Échanger 12 %</span><span class="s-vendre">Vendre 18 %</span><span class="s-defausser">Défausser 5 %</span><span>À trier 25 %</span></div>
+    <table class="rwd" style="margin-top:12px"><thead><tr><th>Rareté</th><th>Titres</th><th>Garder</th><th>Échanger</th><th>Vendre</th></tr></thead><tbody>
+    <tr><td>Commune</td><td>201</td><td>70</td><td>20</td><td>25</td></tr><tr><td>Rare</td><td>118</td><td>52</td><td>16</td><td>31</td></tr><tr><td>Épique</td><td>93</td><td>44</td><td>13</td><td>20</td></tr></tbody></table>
+  </section>
+  <section aria-labelledby="t-san"><h2 id="t-san">Santé de la synchro</h2>
+    <div class="etape fait"><span class="pastille">✓ Lecture</span><span>collection complète, 1 284 exemplaires, il y a 12 min</span></div>
+    <div class="etape fait"><span class="pastille">✓ Étiquettes</span><span>412 titres, 98 étiquettes du site</span></div>
+    <div class="etape attente"><span class="pastille">○ Prix</span><span>23 titres à rafraîchir (plus de 30 jours)</span></div>
+    <div class="etape erreur"><span class="pastille">✕ Ignorées</span><span>2 actions ignorées jusqu’à la prochaine synchro · <a href="#">gérer</a></span></div>
+    <p class="note">Prochaine synchro automatique : 14:32.</p>
+  </section>
+</div>
+</main></body></html>

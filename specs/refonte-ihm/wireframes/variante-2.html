@@ -1,0 +1,49 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="base.css"><title>Variante 2 · Page unique et tiroir Activité</title>
+<style>
+.cadre{display:grid;grid-template-columns:minmax(0,1fr);min-height:100vh}.cadre>*{min-width:0}
+.tiroir{border-top:1px solid var(--line);background:var(--ink-2);padding:16px}
+@media (min-width:1280px){.cadre{grid-template-columns:minmax(0,1fr) 400px}.tiroir{border-top:0;border-left:1px solid var(--line);position:sticky;top:0;height:100vh;overflow:auto}}
+.bandeau{position:sticky;top:0;background:var(--ink);border-bottom:1px solid var(--line);padding:8px 16px;z-index:2}
+</style></head><body>
+<div class="wf">Wireframe variante 2 · La collection reste la page principale ; un tiroir « Activité » (à droite dès 1280 px, sous la liste en dessous) rassemble synchro, lot, file et erreurs.</div>
+<div class="cadre"><div>
+<div class="bandeau"><strong>Synchro : en cours</strong> · page 7 / 13 · <span class="note">54 %</span><div class="barre fine" role="progressbar" aria-valuenow="54" aria-valuemin="0" aria-valuemax="100" aria-label="Synchro"><i style="width:54%"></i></div></div>
+<main style="padding:16px;display:grid;gap:16px">
+<h1>Collection</h1>
+<div class="grille g4">
+  <div class="carte"><div class="kpi">1 284</div><p class="note">exemplaires</p></div><div class="carte"><div class="kpi">18 240</div><p class="note">valeur estimée</p></div><div class="carte"><div class="kpi">3 / 5</div><p class="note">enchères</p></div><div class="carte"><div class="kpi">14</div><p class="note">écarts avec le site</p></div>
+</div>
+<section><h2>Cartes</h2><p><input aria-label="Rechercher une carte" placeholder="Rechercher" style="min-height:44px;width:100%;max-width:360px"></p>
+<table class="rwd"><thead><tr><th>Carte</th><th>Décision</th><th>Valeur</th><th>Site</th></tr></thead><tbody>
+<tr><td>[R] Titre fictif A</td><td class="s-garder">Garder</td><td>140</td><td>✓ à jour</td></tr>
+<tr><td>[SR] Titre fictif B</td><td class="s-vendre">Vendre · départ 10</td><td>72</td><td>⏳ en file</td></tr>
+<tr><td>[C] Titre fictif C</td><td class="s-echanger">Échanger · Benjamin</td><td>8</td><td class="s-defausser">✕ échec, voir l’activité</td></tr></tbody></table></section>
+</main></div>
+<aside class="tiroir" aria-labelledby="t-activite"><h2 id="t-activite">Activité</h2>
+<nav class="onglets" aria-label="Activité"><a href="#" aria-current="page">En cours</a><a href="#">À venir (83)</a><a href="#">Erreurs (1)</a><a href="#">Historique</a></nav>
+<h3>Synchro</h3>
+<div class="etape fait"><span class="pastille">✓ Stats</span><span>1 284 exemplaires</span></div>
+<div class="etape cours"><span class="pastille">▶ Pages</span><span>7 / 13 · 6 requêtes restantes</span></div>
+<div class="etape attente"><span class="pastille">○ Prix</span><span>23 titres</span></div>
+<h3>Lot d’écriture</h3>
+<div class="barre" role="progressbar" aria-valuenow="31" aria-valuemin="0" aria-valuemax="100" aria-label="Lot"><i style="width:31%"></i></div>
+<p class="note">37 / 120 · arrêté sur erreur</p>
+<div class="erreur-bloc" role="alert" aria-labelledby="e1">
+  <h3 id="e1" style="margin-top:0">Arrêt : une action a échoué</h3>
+  <dl>
+    <dt>Action</dt><dd>Pose d’étiquette « #À échanger Benjamin »</dd>
+    <dt>Carte</dt><dd>[R] Titre de carte fictif · lot 2 / 4 · action 37 / 120</dd>
+    <dt>Réponse du site</dt><dd><strong>HTTP 429</strong> · trop de requêtes · reçue à 14:02:13</dd>
+    <dt>Cause probable</dt><dd>Le site demande de ralentir. Aucune reprise automatique avant 14:32.</dd>
+    <dt>Déjà fait</dt><dd>36 actions réussies, 0 interrompue</dd>
+  </dl>
+  <div class="actions">
+    <button class="principal">Réessayer cette action</button>
+    <button>Sauter cette action</button>
+    <button>Sauter ce lot (4 actions)</button>
+    <button>Ignorer jusqu’à la prochaine synchro</button>
+    <button class="danger">Arrêter tout</button>
+  </div>
+  <p class="note">« Sauter » n’envoie rien au site : l’action est marquée « passée » dans le journal. Elle sera reproposée au prochain aperçu sauf si vous choisissez « Ignorer jusqu’à la prochaine synchro ».</p>
+</div>
+</aside></div></body></html>
