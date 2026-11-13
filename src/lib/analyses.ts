@@ -7,7 +7,7 @@
  */
 import type { Carte, Statut } from './collection'
 import { STATUTS } from './collection'
-import { themesDeCarte } from './themes'
+import { compterThemes } from './themes'
 
 const LIMITE = 10
 
@@ -47,11 +47,8 @@ export function plusCheres(cartes: readonly Carte[]): Carte[] {
 }
 
 export function themesFrequents(cartes: readonly Carte[]): { theme: string; nombre: number }[] {
-  const compte = new Map<string, number>()
-  for (const carte of cartes) {
-    for (const theme of themesDeCarte(carte)) compte.set(theme, (compte.get(theme) ?? 0) + 1)
-  }
-  return [...compte]
+  return Object.entries(compterThemes([...cartes]))
+    .filter(([, nombre]) => nombre > 0)
     .map(([theme, nombre]) => ({ theme, nombre }))
     .sort((a, b) => b.nombre - a.nombre || (a.theme < b.theme ? -1 : a.theme > b.theme ? 1 : 0))
     .slice(0, LIMITE)

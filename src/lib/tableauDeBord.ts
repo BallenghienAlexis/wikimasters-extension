@@ -10,9 +10,9 @@
  * (jamais `NaN`). Parts de la répartition arrondies par plus forts restes (somme = 100).
  */
 import type { Collection, Statut } from './collection'
-import { STATUTS } from './collection'
 import { calculerEcarts } from './ecarts'
 import { placesEncheres, type Config } from './lot'
+import { valeurParDecision } from './analyses'
 
 export type PastilleSynchro = 'a-jour' | 'en-cours' | 'arretee' | 'erreur'
 
@@ -22,6 +22,9 @@ export interface ContexteTableauDeBord {
   synchro: { activee: boolean; etat: PastilleSynchro; derniereTerminee: number | null }
   /** Relevés de prix par identifiant de carte (valeur éventuellement inconnue). */
   prix: Record<string, { valeur: number | null; releveLe: number }>
+  /** Amis (préférences) : nécessaires aux étiquettes « #À échanger <nom> » attendues. */
+  amis?: Config['amis']
+  limiteParExemplaire?: Config['limiteParExemplaire']
 }
 
 export interface LigneRepartition {
@@ -90,16 +93,10 @@ export function calculerTableauDeBord(
   const valeur = connues.length === 0 ? null : connues.reduce((s, c) => s + (c.valeurMarchande ?? 0) * c.quantite, 0)
   const partSansPrix = hors.length === 0 ? null : Math.round(((hors.length - connues.length) * 100) / hors.length)
 
-  const lignes = STATUTS.map((statut) => {
-    const du = cartes.filter((c) => c.statut === statut)
-    const avecValeur = du.filter((c) => c.valeurMarchande !== null)
-    return {
-      statut,
-      exemplaires: du.reduce((s, c) => s + c.quantite, 0),
-      valeur: avecValeur.length === 0 ? null : avecValeur.reduce((s, c) => s + (c.valeurMarchande ?? 0) * c.quantite, 0),
-      exemples: du.slice(0, 3).map((c) => c.titre),
-    }
-  }).filter((l) => l.exemplaires > 0)
+  const lignes = valeurParDecision(cartes).map((l) => ({
+    ...l,
+    exemples: cartes.filter((c) => c.statut === l.statut).slice(0, 3).map((c) => c.titre),
+  }))
   const parts = partsEntieres(lignes.map((l) => l.exemplaires))
   const repartition = lignes.map((l, i) => ({ ...l, part: parts[i] ?? 0 }))
 
@@ -111,7 +108,7 @@ export function calculerTableauDeBord(
     valeur,
     partSansPrix,
     places: placesEncheres(contexte, enVente),
-    ecarts: calculerEcarts(cartes).length,
+    ecarts: calculerEcarts(cartes, { amis: contexte.amis, limiteParExemplaire: contexte.limiteParExemplaire }).length,
     repartition,
     sante: { pastille: contexte.synchro.etat, ageLibelle: ageLibelle(contexte.synchro, maintenant) },
     fraicheurPrix: {
