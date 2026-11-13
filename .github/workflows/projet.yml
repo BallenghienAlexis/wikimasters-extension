@@ -6,6 +6,11 @@ name: Projet GitHub
 # `pull_request_target` n'est utilisé que pour avoir le secret sur les PR de forks et de Dependabot :
 # aucun code de la PR n'est extrait ni exécuté, seules des métadonnées de l'évènement sont lues.
 on:
+  workflow_dispatch:
+    inputs:
+      jours:
+        description: Rattrapage : éléments fermés ou fusionnés depuis N jours
+        default: '14'
   issues:
     types: [opened, reopened, closed, labeled, assigned]
   pull_request_target:
@@ -15,12 +20,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: projet-${{ github.event.issue.number || github.event.pull_request.number }}
+  group: projet-${{ github.event.issue.number || github.event.pull_request.number || 'rattrapage' }}
   cancel-in-progress: false
 
 jobs:
   suivre:
     name: suivre
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -84,3 +90,84 @@ jobs:
                  projectId: $p, itemId: $i, fieldId: $f, value: { singleSelectOptionId: $o } }) { projectV2Item { id } } }`,
               { p: projet.id, i: itemId, f: champ.id, o: option.id });
             core.info(`Statut : ${option.name}`);
+
+  # Lancement manuel : ajoute au projet les issues et PR ouvertes (et celles fermées récemment)
+  # qui n'y figurent pas, avec le statut qu'aurait posé le suivi. Un élément déjà dans le projet
+  # avec un statut n'est jamais modifié.
+  rattrapage:
+    name: rattrapage
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+      JOURS: ${{ inputs.jours }}
+    steps:
+      - name: Vérifier le secret
+        run: test -n "$PROJECT_TOKEN" || { echo "::error::PROJECT_TOKEN absent"; exit 1; }
+      - uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const jours = Math.min(Math.max(parseInt(process.env.JOURS, 10) || 14, 1), 365);
+            const depuis = new Date(Date.now() - jours * 864e5).toISOString();
+            const noms = {
+              Backlog: ['Backlog', 'À trier', 'Todo'],
+              Ready: ['Ready', 'Accepté', 'À faire'],
+              'In progress': ['In progress', 'En cours'],
+              'In review': ['In review', 'En revue'],
+              Done: ['Done', 'Terminé'],
+            };
+            const res = await github.graphql(
+              `query($owner: String!) { user(login: $owner) { projectV2(number: 1) { id
+                 field(name: "Status") { ... on ProjectV2SingleSelectField { id options { id name } } } } } }`,
+              { owner });
+            const projet = res.user.projectV2;
+            const champ = projet.field;
+            const option = (n) => noms[n].map((x) => champ.options.find((o) => o.name.toLowerCase() === x.toLowerCase())).find(Boolean);
+
+            // Éléments déjà dans le projet : contenu → statut.
+            const presents = new Map();
+            let apres = null;
+            for (;;) {
+              const page = await github.graphql(
+                `query($id: ID!, $after: String) { node(id: $id) { ... on ProjectV2 { items(first: 100, after: $after) {
+                   pageInfo { hasNextPage endCursor }
+                   nodes { content { ... on Issue { id } ... on PullRequest { id } }
+                           fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } } } } } } }`,
+                { id: projet.id, after: apres });
+              const items = page.node.items;
+              for (const n of items.nodes) if (n.content) presents.set(n.content.id, n.fieldValueByName?.name ?? null);
+              if (!items.pageInfo.hasNextPage) break;
+              apres = items.pageInfo.endCursor;
+            }
+
+            const tous = await github.paginate(github.rest.issues.listForRepo, { owner, repo, state: 'all', since: depuis, per_page: 100 });
+            let ajoutes = 0, deplaces = 0, ignores = 0;
+            for (const it of tous.sort((a, b) => a.number - b.number)) {
+              const ferme = it.state === 'closed';
+              if (ferme && new Date(it.closed_at) < new Date(depuis)) { ignores++; continue; }
+              // Un PR fermé sans fusion (ex. PR Dependabot regroupée) n'a pas sa place sur le tableau.
+              if (ferme && it.pull_request && !it.pull_request.merged_at) { ignores++; continue; }
+              let cible;
+              if (ferme) cible = 'Done';
+              else if (it.pull_request) cible = it.draft ? 'In progress' : 'In review';
+              else if (it.assignees?.length) cible = 'In progress';
+              else if (it.labels.some((l) => l.name === 'statut:accepté')) cible = 'Ready';
+              else cible = 'Backlog';
+              const deja = presents.get(it.node_id);
+              if (deja) { ignores++; continue; }
+              const ajout = await github.graphql(
+                `mutation($p: ID!, $c: ID!) { addProjectV2ItemById(input: { projectId: $p, contentId: $c }) { item { id } } }`,
+                { p: projet.id, c: it.node_id });
+              const o = option(cible);
+              if (!o) { core.warning(`#${it.number} : aucune colonne pour ${cible}`); continue; }
+              await github.graphql(
+                `mutation($p: ID!, $i: ID!, $f: ID!, $o: String!) { updateProjectV2ItemFieldValue(input: {
+                   projectId: $p, itemId: $i, fieldId: $f, value: { singleSelectOptionId: $o } }) { projectV2Item { id } } }`,
+                { p: projet.id, i: ajout.addProjectV2ItemById.item.id, f: champ.id, o: o.id });
+              core.info(`#${it.number} → ${o.name}`);
+              ajoutes++;
+            }
+            core.info(`Ajoutés : ${ajoutes} ; déjà présents ou ignorés : ${ignores}.`);
