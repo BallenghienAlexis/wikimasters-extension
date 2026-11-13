@@ -208,7 +208,7 @@ describe('AC2 : requêtes parallèles abandonnées ou en échec', () => {
           reverifs++;
           await porte.promesse;
         }
-        return 'ok';
+        return 'ok' as const;
       },
       journal: {
         ouvrir: () => 'e',

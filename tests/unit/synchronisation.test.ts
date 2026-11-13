@@ -328,7 +328,7 @@ describe('retrait d’étiquette', () => {
 })
 
 describe('exécution : libellés fixes (D-22, D-41)', () => {
-  const etat = (e: Partial<EtatFile>): EtatFile => ({ version: 1, idLot: 'l', etat: 'arretee', traitees: 0, total: 0, raison: null, ...e })
+  const etat = (e: Partial<EtatFile>): EtatFile => ({ version: 1, idLot: 'l', etat: 'arretee', traitees: 0, total: 0, raison: null, enPause: false, lots: [], reussies: 0, restantes: [], erreur: null, ...e })
   const bilan = { reussies: 0, passees: 0, erreurs: 0, dernierCode: null, dernierInconnu: false }
 
   it('donne une cause fixe, jamais un texte du site', () => {

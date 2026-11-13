@@ -42,7 +42,7 @@ const banc = vi.hoisted(() => {
     reponse: ((): unknown => null) as (a: Action, n: number) => unknown,
     t: 1_000_000,
     attentes: [] as Array<{ echeance: number; resoudre: () => void }>,
-    avancer: async (): Promise<void> => undefined,
+    avancer: (async () => undefined) as (ms: number) => Promise<void>,
     horloge: {
       now: (): number => b.t,
       attendreJusqua: (echeance: number): Promise<void> => {
