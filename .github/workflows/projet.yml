@@ -1,0 +1,87 @@
+name: Projet GitHub
+
+# Suit les issues et PR dans https://github.com/users/BallenghienAlexis/projects/1
+# Secret requis : PROJECT_TOKEN (voir .github/PROTECTION.md). Sans lui, le workflow ne fait rien.
+#
+# `pull_request_target` n'est utilisé que pour avoir le secret sur les PR de forks et de Dependabot :
+# aucun code de la PR n'est extrait ni exécuté, seules des métadonnées de l'évènement sont lues.
+on:
+  issues:
+    types: [opened, reopened, closed, labeled]
+  pull_request_target:
+    types: [opened, reopened, ready_for_review, closed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: projet-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  suivre:
+    name: suivre
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+    steps:
+      - name: Vérifier le secret
+        id: secret
+        run: |
+          if [ -z "$PROJECT_TOKEN" ]; then
+            echo "::notice::PROJECT_TOKEN absent : suivi du projet ignoré."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Ajouter au projet
+        id: ajout
+        if: steps.secret.outputs.present == 'true'
+        uses: actions/add-to-project@v1
+        with:
+          project-url: https://github.com/users/BallenghienAlexis/projects/1
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+
+      - name: Mettre à jour le statut
+        if: steps.secret.outputs.present == 'true'
+        uses: actions/github-script@v9
+        env:
+          ITEM_ID: ${{ steps.ajout.outputs.itemId }}
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          script: |
+            // Noms de colonne acceptés pour chaque étape (le premier trouvé est utilisé).
+            const noms = {
+              triage: ['À trier', 'Todo', 'To do', 'New'],
+              accepte: ['Accepté', 'À faire', 'Ready', 'Backlog'],
+              encours: ['En cours', 'In progress'],
+              termine: ['Terminé', 'Done'],
+            };
+            const a = context.payload.action;
+            const estPr = !!context.payload.pull_request;
+            let cible = null;
+            if (estPr) {
+              if (a === 'closed') cible = 'termine';
+              else cible = 'encours';
+            } else if (a === 'closed') cible = 'termine';
+            else if (a === 'opened' || a === 'reopened') cible = 'triage';
+            else if (a === 'labeled' && context.payload.label.name === 'statut:accepté') cible = 'accepte';
+            if (!cible) { core.info('Aucun changement de statut pour cet évènement.'); return; }
+
+            const owner = 'BallenghienAlexis';
+            const res = await github.graphql(
+              `query($owner: String!) { user(login: $owner) { projectV2(number: 1) { id
+                 field(name: "Status") { ... on ProjectV2SingleSelectField { id options { id name } } } } } }`,
+              { owner });
+            const projet = res.user.projectV2;
+            const champ = projet.field;
+            if (!champ) { core.setFailed('Champ « Status » introuvable dans le projet.'); return; }
+            const option = noms[cible].map((n) => champ.options.find((o) => o.name.toLowerCase() === n.toLowerCase())).find(Boolean);
+            if (!option) { core.warning(`Aucune colonne parmi ${noms[cible].join(', ')} (colonnes : ${champ.options.map((o) => o.name).join(', ')}).`); return; }
+            await github.graphql(
+              `mutation($p: ID!, $i: ID!, $f: ID!, $o: String!) { updateProjectV2ItemFieldValue(input: {
+                 projectId: $p, itemId: $i, fieldId: $f, value: { singleSelectOptionId: $o } }) { projectV2Item { id } } }`,
+              { p: projet.id, i: process.env.ITEM_ID, f: champ.id, o: option.id });
+            core.info(`Statut : ${option.name}`);
