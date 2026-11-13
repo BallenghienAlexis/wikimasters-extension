@@ -1,4 +1,4 @@
-import { chromium, test as base, type BrowserContext, type Page, type Worker } from '@playwright/test';
+import { chromium, expect, test as base, type BrowserContext, type Page, type Worker } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -37,6 +37,27 @@ export async function chargerCollectionFictive(page: Page): Promise<void> {
   await chargerCartes(page, cartes);
 }
 
+/** Onglets de la page de gestion, dans l'ordre d'affichage (fragment d'URL = identifiant). */
+export const ONGLETS = [
+  { id: 'tableau-de-bord', nom: 'Tableau de bord' },
+  { id: 'synchro', nom: 'Synchro' },
+  { id: 'lots', nom: 'Lots' },
+  { id: 'collection', nom: 'Collection' },
+  { id: 'ventes', nom: 'Ventes' },
+  { id: 'reglages', nom: 'Réglages' },
+] as const;
+
+export type IdOnglet = (typeof ONGLETS)[number]['id'];
+
+/** Ouvre un onglet de la page de gestion par son fragment d'URL, puis attend qu'il soit sélectionné. */
+export async function allerA(page: Page, onglet: IdOnglet): Promise<void> {
+  await page.evaluate((id) => {
+    window.location.hash = id;
+  }, onglet);
+  const { nom } = ONGLETS.find((o) => o.id === onglet) ?? { nom: onglet };
+  await expect(page.getByRole('tab', { name: new RegExp(`^${nom}`) })).toHaveAttribute('aria-selected', 'true');
+}
+
 interface Fixtures {
   context: BrowserContext;
   serviceWorker: Worker;
@@ -69,4 +90,4 @@ export const test = base.extend<Fixtures>({
   },
 });
 
-export { expect } from '@playwright/test';
+export { expect };
