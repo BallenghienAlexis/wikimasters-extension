@@ -1,0 +1,65 @@
+name: Alertes de sécurité
+
+# Le jeton des workflows ne peut pas lire les alertes Dependabot ; `npm audit` lit le même
+# registre d'avis à partir de package-lock.json. Une seule issue suit l'état courant.
+on:
+  schedule:
+    - cron: '41 5 * * *'
+  push:
+    branches: [main]
+    paths: [package-lock.json]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Audit des dépendances
+        run: npm audit --json > "$RUNNER_TEMP/audit.json" || true
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const { owner, repo } = context.repo;
+            const etiquette = 'alerte-securite';
+            try {
+              await github.rest.issues.createLabel({ owner, repo, name: etiquette, color: 'b60205', description: 'Vulnérabilité dans une dépendance' });
+            } catch (e) { if (e.status !== 422) throw e; }
+
+            let rapport;
+            try { rapport = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/audit.json`, 'utf8')); }
+            catch { core.setFailed('Rapport npm audit illisible'); return; }
+            if (rapport.error) { core.setFailed('npm audit a échoué'); return; }
+
+            const ordre = { critical: 0, high: 1, moderate: 2 };
+            const lignes = Object.values(rapport.vulnerabilities ?? {})
+              .filter((v) => v.severity in ordre)
+              .sort((a, b) => ordre[a.severity] - ordre[b.severity] || a.name.localeCompare(b.name))
+              .map((v) => `- **${v.name}** : ${v.severity}${v.isDirect ? ' (directe)' : ''}${v.fixAvailable ? '' : ', pas de correctif'}`);
+
+            const ouvertes = await github.paginate(github.rest.issues.listForRepo, { owner, repo, state: 'open', labels: etiquette, per_page: 100 });
+            const existante = ouvertes[0];
+            const pied = '\n\n---\n_Mis à jour par le workflow « Alertes de sécurité » (`npm audit`)._';
+
+            if (!lignes.length) {
+              if (existante) {
+                await github.rest.issues.createComment({ owner, repo, issue_number: existante.number, body: 'Plus aucune vulnérabilité modérée ou plus grave : issue fermée.' });
+                await github.rest.issues.update({ owner, repo, issue_number: existante.number, state: 'closed', state_reason: 'completed' });
+              }
+              return;
+            }
+            const corps = `Dépendances touchées (${lignes.length}) :\n\n${lignes.join('\n')}\n\nDependabot ouvre les PR de correctif quand il en existe. Détail : onglet Security › Dependabot.${pied}`;
+            if (existante) {
+              await github.rest.issues.update({ owner, repo, issue_number: existante.number, body: corps });
+            } else {
+              await github.rest.issues.create({ owner, repo, title: 'Alertes de sécurité des dépendances', body: corps, labels: [etiquette] });
+            }
