@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EtatExecution, Registre } from '../../src/lib/actions';
-import { collectionVide, type Carte } from '../../src/lib/collection';
-import { versCsv, versJson } from '../../src/lib/exports';
+import { collectionVide } from '../../src/lib/collection';
 import { ouvrirEntree, type Journal } from '../../src/lib/journal';
 import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../../src/config/amis';
 
@@ -197,26 +196,6 @@ describe('CLES_STOCKAGE', () => {
       for (const k of clesRecursives(faux.donnees.get(cle))) expect(k).not.toMatch(MOTIF_SENSIBLE);
     }
     for (const cle of faux.donnees.keys()) expect(cle).not.toMatch(MOTIF_SENSIBLE);
-  });
-
-  it('AC1 : registre, journal et exécution restent absents de l’export JSON', async () => {
-    const carte: Carte = {
-      id: 'c1', titre: 'Loutre', rarete: 'Rare', quantite: 1, url: null, favori: false, idsSite: null, etiquettesSite: [],
-      description: '', ami: null, valeurMarchande: null, decidePar: null, statut: 'vendre', prixCible: 50, note: '',
-    };
-    await enregistrerRegistre(registreRempli());
-    await enregistrerJournal(journalRempli());
-    await enregistrerExecution(execution());
-    await enregistrerSignalSynchro(1700000000000);
-    await enregistrerCollection({ ...collectionVide(), cartes: [carte] });
-    const charge = await chargerCollection();
-    expect(charge.cartes).toHaveLength(1);
-    const json = versJson(charge);
-    const csv = versCsv(charge.cartes);
-    for (const sortie of [json, csv]) {
-      for (const mot of ['registre', 'journal', 'execution', 'etiquettes', 'couples', 'idLot', 'etiq-1', 'Ami Un', 'lot-1', 'pose-etiquette', 'signalSynchro', '1700000000000'])
-        expect(sortie).not.toContain(mot);
-    }
   });
 });
 

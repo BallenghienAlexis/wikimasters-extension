@@ -12,7 +12,7 @@ Extension Chrome (Manifest V3) pour préparer le tri, l’échange et la vente d
 - Prépare les étiquettes (statut, thème, « #À échanger <ami> ») avec un aperçu, puis les envoie au site si vous cliquez sur « Lancer ».
 - Liste les ventes à lancer selon vos places libres et conseille un délai selon les heures de forte affluence.
 - Se synchronise avec le site (collection, étiquettes, prix du marché) tant qu’un onglet WikiMasters est ouvert.
-- Permet d’éditer chaque carte (statut, prix cible, note), de filtrer, de repérer les doublons, d’importer et d’exporter en CSV ou JSON.
+- Permet d’éditer chaque carte (statut, prix cible, note), de filtrer, de repérer les doublons, et de sauvegarder / restaurer vos données d’un PC à l’autre (voir « Sauvegarde complète »).
 
 Les données sont stockées localement dans `chrome.storage.local`. Il n’y a ni serveur ni base de données.
 
@@ -50,7 +50,7 @@ npm run build
 
 Après une modification du code, relancez `npm run build` (ou laissez tourner `npm run dev`, qui reconstruit `dist/` en continu) puis cliquez sur la flèche de rechargement de l’extension dans `chrome://extensions`.
 
-Pour essayer sans compte, importez `tests/e2e/fixtures/collection-fictive.json` depuis la page de gestion.
+Pour essayer sans compte, les tests e2e écrivent des cartes fictives (`tests/e2e/fixtures/`) dans le stockage de l’extension.
 
 ## Commandes npm
 
@@ -104,15 +104,8 @@ Les grosses fonctions passent par un pipeline de documents dans `specs/<feature>
 
 Tout se trouve dans [src/config/prix.ts](src/config/prix.ts) : seuil de défausse, limite d’enchères, matrice valeur marchande → prix de départ. Les amis et leurs thèmes se saisissent dans la page de gestion (liste vide au départ ; `src/config/amis.ts` reste vide dans le code livré) : renseignez les vôtres. Après une modification, lancez `npm run build` puis rechargez l’extension.
 
-## Format d’import
+## Sauvegarde complète (changer de PC)
 
-```json
-{
-  "version": 1,
-  "cartes": [
-    { "id": "identifiant-unique", "titre": "Titre", "rarete": "Rare", "quantite": 2, "url": "https://exemple.test/carte" }
-  ]
-}
-```
+La section « Sauvegarde complète » de la page de gestion écrit un seul fichier JSON (`wm-sauvegarde-AAAA-MM-JJ.json`) avec ce que vous avez saisi : statut, prix cible, note, ami, valeur marchande et favori de chaque carte, vos thèmes, vos amis, le plafond de défausse, le journal des ventes. **Jamais** de jeton, de cookie ni d’identifiant du site ; les caches (Wikipédia, marché) et les étiquettes du site se reconstruisent par la synchronisation. Les réglages de `src/config/prix.ts` suivent avec le dépôt.
 
-Seuls `id` et `titre` sont obligatoires. Un import met à jour les cartes de même `id` en gardant votre édition locale, sauf si le fichier fournit `statut`, `prixCible` ou `note`.
+Sur l’autre PC : « Importer une sauvegarde », lisez l’aperçu (cartes nouvelles, complétées, identiques, en conflit), choisissez quoi faire en cas de conflit, puis « Appliquer ». Par défaut, ce que vous avez saisi sur ce PC est gardé ; une carte sans saisie reçoit celle de la sauvegarde ; les thèmes, amis et ventes sont réunis (le plafond de défausse réglé ici est gardé). Un fichier invalide, trop gros ou d’une version plus récente est refusé sans rien modifier.

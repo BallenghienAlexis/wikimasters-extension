@@ -1,8 +1,7 @@
 // Modèle de la collection et logique pure, sans dépendance à chrome.*.
 
-// Schéma de stockage (v2 : identifiants d’exemplaires du site ; v3 : étiquettes lues sur le site). Le fichier d’échange garde sa propre version.
+// Schéma de stockage (v2 : identifiants d’exemplaires du site ; v3 : étiquettes lues sur le site).
 export const VERSION_SCHEMA = 3;
-export const VERSION_ECHANGE = 1;
 const MAX_ID_SITE = 200;
 const MAX_ETIQUETTES_SITE = 100;
 const MAX_ETIQUETTE_SITE = 300;
@@ -59,7 +58,6 @@ export type EditionCarte = Partial<Pick<Carte, 'statut' | 'prixCible' | 'note' |
 export type CarteImportee = Omit<Carte, 'idsSite' | 'etiquettesSite' | 'statut' | 'prixCible' | 'note' | 'favori' | 'description' | 'ami' | 'decidePar' | 'valeurMarchande'> &
   EditionCarte & { favori?: boolean; description?: string };
 
-export type ResultatImport = { ok: true; cartes: CarteImportee[] } | { ok: false; erreur: string };
 export type ResultatStockage = { ok: true; collection: Collection } | { ok: false; erreur: string };
 
 export const collectionVide = (): Collection => ({ version: VERSION_SCHEMA, cartes: [] });
@@ -81,7 +79,7 @@ interface CarteLue {
   etiquettesSite: string[];
 }
 
-function analyserCarte(brut: unknown, rang: number, avecIds: boolean): CarteLue | string {
+function analyserCarte(brut: unknown, rang: number): CarteLue | string {
   const position = `Carte n° ${rang + 1}`;
   if (!estObjet(brut)) return `${position} : format invalide.`;
 
@@ -106,12 +104,12 @@ function analyserCarte(brut: unknown, rang: number, avecIds: boolean): CarteLue 
   if (decidePar !== undefined && decidePar !== null && decidePar !== 'moi' && decidePar !== 'assistant') return `${position} : origine invalide.`;
 
   let ids: string[] | null = null;
-  if (avecIds && idsSite !== undefined && idsSite !== null) {
+  if (idsSite !== undefined && idsSite !== null) {
     if (!Array.isArray(idsSite) || !idsSiteValides(idsSite)) return `${position} : identifiants du site invalides.`;
     ids = idsSite as string[];
   }
   let etiquettes: string[] = [];
-  if (avecIds && etiquettesSite !== undefined) {
+  if (etiquettesSite !== undefined) {
     if (!etiquettesSiteValides(etiquettesSite)) return `${position} : étiquettes du site invalides.`;
     etiquettes = etiquettesSite;
   }
@@ -134,29 +132,20 @@ function analyserCarte(brut: unknown, rang: number, avecIds: boolean): CarteLue 
   return { carte, idsSite: ids, etiquettesSite: etiquettes };
 }
 
-function analyserCartes(brut: Record<string, unknown>, avecIds: boolean): CarteLue[] | string {
+function analyserCartes(brut: Record<string, unknown>): CarteLue[] | string {
   if (!Array.isArray(brut.cartes)) return 'La liste « cartes » est absente.';
   if (brut.cartes.length > MAX_CARTES) return `Trop de cartes (maximum : ${MAX_CARTES}).`;
 
   const lues: CarteLue[] = [];
   const ids = new Set<string>();
   for (const [rang, element] of brut.cartes.entries()) {
-    const lue = analyserCarte(element, rang, avecIds);
+    const lue = analyserCarte(element, rang);
     if (typeof lue === 'string') return lue;
     if (ids.has(lue.carte.id)) return `Carte n° ${rang + 1} : identifiant en double.`;
     ids.add(lue.carte.id);
     lues.push(lue);
   }
   return lues;
-}
-
-// Valide le fichier d’échange : version 1 seulement, tout `idsSite` présent est ignoré.
-export function analyserImport(brut: unknown): ResultatImport {
-  if (!estObjet(brut)) return { ok: false, erreur: 'Le fichier doit contenir un objet JSON.' };
-  if (brut.version !== VERSION_ECHANGE) return { ok: false, erreur: `Version de fichier non prise en charge (attendue : ${VERSION_ECHANGE}).` };
-  const lues = analyserCartes(brut, false);
-  if (typeof lues === 'string') return { ok: false, erreur: lues };
-  return { ok: true, cartes: lues.map((l) => l.carte) };
 }
 
 // v1 → v3 et v2 → v3 : chaque carte garde ses champs et reçoit `idsSite: null` (v1) et `etiquettesSite: []`. Une v3 (ou un contenu inconnu) passe telle quelle.
@@ -175,7 +164,7 @@ export function analyserStockage(brut: unknown): ResultatStockage {
     return { ok: false, erreur: `Version de stockage non prise en charge (attendue : 1, 2 ou ${VERSION_SCHEMA}).` };
   }
   const migre = migrerCollection(brut) as unknown as Record<string, unknown>;
-  const lues = analyserCartes(migre, true);
+  const lues = analyserCartes(migre);
   if (typeof lues === 'string') return { ok: false, erreur: lues };
   const base = fusionnerImport(
     collectionVide(),
