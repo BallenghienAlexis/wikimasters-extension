@@ -21,7 +21,6 @@ const Onglets: React.FC<Props> = ({ actif, onChoisir }) => {
   const conteneur = useRef<HTMLDivElement>(null);
   const refs = useRef<Map<IdOnglet, HTMLAnchorElement>>(new Map());
   const [indicateur, setIndicateur] = useState<Indicateur | null>(null);
-  const [anime, setAnime] = useState(false);
 
   useLayoutEffect(() => {
     const mesurer = (): void => {
@@ -32,11 +31,6 @@ const Onglets: React.FC<Props> = ({ actif, onChoisir }) => {
     window.addEventListener('resize', mesurer);
     return () => window.removeEventListener('resize', mesurer);
   }, [actif]);
-
-  // Le glissement n’est actif qu’après la première mesure : pas de trajet à l’ouverture de la page.
-  useLayoutEffect(() => {
-    if (indicateur !== null) setAnime(true);
-  }, [indicateur]);
 
   const deplacer = (e: React.KeyboardEvent, position: number): void => {
     const n = ONGLETS.length;
@@ -89,7 +83,7 @@ const Onglets: React.FC<Props> = ({ actif, onChoisir }) => {
           style={{
             width: indicateur.largeur,
             transform: `translateX(${indicateur.gauche}px)`,
-            transition: anime && mouvement ? 'transform var(--d-base) var(--ease-spring)' : 'none',
+            transition: mouvement ? 'transform var(--d-base) var(--ease-spring)' : 'none',
           }}
         />
       )}

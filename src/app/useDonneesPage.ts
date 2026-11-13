@@ -116,8 +116,6 @@ export function useDonneesPage() {
       arreterEtiquettes();
       arreterSynchro();
     };
-    // Lecture initiale seulement : les fonctions de lecture ne dépendent que de setters stables.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // La surcouche des thèmes est posée avant l’état : les rendus qui suivent lisent déjà le nouveau cache.
