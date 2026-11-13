@@ -13,7 +13,7 @@
  * requête dont le résultat est inconnu.
  */
 
-import type { Action, EtatExecution, ResultatAction } from './actions'
+import { CODES_CARTE_INDISPONIBLE, type Action, type EtatExecution, type ResultatAction } from './actions'
 
 /** Intervalle minimal entre deux débuts de requête. */
 export const INTERVALLE_MS = 200
@@ -28,6 +28,19 @@ export const CODES_ARRET: readonly number[] = [401, 403, 429]
 export const CODE_CONFLIT = 409
 export const arreteLeLot = (action: Action, codeHttp: number | null): boolean =>
   codeHttp !== null && (CODES_ARRET.includes(codeHttp) || (codeHttp === CODE_CONFLIT && (action.type === 'enchere' || action.type === 'defausse')))
+/**
+ * Refus par carte (403, 404) sur une action visant un exemplaire : le plus souvent l’exemplaire a été vendu ou
+ * défaussé depuis la dernière synchro. L’action est abandonnée, la carte marquée indisponible localement et le lot
+ * continue. Une session ou un jeton refusés répondent 403 à toutes les cartes : `MAX_REFUS_CARTE_CONSECUTIFS`
+ * refus d’affilée (sans succès entre deux) arrêtent le lot comme avant.
+ */
+export { CODES_CARTE_INDISPONIBLE }
+export const MAX_REFUS_CARTE_CONSECUTIFS = 3
+/** Plafond de refus par carte sur tout un lot, qu’un succès intercalé ne remet jamais à zéro. */
+export const MAX_REFUS_CARTE_PAR_LOT = 5
+const TYPES_PAR_EXEMPLAIRE: readonly string[] = ['pose-etiquette', 'retrait-etiquette', 'enchere', 'defausse']
+export const refusParCarte = (action: Action, codeHttp: number | null): boolean =>
+  codeHttp !== null && CODES_CARTE_INDISPONIBLE.includes(codeHttp) && TYPES_PAR_EXEMPLAIRE.includes(action.type)
 /** Libellé fixe d’un résultat d’arrêt sans requête émise (jeton absent). */
 export const CAUSE_JETON_ABSENT = 'jeton-absent'
 
@@ -203,7 +216,7 @@ export function creerFile(deps: DependancesFile): File {
    * `lotParallele` : l’action fait partie d’un lot de poses en vol en même temps. Son créneau de départ est
    * réservé tout de suite (intervalle minimal entre deux départs), sans attendre la réponse des autres.
    */
-  async function traiter(action: Action, echecs: { n: number }, lotParallele = false, apresReponse = Number.NEGATIVE_INFINITY): Promise<void> {
+  async function traiter(action: Action, echecs: { n: number; refus: number; refusTotal: number }, lotParallele = false, apresReponse = Number.NEGATIVE_INFINITY): Promise<void> {
     if ((await verifier(action)) === 'passee') return inscrirePassee(action)
 
     if (lotParallele) {
@@ -265,9 +278,16 @@ export function creerFile(deps: DependancesFile): File {
     // Raison d’arrêt connue dès la réponse : le drapeau passe avant toute attente de journal, pour qu’aucun
     // ordre du lot parallèle ne parte entre-temps.
     let arretApres: Arret | null = null
+    let indisponible = false
+    if (resultat.classe === 'reussie') echecs.refus = 0
     if (exception) arretApres = new Arret('transport')
     else if (resultat.classe === 'echec') {
-      if (arreteLeLot(action, resultat.codeHttp)) arretApres = new Arret('code-http')
+      if (refusParCarte(action, resultat.codeHttp)) {
+        echecs.refus++
+        echecs.refusTotal++
+        if (echecs.refus >= MAX_REFUS_CARTE_CONSECUTIFS || echecs.refusTotal >= MAX_REFUS_CARTE_PAR_LOT) arretApres = new Arret('code-http')
+        else indisponible = true
+      } else if (arreteLeLot(action, resultat.codeHttp)) arretApres = new Arret('code-http')
       else {
         echecs.n++
         if (echecs.n >= MAX_ECHECS) arretApres = new Arret('echecs')
@@ -277,7 +297,9 @@ export function creerFile(deps: DependancesFile): File {
 
     await journal.completer(id, resultat)
     if (arretApres) throw arretApres
-    if (resultat.classe === 'reussie') await appliquer(action, resultat)
+    // Carte indisponible : l’état local est corrigé (exemplaire retiré), les actions suivantes visant ce même
+    // exemplaire sont écartées par la revérification, le lot continue.
+    if (resultat.classe === 'reussie' || indisponible) await appliquer(action, resultat)
   }
 
   /** Prend la prochaine action, ou jusqu’à `concurrence` poses/retraits consécutifs si la file est parallèle. */
@@ -299,7 +321,7 @@ export function creerFile(deps: DependancesFile): File {
   }
 
   async function boucle(): Promise<void> {
-    const echecs = { n: 0 }
+    const echecs = { n: 0, refus: 0, refusTotal: 0 }
     let raison: RaisonArret | null = null
     try {
       while (file.length > 0) {

@@ -1,5 +1,8 @@
 > **Retiré le 2026-11-12** : l'import/export de fichier (`versJson`, `versCsv`, `analyserImport`, `VERSION_ECHANGE`) n'existe plus (voir `specs/retrait-import-export/retouches.md`). Ce passage reste comme historique.
 
+> **Amendement du 2026-11-13 (demande d’Alexis : gérer les cartes vendues ou défaussées)** : un 403/404 isolé sur un exemplaire (pose, retrait, enchère, défausse) ou sur le prix d’une carte n’arrête plus le lot ni la synchro ; 3 refus d’affilée, 5 par lot (10 par exécution pour les prix), 401, 429 ou un refus hors exemplaire arrêtent comme avant. Voir AGENTS.md § « 403 par carte ». Risque de bannissement accru, rappelé.
+
+
 # Spec raffinée — Synchronisation complète : étiquettes, enchères et défausse appliquées sur le site
 
 
