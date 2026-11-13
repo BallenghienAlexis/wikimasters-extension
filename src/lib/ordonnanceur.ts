@@ -27,6 +27,8 @@ export const DUREE_BAIL_MS = 2 * 60_000;
 export const MAX_PRIX_PAR_EXECUTION = 100;
 /** Refus 403 d’affilée sur les prix qui arrêtent la synchro : en dessous, c’est une carte sans route de prix, pas la session. */
 export const MAX_REFUS_PRIX_CONSECUTIFS = 3;
+/** Plafond de refus de prix sur toute une exécution, qu’un succès intercalé ne remet jamais à zéro. */
+export const MAX_REFUS_PRIX_PAR_EXECUTION = 10;
 const PREMIERE_PAGE = 0;
 const CARTES_PAR_PAGE = 50;
 /** Retrait automatique des cartes disparues : au plus ce nombre, ou 10 % de la collection si plus. */
@@ -204,6 +206,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   let echecs = 0;
   /** Refus 403 consécutifs sur la route des prix (par carte, tolérés un à un). */
   let refusPrix = 0;
+  let refusPrixTotal = 0;
 
   if (!deps.forcer && etat.arretJusqua !== null && horloge.now() < etat.arretJusqua) {
     journal('Synchronisation en pause après un arrêt : pas de reprise avant la fin du délai.');
@@ -265,8 +268,9 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       // Prix d’une seule carte refusé : carte vendue, défaussée ou sans marché. On l’ignore ; la session n’est en
       // cause que si les refus s’enchaînent (401 et 429 arrêtent toujours tout de suite).
       refusPrix += 1;
+      refusPrixTotal += 1;
       journal(`Prix indisponible (réponse ${reponse.statut}) : carte ignorée (${refusPrix}/${MAX_REFUS_PRIX_CONSECUTIFS} refus d’affilée).`);
-      if (refusPrix >= MAX_REFUS_PRIX_CONSECUTIFS) throw new Interruption('code-http', reponse.statut);
+      if (refusPrix >= MAX_REFUS_PRIX_CONSECUTIFS || refusPrixTotal >= MAX_REFUS_PRIX_PAR_EXECUTION) throw new Interruption('code-http', reponse.statut);
       return null;
     }
     if (CODES_ARRET.includes(reponse.statut)) {

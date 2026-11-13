@@ -610,6 +610,14 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.etat.arretJusqua).toBe(b.horloge.t + PAUSE_APRES_ARRET_MS);
   })
 
+  it('prix : 10 refus 403 sur l’exécution arrêtent même séparés par des succès', async () => {
+    const site = siteFictif(40);
+    const b = banc((chemin) => (/card-(\d+)\/sales/.test(chemin) && Number(/card-(\d+)\//.exec(chemin)![1]) % 2 === 0 ? { statut: 403, json: null } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('arret');
+    expect(r.codeHttp).toBe(403);
+  })
+
   it('prix : 401 et 429 arrêtent toujours dès la première réponse', async () => {
     for (const code of [401, 429]) {
       const site = siteFictif(4);

@@ -298,10 +298,12 @@ describe('arrêts (AC4)', () => {
     expect(etat.raison).toBe('code-http');
     expect(b.requetes).toHaveLength(4);
 
-    // Refus séparés par des succès : jamais d’arrêt.
+    // Refus séparés par des succès : jamais 3 d’affilée, mais le plafond de 5 par lot arrête.
     const b2 = banc({}, (n) => (n % 3 === 0 ? OK : echec(403)));
-    const etat2 = await creerFile(b2.deps).demarrer([1, 2, 3, 4, 5, 6, 7, 8].map(pose), 'lot-alterne');
-    expect(etat2.etat).toBe('terminee');
+    const etat2 = await creerFile(b2.deps).demarrer(Array.from({ length: 20 }, (_, i) => pose(i + 1)), 'lot-alterne');
+    expect(etat2.etat).toBe('arretee');
+    expect(etat2.raison).toBe('code-http');
+    expect(b2.requetes.filter((_, i) => (i + 1) % 3 !== 0)).toHaveLength(5);
   });
 
   it('409 : arrête le lot pour une enchère ou une défausse, pas pour une étiquette', async () => {

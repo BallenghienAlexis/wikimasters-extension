@@ -36,6 +36,8 @@ export const arreteLeLot = (action: Action, codeHttp: number | null): boolean =>
  */
 export const CODES_CARTE_INDISPONIBLE: readonly number[] = [403, 404]
 export const MAX_REFUS_CARTE_CONSECUTIFS = 3
+/** Plafond de refus par carte sur tout un lot, qu’un succès intercalé ne remet jamais à zéro. */
+export const MAX_REFUS_CARTE_PAR_LOT = 5
 const TYPES_PAR_EXEMPLAIRE: readonly string[] = ['pose-etiquette', 'retrait-etiquette', 'enchere', 'defausse']
 export const refusParCarte = (action: Action, codeHttp: number | null): boolean =>
   codeHttp !== null && CODES_CARTE_INDISPONIBLE.includes(codeHttp) && TYPES_PAR_EXEMPLAIRE.includes(action.type)
@@ -214,7 +216,7 @@ export function creerFile(deps: DependancesFile): File {
    * `lotParallele` : l’action fait partie d’un lot de poses en vol en même temps. Son créneau de départ est
    * réservé tout de suite (intervalle minimal entre deux départs), sans attendre la réponse des autres.
    */
-  async function traiter(action: Action, echecs: { n: number; refus: number }, lotParallele = false, apresReponse = Number.NEGATIVE_INFINITY): Promise<void> {
+  async function traiter(action: Action, echecs: { n: number; refus: number; refusTotal: number }, lotParallele = false, apresReponse = Number.NEGATIVE_INFINITY): Promise<void> {
     if ((await verifier(action)) === 'passee') return inscrirePassee(action)
 
     if (lotParallele) {
@@ -282,7 +284,8 @@ export function creerFile(deps: DependancesFile): File {
     else if (resultat.classe === 'echec') {
       if (refusParCarte(action, resultat.codeHttp)) {
         echecs.refus++
-        if (echecs.refus >= MAX_REFUS_CARTE_CONSECUTIFS) arretApres = new Arret('code-http')
+        echecs.refusTotal++
+        if (echecs.refus >= MAX_REFUS_CARTE_CONSECUTIFS || echecs.refusTotal >= MAX_REFUS_CARTE_PAR_LOT) arretApres = new Arret('code-http')
         else indisponible = true
       } else if (arreteLeLot(action, resultat.codeHttp)) arretApres = new Arret('code-http')
       else {
@@ -318,7 +321,7 @@ export function creerFile(deps: DependancesFile): File {
   }
 
   async function boucle(): Promise<void> {
-    const echecs = { n: 0, refus: 0 }
+    const echecs = { n: 0, refus: 0, refusTotal: 0 }
     let raison: RaisonArret | null = null
     try {
       while (file.length > 0) {
