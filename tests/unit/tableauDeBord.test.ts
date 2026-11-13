@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Carte, Collection, Statut } from '../../src/lib/collection'
+import { themesDeCarte } from '../../src/lib/themes'
 import { etiquettesDeCarte, placesEncheres } from '../../src/lib/lot'
 import { calculerTableauDeBord, type ContexteTableauDeBord } from '../../src/lib/tableauDeBord'
 
@@ -85,8 +86,9 @@ describe('chiffres clés', () => {
   })
 
   it('SC-001 : écarts calculés avec les amis du contexte (étiquette « #À échanger <ami> » attendue, donc 0 écart)', () => {
-    const amis = [{ nom: 'Zoé', themes: [] }]
-    const base = carte('e', { idsSite: ['ex-e'], statut: 'echanger', ami: 'Zoé' })
+    const base = carte('e', { idsSite: ['ex-e'], statut: 'echanger', description: 'compositeur allemand' })
+    // Zoé suit un thème de la carte : l’étiquette d’échange vient du contexte, pas de la carte.
+    const amis = [{ nom: 'Zoé', themes: themesDeCarte(base) }]
     const attendues = etiquettesDeCarte(base, { amis }).retenues
     expect(attendues).toContain('#À échanger Zoé')
     const reliee = { ...base, etiquettesSite: [...attendues] }
