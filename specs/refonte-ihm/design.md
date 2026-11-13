@@ -40,6 +40,18 @@ Contrat visuel. Tokens existants uniquement (`src/styles/tokens.css`) ; aucune n
   | Erreur | entrée avec courte secousse, `role="alert"` |
   | Statut « À jour » | pastille qui pulse |
   Tout est coupé par `prefers-reduced-motion` et par le réglage « Animations ».
+- D-08 Harmonisation du mouvement par type d’élément (Alexis, 2026-11-13) : **trois durées et deux courbes seulement**, des tokens (`src/styles/tokens.css`) : `--d-fast` 0,2 s (retours au survol, focus, couleurs), `--d-base` 0,4 s (apparitions, dépliages, déplacements courts), `--d-move` 0,65 s (déplacement de lignes et de cartes), `--d-bar` 0,9 s (remplissage de barre) ; `--ease-out` `cubic-bezier(.22,1,.36,1)` (apparition, remplissage) et `--ease-spring` `cubic-bezier(.34,1.56,.64,1)` (déplacement, rebond).
+  | Type | Règle |
+  |---|---|
+  | Cliquable (bouton, onglet, en-tête de colonne, chevron) | survol : soulèvement 1 px, `--d-fast`, `--ease-spring` ; appui : échelle 0,96 ; focus : halo 3 px |
+  | Table (lignes) | survol : surlignage 6 % `--d-fast` ; tri et filtre : glissement `--d-move` + `--ease-spring`, flou 1,2 px pendant le trajet ; entrée en cascade 40 ms |
+  | Barre (progression, piste, graphique) | remplissage depuis la gauche ou la base `--d-bar` + `--ease-out` ; reflet seulement sur une barre en cours |
+  | Zoomable (segment de répartition) | grandit en hauteur et en largeur `--d-base` + `--ease-spring`, ombre, autres segments à 55 % ; bulle de détail suit en `--d-move` |
+  | Déplaçable (carte du tableau de tri) | survol : soulèvement 2 px + ombre ; pendant le déplacement : `--d-move` + `--ease-spring`, flou 1,6 px, échelle 1,03 ; carte glissée à 40 % |
+  | Panneau dépliable | hauteur `grid-template-rows` 0fr → 1fr, `--d-base` + `--ease-out`, chevron qui pivote ; contenu masqué (visibility) une fois replié |
+  | Carte / bloc | apparition `--d-base` + `--ease-out`, ombre au survol `--d-base` |
+  | Interrupteur | bouton qui glisse `--d-base` + `--ease-spring` |
+  | Alerte | entrée + secousse 0,5 s, une seule fois |
 - D-10 Barre de progression : `role="progressbar"` avec `aria-valuenow/min/max` et `aria-label` ; contour et remplissage en `paper` ; le pourcentage et l’étape sont **écrits** à côté ; version fine (8 px) pour la barre globale.
 - D-11 Étapes : « ✓ Lecture / ▶ Pages / ○ Prix / ✕ Ignorées » : symbole + mot + couleur (garder = fait, echanger = en cours, muted = attente, defausser = erreur). Mise à jour annoncée dans une zone `aria-live="polite"` (au plus toutes les 2 s).
 - D-20 Tâches : trois listes En cours / À venir (par lot : type, nombre) / Terminées (dernières 20), puis lien vers l’historique filtrable (type, résultat, carte, lot).
