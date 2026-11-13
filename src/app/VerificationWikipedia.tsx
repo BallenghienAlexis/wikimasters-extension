@@ -44,6 +44,9 @@ const VerificationWikipedia: React.FC<Props> = ({ titres, onCache }) => {
     file.demander(titres);
   }, [file, titres]);
 
+  // Quitter la vue liste arrête de planifier de nouvelles vérifications (SC-011) ; elles reprendront au retour.
+  useEffect(() => () => file.annuler(), [file]);
+
   return (
     <div className="mt-2 text-sm text-muted" data-testid="verification-wikipedia">
       <p>Les titres des cartes affichées sont vérifiés sur Wikipédia pour affiner leurs thèmes (aucune autre donnée n’est envoyée).</p>

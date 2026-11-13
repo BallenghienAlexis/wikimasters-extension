@@ -134,6 +134,8 @@ export interface OptionsPlanificateur {
 export interface Planificateur {
   /** Met en file les titres jamais tentés depuis le chargement de la page ; sans effet si c'est suspendu. */
   demander: (titres: string[]) => void;
+  /** Retire de la file les titres pas encore partis (la vue liste a été quittée) ; la requête en vol va à son terme. */
+  annuler: () => void;
   etat: () => EtatPlanificateur;
   abonner: (rappel: () => void) => () => void;
 }
@@ -203,6 +205,11 @@ export function creerPlanificateur(options: OptionsPlanificateur): Planificateur
       }
       if (!etat.enCours && file.length > 0) void boucle();
       else if (etat.enCours) changer({ total: etat.faites + file.length });
+    },
+    annuler() {
+      for (const titre of file) tentes.delete(titre);
+      file.length = 0;
+      if (etat.enCours) changer({ total: etat.faites });
     },
     etat: () => etat,
     abonner(rappel) {

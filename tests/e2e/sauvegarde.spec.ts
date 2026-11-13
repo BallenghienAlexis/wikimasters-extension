@@ -1,9 +1,10 @@
 import fs from 'node:fs';
-import { chargerCollectionFictive, expect, test } from './extension';
+import { allerA, chargerCollectionFictive, expect, test } from './extension';
 
 test.describe('sauvegarde complète', () => {
   test('exporte, puis importe sur un stockage vide avec aperçu', async ({ pageCollection }) => {
     await chargerCollectionFictive(pageCollection);
+    await allerA(pageCollection, 'reglages');
     await pageCollection.evaluate(async () => {
       const { collection } = (await chrome.storage.local.get('collection')) as { collection: { cartes: Record<string, unknown>[] } };
       collection.cartes[0]!.statut = 'garder';
@@ -23,7 +24,9 @@ test.describe('sauvegarde complète', () => {
     // Autre PC : stockage vide.
     await pageCollection.evaluate(() => chrome.storage.local.clear());
     await pageCollection.reload();
+    await allerA(pageCollection, 'collection');
     await expect(pageCollection.getByText('Votre collection est vide')).toBeVisible();
+    await allerA(pageCollection, 'reglages');
 
     await pageCollection.locator('input[type="file"]').setInputFiles(fichier);
     const apercu = pageCollection.getByTestId('apercu-sauvegarde');
@@ -31,6 +34,7 @@ test.describe('sauvegarde complète', () => {
     await expect(apercu).toContainText('1 ami ajouté');
     await pageCollection.getByRole('button', { name: 'Appliquer la sauvegarde' }).click();
     await expect(pageCollection.getByText('Sauvegarde importée.')).toBeVisible();
+    await allerA(pageCollection, 'collection');
     await expect(pageCollection.getByTestId('resume')).toContainText('7 exemplaires');
     const stocke = await pageCollection.evaluate(async () => (await chrome.storage.local.get(['collection', 'preferences'])) as Record<string, unknown>);
     expect(JSON.stringify(stocke)).toContain('note de test');
@@ -39,8 +43,10 @@ test.describe('sauvegarde complète', () => {
 
   test('refuse un fichier invalide sans rien modifier', async ({ pageCollection }) => {
     await chargerCollectionFictive(pageCollection);
+    await allerA(pageCollection, 'reglages');
     await pageCollection.locator('input[type="file"]').setInputFiles({ name: 'faux.json', mimeType: 'application/json', buffer: Buffer.from('{"format":"autre"}') });
     await expect(pageCollection.getByRole('alert')).toContainText('Importation refusée');
+    await allerA(pageCollection, 'collection');
     await expect(pageCollection.getByTestId('resume')).toContainText('7 exemplaires');
   });
 });

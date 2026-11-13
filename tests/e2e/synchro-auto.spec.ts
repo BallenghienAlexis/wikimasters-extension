@@ -2,7 +2,7 @@ import type { BrowserContext, Page, Route, Worker } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 import { CONFIG_AFFLUENCE } from '../../src/config/affluence';
-import { expect, test } from './extension';
+import { allerA, expect, test } from './extension';
 
 // Le site est entièrement simulé : ces tests ne contactent jamais le vrai WikiMasters (G1).
 // Les réponses fictives ont la forme décrite dans specs/synchro-auto/releve-api.md.
@@ -228,6 +228,7 @@ test.describe('synchronisation automatique sur site fictif', () => {
     expect(chemins(site.api)).toEqual([CHEMIN_STATS]);
     verifierLectureSeule(site.api);
 
+    await allerA(pageCollection, 'synchro');
     await pageCollection.reload();
     await expect(pageCollection.getByTestId('etat-synchro-auto')).toHaveText(/Arrêtée\s: le site a refusé \(403\)/);
     const pause = await serviceWorker.evaluate(

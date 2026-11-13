@@ -2,7 +2,7 @@ import type { BrowserContext, Page, Request } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 import { CLE_PUBLIQUE, COULEUR_ETIQUETTE, NOM_COOKIE_SESSION, ORIGINE_REST } from '../../src/config/synchro';
-import { expect, test } from './extension';
+import { allerA, expect, test } from './extension';
 
 // T-018, T-020, T-026 : écriture des étiquettes sur un site ENTIÈREMENT fictif.
 // Le vrai site et son hôte REST ne sont jamais contactés : toute requête http(s) est interceptée,
@@ -110,6 +110,7 @@ async function amorcer(page: Page): Promise<void> {
 }
 
 const ouvrirApercu = async (page: Page): Promise<void> => {
+  await allerA(page, 'lots');
   await page.getByRole('button', { name: 'Voir l’aperçu du lot' }).click();
   await expect(page.getByTestId('zone-execution').or(page.getByTestId('titre-apercu'))).toBeVisible();
 };
