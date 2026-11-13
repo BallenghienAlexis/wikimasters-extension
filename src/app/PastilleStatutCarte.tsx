@@ -6,7 +6,7 @@ const MARQUES: Record<Statut, { symbole: string; couleur: string }> = {
   garder: { symbole: '♥', couleur: 'border-garder' },
   echanger: { symbole: '⇄', couleur: 'border-echanger' },
   vendre: { symbole: '€', couleur: 'border-vendre' },
-  'en-vente': { symbole: '⏱', couleur: 'border-vendre' },
+  'en-vente': { symbole: '◷', couleur: 'border-vendre' },
   defausser: { symbole: '✕', couleur: 'border-defausser' },
 };
 

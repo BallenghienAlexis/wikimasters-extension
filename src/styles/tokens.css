@@ -94,7 +94,8 @@ body {
 }
 
 /*
- * Classes communes du mouvement (refonte-ihm, T-315) : elles ne citent que des tokens.
+ * Classes communes du mouvement (refonte-ihm, T-315) : elles ne citent que des tokens et n'animent
+ * que transform, opacity, filter, grid-template-rows et les couleurs (D-04).
  * Les règles de coupure ci-dessus (préférence système, réglage « Animations ») les neutralisent.
  */
 @keyframes wm-reflet {
@@ -103,8 +104,8 @@ body {
 }
 
 @keyframes wm-rayures {
-  from { background-position: 0 0; }
-  to { background-position: 32px 0; }
+  from { transform: translateX(-32px); }
+  to { transform: translateX(0); }
 }
 
 @keyframes wm-secousse {
@@ -125,9 +126,10 @@ body {
   50% { transform: scale(1.25); }
 }
 
-/* Remplissage d’une barre : la largeur s’anime, un reflet défile sur les barres actives. */
+/* Remplissage d’une barre : pleine largeur, mise à l’échelle (`scaleX`) depuis la gauche. */
 .wm-barre-remplissage {
-  transition: width var(--d-bar) var(--ease-out);
+  transform-origin: left;
+  transition: transform var(--d-bar) var(--ease-out);
 }
 
 .wm-reflet {
@@ -143,14 +145,20 @@ body {
   animation: wm-reflet var(--d-bar) var(--ease-out) infinite;
 }
 
-/* Barre indéterminée : rayures qui défilent (aucune couleur nouvelle). */
+/* Barre indéterminée : un pseudo-élément plus large défile par translateX (aucune couleur nouvelle). */
 .wm-rayures {
-  background-image: repeating-linear-gradient(
-    135deg,
-    var(--color-paper) 0 8px,
-    var(--color-ink-2) 8px 16px
-  );
-  background-size: 32px 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.wm-rayures::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(100% + 32px);
+  background-image: repeating-linear-gradient(135deg, var(--color-paper) 0 8px, var(--color-ink-2) 8px 16px);
   animation: wm-rayures var(--d-bar) linear infinite;
 }
 
@@ -165,6 +173,16 @@ body {
 .wm-pulsation {
   display: inline-block;
   animation: wm-pulsation var(--d-bar) var(--ease-out) infinite;
+}
+
+/* Chevron qui pivote à l’ouverture d’une section. */
+.wm-chevron {
+  display: inline-block;
+  transition: transform var(--d-base) var(--ease-out);
+}
+
+.wm-chevron[data-ouvert='true'] {
+  transform: rotate(180deg);
 }
 
 /* Dépliage en hauteur fluide (grid-template-rows 0fr → 1fr). */

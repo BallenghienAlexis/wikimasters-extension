@@ -18,7 +18,8 @@ interface Props {
 const BarreProgression: React.FC<Props> = ({ valeur, max, libelle, texte, fine = false, enCours = false }) => {
   const mouvement = useMouvement();
   const indeterminee = valeur === null;
-  const pct = indeterminee || max <= 0 ? 100 : Math.min(100, Math.max(0, (valeur / max) * 100));
+  const borne = indeterminee ? 0 : Math.min(max, Math.max(0, valeur));
+  const pct = indeterminee || max <= 0 ? 100 : (borne / max) * 100;
   const remplissage = indeterminee
     ? mouvement
       ? 'wm-rayures'
@@ -31,10 +32,10 @@ const BarreProgression: React.FC<Props> = ({ valeur, max, libelle, texte, fine =
         aria-label={libelle}
         aria-valuemin={0}
         aria-valuemax={max}
-        aria-valuenow={indeterminee ? undefined : valeur}
+        aria-valuenow={indeterminee ? undefined : borne}
         className={`w-full overflow-hidden rounded-full border border-paper bg-ink-2 ${fine ? 'h-2' : 'h-4'}`}
       >
-        <div className={`h-full rounded-full ${remplissage}`} style={{ width: `${pct}%` }} />
+        <div className={`h-full w-full rounded-full ${remplissage}`} style={{ transform: `scaleX(${pct / 100})` }} />
       </div>
       <p className="text-sm text-paper">{texte}</p>
     </div>

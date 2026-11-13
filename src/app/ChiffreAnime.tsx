@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { dureeToken, useMouvement } from './useMouvement';
 
 interface Props {
@@ -7,21 +7,27 @@ interface Props {
   libelle: string;
 }
 
-const formater = (n: number): string => Math.round(n).toLocaleString('fr-FR');
+// Milliers séparés par une espace insécable U+00A0 (typographie française).
+const formater = (n: number): string => Math.round(n).toLocaleString('fr-FR').replace(/[\u202f\u00a0]/g, '\u00a0');
 
 /** Chiffre clé (D-61) : le compteur défile en `aria-hidden`, la valeur finale est écrite dès le premier rendu. */
 const ChiffreAnime: React.FC<Props> = ({ valeur, libelle }) => {
   const mouvement = useMouvement();
   const [affiche, setAffiche] = useState(valeur);
+  const dernier = useRef(valeur);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!mouvement) return;
-    const duree = dureeToken('--d-base', 400);
+    const duree = dureeToken('--d-base');
+    if (duree === null) return;
+    const depart = dernier.current;
     const debut = performance.now();
     let image = 0;
     const pas = (t: number) => {
       const p = Math.min(1, (t - debut) / duree);
-      setAffiche(valeur * (1 - (1 - p) ** 3));
+      const courant = depart + (valeur - depart) * (1 - (1 - p) ** 3);
+      dernier.current = courant;
+      setAffiche(courant);
       if (p < 1) image = requestAnimationFrame(pas);
     };
     image = requestAnimationFrame(pas);

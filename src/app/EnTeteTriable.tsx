@@ -19,7 +19,7 @@ const EnTeteTriable: React.FC<Props> = ({ colonne, etat, onBasculer }) => (
     <button
       type="button"
       onClick={onBasculer}
-      className={`flex min-h-11 w-full items-center gap-2 px-3 text-left ${etat === null ? 'font-normal' : 'font-bold'}`}
+      className={`flex min-h-11 w-full items-center gap-2 px-3 text-left focus-visible:shadow-(--halo-focus) ${etat === null ? 'font-normal' : 'font-bold'}`}
     >
       <span>{colonne.libelle}</span>
       {etat !== null && <span aria-hidden="true">{etat === 'croissant' ? '▲' : '▼'}</span>}

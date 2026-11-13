@@ -106,7 +106,7 @@ describe("SC-027 : ChiffreAnime", () => {
       h(ChiffreAnime, { valeur: 1240, libelle: "Exemplaires" }),
     );
     expect(html).toMatch(/<span[^>]*aria-hidden="true"/);
-    expect(html.replace(/[\u00a0\u202f]/g, " ")).toContain("Exemplaires : 1 240");
+    expect(html).toContain("Exemplaires\u00a0: 1\u00a0240");
   });
 
   it("SC-027/SC-026 : directement final si mouvement coupé", () => {
@@ -115,7 +115,7 @@ describe("SC-027 : ChiffreAnime", () => {
       h(ChiffreAnime, { valeur: 1240, libelle: "Exemplaires" }),
     );
     const compteur = /<span[^>]*aria-hidden="true"[^>]*>([^<]*)</.exec(html);
-    expect((compteur?.[1] ?? "").replace(/[\u00a0\u202f]/g, " ")).toContain("1 240");
+    expect(compteur?.[1] ?? "").toContain("1\u00a0240");
   });
 
   it("SC-027 : largeur stable (tabular-nums)", () => {

@@ -25,11 +25,18 @@ export function useMouvement(): boolean {
   return animations && !systemeReduit;
 }
 
-/** Lit une durée (token `--d-*`) en millisecondes ; repli si le token est illisible. */
-export function dureeToken(nom: string, repli: number): number {
-  if (typeof document === 'undefined') return repli;
+/** Lit une durée (token `--d-*`) en millisecondes ; `null` si le token est illisible (pas d'animation). */
+export function dureeToken(nom: string): number | null {
+  if (typeof document === 'undefined') return null;
   const brut = getComputedStyle(document.documentElement).getPropertyValue(nom).trim();
-  const m = /^([\d.]+)(ms|s)$/.exec(brut);
-  if (!m?.[1]) return repli;
-  return m[2] === 's' ? Number(m[1]) * 1000 : Number(m[1]);
+  const r = /^([\d.]+)(ms|s)$/.exec(brut);
+  if (!r?.[1]) return null;
+  return r[2] === 's' ? Number(r[1]) * 1000 : Number(r[1]);
+}
+
+/** Lit une courbe (token `--ease-*`) ; `null` si absente. */
+export function courbeToken(nom: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const brut = getComputedStyle(document.documentElement).getPropertyValue(nom).trim();
+  return brut === '' ? null : brut;
 }
