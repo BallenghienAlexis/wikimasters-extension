@@ -104,6 +104,9 @@ test.describe('SC-012 : onglets', () => {
     await allerA(pageCollection, 'synchro');
     await expect(pageCollection.getByTestId('synchro-auto')).toBeVisible();
     await allerA(pageCollection, 'reglages');
+    // T-309 : sections repliées par défaut, on ouvre celles qu’on vérifie.
+    await pageCollection.getByRole('button', { name: /^Plafond de défausse/ }).click();
+    await pageCollection.getByRole('button', { name: /^Sauvegarde/ }).click();
     await expect(pageCollection.getByTestId('plafond-defausse')).toBeVisible();
     await expect(pageCollection.getByRole('button', { name: 'Exporter une sauvegarde' })).toBeVisible();
   });
