@@ -1,7 +1,6 @@
-import { expect, test } from './extension';
+import { chargerCartes, expect, test } from './extension';
 
 const COLLECTION = {
-  version: 1,
   cartes: [
     { id: 'a', titre: 'Agrume fictif', rarete: 'C', description: 'agrume', valeurMarchande: 3 },
     { id: 'b', titre: 'Planète fictive', rarete: 'C', description: 'planète lointaine', valeurMarchande: 8 },
@@ -9,12 +8,7 @@ const COLLECTION = {
 };
 
 test.beforeEach(async ({ pageCollection }) => {
-  await pageCollection.setInputFiles('input[type="file"]', {
-    name: 'collection.json',
-    mimeType: 'application/json',
-    buffer: Buffer.from(JSON.stringify(COLLECTION)),
-  });
-  await expect(pageCollection.getByRole('status').first()).toHaveText('2 cartes importées.');
+  await chargerCartes(pageCollection, COLLECTION.cartes);
 });
 
 const champ = (page: import('@playwright/test').Page) => page.getByRole('spinbutton', { name: /Plafond \(1 à 20\)/ });
