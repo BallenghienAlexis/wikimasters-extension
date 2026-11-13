@@ -18,6 +18,7 @@ Découpage valable pour la variante 1 ; les variantes 2 et 3 changent seulement 
 ## Vague 3 — Rangement
 - T-311 Onglet Lots (aperçu des lots à appliquer, sélection, lancement ; réutilise `lot.ts`, `apercuEtiquettes.ts`, `execution.ts`), en parallèle de T-306.
 - T-308 Onglets Collection (avec analyses), Ventes (assistant de tri, file de vente) déplacés sans changement de logique.
+- T-312 Tableau de tri interactif (glisser-déposer, flèches clavier, animations D-04) et motion de base (apparitions, barres, dépliages), en parallèle de T-308.
 - T-309 Onglet Réglages repliables.
 - T-310 e2e adaptés (SC-010), captures 3 largeurs × 2 thèmes, accessibilité.
 
