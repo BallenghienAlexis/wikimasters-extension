@@ -220,7 +220,8 @@ export function appliquerImport(locales: Donnees, s: Sauvegarde, politique: Poli
     }
     const k = classer(locale, sauvee);
     const prendEdition = k === 'completee' || (k === 'conflit' && remplacer);
-    const valeur = locale.valeurMarchande === null || (remplacer && sauvee.valeurMarchande !== null) ? sauvee.valeurMarchande ?? locale.valeurMarchande : locale.valeurMarchande;
+    // La valeur d'ici prime toujours : elle fixe le plafond de défausse, irréversible ; la synchro la tient à jour.
+    const valeur = locale.valeurMarchande ?? sauvee.valeurMarchande;
     parId.set(sauvee.id, {
       ...locale,
       ...(prendEdition

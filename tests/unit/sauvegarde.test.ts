@@ -140,6 +140,12 @@ describe('fusion', () => {
     expect(r.ok && r.donnees.collection.cartes.map((c) => c.valeurMarchande)).toEqual([7, 3]);
   });
 
+  it('« remplacer » ne touche jamais à la valeur marchande d’ici', () => {
+    const s = sauvee([carte('a', { valeurMarchande: 3 })]);
+    const r = appliquerImport(donnees([carte('a', { valeurMarchande: 50 })]), s, 'remplacer');
+    expect(r.ok && r.donnees.collection.cartes[0]?.valeurMarchande).toBe(50);
+  });
+
   it('réunit thèmes, amis et ventes sans doublon ; garde les cartes absentes de la sauvegarde', () => {
     const s = sauvee([], { preferences: { version: 2, mesThemes: ['ukraine', 'barrage'], amis: [{ nom: 'ami1', themes: ['ukraine'] }, { nom: 'Nouveau', themes: [] }] }, ventes: [{ type: 'debut', at: 1000 }, { type: 'fin', at: 2000 }] });
     const ici = donnees([carte('seule')]);

@@ -128,7 +128,7 @@ const Sauvegarde: React.FC<Props> = ({ onImportee }) => {
             </label>
             <label className="flex min-h-11 items-center gap-2">
               <input type="radio" name="politique-sauvegarde" checked={politique === 'remplacer'} onChange={() => setPolitique('remplacer')} />
-              Prendre la sauvegarde (remplace aussi mes thèmes, mes amis et la synchro automatique)
+              Prendre la sauvegarde (remplace aussi mes thèmes, mes amis et le réglage de la synchro automatique)
             </label>
           </fieldset>
           <div className="mt-3 flex flex-wrap gap-3">
