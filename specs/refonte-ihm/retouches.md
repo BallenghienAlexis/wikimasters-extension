@@ -8,6 +8,8 @@
 - **T-303 (PR #112)** : `src/lib/ignorees.ts:66` : utiliser `ID_CARTE_ETIQUETTES` (`actions.ts:71`) au lieu de `'etiquettes'` en dur.
 - **T-303 (PR #112)** : `src/lib/journal.ts:178` : `entreeValide` accepte des formes 9 ou 13 clés quelle que soit l’enveloppe ; fixer ce choix par un test.
 - **T-303 (PR #112)** : `src/lib/statutSynchro.ts:70` : rejeter `prixFaits > prixPrevus` quand les deux sont des nombres.
+- **T-302 (PR #115)** : `src/lib/progression.ts:49-52` : le texte de la barre d’exécution est « N / M · P % » ; SC-002 demande « N / M actions · P % » (ajouter « actions » et mettre le test à jour). `progression.ts:69-78` : `barreEtape` n’accepte pas de `precedent` (barre d’étape non monotone si `pages` ou `prixPrevus` augmentent). `tests/unit/progression.test.ts:198` : `.reverse().reverse()` inutile. SC-013 : aucun `resumeActivite` (T-317 compose le résumé).
+- **T-315 (PR #113)** : `src/app/ChiffreAnime.tsx:20` : réactiver les animations après un changement de valeur fait repartir le compteur d’une ancienne valeur ; mettre `dernier.current = valeur` dans la branche sans mouvement.
 - **T-315 (PR #113)** : `ChiffreAnime` — voir verdict du reviewer sur l’espace insécable des milliers.
 
 ## Décisions
