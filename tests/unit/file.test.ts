@@ -261,6 +261,49 @@ describe('arrêts (AC4)', () => {
     expect(etat.etat).toBe('arretee');
   });
 
+  it('403 ou 404 isolé sur un exemplaire : carte indisponible, l’action est appliquée localement et le lot continue', async () => {
+    for (const code of [403, 404]) {
+      for (const fab of [pose, defausse]) {
+        const b = banc({}, (n) => (n === 2 ? echec(code) : OK));
+        const etat = await creerFile(b.deps).demarrer([1, 2, 3, 4].map(fab), 'lot-refus');
+        expect(etat.etat).toBe('terminee');
+        expect(b.requetes).toHaveLength(4);
+        // L’application locale reçoit aussi le refus, pour retirer l’exemplaire.
+        expect(b.appliquees.filter(([, r]) => r.classe === 'echec')).toHaveLength(1);
+      }
+    }
+  });
+
+  it('403 sur lecture ou création d’étiquette (hors exemplaire) : arrêt immédiat comme avant', async () => {
+    const creation = (n: number): Action => ({ type: 'creation-etiquette', idCarte: `Rare|Carte ${n}`, nomEtiquette: 'X' });
+    const b = banc({}, (n) => (n === 2 ? echec(403) : OK));
+    const etat = await creerFile(b.deps).demarrer([1, 2, 3, 4].map(creation), 'lot-creation');
+    expect(etat.etat).toBe('arretee');
+    expect(b.requetes).toHaveLength(2);
+  });
+
+  it('401 et 429 sur un exemplaire arrêtent toujours le lot', async () => {
+    for (const code of [401, 429]) {
+      const b = banc({}, (n) => (n === 2 ? echec(code) : OK));
+      const etat = await creerFile(b.deps).demarrer([1, 2, 3, 4].map(pose), 'lot-session');
+      expect(etat.etat).toBe('arretee');
+      expect(b.requetes).toHaveLength(2);
+    }
+  });
+
+  it('3 refus 403 d’affilée (session ou jeton refusés) arrêtent le lot ; un succès remet le compte à zéro', async () => {
+    const b = banc({}, (n) => (n >= 2 && n <= 4 ? echec(403) : OK));
+    const etat = await creerFile(b.deps).demarrer([1, 2, 3, 4, 5, 6].map(pose), 'lot-3');
+    expect(etat.etat).toBe('arretee');
+    expect(etat.raison).toBe('code-http');
+    expect(b.requetes).toHaveLength(4);
+
+    // Refus séparés par des succès : jamais d’arrêt.
+    const b2 = banc({}, (n) => (n % 3 === 0 ? OK : echec(403)));
+    const etat2 = await creerFile(b2.deps).demarrer([1, 2, 3, 4, 5, 6, 7, 8].map(pose), 'lot-alterne');
+    expect(etat2.etat).toBe('terminee');
+  });
+
   it('409 : arrête le lot pour une enchère ou une défausse, pas pour une étiquette', async () => {
     const e = (n: number): Action => ({ type: 'enchere', idCarte: `Rare|Carte ${n}`, idExemplaire: 'x', prix: 5 });
     for (const [fab, arrete] of [[e, true], [defausse, true], [pose, false]] as const) {

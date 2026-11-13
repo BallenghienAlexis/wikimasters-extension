@@ -281,3 +281,43 @@ describe('appliquerResultat : état inchangé (AC3)', () => {
     expect(res.registre).toBe(r)
   })
 })
+
+describe('exemplaire indisponible (403/404 sur une action par exemplaire)', () => {
+  const refus = (codeHttp: number): ResultatAction => ({ classe: 'echec', codeHttp, cause: 'action non disponible' })
+  const pose: Action = { type: 'pose-etiquette', idCarte: 'commune|Chat', idExemplaire: 'ex-1', nomEtiquette: 'Statut · Vendre' }
+
+  it('retire l’exemplaire, diminue la quantité et purge le registre ; la carte reste s’il en reste un', () => {
+    const r = reg([{ ex: 'ex-1', nom: 'a' }, { ex: 'ex-2', nom: 'a' }])
+    const { collection, registre } = appliquerResultat(coll(carte()), r, pose, refus(403))
+    expect(collection.cartes[0]!.idsSite).toEqual(['ex-2'])
+    expect(collection.cartes[0]!.quantite).toBe(1)
+    expect(registre.couples).toEqual([{ ex: 'ex-2', nom: 'a' }])
+  })
+
+  it('dernier exemplaire sans édition locale : la carte disparaît de la collection', () => {
+    const seule = carte({ quantite: 1, idsSite: ['ex-1'], statut: 'a-trier', prixCible: null, valeurMarchande: null })
+    expect(appliquerResultat(coll(seule), reg(), pose, refus(404)).collection.cartes).toEqual([])
+  })
+
+  it('dernier exemplaire d’une carte éditée : gardée mais déliée du site', () => {
+    const seule = carte({ quantite: 1, idsSite: ['ex-1'], note: 'à garder en tête' })
+    const c = appliquerResultat(coll(seule), reg(), pose, refus(403)).collection.cartes[0]!
+    expect(c.quantite).toBe(0)
+    expect(c.idsSite).toBeNull()
+    expect(c.note).toBe('à garder en tête')
+  })
+
+  it('les actions suivantes visant cet exemplaire sont ensuite passées par la revérification', () => {
+    const { collection, registre } = appliquerResultat(coll(carte()), reg(), enchere, refus(403))
+    expect(reverifierAction(enchere, collection, registre, config)).toBe('passee')
+    expect(reverifierAction(defausse, collection, registre, config)).toBe('passee')
+  })
+
+  it('exemplaire inconnu, 500 ou action sans exemplaire : rien ne change', () => {
+    const c = coll(carte())
+    const r = reg()
+    expect(appliquerResultat(c, r, pose, refus(500)).collection).toBe(c)
+    expect(appliquerResultat(c, r, { ...pose, idExemplaire: 'ex-9' }, refus(403)).collection).toBe(c)
+    expect(appliquerResultat(c, r, { type: 'creation-etiquette', idCarte: 'commune|Chat', nomEtiquette: 'x' }, refus(403)).collection).toBe(c)
+  })
+})

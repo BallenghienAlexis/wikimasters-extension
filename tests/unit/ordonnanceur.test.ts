@@ -585,6 +585,41 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r3.issue).toBe('termine');
   });
 
+  it('prix : un 403 sur une seule carte est ignoré, la synchro va au bout sans pause', async () => {
+    const site = siteFictif(6);
+    const b = banc((chemin) => (chemin.includes('card-2/sales') ? { statut: 403, json: null } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('termine');
+    expect(r.etat.arretJusqua).toBeNull();
+    expect(r.prixReleves).toBe(5);
+    // Pas redemandée avant la fin de l’ancienneté, sans valeur inventée.
+    expect(r.etat.prix['R|Carte 2']?.valeur).toBeNull();
+    const b2 = banc(site, r.collection, r.etat);
+    b2.horloge.t += 31 * 60_000;
+    await synchroniser({ ...b2.deps });
+    expect(b2.departs.some((d) => d.chemin.includes('card-2/sales'))).toBe(false);
+  })
+
+  it('prix : 3 refus 403 d’affilée (session refusée) arrêtent la synchro avec pause de 30 min', async () => {
+    const site = siteFictif(8);
+    const b = banc((chemin) => (chemin.includes('/sales') ? { statut: 403, json: null } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('arret');
+    expect(r.codeHttp).toBe(403);
+    expect(b.departs.filter((d) => d.chemin.includes('/sales'))).toHaveLength(3);
+    expect(r.etat.arretJusqua).toBe(b.horloge.t + PAUSE_APRES_ARRET_MS);
+  })
+
+  it('prix : 401 et 429 arrêtent toujours dès la première réponse', async () => {
+    for (const code of [401, 429]) {
+      const site = siteFictif(4);
+      const b = banc((chemin) => (chemin.includes('/sales') ? { statut: code, json: null } : site(chemin)));
+      const r = await synchroniser(b.deps);
+      expect(r.issue).toBe('arret');
+      expect(b.departs.filter((d) => d.chemin.includes('/sales'))).toHaveLength(1);
+    }
+  })
+
   it('arrêt après 3 échecs (statut 500, transport en erreur, forme inattendue)', async () => {
     const reponses: Array<() => ReponseApi> = [
       () => ({ statut: 200, json: statsJson(200) }),

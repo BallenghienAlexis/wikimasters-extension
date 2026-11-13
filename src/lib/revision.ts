@@ -7,12 +7,14 @@
 import { plafondDefausse } from './tri'
 import type { Action, Registre, ResultatAction } from './actions'
 import {
+  aEditionLocale,
   appliquerEdition,
   retirerCarte,
   retirerIdSite,
   type Carte,
   type Collection,
 } from './collection'
+import { CODES_CARTE_INDISPONIBLE } from './file'
 import { exemplairesAttendus, type Config } from './lot'
 import { enregistrerEtiquette, poserCouple, purgerCarte, purgerExemplaire, retirerCouple, supprimerEtiquetteDuRegistre } from './registre'
 import { prixDepart, valeurDeCarte } from './tri'
@@ -80,6 +82,9 @@ export function appliquerResultat(
   action: Action,
   resultat: ResultatApplicable,
 ): EtatLocal {
+  if (resultat.classe === 'echec' && resultat.codeHttp !== null && CODES_CARTE_INDISPONIBLE.includes(resultat.codeHttp)) {
+    return appliquerIndisponible(collection, registre, action)
+  }
   if (resultat.classe !== 'reussie') return { collection, registre }
   const carte = collection.cartes.find((c) => c.id === action.idCarte)
 
@@ -117,5 +122,34 @@ export function appliquerResultat(
       return { collection, registre: poserCouple(registre, action.idExemplaire, action.nomEtiquette) }
     case 'retrait-etiquette':
       return { collection, registre: retirerCouple(registre, action.idExemplaire, action.nomEtiquette) }
+  }
+}
+
+/**
+ * Le site a refusé (403, 404) une action sur un exemplaire : il n’est plus dans la collection (vendu, défaussé,
+ * échangé ou aux enchères). On le retire du local comme une défausse réussie : identifiant d’exemplaire et couples
+ * d’étiquettes oubliés, quantité diminuée ; à zéro, la carte disparaît si elle n’a aucune édition locale, sinon elle
+ * est gardée mais déliée du site (`idsSite` nul). Une carte `en-vente` n’est jamais retirée. Actions sans exemplaire : rien.
+ */
+export function appliquerIndisponible(collection: Collection, registre: Registre, action: Action): EtatLocal {
+  if (action.type !== 'pose-etiquette' && action.type !== 'retrait-etiquette' && action.type !== 'enchere' && action.type !== 'defausse') {
+    return { collection, registre }
+  }
+  const carte = collection.cartes.find((c) => c.id === action.idCarte)
+  if (!carte || !carte.idsSite?.includes(action.idExemplaire)) return { collection, registre }
+  const registreSans = purgerExemplaire(registre, action.idExemplaire)
+  const sansId = retirerIdSite(collection, carte.id, action.idExemplaire)
+  const quantite = Math.max(0, carte.quantite - 1)
+  if (quantite === 0 && carte.statut !== 'en-vente' && !aEditionLocale(carte)) {
+    return { collection: retirerCarte(sansId, carte.id), registre: registreSans }
+  }
+  return {
+    collection: {
+      ...sansId,
+      cartes: sansId.cartes.map((c) =>
+        c.id === carte.id ? { ...c, quantite, ...(quantite === 0 ? { idsSite: null, etiquettesSite: [] } : {}) } : c,
+      ),
+    },
+    registre: registreSans,
   }
 }

@@ -172,6 +172,22 @@ test.describe('synchronisation automatique sur site fictif', () => {
     verifierLectureSeule(site.api);
   });
 
+  test('403 isolé sur le prix d\u2019une carte : ignoré, la synchro va au bout sans pause', async ({ context, serviceWorker }) => {
+    test.setTimeout(90_000);
+    await poser(serviceWorker, { collection: { version: 3, cartes: [carteLocale({ statut: 'a-trier' })] }, syncAuto: true });
+    const site = await ouvrirSite(context, {
+      [CHEMIN_STATS]: { corps: STATS },
+      [CHEMIN_PAGE(0)]: { corps: PAGE_0 },
+      [CHEMIN_PRIX]: { corps: '{"error":"forbidden"}', statut: 403 },
+    });
+    await expect.poll(() => chemins(site.api).includes(CHEMIN_VENTES), { timeout: 60_000, intervals: [250] }).toBe(true);
+    const arret = await serviceWorker.evaluate(
+      async () => ((await chrome.storage.local.get('etatSynchro')).etatSynchro as { arretJusqua: number | null } | undefined)?.arretJusqua ?? null,
+    );
+    expect(arret).toBeNull();
+    verifierLectureSeule(site.api);
+  });
+
   test('total inchangé depuis la dernière synchro complète : une seule requête de synchro (stats), puis le relevé du marché (SC-003)', async ({ context, serviceWorker }) => {
     const maintenant = Date.now();
     await poser(serviceWorker, {
