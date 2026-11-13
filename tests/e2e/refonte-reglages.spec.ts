@@ -33,7 +33,8 @@ test.describe('SC-028 : sections repliables', () => {
   });
 
   test('SC-028 : le contenu replié est hors tabulation, visible une fois ouvert', async ({ pageCollection: page }) => {
-    const champ = page.getByRole('spinbutton', { name: /Plafond \(1 à 20\)/ });
+    // Replié, le champ est hors de l’arbre d’accessibilité : on le cible par le testid, pas par le rôle.
+    const champ = page.getByTestId('plafond-defausse').locator('input');
     await expect(champ).toBeHidden();
     await expect(page.getByTestId('plafond-defausse')).toHaveCSS('visibility', 'hidden');
     // Tabulations depuis le bouton : le champ replié ne reçoit jamais le focus.
