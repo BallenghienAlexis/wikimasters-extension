@@ -1,5 +1,5 @@
 import type { Donnees } from './sauvegarde';
-import { analyserStockage,appliquerEdition, collectionVide, fusionnerImport, type CarteImportee, type Collection } from './collection';
+import { analyserStockage,appliquerEdition, collectionVide, fusionnerCartesLues, type CarteLueSite, type Collection } from './collection';
 import type { EtatExecution, Registre } from './actions';
 import { validerJournal, type Journal } from './journal';
 import { cacheVide, validerCache, type CacheWikipedia } from './wikipedia';
@@ -422,9 +422,9 @@ export async function enregistrerPreferences(preferences: Preferences): Promise<
 }
 
 // N'écrit que si la lecture apporte du nouveau.
-export async function fusionnerDansStockage(cartes: CarteImportee[]): Promise<Collection> {
+export async function fusionnerDansStockage(cartes: CarteLueSite[]): Promise<Collection> {
   const avant = await chargerCollection();
-  const apres = fusionnerImport(avant, cartes);
+  const apres = fusionnerCartesLues(avant, cartes);
   if (JSON.stringify(apres) !== JSON.stringify(avant)) await enregistrerCollection(apres);
   return apres;
 }

@@ -54,8 +54,8 @@ export interface Collection {
 
 export type EditionCarte = Partial<Pick<Carte, 'statut' | 'prixCible' | 'note' | 'ami' | 'decidePar' | 'valeurMarchande'>>;
 
-// Une carte importée : l'édition n'est présente que si le fichier la fournit.
-export type CarteImportee = Omit<Carte, 'idsSite' | 'etiquettesSite' | 'statut' | 'prixCible' | 'note' | 'favori' | 'description' | 'ami' | 'decidePar' | 'valeurMarchande'> &
+// Une carte lue sur le site : l'édition locale n'est présente que si la lecture la fournit.
+export type CarteLueSite = Omit<Carte, 'idsSite' | 'etiquettesSite' | 'statut' | 'prixCible' | 'note' | 'favori' | 'description' | 'ami' | 'decidePar' | 'valeurMarchande'> &
   EditionCarte & { favori?: boolean; description?: string };
 
 export type ResultatStockage = { ok: true; collection: Collection } | { ok: false; erreur: string };
@@ -74,7 +74,7 @@ const etiquettesSiteValides = (v: unknown): v is string[] =>
   Array.isArray(v) && v.length <= MAX_ETIQUETTES_SITE && v.every((e) => typeof e === 'string' && e.trim() !== '' && e.length <= MAX_ETIQUETTE_SITE);
 
 interface CarteLue {
-  carte: CarteImportee;
+  carte: CarteLueSite;
   idsSite: string[] | null;
   etiquettesSite: string[];
 }
@@ -114,7 +114,7 @@ function analyserCarte(brut: unknown, rang: number): CarteLue | string {
     etiquettes = etiquettesSite;
   }
 
-  const carte: CarteImportee = {
+  const carte: CarteLueSite = {
     id,
     titre,
     rarete: (rarete as string | null | undefined) ?? null,
@@ -166,7 +166,7 @@ export function analyserStockage(brut: unknown): ResultatStockage {
   const migre = migrerCollection(brut) as unknown as Record<string, unknown>;
   const lues = analyserCartes(migre);
   if (typeof lues === 'string') return { ok: false, erreur: lues };
-  const base = fusionnerImport(
+  const base = fusionnerCartesLues(
     collectionVide(),
     lues.map((l) => l.carte),
   );
@@ -189,13 +189,13 @@ export function meilleureDescription(actuelle: string, lue: string | undefined):
   return lue;
 }
 
-// Les données du jeu viennent de l'import ; l'édition locale existante est gardée
-// sauf si le fichier en fournit une ; une description vide ou tronquée n'efface pas la complète. Les cartes absentes du fichier restent en place.
-export function fusionnerImport(collection: Collection, importees: CarteImportee[]): Collection {
+// Les données du jeu viennent de la lecture du site ; l'édition locale existante est gardée
+// sauf si la lecture en fournit une ; une description vide ou tronquée n'efface pas la complète. Les cartes absentes de la lecture restent en place.
+export function fusionnerCartesLues(collection: Collection, lues: CarteLueSite[]): Collection {
   const parId = new Map(collection.cartes.map((c) => [c.id, c]));
-  for (const importee of importees) {
-    const existante = parId.get(importee.id);
-    parId.set(importee.id, {
+  for (const lue of lues) {
+    const existante = parId.get(lue.id);
+    parId.set(lue.id, {
       favori: existante?.favori ?? false,
       idsSite: existante?.idsSite ?? null,
       etiquettesSite: existante?.etiquettesSite ?? [],
@@ -205,10 +205,10 @@ export function fusionnerImport(collection: Collection, importees: CarteImportee
       statut: existante?.statut ?? 'a-trier',
       prixCible: existante?.prixCible ?? null,
       note: existante?.note ?? '',
-      ...importee,
-      description: meilleureDescription(existante?.description ?? '', importee.description),
-      // Une lecture du site ne connaît pas l'URL : elle n'efface pas celle d'un import.
-      url: importee.url ?? existante?.url ?? null,
+      ...lue,
+      description: meilleureDescription(existante?.description ?? '', lue.description),
+      // Une lecture du site ne connaît pas l'URL : elle n'efface pas celle déjà connue.
+      url: lue.url ?? existante?.url ?? null,
     });
   }
   return { version: VERSION_SCHEMA, cartes: [...parId.values()] };

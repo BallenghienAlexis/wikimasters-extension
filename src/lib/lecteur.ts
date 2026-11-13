@@ -1,5 +1,5 @@
 // Lecture des cartes affichées sur /collection. Lit le texte de la page, sans jamais agir dessus.
-import type { CarteImportee } from './collection';
+import type { CarteLueSite } from './collection';
 import { analyserPagination, type Pagination } from './synchro';
 
 export const RARETES = ['L', 'UR', 'SR', 'R', 'PC', 'C'];
@@ -42,8 +42,8 @@ export function delaiRelecture(descriptions: string[], dejaFaites: number, palie
 }
 
 // Une carte présente plusieurs fois sur la page compte comme autant d'exemplaires.
-export function regrouperCartes(cartes: CarteAffichee[]): CarteImportee[] {
-  const parId = new Map<string, CarteImportee>();
+export function regrouperCartes(cartes: CarteAffichee[]): CarteLueSite[] {
+  const parId = new Map<string, CarteLueSite>();
   for (const { rarete, titre, description, favori } of cartes) {
     const id = identifiantCarte(rarete, titre);
     const existante = parId.get(id);

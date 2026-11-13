@@ -1,3 +1,5 @@
+> **Retiré le 2026-11-12** : l'import/export de fichier (`versJson`, `versCsv`, `analyserImport`, `VERSION_ECHANGE`) n'existe plus (voir `specs/retrait-import-export/retouches.md`). Ce passage reste comme historique.
+
 # Plan — Synchronisation complète : étiquettes, enchères et défausse appliquées sur le site
 
 

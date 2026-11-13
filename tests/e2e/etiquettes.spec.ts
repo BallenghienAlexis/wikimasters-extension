@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { expect, test } from './extension';
+import { carteComplete as carteCompleteDefaut, expect, test } from './extension';
 
 // Tout est fictif et le site n’est jamais contacté : toute requête http(s) est bloquée et comptée.
 const FIXTURE = JSON.parse(fs.readFileSync(path.resolve('tests/e2e/fixtures/collection-etiquettes.json'), 'utf8')) as {
@@ -16,16 +16,8 @@ const BREAKPOINTS = [
   { name: 'desktop', width: 1280, height: 800 },
 ];
 
-const carteComplete = (c: Record<string, unknown>): object => ({
-  url: null,
-  favori: false,
-  prixCible: null,
-  note: '',
-  ami: null,
-  valeurMarchande: null,
-  decidePar: 'assistant',
-  ...c,
-});
+// Les cartes de cette fixture sont des propositions de l'assistant.
+const carteComplete = (c: Record<string, unknown>): object => carteCompleteDefaut({ decidePar: 'assistant', ...c });
 
 async function amorcer(page: Page, cartes: object[], preferences: object): Promise<void> {
   const ecrire = (): Promise<void> =>
