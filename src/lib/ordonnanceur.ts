@@ -99,6 +99,8 @@ export interface DependancesSynchro {
   forcer?: boolean;
   /** Plafond de prix par exécution (défaut : MAX_PRIX_PAR_EXECUTION). */
   maxPrix?: number;
+  /** Annonce, une fois avant la boucle de prix, le nombre de prix qui seront demandés (sans effet sur le plan). */
+  annoncerPrix?: (n: number) => void;
   /** Millisecondes ajoutées à l’intervalle minimal entre deux requêtes (délai variable). Absent : 0. */
   gigue?: () => number;
 }
@@ -504,7 +506,9 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
 
   async function relevePrix(): Promise<void> {
     const plafond = deps.maxPrix ?? MAX_PRIX_PAR_EXECUTION;
-    for (const carte of candidatsPrix().slice(0, Math.max(0, plafond))) {
+    const retenues = candidatsPrix().slice(0, Math.max(0, plafond));
+    deps.annoncerPrix?.(retenues.length);
+    for (const carte of retenues) {
       const cardId = etat.cardIds[carte.id];
       if (cardId === undefined) continue;
       const refusAvant = refusPrix;
