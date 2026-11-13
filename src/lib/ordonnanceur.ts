@@ -381,7 +381,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     let exemplairesGagnes = 0;
     let cartesGagnees = 0;
     // Plafond : pages attendues + marge ; au-delà, arrêt propre (lecture jugée incomplète).
-    const maxPages = total === null ? MAX_PAGES_SANS_TOTAL : Math.ceil(total / CARTES_PAR_PAGE);
+    const maxPages = total === null ? MAX_PAGES_SANS_TOTAL : Math.max(1, Math.ceil(total / CARTES_PAR_PAGE));
     for (let page = PREMIERE_PAGE; ; page++) {
       if (page - PREMIERE_PAGE >= maxPages) {
         journal(total === null ? `Arrêt de la lecture : plus de ${maxPages} pages (total inconnu).` : `Arrêt de la lecture : plus de ${maxPages} pages pour ${total} exemplaires.`);

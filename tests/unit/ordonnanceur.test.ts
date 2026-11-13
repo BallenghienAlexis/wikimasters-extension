@@ -352,6 +352,13 @@ describe('ordonnanceur — cartes disparues du site (vendues, défaussées)', ()
     expect(r.collection.cartes.some((c) => c.id === idCarte(99))).toBe(true);
   });
 
+  it('collection vidée sur le site (total 0) : lecture complète, cartes non éditées retirées', async () => {
+    const b = banc(siteFictif(0), collectionDe([sansEdition(1), sansEdition(2)]), etatInitial());
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.complete).toBe(true);
+    expect(r.collection.cartes).toHaveLength(0);
+  });
+
   it('prix et identifiants d’une carte retirée sont nettoyés', async () => {
     const etat = etatInitial();
     etat.cardIds[idCarte(9)] = 'card-9';
