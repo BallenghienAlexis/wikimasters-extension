@@ -2,7 +2,7 @@
 // transport à la file, tient le verrou d'exécution unique et clôt les exécutions orphelines.
 // Aucune requête ici : les ordres passent par le content script.
 import { ORIGINE_SITE } from '../config/synchro';
-import type { Action, EtatExecution, ResultatAction } from '../lib/actions';
+import type { Action, EtatExecution, EtatExecutionV2, ResultatAction } from '../lib/actions';
 import type { Horloge } from '../lib/file';
 import { cloreInterrompues as cloreJournal, type Journal } from '../lib/journal';
 import { ID_MAX, NOM_PORT, idDeMessage, messageOrdre, validerResultat } from '../lib/messages';
@@ -67,8 +67,9 @@ interface Verrous {
 export interface DependancesExecution {
   runtime: RuntimePage;
   verrous: Verrous;
-  chargerExecution: () => Promise<EtatExecution | null>;
-  enregistrerExecution: (etat: EtatExecution) => Promise<void>;
+  chargerExecution: () => Promise<EtatExecution | EtatExecutionV2 | null>;
+  /** Accepte la v1 ou la v2 (`lots`, `pauseJusqua`, `erreur`) ; le stockage écrit toujours une v2. */
+  enregistrerExecution: (etat: EtatExecution | EtatExecutionV2) => Promise<void>;
   chargerJournal: () => Promise<Journal>;
   enregistrerJournal: (journal: Journal) => Promise<void>;
   enregistrerSignalSynchro: (horodatage: number) => Promise<void>;

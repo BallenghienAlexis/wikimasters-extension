@@ -10,6 +10,8 @@ const COLLECTION = {
 test.beforeEach(async ({ pageCollection }) => {
   await chargerCartes(pageCollection, COLLECTION.cartes);
   await allerA(pageCollection, 'reglages');
+  // T-309 : section repliée par défaut.
+  await pageCollection.getByRole('button', { name: /^Plafond de défausse/ }).click();
 });
 
 const champ = (page: import('@playwright/test').Page) => page.getByRole('spinbutton', { name: /Plafond \(1 à 20\)/ });
@@ -29,6 +31,7 @@ test('plafond de défausse : 5 par défaut, saisie invalide refusée, avertissem
 
   await champ(page).fill('12');
   await page.reload();
+  await page.getByRole('button', { name: /^Plafond de défausse/ }).click();
   await expect(champ(page)).toHaveValue('12');
   await expect(page.locator('#aide-plafond')).toContainText('Attention');
 });
