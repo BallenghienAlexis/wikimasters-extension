@@ -654,7 +654,7 @@ describe('T-206 D-03 : écriture dans le journal existant', () => {
     await ecrireEvenementJournal({ titre: 'Synchronisation automatique : début', resultat: 'reussie', parametre: null, codeHttp: null }, () => new Date('2026-11-09T16:00:00.000Z'));
     await ecrireEvenementJournal({ titre: 'Synchronisation automatique : arrêt', resultat: 'interrompue', parametre: 'le site a refusé', codeHttp: 403 }, () => new Date('2026-11-09T16:01:00.000Z'));
     const { entrees, version } = donnees.get('journal') as { version: number; entrees: Array<Record<string, unknown>> };
-    expect(version).toBe(1);
+    expect(version).toBe(2);
     expect(entrees).toHaveLength(2);
     expect(entrees[1]).toMatchObject({ type: 'lecture', idCarte: '', titre: 'Synchronisation automatique : arrêt', parametre: 'le site a refusé', resultat: 'interrompue', codeHttp: 403, idLot: 'synchro-auto' });
     expect(entrees[0]).toMatchObject({ resultat: 'reussie', codeHttp: null });

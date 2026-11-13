@@ -143,7 +143,7 @@ describe('construction champ par champ', () => {
     expect(json).not.toContain('authorization');
     expect(json).not.toContain('ex-secret');
     expect(Object.keys(fin[0] ?? {}).sort()).toEqual(
-      ['codeHttp', 'horodatage', 'id', 'idCarte', 'idLot', 'parametre', 'resultat', 'titre', 'type'],
+      ['cause', 'codeHttp', 'horodatage', 'id', 'idCarte', 'idLot', 'lot', 'parametre', 'rang', 'resultat', 'titre', 'total', 'type'],
     );
   });
 

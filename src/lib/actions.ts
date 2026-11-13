@@ -138,7 +138,25 @@ export interface EntreeJournal {
   resultat: 'reussie' | 'echouee' | 'passee' | 'interrompue' | 'inconnu' | 'en-cours'
   codeHttp: number | null
   idLot: string
+  /** Rang de l’action dans son lot (à partir de 1) ; `null` pour une entrée v1 ou sans objet. */
+  rang?: number | null
+  /** Taille du lot de l’action ; `null` si inconnue. */
+  total?: number | null
+  /** Famille de l’action ; `null` si inconnue. */
+  lot?: FamilleLot | null
+  /** Cause d’une action passée ou interrompue, en liste fermée ; `null` sinon. */
+  cause?: CauseJournal | null
 }
+
+/** Familles de lots d’une exécution (v2). */
+export const FAMILLES_LOT = ['etiquettes', 'encheres', 'defausses', 'suppressions', 'lectures'] as const
+export type FamilleLot = (typeof FAMILLES_LOT)[number]
+
+/** Causes d’un journal v2 : raisons d’arrêt de `file.ts`, plus `sautee` et `ignoree`. */
+export const CAUSES_JOURNAL = [
+  'manuel', 'echecs', 'code-http', 'resultat', 'ecriture', 'transport', 'verification', 'sautee', 'ignoree',
+] as const
+export type CauseJournal = (typeof CAUSES_JOURNAL)[number]
 
 /** Registre des étiquettes posées par l’extension (seul à autoriser les retraits). */
 export interface Registre {
@@ -158,6 +176,43 @@ export interface EtatExecution {
   traitees: number
   /** Nombre total d’actions du lot. */
   total: number
+}
+
+/** Progression d’une famille de lots (v2). */
+export interface LotExecution {
+  famille: FamilleLot
+  total: number
+  traitees: number
+  sautees: number
+}
+
+/**
+ * Contexte de l’erreur qui a arrêté l’exécution (v2). Liste fermée : aucun identifiant d’exemplaire du site,
+ * aucun corps de réponse (SC-007).
+ */
+export interface ErreurExecution {
+  type: TypeAction
+  parametre: string | null
+  idCarte: string
+  titre: string
+  famille: FamilleLot
+  indexLot: number
+  nbLots: number
+  rang: number
+  totalLot: number
+  codeHttp: number | null
+  cause: CauseJournal
+  le: number
+  reussies: number
+  autresEchecsEnVol: number
+}
+
+/** État d’exécution v2 : v1 + lots, pause et contexte d’erreur. */
+export interface EtatExecutionV2 extends EtatExecution {
+  version: 2
+  lots: LotExecution[]
+  pauseJusqua: number | null
+  erreur: ErreurExecution | null
 }
 
 /** Codes HTTP d’un refus par carte (exemplaire vendu, défaussé ou en vente), tolérés un à un. */
