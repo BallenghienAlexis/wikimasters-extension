@@ -1,0 +1,26 @@
+name: Issues sans réponse
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/stale@v9
+        with:
+          only-labels: 'statut:à-trier'
+          days-before-stale: 60
+          days-before-close: 14
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          stale-issue-label: 'inactive'
+          exempt-issue-labels: 'sdd-escalade,bug'
+          stale-issue-message: 'Sans nouvelle depuis 60 jours : cette issue sera fermée dans 14 jours sans activité.'
+          close-issue-message: 'Fermée faute d’activité. Rouvre-la si le besoin demeure.'

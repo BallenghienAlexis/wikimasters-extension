@@ -1,0 +1,29 @@
+name: Bug
+description: Signaler un comportement incorrect
+title: "Bug : "
+labels: ["bug", "statut:à-trier"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ne colle ici aucun jeton, cookie ni donnée privée de ton compte.
+  - type: textarea
+    id: observe
+    attributes:
+      label: Ce qui se passe
+    validations:
+      required: true
+  - type: textarea
+    id: attendu
+    attributes:
+      label: Ce que tu attendais
+    validations:
+      required: true
+  - type: textarea
+    id: etapes
+    attributes:
+      label: Étapes pour reproduire
+  - type: input
+    id: version
+    attributes:
+      label: Version de Chrome
