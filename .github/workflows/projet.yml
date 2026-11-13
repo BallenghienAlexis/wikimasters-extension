@@ -36,19 +36,9 @@ jobs:
             echo "present=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Ajouter au projet
-        id: ajout
-        if: steps.secret.outputs.present == 'true'
-        uses: actions/add-to-project@v1
-        with:
-          project-url: https://github.com/users/BallenghienAlexis/projects/1
-          github-token: ${{ secrets.PROJECT_TOKEN }}
-
-      - name: Mettre à jour le statut
+      - name: Ajouter au projet et mettre à jour le statut
         if: steps.secret.outputs.present == 'true'
         uses: actions/github-script@v9
-        env:
-          ITEM_ID: ${{ steps.ajout.outputs.itemId }}
         with:
           github-token: ${{ secrets.PROJECT_TOKEN }}
           script: |
@@ -71,14 +61,20 @@ jobs:
             else if (a === 'opened' || a === 'reopened') cible = 'backlog';
             else if (a === 'assigned') cible = 'encours';
             else if (a === 'labeled' && context.payload.label.name === 'statut:accepté') cible = 'ready';
-            if (!cible) { core.info('Aucun changement de statut pour cet évènement.'); return; }
 
             const owner = 'BallenghienAlexis';
+            const contenu = (pr ?? context.payload.issue).node_id;
             const res = await github.graphql(
               `query($owner: String!) { user(login: $owner) { projectV2(number: 1) { id
                  field(name: "Status") { ... on ProjectV2SingleSelectField { id options { id name } } } } } }`,
               { owner });
             const projet = res.user.projectV2;
+            // Ajout au projet (sans effet si l'élément y est déjà).
+            const ajout = await github.graphql(
+              `mutation($p: ID!, $c: ID!) { addProjectV2ItemById(input: { projectId: $p, contentId: $c }) { item { id } } }`,
+              { p: projet.id, c: contenu });
+            const itemId = ajout.addProjectV2ItemById.item.id;
+            if (!cible) { core.info('Ajouté au projet ; aucun changement de statut pour cet évènement.'); return; }
             const champ = projet.field;
             if (!champ) { core.setFailed('Champ « Status » introuvable dans le projet.'); return; }
             const option = noms[cible].map((n) => champ.options.find((o) => o.name.toLowerCase() === n.toLowerCase())).find(Boolean);
@@ -86,5 +82,5 @@ jobs:
             await github.graphql(
               `mutation($p: ID!, $i: ID!, $f: ID!, $o: String!) { updateProjectV2ItemFieldValue(input: {
                  projectId: $p, itemId: $i, fieldId: $f, value: { singleSelectOptionId: $o } }) { projectV2Item { id } } }`,
-              { p: projet.id, i: process.env.ITEM_ID, f: champ.id, o: option.id });
+              { p: projet.id, i: itemId, f: champ.id, o: option.id });
             core.info(`Statut : ${option.name}`);
