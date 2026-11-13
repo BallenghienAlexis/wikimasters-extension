@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       jours:
-        description: Rattrapage : éléments fermés ou fusionnés depuis N jours
+        description: 'Rattrapage, éléments fermés ou fusionnés depuis N jours'
         default: '14'
   issues:
     types: [opened, reopened, closed, labeled, assigned]
