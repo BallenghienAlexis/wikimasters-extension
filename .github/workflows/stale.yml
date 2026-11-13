@@ -22,6 +22,6 @@ jobs:
           days-before-pr-stale: -1
           days-before-pr-close: -1
           stale-issue-label: 'inactive'
-          exempt-issue-labels: 'sdd-escalade,bug'
-          stale-issue-message: 'Sans nouvelle depuis 60 jours : cette issue sera fermée dans 14 jours sans activité.'
+          exempt-issue-labels: 'sdd-escalade,bug,alerte-securite,statut:accepté'
+          stale-issue-message: 'Relance : sans nouvelle depuis 60 jours, cette issue sera fermée dans 14 jours sans activité. Un commentaire suffit à la garder ouverte.'
           close-issue-message: 'Fermée faute d’activité. Rouvre-la si le besoin demeure.'

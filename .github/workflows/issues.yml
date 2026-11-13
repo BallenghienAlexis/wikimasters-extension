@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 5
     # Le contenu des issues est non fiable : il n'est jamais interpolé dans un script shell.
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v9
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -23,6 +23,9 @@ jobs:
               { name: 'suggestion', color: '0e8a16', description: 'Idée ou amélioration proposée' },
               { name: 'bug', color: 'd73a4a', description: 'Comportement incorrect' },
               { name: 'statut:à-trier', color: 'fbca04', description: 'Pas encore examinée' },
+              { name: 'alerte-securite', color: 'b60205', description: 'Vulnérabilité dans une dépendance' },
+              { name: 'revue-manuelle', color: 'd93f0b', description: 'Mise à jour majeure : à relire avant fusion' },
+              { name: 'statut:accepté', color: '0e8a16', description: 'Retenue, à réaliser' },
               { name: 'doublon-possible', color: 'cfd3d7', description: 'Titre proche d’une issue ouverte' },
             ];
             for (const l of labels) {
@@ -48,6 +51,6 @@ jobs:
               const lien = proche ? `\n\nUne issue au titre identique existe déjà : #${proche.number}.` : '';
               await github.rest.issues.createComment({
                 owner, repo, issue_number: issue.number,
-                body: `Merci, ta demande est enregistrée et sera examinée. Elle est étiquetée « statut:à-trier ».${lien}`,
+                body: `Merci, ta demande est enregistrée et sera examinée. Elle est étiquetée « statut:à-trier ».${lien}\n\nSuivi : [issues en attente de tri](https://github.com/${owner}/${repo}/issues?q=is%3Aissue+is%3Aopen+label%3A%22statut%3A%C3%A0-trier%22). Sans nouvelle de ta part ni activité pendant 60 jours, elle sera relancée puis fermée 14 jours plus tard ; elle reste rouvrable.`,
               });
             }
