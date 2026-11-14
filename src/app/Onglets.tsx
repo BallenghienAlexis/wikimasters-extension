@@ -98,7 +98,8 @@ const Onglets: React.FC<Props> = ({ actif, onChoisir }) => {
             {o.nom}
             {o.id === 'synchro' && erreur && (
               <>
-                <span aria-hidden="true" className="ml-2 text-defausser">✕</span>
+                <span aria-hidden="true" className="ml-2 inline-block size-2.5 rounded-full bg-defausser" />
+                <span aria-hidden="true" className="ml-1 text-defausser">✕</span>
                 <span className="sr-only"> erreur</span>
               </>
             )}

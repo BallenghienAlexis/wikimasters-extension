@@ -45,6 +45,11 @@ const libererAction = (): void => {
 const noterSaut = (cle: string): void => {
   sauteEnPause = cle;
 };
+/** Erreur pour laquelle toutes les actions restantes ont été sautées ou abandonnées dans cette page (≠ rechargement). */
+let toutEcarte: string | null = null;
+const noterToutEcarte = (cle: string): void => {
+  toutEcarte = cle;
+};
 
 const MESSAGES_FIXES = ['Reprise possible à', 'Résultat inconnu', 'L’état de l’exécution est illisible', 'Aucune action à', 'Une exécution est déjà en cours', 'Un seul onglet', 'Onglet WikiMasters', 'Une synchronisation'];
 /** Texte d’une erreur de lancement : seulement les phrases fixes de l’extension, jamais un texte venu d’ailleurs. */
@@ -78,7 +83,8 @@ const PanneauErreur: React.FC<Props> = ({ execution, statut, journal, maintenant
   const genre = erreurAffichable(execution, statut);
   const titre = useRef<HTMLHeadingElement>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [, rafraichir] = useState(0);
+  const [apresAction, rafraichir] = useState(0);
+  const conteneur = useRef<HTMLElement>(null);
   const erreur = genre === 'execution' ? (execution?.erreur ?? null) : null;
   const cleErreur = genre === 'execution' && execution !== null && erreur !== null ? `${execution.idLot}|${erreur.le}` : `synchro|${statut?.le ?? 0}`;
 
@@ -86,6 +92,13 @@ const PanneauErreur: React.FC<Props> = ({ execution, statut, journal, maintenant
   useEffect(() => {
     titre.current?.focus();
   }, [cleErreur]);
+
+  // Après une action : le focus passe au premier bouton actif restant, sinon au titre (D-33).
+  useEffect(() => {
+    if (apresAction === 0) return;
+    const premier = conteneur.current?.querySelector<HTMLButtonElement>('button:not([aria-disabled="true"])');
+    (premier ?? titre.current)?.focus();
+  }, [apresAction]);
 
   if (genre === null) return null;
 
@@ -116,6 +129,7 @@ const PanneauErreur: React.FC<Props> = ({ execution, statut, journal, maintenant
   const reste = restantes();
   const aSaute = sauteEnPause === cleErreur;
   const repriseImpossible = reste.length === 0 && !(aSaute && enPause);
+  const rechargee = toutEcarte !== cleErreur;
   const parametre = erreur.parametre;
   const choix = choixPanneau({
     pauseJusqua,
@@ -124,13 +138,14 @@ const PanneauErreur: React.FC<Props> = ({ execution, statut, journal, maintenant
     resultatInconnu: resultatInconnu(journal, { type: erreur.type, parametre, idCarte: erreur.idCarte }, execution.idLot),
   });
   const nbLot = reste.filter((a) => familleDe(a) === erreur.famille).length;
-  const raisonSaut = aSaute ? 'Une action a déjà été sautée pendant la pause : la reprise est différée.' : null;
+  const raisonSaut = aSaute && enPause ? 'Une action a déjà été sautée pendant la pause : la reprise est différée.' : null;
 
   const executer = async (f: () => Promise<void>, apresSaut: boolean, defaut = 'L’action n’a pas pu être lancée.'): Promise<void> => {
     if (!reserverAction()) return;
     setMessage(null);
     try {
       await f();
+      if (restantes().length === 0) noterToutEcarte(cleErreur);
       if (apresSaut && enPause) noterSaut(cleErreur);
     } catch (e) {
       setMessage(messageDe(e, defaut));
@@ -172,7 +187,7 @@ const PanneauErreur: React.FC<Props> = ({ execution, statut, journal, maintenant
   const saut = (etat: EtatChoix): EtatChoix => (raisonSaut !== null ? { ...etat, actif: false, raison: raisonSaut } : etat);
 
   return (
-    <section role="alert" aria-labelledby="titre-panneau-erreur" data-testid="panneau-erreur" className="mt-4 rounded border border-line border-l-[6px] border-l-defausser bg-ink-2 p-4">
+    <section ref={conteneur} role="alert" aria-labelledby="titre-panneau-erreur" data-testid="panneau-erreur" className="mt-4 rounded border border-line border-l-[6px] border-l-defausser bg-ink-2 p-4">
       <h3 id="titre-panneau-erreur" ref={titre} tabIndex={-1} className="font-semibold">
         <span aria-hidden="true">✕ </span>Erreur d’exécution
       </h3>
@@ -197,11 +212,13 @@ const PanneauErreur: React.FC<Props> = ({ execution, statut, journal, maintenant
         </Ligne>
         <Ligne intitule="Autres échecs en vol">{plurielAutres(erreur.autresEchecsEnVol)}</Ligne>
         <Ligne intitule="Reprise possible">
-          {enPause && pauseJusqua !== null ? `à ${heureReprise(pauseJusqua)}` : repriseImpossible ? 'non, la page a été rechargée' : 'oui, tout de suite'}
+          {enPause && pauseJusqua !== null ? `à ${heureReprise(pauseJusqua)}` : repriseImpossible ? rechargee ? 'non, la page a été rechargée' : 'non, plus aucune action à reprendre' : 'oui, maintenant'}
         </Ligne>
       </dl>
       {repriseImpossible && (
-        <p className="mt-2 text-sm text-muted">L’exécution ne peut pas reprendre après un rechargement : préparez un nouveau lot.</p>
+        <p className="mt-2 text-sm text-muted">
+          {rechargee ? 'L’exécution ne peut pas reprendre après un rechargement' : 'Il ne reste aucune action à reprendre'}{' : '}préparez un nouveau lot.
+        </p>
       )}
 
       <div className="mt-4 flex flex-col gap-3 md:flex-row md:flex-wrap md:items-start">

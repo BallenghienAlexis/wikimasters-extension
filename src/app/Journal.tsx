@@ -159,9 +159,11 @@ interface Props {
   onVider: () => void;
   /** Repère de test de la section (`journal` par défaut, `historique` dans l’onglet Synchro). */
   idTest?: string;
+  /** Titre de la section (« Journal » par défaut). */
+  titre?: string;
 }
 
-const Journal: React.FC<Props> = ({ entrees, registre, retraitDisponible, ongletPret, illisible = false, onRetirer, onVider, idTest = 'journal' }) => {
+const Journal: React.FC<Props> = ({ entrees, registre, retraitDisponible, ongletPret, illisible = false, onRetirer, onVider, idTest = 'journal', titre: titreSection = 'Journal' }) => {
   const [nombre, setNombre] = useState(PAS_AFFICHAGE);
   const [criteres, setCriteres] = useState<CriteresHistorique>(CRITERES_VIDES);
   const [dialogue, setDialogue] = useState(false);
@@ -185,7 +187,7 @@ const Journal: React.FC<Props> = ({ entrees, registre, retraitDisponible, onglet
     <section aria-labelledby="titre-journal" className="mt-4 rounded border border-line bg-ink-2 p-4" data-testid={idTest}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="titre-journal" ref={titre} tabIndex={-1} className="font-semibold">
-          {idTest === 'journal' ? 'Journal' : 'Historique'}
+          {titreSection}
         </h2>
         <div className="flex flex-col items-end gap-1">
           <button

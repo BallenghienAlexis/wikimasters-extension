@@ -90,8 +90,14 @@ const TableIgnorees: React.FC<Props> = ({ collection }) => {
 
   const reprendre = (i: Ignoree): void => {
     setErreur(null);
-    enregistrerIgnorees(retirerIgnoree(liste, i))
-      .then(() => setListe((l) => retirerIgnoree(l, i)))
+    // Relecture juste avant l’écriture : une liste modifiée ailleurs ne doit pas être écrasée, une liste corrompue n’est jamais réécrite.
+    chargerIgnorees()
+      .then(
+        (courante) => enregistrerIgnorees(retirerIgnoree(courante, i)).then(() => setListe(retirerIgnoree(courante, i))),
+        () => {
+          setIllisible(true);
+        },
+      )
       .catch(() => setErreur('Écriture impossible : l’action n’a pas été reprise.'));
   };
   const jusqua = (i: Ignoree): string => `prochaine synchro (au plus tard le ${dateFr(i.date + JOURS_30)})`;
