@@ -12,7 +12,7 @@ import OngletReglages from './OngletReglages';
 import OngletSynchro from './OngletSynchro';
 import OngletTableauDeBord from './OngletTableauDeBord';
 import OngletVentes from './OngletVentes';
-import { idOnglet, idPanneau } from './onglets';
+import { idOnglet, idPanneau } from './definitionOnglets';
 import { ContexteAffichage } from './useMouvement';
 import { useAffichage } from './useAffichage';
 import { useDonneesPage } from './useDonneesPage';

@@ -1,5 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react';
-import { ongletDepuisHash, type IdOnglet } from './onglets';
+import { ongletDepuisHash, type IdOnglet } from './definitionOnglets';
 
 function abonner(rappel: () => void): () => void {
   window.addEventListener('hashchange', rappel);

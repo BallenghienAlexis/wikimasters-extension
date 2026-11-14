@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { chargerExecution, chargerStatutSynchro, ecouterExecution, ecouterSynchroAuto } from '../lib/stockage';
 import { erreurAffichable } from './PanneauErreur';
-import { ONGLETS, idOnglet, idPanneau, type IdOnglet } from './onglets';
+import { ONGLETS, idOnglet, idPanneau, type IdOnglet } from './definitionOnglets';
 import { useMouvement } from './useMouvement';
 
 interface Props {
