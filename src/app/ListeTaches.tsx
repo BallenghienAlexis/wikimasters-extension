@@ -37,7 +37,7 @@ const ListeTaches: React.FC<Props> = ({ listes }) => {
     cible?.focus();
   };
   return (
-    <section aria-label="Tâches" className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+    <section aria-label="Tâches" className="mt-4 grid grid-cols-1 gap-4 rounded border border-line bg-ink-2 p-4">
       {listes.aucuneActivite ? (
         <p data-testid="aucune-activite" className="font-medium">
           Aucune activité en cours
@@ -45,16 +45,16 @@ const ListeTaches: React.FC<Props> = ({ listes }) => {
       ) : (
         <>
           <div>
-            <h3 className="font-semibold">En cours</h3>
-            <ul data-testid="liste-en-cours" className="mt-2 flex flex-col gap-2">
+            <h3 className="text-[15px] font-semibold">En cours</h3>
+            <ul data-testid="liste-en-cours" className="mt-2 flex flex-col text-sm [&>li]:border-b [&>li]:border-line [&>li]:py-1.5">
               {listes.enCours.map((t) => (
                 <li key={cleTache(t)}>{libelleTache(t)}</li>
               ))}
             </ul>
           </div>
           <div>
-            <h3 className="font-semibold">À venir</h3>
-            <ul data-testid="liste-a-venir" className="mt-2 flex flex-col gap-2">
+            <h3 className="text-[15px] font-semibold">À venir</h3>
+            <ul data-testid="liste-a-venir" className="mt-2 flex flex-col text-sm [&>li]:border-b [&>li]:border-line [&>li]:py-1.5">
               {listes.aVenir.map((t) => (
                 <li key={cleTache(t)}>{libelleTache(t)}</li>
               ))}
@@ -63,8 +63,8 @@ const ListeTaches: React.FC<Props> = ({ listes }) => {
         </>
       )}
       <div>
-        <h3 className="font-semibold">Terminées</h3>
-        <ul data-testid="liste-terminees" className="mt-2 flex flex-col gap-2 text-sm">
+        <h3 className="text-[15px] font-semibold">Terminées</h3>
+        <ul data-testid="liste-terminees" className="mt-2 flex flex-col text-sm [&>li]:border-b [&>li]:border-line [&>li]:py-1.5">
           {listes.terminees.map((e) => (
             <li key={e.id} className="break-words">
               {libelleEntree(e)}
