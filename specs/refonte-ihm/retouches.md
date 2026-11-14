@@ -247,3 +247,5 @@ b. BandeauActivite.tsx:88 : message d'échec non effacé quand synchro devient n
 - `src/lib/affluence.ts`, `src/config/affluence.ts`, `src/config/prix.ts` (matrice, limite d’enchères), `src/app/PlafondDefausse.tsx`, `src/app/PlacesEncheres.tsx`, clé `ventes` du stockage : plus de consommateur d’interface (onglet Ventes supprimé).
 - `src/app/apercuLot.ts` : type `EtiquetteObsolete` et raison `etiquette-obsolete` conservés pour les tests de regroupement.
 - Spécs `specs/*` qui décrivent les statuts, l’assistant de tri ou l’onglet Ventes : à marquer « remplacé le 2026-11-14 » à la prochaine passe de documentation.
+
+- `src/lib/ordonnanceur.ts` (`lirePages`) : `gain` vaut toujours `null` ; `exemplairesGagnes`, `cartesGagnees`, `toutIdentique`, `ordreConfirme` et le retour anticipé sont du code mort à retirer. `etat.total`, `etat.totalUnique` et `etat.signatureEtiquettes` sont écrits mais plus lus pour décider.
