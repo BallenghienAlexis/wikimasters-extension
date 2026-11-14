@@ -16,7 +16,7 @@ const PlafondDefausse: React.FC<Props> = ({ plafond, onChange }) => {
   const valeur = Number(saisie);
   const valide = saisie.trim() !== '' && Number.isInteger(valeur) && valeur >= PLAFOND_DEFAUSSE_MIN && valeur <= PLAFOND_DEFAUSSE_MAX;
   return (
-    <section aria-labelledby="titre-plafond" className="mt-4 rounded border border-line bg-ink-2 p-4" data-testid="plafond-defausse">
+    <section aria-labelledby="titre-plafond" className="py-2" data-testid="plafond-defausse">
       <h2 id="titre-plafond" className="font-semibold">
         Plafond de défausse
       </h2>

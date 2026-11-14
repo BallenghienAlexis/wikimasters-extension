@@ -12,7 +12,7 @@ Source : maquette « Refonte IHM · 3 variantes », variante 1, v15 (`Main.dc.ht
 | 6 | Collection | Cartes de synthèse, évolution 30 jours en barres, 10 plus chères, thèmes en barres ; « valeur par décision » et décision colorée : **supprimés volontairement**. Fait : liste et filtres dans une carte, thèmes en barres, évolution en carte avec bornes et écart. Écarts assumés : tableau éditable (valeur, prix cible, note) au lieu de la liste en lecture seule de la maquette, 3 analyses sur une ligne, pas de carte de synthèse « Doublons » (le résumé en tête de page en tient lieu) | partiel |
 | 7 | Tableau de tri | **Supprimé volontairement** (#140) | sans objet |
 | 8 | Ventes | **Onglet supprimé volontairement** (#140) : places, file de vente, heures fortes | sans objet |
-| 9 | Réglages | Sections compactes (titre, résumé, chevron) ; synchro auto en section (faite, #142) ; plafond de défausse : **supprimé volontairement** | à faire |
+| 9 | Réglages | Sections compactes (titre, résumé, chevron) ; synchro auto en section (faite, #142) ; plafond de défausse : **supprimé volontairement** (la section reste dans l’extension, en réserve). Fait : résumé de la valeur courante calé à droite, plus de carte dans la carte (Sauvegarde, Plafond), hook `useSyncAuto`. Reste : résumé « N trouvées » des étiquettes préexistantes | partiel |
 
 Choix assumés (fonctions réelles absentes de la maquette) : panneau d’erreur détaillé, champs modifiables de la liste, aperçu du lot, sauvegarde.
 
