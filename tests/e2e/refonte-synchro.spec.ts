@@ -47,6 +47,7 @@ interface Statut {
   etape?: string | null;
   prixFaits?: number | null;
   prixPrevus?: number | null;
+  debut?: number | null;
 }
 
 const statut = (s: Statut = {}): Record<string, unknown> => ({

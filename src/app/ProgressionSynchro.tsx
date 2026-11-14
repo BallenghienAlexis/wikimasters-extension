@@ -22,9 +22,6 @@ const COULEURS: Record<EtatAffiche, string> = {
   arret: 'text-defausser',
 };
 
-/** Deux débuts à moins de 5 s l’un de l’autre désignent la même synchro (le début est écrit une fois par synchro). */
-const TOLERANCE_DEBUT_MS = 5000;
-
 const horloge = (): number => Date.now();
 
 const barreMinimale = (pourcent: number): Barre => ({ valeur: 0, max: 100, pourcent, indeterminee: false, texte: '' });
@@ -35,17 +32,14 @@ interface Plafond {
   pourcent: number;
 }
 
-const memeSynchro = (a: number | null, b: number | null): boolean =>
-  a === null || b === null ? a === b : Math.abs(a - b) <= TOLERANCE_DEBUT_MS;
-
 /** Barre globale « Étape i / 4 · P % », étapes (symbole + mot + couleur) et annonce `aria-live` limitée (D-10, D-11). */
 const ProgressionSynchro: React.FC<Props> = ({ statut, actif }) => {
   const [plafond, setPlafond] = useState<Plafond>({ debut: null, etape: null, pourcent: 0 });
   // Le plafond de monotonie vaut pour une même synchro et une même étape (D-10).
-  const applicable = actif && memeSynchro(plafond.debut, statut.debut) && plafond.etape === statut.etape;
+  const applicable = actif && plafond.debut === statut.debut && plafond.etape === statut.etape;
   const p = progressionSynchro(statut, applicable ? barreMinimale(plafond.pourcent) : null);
   const cible: Plafond = { debut: statut.debut, etape: statut.etape, pourcent: actif && p.pourcent !== null ? p.pourcent : 0 };
-  if (cible.pourcent !== plafond.pourcent || cible.etape !== plafond.etape || !memeSynchro(cible.debut, plafond.debut)) {
+  if (cible.pourcent !== plafond.pourcent || cible.etape !== plafond.etape || cible.debut !== plafond.debut) {
     setPlafond(cible);
   }
 
@@ -97,7 +91,7 @@ const ProgressionSynchro: React.FC<Props> = ({ statut, actif }) => {
                   {`${SYMBOLES[etat]} ${LIBELLES_ETAPE[e.etape]}`}
                   {etat === 'arret' && <span className="ml-2 text-sm font-normal">(arrêtée)</span>}
                 </span>
-                {(e.etat === 'faite' || e.etat === 'en-cours') && (
+                {(etat === 'faite' || etat === 'en-cours') && (
                   <BarreProgression
                     valeur={e.barre.indeterminee ? null : e.barre.valeur}
                     max={e.barre.max ?? 0}

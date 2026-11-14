@@ -75,6 +75,8 @@ const OngletSynchro: React.FC<Props> = ({ donnees }) => {
   // Pastille D-40 : « En cours » seulement si le bail est tenu.
   let pastille: EtatSynchro = 'a-jour';
   if (synchroActive) pastille = 'en-cours';
+  // Un statut « en cours » sans bail tenu est périmé : synchro interrompue, donc arrêtée.
+  else if (statut?.etat === 'en-cours') pastille = 'arretee';
   else if (statut?.etat === 'arret') pastille = statut.raison === 'manuel' ? 'arretee' : 'erreur';
   else if ((etat?.arretJusqua ?? 0) > maintenant) pastille = 'arretee';
   const listes = useMemo(
