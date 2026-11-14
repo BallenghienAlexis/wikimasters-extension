@@ -1,17 +1,24 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CONFIG_PRIX } from '../config/prix';
-import type { Action, CarteEcartee, Registre, TypesDisponibles } from '../lib/actions';
+import type { Action, CarteEcartee, FamilleLot, Registre, TypesDisponibles } from '../lib/actions';
 import type { Collection } from '../lib/collection';
 import { typesDisponibles } from '../lib/contrat';
 import { regrouperEtiquettes, type ApercuEtiquettes } from '../lib/apercuEtiquettes';
-import { enregistrerJournal } from '../lib/stockage';
-import { preferencesParDefaut, type Preferences } from '../lib/tri';
+import { calculerEcarts } from '../lib/ecarts';
+import { decouperEnLots } from '../lib/familles';
+import { filtrerLotIgnore, type Ignoree } from '../lib/ignorees';
+import { chargerExecution, chargerIgnorees, ecouterExecution, enregistrerJournal } from '../lib/stockage';
+import { PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
+import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
 import EtiquettesPrevues from './EtiquettesPrevues';
 import Journal, { type CoupleRetrait } from './Journal';
 import BandeauRisque from './BandeauRisque';
 import ZoneExecution from './ZoneExecution';
 import ListeActionsLot from './ListeActionsLot';
 import CartesNonIncluses from './CartesNonIncluses';
+import ListeEcarts from './ListeEcarts';
+import SectionRepliable from './SectionRepliable';
+import TableauLots from './TableauLots';
 import { useExecution } from './useExecution';
 import { actionsRetrait, contexteExecution, lancerLot, nouvelIdLot } from './pilotageLots';
 import {
@@ -20,9 +27,12 @@ import {
   CLASSE_BOUTON,
   CLASSE_INACTIF,
   NB,
+  actionsDesLotsCoches,
   configDuLot,
   contientAmi,
   detailsDuLot,
+  carteTexte,
+  libelleType,
   libelleErreurLancement,
   lignesNonIncluses,
   pageActions,
@@ -30,6 +40,8 @@ import {
   raisonDesactivation,
   regrouperEcartees,
   separerDisponibles,
+  texteActionsEcartees,
+  texteDureeLots,
   texteLotVide,
   titreApercu,
   type Places,
@@ -57,6 +69,13 @@ interface Props {
   /** Appelé par « Lancer » (câblé en T-017). */
   onLancer?: (actions: Action[]) => void;
 }
+
+const Avertissement: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <p className="rounded border border-vendre p-3 text-sm" data-testid="avertissement">
+    <span aria-hidden="true">⚠ </span>
+    {children}
+  </p>
+);
 
 const PanneauApercuLot: React.FC<Props> = ({
   collection,
@@ -120,7 +139,34 @@ const PanneauApercuLot: React.FC<Props> = ({
 
   // Aperçu des étiquettes, figé avec le lot : mêmes collection, registre et préférences (H24).
   const [apercuEtiquettes, setApercuEtiquettes] = useState<ApercuEtiquettes | null>(null);
-  const figer = (r: Registre | null): void => {
+  // Ignorées figées avec le lot ; familles décochées (tout est coché par défaut, SC-015).
+  const [ignorees, setIgnorees] = useState<Ignoree[]>([]);
+  const [decochees, setDecochees] = useState<ReadonlySet<FamilleLot>>(new Set());
+  const [pauseJusqua, setPauseJusqua] = useState<number | null>(null);
+  const [maintenant, setMaintenant] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setMaintenant(Date.now()), 15_000);
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => {
+    let actif = true;
+    const lire = (): void => {
+      chargerExecution()
+        .then((e) => {
+          if (actif) setPauseJusqua(e?.pauseJusqua ?? null);
+        })
+        .catch(() => undefined);
+    };
+    lire();
+    const arreter = ecouterExecution(lire);
+    return () => {
+      actif = false;
+      arreter();
+    };
+  }, []);
+  const figer = (r: Registre | null, listeIgnorees: Ignoree[]): void => {
+    setIgnorees(listeIgnorees);
+    setDecochees(new Set());
     const config = configDuLot(preferences, ventesSiteLues);
     setEtat(preparerLot(collection, r, dispo, config));
     let apercu: ApercuEtiquettes | null = null;
@@ -133,17 +179,38 @@ const PanneauApercuLot: React.FC<Props> = ({
     }
     setApercuEtiquettes(apercu);
   };
-  const ouvrir = (): void => figer(registreIllisible ? null : registreCourant);
+  const ouvrir = (): void => {
+    chargerIgnorees()
+      .catch(() => [] as Ignoree[])
+      .then((i) => figer(registreIllisible ? null : registreCourant, i));
+  };
   const reessayer = async (): Promise<void> => {
     const r = onReessayer ? await onReessayer() : registreIllisible ? null : registreCourant;
-    figer(r);
+    figer(r, await chargerIgnorees().catch(() => [] as Ignoree[]));
     setFocusTitre((k) => k + 1);
   };
 
   const lot = etat && 'lot' in etat ? etat.lot : null;
-  const separes = useMemo(() => (lot ? separerDisponibles(lot.actions, dispo) : null), [lot, dispo]);
-  const details = useMemo(() => (separes ? detailsDuLot(separes.disponibles, cartes) : []), [separes, cartes]);
-  const page = useMemo(() => pageActions(separes?.disponibles ?? []), [separes]);
+  const filtre = useMemo(() => (lot ? filtrerLotIgnore(lot.actions, ignorees) : null), [lot, ignorees]);
+  const separes = useMemo(() => (filtre ? separerDisponibles(filtre.actions, dispo) : null), [filtre, dispo]);
+  const lotsAffiches = useMemo(() => decouperEnLots(separes?.disponibles ?? []), [separes]);
+  const cochees = useMemo<ReadonlySet<FamilleLot>>(
+    () => new Set(lotsAffiches.map((l) => l.famille).filter((f) => !decochees.has(f))),
+    [lotsAffiches, decochees],
+  );
+  const actionsCochees = useMemo(() => actionsDesLotsCoches(separes?.disponibles ?? [], cochees), [separes, cochees]);
+  const lignesLots = useMemo(() => lotsAffiches.map((l, i) => ({ famille: l.famille, nbActions: l.actions.length, ordre: i + 1 })), [lotsAffiches]);
+  const detailsCochees = useMemo(() => detailsDuLot(actionsCochees, cartes), [actionsCochees, cartes]);
+  const pageCochees = useMemo(() => pageActions(actionsCochees), [actionsCochees]);
+  const ecartsSite = useMemo(() => calculerEcarts(collection.cartes, { amis: preferences.amis }), [collection.cartes, preferences.amis]);
+  const detailsEcartees = useMemo(() => detailsDuLot((filtre?.ecartees ?? []).map((e) => e.action), cartes), [filtre, cartes]);
+  const basculerLot = (f: FamilleLot): void =>
+    setDecochees((d) => {
+      const suite = new Set(d);
+      if (suite.has(f)) suite.delete(f);
+      else suite.add(f);
+      return suite;
+    });
   const lignes = useMemo(() => {
     if (!lot || !separes) return [];
     // Les actions « non disponibles » sont listées avec les cartes non incluses (D-17).
@@ -159,10 +226,10 @@ const PanneauApercuLot: React.FC<Props> = ({
   const places = useMemo<Places>(
     () => ({
       occupees:
-        collection.cartes.filter((c) => c.statut === 'en-vente').length + (lot?.actions.filter((a) => a.type === 'enchere').length ?? 0),
+        collection.cartes.filter((c) => c.statut === 'en-vente').length + (filtre?.actions.filter((a) => a.type === 'enchere').length ?? 0),
       max: CONFIG_PRIX.maxVentesSimultanees,
     }),
-    [collection.cartes, lot],
+    [collection.cartes, filtre],
   );
 
   const n = separes?.disponibles.length ?? 0;
@@ -170,7 +237,17 @@ const PanneauApercuLot: React.FC<Props> = ({
   const afficherLancer = n > 0 || avecIndisponibles;
   const enCours = exec?.etat.etat === 'en-cours' || (enCoursStocke === null ? executionEnCours : enCoursStocke);
   const nbOngletsReel = ongletsLive ?? nbOnglets;
-  const raison = raisonDesactivation({ nbOnglets: nbOngletsReel, executionEnCours: enCours, executionIllisible, nbDisponibles: n });
+  const nCochees = actionsCochees.length;
+  const raison = raisonDesactivation({
+    nbOnglets: nbOngletsReel,
+    executionEnCours: enCours,
+    executionIllisible,
+    nbDisponibles: nCochees,
+    pauseJusqua,
+    maintenant,
+    nbLotsCoches: lotsAffiches.length > 0 ? cochees.size : undefined,
+  });
+  const plafond = plafondDefausse(preferences);
 
   const phase = exec?.etat.etat ?? null;
   useEffect(() => {
@@ -218,7 +295,7 @@ const PanneauApercuLot: React.FC<Props> = ({
 
   return (
     <div data-testid="synchronisation">
-      <BandeauRisque avertirAmis={lot !== null && contientAmi(lot.actions)} />
+      <BandeauRisque avertirAmis={lot !== null && contientAmi(actionsCochees)} />
 
       {zoneVisible && (
         <ZoneExecution
@@ -270,41 +347,98 @@ const PanneauApercuLot: React.FC<Props> = ({
           </>
         ) : (
           <>
-            {n === 0 ? (
-              <p className="mt-2 text-sm text-muted">{texteLotVide(avecIndisponibles)}</p>
-            ) : (
-              <ListeActionsLot disponibles={separes.disponibles} n={n} page={page} details={details} cartes={cartes} />
+            <p className="mt-2 text-sm" data-testid="resume-lots">
+              {lotsAffiches.length > 0 ? `${cochees.size} sur ${lotsAffiches.length} ${lotsAffiches.length > 1 ? 'lots cochés' : 'lot coché'}` : 'Aucun lot'}
+              {filtre && filtre.ecartees.length > 0 && ` · ${texteActionsEcartees(filtre.ecartees.length)}`}
+            </p>
+            <p className="mt-1 text-sm" data-testid="duree-lots">
+              {texteDureeLots(nCochees)}
+            </p>
+
+            {n === 0 && <p className="mt-2 text-sm text-muted">{texteLotVide(avecIndisponibles)}</p>}
+            <TableauLots lots={lignesLots} cochees={cochees} onBasculer={basculerLot} />
+            {n > 0 && (
+              <div className="mt-3">
+                <SectionRepliable id="apercu-actions" titre="Aperçu des actions" resume={`${nCochees} ${nCochees > 1 ? 'actions' : 'action'}`}>
+                  {nCochees === 0 ? (
+                    <p className="text-sm text-muted">Aucune action : aucun lot n’est coché.</p>
+                  ) : (
+                    <ListeActionsLot disponibles={actionsCochees} n={nCochees} page={pageCochees} details={detailsCochees} cartes={cartes} />
+                  )}
+                </SectionRepliable>
+              </div>
+            )}
+
+            {filtre && filtre.ecartees.length > 0 && (
+              <section aria-labelledby="titre-ecartees" className="mt-4" data-testid="actions-ecartees">
+                <h3 id="titre-ecartees" className="font-semibold">
+                  Actions écartées
+                </h3>
+                <ul className="mt-1 text-sm">
+                  {filtre.ecartees.slice(0, 50).map((e, i) => (
+                    <li key={i} className="break-words py-1">
+                      {carteTexte(e.action.idCarte, cartes)}
+                      {NB}: {libelleType(e.action.type)}
+                      {detailsEcartees[i] ? ` (${detailsEcartees[i]})` : ''} · <span className="text-muted">{e.raison}</span>
+                    </li>
+                  ))}
+                </ul>
+                {filtre.ecartees.length > 50 && (
+                  <p className="text-sm text-muted">… et {filtre.ecartees.length - 50} autres.</p>
+                )}
+              </section>
             )}
 
             {apercuEtiquettes && <EtiquettesPrevues apercu={apercuEtiquettes} cartes={cartes} />}
+
+            <ListeEcarts ecarts={ecartsSite} />
+
+            <div className="mt-4 grid gap-2">
+              {actionsCochees.some((a) => a.type === 'creation-etiquette' || a.type === 'pose-etiquette' || a.type === 'retrait-etiquette') && (
+                <Avertissement>Les étiquettes posées sont visibles des autres joueurs.</Avertissement>
+              )}
+              {actionsCochees.some((a) => a.type === 'defausse') && (
+                <Avertissement>Une défausse est définitive : la carte ne peut pas être récupérée.</Avertissement>
+              )}
+              {plafond > PLAFOND_VALEUR_DEFAUSSE && (
+                <Avertissement>
+                  Le plafond de défausse est réglé à {plafond}, au-dessus de {PLAFOND_VALEUR_DEFAUSSE} : des cartes de valeur plus élevée peuvent être défaussées.
+                </Avertissement>
+              )}
+            </div>
 
             {lignes.length > 0 && <CartesNonIncluses lignes={lignes} groupees={groupees} places={places} cartes={cartes} />}
 
             <p className="mt-3 text-sm text-muted">{CADENCE_TEXTE}</p>
 
-            <div className="mt-3 flex flex-col gap-2 md:flex-row">
-              {afficherLancer && (
-                <button
-                  type="button"
-                  aria-disabled={raison !== null}
-                  aria-describedby={raison !== null ? 'raison-lancer' : undefined}
-                  className={`${CLASSE_BOUTON} font-semibold ${raison !== null ? CLASSE_INACTIF : `${CLASSE_ACTIF} border-paper`}`}
-                  onClick={() => {
-                    if (raison === null) lancerDepuisApercu(separes.disponibles);
-                  }}
-                >
-                  {n === 0 ? 'Lancer' : n > 1 ? `Lancer les ${n} actions` : 'Lancer l’action'}
+            <div
+              data-testid="barre-lancer"
+              className="sticky bottom-0 z-10 -mx-4 mt-3 border-t border-line bg-ink-2 px-4 py-3 min-[600px]:static min-[600px]:mx-0 min-[600px]:border-t-0 min-[600px]:bg-transparent min-[600px]:px-0"
+            >
+              <div className="flex flex-col gap-2 md:flex-row">
+                {afficherLancer && (
+                  <button
+                    type="button"
+                    aria-disabled={raison !== null}
+                    aria-describedby={raison !== null ? 'raison-lancer' : undefined}
+                    className={`${CLASSE_BOUTON} font-semibold ${raison !== null ? CLASSE_INACTIF : `${CLASSE_ACTIF} border-paper`}`}
+                    onClick={() => {
+                      if (raison === null) lancerDepuisApercu(actionsCochees);
+                    }}
+                  >
+                    {nCochees === 0 ? 'Lancer' : nCochees > 1 ? `Lancer les ${nCochees} actions` : 'Lancer l’action'}
+                  </button>
+                )}
+                <button type="button" className={classeSecondaire} onClick={() => setEtat(null)}>
+                  {afficherLancer ? 'Annuler' : 'Fermer'}
                 </button>
+              </div>
+              {afficherLancer && raison !== null && (
+                <p id="raison-lancer" className="mt-2 text-sm text-muted">
+                  {raison}
+                </p>
               )}
-              <button type="button" className={classeSecondaire} onClick={() => setEtat(null)}>
-                {afficherLancer ? 'Annuler' : 'Fermer'}
-              </button>
             </div>
-            {afficherLancer && raison !== null && (
-              <p id="raison-lancer" className="mt-2 text-sm text-muted">
-                {raison}
-              </p>
-            )}
           </>
         )}
       </section>
