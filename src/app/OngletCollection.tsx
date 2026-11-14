@@ -63,26 +63,31 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
 
       <VerificationWikipedia titres={titresConsultes} onCache={appliquerCacheWiki} />
 
-      <FiltresCollection filtres={filtres} theme={theme} onFiltres={onFiltres} onTheme={onTheme} />
+      <section aria-labelledby="titre-liste-cartes" className="mt-4 rounded border border-line bg-ink-2 p-4" data-testid="liste-cartes">
+        <h2 id="titre-liste-cartes" className="font-semibold">
+          Cartes
+        </h2>
+        <FiltresCollection filtres={filtres} theme={theme} onFiltres={onFiltres} onTheme={onTheme} />
 
-      {visibles.length === 0 ? (
-        <p className="mt-6">Aucune carte ne correspond à ces filtres.</p>
-      ) : (
-        <TableauCartes
-          cartes={rendues}
-          tri={tri}
-          revision={revision}
-          cleFiltre={`${filtres.recherche}|${filtres.doublonsSeulement}|${theme}`}
-          onTri={setTri}
-          onEdition={editer}
-        />
-      )}
+        {visibles.length === 0 ? (
+          <p className="mt-6">Aucune carte ne correspond à ces filtres.</p>
+        ) : (
+          <TableauCartes
+            cartes={rendues}
+            tri={tri}
+            revision={revision}
+            cleFiltre={`${filtres.recherche}|${filtres.doublonsSeulement}|${theme}`}
+            onTri={setTri}
+            onEdition={editer}
+          />
+        )}
 
-      {visibles.length > limite && (
-        <button type="button" className={`${CLASSE_BOUTON} mt-4`} onClick={() => onLimite(limite + TAILLE_PAGE)}>
-          Afficher plus ({visibles.length - limite} restantes)
-        </button>
-      )}
+        {visibles.length > limite && (
+          <button type="button" className={`${CLASSE_BOUTON} mt-4`} onClick={() => onLimite(limite + TAILLE_PAGE)}>
+            Afficher plus ({visibles.length - limite} restantes)
+          </button>
+        )}
+      </section>
 
       <AnalysesCollection cartes={collection.cartes} cacheWiki={cacheWiki} />
       <GraphiqueEvolution />
