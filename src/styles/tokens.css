@@ -178,7 +178,8 @@ body {
 /*
  * Survol de tout cliquable (D-08, SC-025) : 1 px vers le haut, --d-fast et --ease-spring. Règle unique
  * en couche `base` : un utilitaire Tailwind explicite l’emporte. `translate` (propriété séparée)
- * n’entre pas en conflit avec `transform`. Coupée par les règles de mouvement ci-dessus.
+ * n’entre pas en conflit avec `transform`. Un utilitaire Tailwind `transition-colors` ou `transition-shadow`
+ * remplace le `transition-property` de cette règle : accepté. Coupée par les règles de mouvement ci-dessus.
  */
 @layer base {
   button,
@@ -190,7 +191,7 @@ body {
     transition-timing-function: var(--ease-spring);
   }
 
-  button:not(:disabled):hover,
+  button:not(:disabled):not([aria-disabled='true']):hover,
   [role='button']:not([aria-disabled='true']):hover,
   [role='tab']:hover,
   summary:hover {

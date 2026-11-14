@@ -47,6 +47,29 @@ test.describe('SC-025 : durées calculées', () => {
     expect(toutes).toContain(0.2);
   });
 
+  test('SC-025 : survol d’un bouton actif → 1 px vers le haut, courbe --ease-spring ; flèche aria-disabled → immobile', async ({ pageCollection: page }) => {
+    await allerA(page, 'collection');
+    await page.getByRole('button', { name: 'Tableau de tri' }).click();
+    const carte = page.getByTestId('carte-tri').filter({ hasText: 'Élan fictif' });
+    const actif = carte.getByRole('button').first();
+    const inactif = carte.getByRole('button').nth(1);
+    await expect(actif).not.toHaveAttribute('aria-disabled', 'true');
+    await expect(inactif).toHaveAttribute('aria-disabled', 'true');
+    const ressort = await page.evaluate(() => {
+      const s = document.createElement('div');
+      s.style.transitionTimingFunction = 'var(--ease-spring)';
+      document.body.append(s);
+      const v = getComputedStyle(s).transitionTimingFunction;
+      s.remove();
+      return v;
+    });
+    await actif.hover();
+    await expect.poll(() => duree(actif, 'translate')).toBe('0px -1px');
+    expect(await duree(actif, 'transition-timing-function')).toBe(ressort);
+    await inactif.hover();
+    expect(await duree(inactif, 'translate')).toBe('none');
+  });
+
   test('SC-025 : colonne et carte du tableau de tri → 0,2 s (--d-fast)', async ({ pageCollection: page }) => {
     await allerA(page, 'collection');
     await page.getByRole('button', { name: 'Tableau de tri' }).click();
