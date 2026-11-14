@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { collectionVide, type Filtres } from '../lib/collection';
 import BandeauActivite from './BandeauActivite';
 import BlocageCollection from './BlocageCollection';
+import EnTete from './EnTete';
 import MessageStockage from './MessageStockage';
 import Onglets from './Onglets';
 import OngletCollection, { TAILLE_PAGE } from './OngletCollection';
@@ -79,10 +80,8 @@ const App: React.FC = () => {
 
   return (
     <ContexteAffichage.Provider value={{ animations: affichage.animations }}>
-      <main className="mx-auto max-w-6xl p-4">
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold">WM Collection</h1>
-        </header>
+      <main className="mx-auto max-w-[1280px] px-6 pt-5 pb-6">
+        <EnTete />
 
         {blocage && (
           <BlocageCollection
@@ -95,10 +94,6 @@ const App: React.FC = () => {
           />
         )}
 
-        <p className="mt-3 text-sm text-muted">
-          Vos modifications restent dans cette extension : rien n’est changé sur WikiMasters. Chaque page Collection que vous ouvrez sur le site est ajoutée ici.
-        </p>
-
         <MessageStockage message={message} />
 
         <Onglets actif={actif} onChoisir={aller} />
@@ -108,6 +103,9 @@ const App: React.FC = () => {
         <div role="tabpanel" id={idPanneau(actif)} aria-labelledby={idOnglet(actif)} tabIndex={0}>
           {panneau}
         </div>
+        <p className="mt-6 text-sm text-muted">
+          Vos modifications restent dans cette extension : rien n’est changé sur WikiMasters. Chaque page Collection que vous ouvrez sur le site est ajoutée ici.
+        </p>
       </main>
     </ContexteAffichage.Provider>
   );

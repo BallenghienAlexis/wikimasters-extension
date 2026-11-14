@@ -250,3 +250,7 @@ b. BandeauActivite.tsx:88 : message d'échec non effacé quand synchro devient n
 
 - `src/lib/ordonnanceur.ts` (`lirePages`) : `gain` vaut toujours `null` ; `exemplairesGagnes`, `cartesGagnees`, `toutIdentique`, `ordreConfirme` et le retour anticipé sont du code mort à retirer. `etat.total`, `etat.totalUnique` et `etat.signatureEtiquettes` sont écrits mais plus lus pour décider.
 - `tests/unit/ordonnanceur.test.ts` : ajouter un test du contrôle de tête en échec (seconde lecture de `page=0` en 500) : une seule passe, `complete` faux, aucun retrait local.
+
+## À reprendre : PR #139 (suite, après #140)
+- `src/app/EnTete.tsx` : aucun test des trois textes (synchro coupée, jamais, dernière synchro) ; `data-testid="entete-synchro"` inutilisé ; appeler `pastilleDe` une seule fois.
+- `specs/refonte-ihm/design.md` D-01, D-02, D-12 : encore « 4 chiffres clés », « répartition », « tableau par rareté », « 6 onglets », ancre `#ventes` ; mettre à jour ou renvoyer vers `ecarts-maquette.md`.

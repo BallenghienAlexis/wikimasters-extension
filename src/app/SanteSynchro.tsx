@@ -23,6 +23,7 @@ const SanteSynchro: React.FC<Props> = ({ pastille, ageLibelle, activee, prixRele
   const lien = LIEN[pastille];
   return (
     <section aria-label="Santé de la synchro" data-testid="sante-synchro" className="mt-4 rounded border border-line bg-ink-2 p-4">
+      <h3 className="mb-2 text-[17px] font-semibold">Santé de la synchro</h3>
       <div className="flex flex-wrap items-center gap-3">
         <PastilleStatut etat={pastille} />
         <p>{activee ? `Dernière synchro\u00a0: ${ageLibelle}` : `Synchro\u00a0: ${ageLibelle}`}</p>
