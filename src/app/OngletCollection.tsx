@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { STATUTS, LIBELLES_STATUT, filtrerCartes, resumer, type Filtres } from '../lib/collection';
+import { deplacerCarte } from '../lib/colonnesTri';
 import { themesDeCarte } from '../lib/themes';
 import { trierLignes } from '../lib/ordreTableau';
 import { plafondDefausse } from '../lib/tri';
 import AnalysesCollection from './AnalysesCollection';
 import GraphiqueEvolution from './GraphiqueEvolution';
+import TableauTri from './TableauTri';
 import TableauCartes, { valeurDeTri, type EtatTri } from './TableauCartes';
 import FiltresCollection from './FiltresCollection';
 import VerificationWikipedia from './VerificationWikipedia';
@@ -24,6 +26,9 @@ interface Props {
   onLimite: (limite: number) => void;
 }
 
+type Vue = 'liste' | 'tri';
+const CLASSE_VUE = 'inline-flex min-h-11 cursor-pointer items-center rounded border border-muted px-4 focus-visible:shadow-(--halo-focus) aria-pressed:bg-ink-2 aria-pressed:font-bold aria-pressed:border-paper';
+
 const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded border border-line bg-ink-2 px-4';
 
 /**
@@ -31,7 +36,8 @@ const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded 
  * n’y est montée que dans cette vue liste, pour les cartes affichées (pages de 200).
  */
 const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, revision, onFiltres, onTheme, onLimite }) => {
-  const { collection, cacheWiki, appliquerCacheWiki, editer } = donnees;
+  const { collection, cacheWiki, appliquerCacheWiki, editer, appliquer } = donnees;
+  const [vue, setVue] = useState<Vue>('liste');
   const visibles = useMemo(
     () => filtrerCartes(collection.cartes, filtres).filter((c) => theme === 'tous' || themesDeCarte(c).includes(theme)),
     // `cacheWiki` change les thèmes lus par `themesDeCarte` (surcouche Wikipédia).
@@ -46,7 +52,8 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
     const triees = cle === null ? visibles : trierLignes(visibles, (c) => valeurDeTri(c, cle), tri.sens);
     return triees.slice(0, limite);
   }, [visibles, tri, limite]);
-  const titresConsultes = useMemo(() => rendues.map((c) => c.titre), [rendues]);
+  // Vue Tableau de tri : aucune carte « consultée », donc aucune vérification Wikipédia (SC-011).
+  const titresConsultes = useMemo(() => (vue === 'liste' ? rendues.map((c) => c.titre) : []), [rendues, vue]);
   const resume = useMemo(() => resumer(collection.cartes), [collection.cartes]);
 
   if (collection.cartes.length === 0) {
@@ -63,11 +70,21 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
         {STATUTS.map((s) => `${LIBELLES_STATUT[s]} : ${resume.parStatut[s]}`).join(' · ')}
       </p>
 
-      <VerificationWikipedia titres={titresConsultes} onCache={appliquerCacheWiki} />
+      <div className="mt-4 flex gap-2" role="group" aria-label="Vue de la collection">
+        {([['liste', 'Liste'], ['tri', 'Tableau de tri']] as const).map(([v, libelle]) => (
+          <button key={v} type="button" aria-pressed={vue === v} className={CLASSE_VUE} onClick={() => setVue(v)}>
+            {libelle}
+          </button>
+        ))}
+      </div>
+
+      {vue === 'liste' && <VerificationWikipedia titres={titresConsultes} onCache={appliquerCacheWiki} />}
 
       <FiltresCollection filtres={filtres} theme={theme} onFiltres={onFiltres} onTheme={onTheme} />
 
-      {visibles.length === 0 ? (
+      {vue === 'tri' ? (
+        <TableauTri cartes={visibles} onDeplacer={(id, statut) => appliquer(deplacerCarte(collection, id, statut))} />
+      ) : visibles.length === 0 ? (
         <p className="mt-6">Aucune carte ne correspond à ces filtres.</p>
       ) : (
         <TableauCartes
@@ -80,7 +97,7 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
         />
       )}
 
-      {visibles.length > limite && (
+      {vue === 'liste' && visibles.length > limite && (
         <button type="button" className={`${CLASSE_BOUTON} mt-4`} onClick={() => onLimite(limite + TAILLE_PAGE)}>
           Afficher plus ({visibles.length - limite} restantes)
         </button>
