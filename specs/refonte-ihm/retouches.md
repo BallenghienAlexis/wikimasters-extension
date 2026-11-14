@@ -238,3 +238,11 @@ b. BandeauActivite.tsx:88 : message d'échec non effacé quand synchro devient n
 - Défaut hors tâche trouvé en route : collision de casse onglets.ts / Onglets.tsx (corrigé en #129).
 - T-310 (reviewer) : refonte-transverse.spec.ts:261-264 « Ignorer puis Reprendre » sans assertion sur la clé ignorees ; :603 et 150-164 dépliage du bandeau conditionnel, phase `sans-liste` des 5 000 cartes non vérifiée à zéro requête.
 - T-319 (sécurité) : README.md:77 « host_permissions limité à fr.wikipedia.org » omet www.wikidata.org (ligne préexistante) → corriger.
+
+## À reprendre : PR #139 (alignement maquette, coquille et tableau de bord)
+- `src/app/TableauRaretes.tsx` : bascule tableau/liste en `sm:` (640 px) au lieu de 600 px ; utiliser `min-[600px]:` comme `TableauLots.tsx`.
+- `tests/unit/raretes.test.ts` : déplacer dans `tests/unit/tableauDeBord.test.ts` (convention un fichier par module).
+- `tests/e2e/refonte-tableau-de-bord.spec.ts:322-333` : le bloc « Alignement maquette » est imbriqué dans SC-009 ; le sortir au niveau supérieur.
+- `src/app/TableauRaretes.tsx` (liste mobile) : accorder « 1 titre ».
+- `src/app/EnTete.tsx` : « Jamais synchronisée » s’affiche brièvement avant la première lecture du stockage.
+- `src/app/EnTete.tsx` et `OngletTableauDeBord.tsx` : `useLectureSynchro` monté deux fois ; lire une fois dans `App.tsx`.
