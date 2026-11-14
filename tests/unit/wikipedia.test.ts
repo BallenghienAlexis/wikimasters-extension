@@ -231,4 +231,76 @@ describe('creerPlanificateur', () => {
     // A est déjà tenté ; B et C, annulés, sont redemandés au retour.
     expect(vus).toHaveLength(3);
   });
+  describe('annulation et cadence (T-312)', () => {
+    const sansCategorie = { query: { pages: [{ title: 'X' }] } };
+    const pause = (signal: AbortSignal): Promise<void> => new Promise((r) => signal.addEventListener('abort', () => r(), { once: true }));
+    const attendre = async (cond: () => boolean): Promise<void> => {
+      for (let i = 0; i < 100 && !cond(); i++) await new Promise((r) => setTimeout(r, 1));
+    };
+
+    it('annuler coupe la requête en vol, sans suspension, et le titre est redemandé au retour', async () => {
+      const urls: string[] = [];
+      let bloquer = true;
+      const transport: Transport = (url, signal) => {
+        urls.push(url);
+        if (!bloquer) return reponseOk(url, signal);
+        return new Promise((_, rejet) => signal.addEventListener('abort', () => rejet(new Error('abort')), { once: true }));
+      };
+      const p = creerPlanificateur({ chargerCache: async () => cacheVide(), surCache: () => undefined, attendre: sansPause, transport, maintenant: () => 0 });
+      p.demander(['A']);
+      await attendre(() => urls.length === 1);
+      p.annuler();
+      await attendreFin(p);
+      expect(p.etat().suspendue).toBeNull();
+      expect(p.etat().enCours).toBe(false);
+      bloquer = false;
+      p.demander(['A']);
+      await attendreFin(p);
+      expect(urls).toHaveLength(2);
+    });
+
+    it('annuler pendant la pause avant Wikidata : aucune requête Wikidata ne part', async () => {
+      const urls: string[] = [];
+      const transport: Transport = async (url) => { urls.push(url); return { status: 200, json: async () => sansCategorie }; };
+      const p = creerPlanificateur({
+        chargerCache: async () => cacheVide(), surCache: () => undefined, transport, maintenant: () => 0,
+        attendre: (_ms, signal) => pause(signal),
+      });
+      p.demander(['Zèbre']);
+      await attendre(() => urls.length === 1);
+      p.annuler();
+      await attendreFin(p);
+      expect(urls).toHaveLength(1);
+      expect(urls[0]).toContain('wikipedia');
+      expect(urls.some((u) => u.includes('wikidata'))).toBe(false);
+    });
+
+    it('respecte 1 000 ms entre deux débuts de requête après annuler() puis demander()', async () => {
+      let t = 0;
+      const departs: number[] = [];
+      let liberer: () => void = () => undefined;
+      const porte = new Promise<void>((r) => { liberer = r; });
+      let premier = true;
+      const transport: Transport = async (url, signal) => {
+        departs.push(t);
+        if (premier) {
+          premier = false;
+          await Promise.race([porte, new Promise<void>((_, rejet) => signal.addEventListener('abort', () => rejet(new Error('abort')), { once: true }))]);
+        }
+        return reponseOk(url, signal);
+      };
+      const p = creerPlanificateur({
+        chargerCache: async () => cacheVide(), surCache: () => undefined, transport,
+        maintenant: () => t, attendre: async (ms) => { t += ms; },
+      });
+      p.demander(['A']);
+      await attendre(() => departs.length === 1);
+      p.annuler();
+      p.demander(['B']);
+      liberer();
+      await attendreFin(p);
+      expect(departs.length).toBeGreaterThanOrEqual(2);
+      for (let i = 1; i < departs.length; i++) expect(departs[i]! - departs[i - 1]!).toBeGreaterThanOrEqual(1000);
+    });
+  });
 });
