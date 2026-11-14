@@ -32,6 +32,13 @@ test.describe('SC-028 : sections repliables', () => {
     await expect(bouton(page, 'Animations')).toContainText('Animations : activées');
   });
 
+  test('le résumé de la section synchro donne la valeur courante, à droite du titre', async ({ pageCollection: page }) => {
+    await expect(bouton(page, 'Synchronisation automatique')).toContainText('Activée');
+    await bouton(page, 'Synchronisation automatique').click();
+    await page.getByRole('switch', { name: 'Synchronisation automatique' }).uncheck();
+    await expect(bouton(page, 'Synchronisation automatique')).toContainText('Désactivée');
+  });
+
   test('l’interrupteur de synchro des Réglages suit celui de l’onglet Synchro', async ({ pageCollection: page }) => {
     await bouton(page, 'Synchronisation automatique').click();
     const reglage = page.getByRole('switch', { name: 'Synchronisation automatique' });

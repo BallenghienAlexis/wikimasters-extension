@@ -254,3 +254,31 @@ b. BandeauActivite.tsx:88 : message d'échec non effacé quand synchro devient n
 ## À reprendre : PR #139 (suite, après #140)
 - `src/app/EnTete.tsx` : aucun test des trois textes (synchro coupée, jamais, dernière synchro) ; `data-testid="entete-synchro"` inutilisé ; appeler `pastilleDe` une seule fois.
 - `specs/refonte-ihm/design.md` D-01, D-02, D-12 : encore « 4 chiffres clés », « répartition », « tableau par rareté », « 6 onglets », ancre `#ventes` ; mettre à jour ou renvoyer vers `ecarts-maquette.md`.
+
+## À reprendre : PR #142 (interrupteur de synchro dans Réglages)
+- `specs/refonte-ihm/spec.refined.md:68` (SC-028) : « six sections », interrupteur dit seulement dans Synchro ; ajouter la section « Synchronisation automatique » (aux deux endroits, décision d’Alexis du 2026-11-14).
+- `specs/refonte-ihm/design.md` D-50 (:155) et D-02 (:71) : préciser que l’interrupteur est aussi dans Réglages, la relance seulement dans Synchro.
+- `AGENTS.md:89` : ajouter la synchronisation automatique à la liste des sections de Réglages.
+- `src/app/OngletReglages.tsx:31` : le résumé « Activer ou couper » devrait donner la valeur courante (« Synchro : activée »).
+- `src/app/ReglageSynchroAuto.tsx:9-33` et `src/app/SynchroAuto.tsx:244-279` : dupliquent lecture, abonnement et bascule ; extraire un hook `useSyncAuto()`.
+- `src/app/ReglageSynchroAuto.tsx:38-45` : case native, alors que Synchro a un bouton-interrupteur stylé ; réutiliser le même rendu.
+- `src/app/ReglageSynchroAuto.tsx:6` (et `SynchroAuto.tsx:237`) : état initial `false` alors que la valeur par défaut est « activée » ; partir de `null`, case désactivée tant que non lue ; reprendre aussi la phrase de cadence (0,2 à 0,3 s, arrêt si refus) dans le texte d’aide.
+
+## À reprendre : PR #143 (encadré de risque compact)
+- `src/app/BandeauRisque.tsx:19` : `inline-flex` sur `<summary>` retire le triangle natif ; ajouter un chevron `aria-hidden` qui pivote avec `[open]`.
+- `src/app/BandeauRisque.tsx:13-15` : le titre « Action sur le site à votre place » est devenu un `<strong>` ; garder un `h2` affiché en ligne pour la navigation par titres.
+- `specs/synchro-complete/design.md:49` et `:74` (D-09, D-13) : décrivent encore « ! », `h2` `text-defausser`, `border-l-defausser`, corps entièrement visible ; renvoyer vers refonte-ihm D-09 et `ecarts-maquette.md` n° 5.
+- `tests/e2e/refonte-lots.spec.ts` (test de l’encadré, `toBeLessThan(260)`) : mesurer la hauteur avant le clic, seuil serré ; vérifier `open` sur `details` après le clic.
+- PR #143 : captures de l’onglet Lots aux 3 largeurs et 2 thèmes non jointes.
+- `src/app/BandeauRisque.tsx:16` : la ligne parle d’enchère et de défausse alors que les lots n’en produisent plus ; texte gardé exprès pour le rappel de risque, à confirmer avec Alexis.
+
+## À reprendre : PR #145 (onglet Collection)
+- `src/app/AnalysesCollection.tsx:68-69` : le libellé de thème est coupé (`truncate`) sans `title`, et la colonne du nombre (`2rem`) déborde dès 4 chiffres (« 1 234 ») ; ajouter `title` et une colonne `minmax(2rem,auto)`.
+- `src/app/AnalysesCollection.tsx:71` : les barres de thèmes utilisent `bg-echanger`, couleur de statut, pour une donnée neutre ; passer à `bg-paper` ou `bg-muted`, ou le justifier dans `design.md`.
+- `src/app/GraphiqueEvolution.tsx:56` : piste `bg-ink` au lieu de `ink-2` (`design.md:218`, `tasks.md:323`) ; mettre à jour `design.md`.
+- `tests/e2e/refonte-collection.spec.ts:199-210, 269` : vérifier la proportionnalité (largeur de la première barre à 100 %) et une valeur exacte « de X à Y (+N) ».
+- PR #145 : captures aux 3 largeurs non jointes.
+
+## À reprendre : PR Réglages (suite de #142)
+- `src/app/SynchroAuto.tsx` : garde sa propre copie de lecture, écoute et bascule de `syncAuto` ; le remplacer par `useSyncAuto` (état initial `null` aussi).
+- Résumé des Étiquettes préexistantes (« N trouvées ») et validité de `specs/refonte-ihm/design.md` D-50, `spec.refined.md` SC-028 et `AGENTS.md` (sections de Réglages) : encore à mettre à jour.

@@ -154,6 +154,18 @@ test.describe('SC-015 : tableau des lots cochables (AC1)', () => {
 });
 
 test.describe('SC-015 : durée, avertissements et écarts (AC2)', () => {
+  test('encadré de risque compact : l’essentiel visible, les règles du site dans un détail repliable', async ({ pageCollection: page }) => {
+    await amorcer(page, TOUTES);
+    await allerA(page, 'lots');
+    const bandeau = page.getByTestId('bandeau-risque');
+    await expect(bandeau).toContainText('Action sur le site à votre place.');
+    await expect(bandeau).toContainText('Risque de bannissement accepté le 07/11/2026.');
+    await expect(bandeau.getByText('robots.txt')).toBeHidden();
+    await bandeau.getByText('Voir les règles du site').click();
+    await expect(bandeau.getByText('robots.txt')).toBeVisible();
+    expect((await bandeau.boundingBox())?.height ?? 999).toBeLessThan(260);
+  });
+
   test('SC-015 : durée « environ N min » des seuls lots cochés', async ({ pageCollection: page }) => {
     await amorcer(page, TOUTES);
     await ouvrirApercu(page);
