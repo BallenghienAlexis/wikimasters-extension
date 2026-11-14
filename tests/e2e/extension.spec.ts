@@ -43,7 +43,7 @@ test.describe('page de collection', () => {
   test('affiche un titre hostile en texte, sans l’interpréter', async ({ pageCollection }) => {
     await chargerCollectionFictive(pageCollection);
     await allerA(pageCollection, 'collection');
-    await expect(pageCollection.getByText('<img src=x onerror=alert(1)>')).toBeVisible();
+    await expect(pageCollection.getByTestId('tableau-cartes').getByText('<img src=x onerror=alert(1)>')).toBeVisible();
     await expect(pageCollection.locator('main img')).toHaveCount(0);
   });
 
@@ -87,10 +87,10 @@ test.describe('page de collection', () => {
     await chargerCollectionFictive(pageCollection);
     await allerA(pageCollection, 'collection');
     await pageCollection.getByLabel('Rechercher une carte').fill('ecureuil');
-    await expect(pageCollection.locator('main li')).toHaveCount(1);
+    await expect(pageCollection.getByTestId('tableau-cartes').locator('tbody tr')).toHaveCount(1);
     await pageCollection.getByLabel('Rechercher une carte').fill('');
     await pageCollection.getByLabel('Doublons seulement').check();
-    await expect(pageCollection.locator('main li')).toHaveCount(2);
+    await expect(pageCollection.getByTestId('tableau-cartes').locator('tbody tr')).toHaveCount(2);
   });
 
 });

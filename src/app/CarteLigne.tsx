@@ -25,9 +25,19 @@ const COULEUR_STATUT: Record<Statut, string> = {
 interface Props {
   carte: Carte;
   onEdition: (edition: EditionCarte) => void;
+  /** Ref de la ligne, pour le FLIP du tri (T-315). */
+  refLigne?: (el: HTMLElement | null) => void;
 }
 
-const CarteLigne: React.FC<Props> = ({ carte, onEdition }) => {
+/** Étiquette visible seulement en cartes empilées (sous 600 px), où l’en-tête du tableau est masqué. */
+const Etiquette: React.FC<{ texte: string }> = ({ texte }) => (
+  <span className="block text-sm text-muted min-[600px]:hidden">{texte}</span>
+);
+
+const CELLULE = 'block px-3 py-1 min-[600px]:table-cell min-[600px]:align-top min-[600px]:py-3';
+
+/** Ligne éditable du tableau de la Collection (T-308) : `tr` empilée sous 600 px. */
+const CarteLigne: React.FC<Props> = ({ carte, onEdition, refLigne }) => {
   // Retourne undefined et rétablit le champ si le nombre saisi est invalide.
   const lireNombre = (champ: HTMLInputElement, actuel: number | null): number | null | undefined => {
     const texte = champ.value.trim();
@@ -51,8 +61,11 @@ const CarteLigne: React.FC<Props> = ({ carte, onEdition }) => {
   };
 
   return (
-    <li className="grid gap-3 py-3 md:grid-cols-[minmax(0,2fr)_10rem_7rem_7rem_minmax(0,1fr)] md:items-center">
-      <div className="min-w-0">
+    <tr
+      ref={refLigne}
+      className="block border-b border-line py-2 hover:bg-(--surface-survol) min-[600px]:table-row min-[600px]:py-0"
+    >
+      <td className={`${CELLULE} min-w-0 break-words`}>
         <p className="font-medium break-words">
           {carte.url ? (
             <a className="underline" href={carte.url} target="_blank" rel="noreferrer noopener">{carte.titre}</a>
@@ -60,63 +73,75 @@ const CarteLigne: React.FC<Props> = ({ carte, onEdition }) => {
             carte.titre
           )}
         </p>
-        <p className="text-sm text-muted">
-          {carte.rarete ? `${carte.rarete} · ` : ''}
-          Quantité : {carte.quantite}
-          {excedent(carte) > 0 ? ` · ${excedent(carte)} en double` : ''}
-          {carte.favori ? ' · Favori, verrouillé sur le site' : ''}
-        </p>
         <p className="text-sm text-muted break-words">
           {themesDeCarte(carte).map((theme) => LIBELLES_THEMES[theme]).join(', ')}
           {carte.ami ? ` · À échanger avec ${carte.ami}` : ''}
+          {excedent(carte) > 0 ? ` · ${excedent(carte)} en double` : ''}
+          {carte.favori ? ' · Favori, verrouillé sur le site' : ''}
         </p>
-      </div>
-      <select
-        aria-label={`Statut de ${carte.titre}`}
-        className={`${CLASSE_CHAMP} ${COULEUR_STATUT[carte.statut]}`}
-        value={carte.statut}
-        onChange={(e) => onEdition({ statut: e.target.value as Statut, ami: null, decidePar: 'moi' })}
-      >
-        {STATUTS.map((s) => (
-          <option key={s} value={s}>{LIBELLES_STATUT[s]}</option>
-        ))}
-      </select>
-      <input
-        key={`valeur-${carte.valeurMarchande}`}
-        type="number"
-        min={0}
-        step={1}
-        inputMode="numeric"
-        aria-label={`Valeur marchande de ${carte.titre}, en wikibidous`}
-        placeholder="Valeur"
-        className={CLASSE_CHAMP}
-        defaultValue={carte.valeurMarchande ?? ''}
-        onBlur={(e) => validerValeur(e.target)}
-      />
-      <input
-        key={`prix-${carte.prixCible}`}
-        type="number"
-        min={0}
-        step={1}
-        inputMode="numeric"
-        aria-label={`Prix cible de ${carte.titre}, en wikibidous`}
-        placeholder="Prix cible"
-        className={CLASSE_CHAMP}
-        defaultValue={carte.prixCible ?? ''}
-        onBlur={(e) => validerPrix(e.target)}
-      />
-      <input
-        type="text"
-        maxLength={MAX_NOTE}
-        aria-label={`Note sur ${carte.titre}`}
-        placeholder="Note"
-        className={CLASSE_CHAMP}
-        defaultValue={carte.note}
-        onBlur={(e) => {
-          if (e.target.value !== carte.note) onEdition({ note: e.target.value });
-        }}
-      />
-    </li>
+      </td>
+      <td className={CELLULE}>
+        <Etiquette texte="Rareté" />
+        {carte.rarete || '—'}
+      </td>
+      <td className={CELLULE}>
+        <Etiquette texte="Quantité" />
+        {carte.quantite}
+      </td>
+      <td className={CELLULE}>
+        <Etiquette texte="Statut" />
+        <select
+          aria-label={`Statut de ${carte.titre}`}
+          className={`${CLASSE_CHAMP} ${COULEUR_STATUT[carte.statut]}`}
+          value={carte.statut}
+          onChange={(e) => onEdition({ statut: e.target.value as Statut, ami: null, decidePar: 'moi' })}
+        >
+          {STATUTS.map((s) => (
+            <option key={s} value={s}>{LIBELLES_STATUT[s]}</option>
+          ))}
+        </select>
+      </td>
+      <td className={CELLULE}>
+        <Etiquette texte="Valeur marchande" />
+        <input
+          key={`valeur-${carte.valeurMarchande}`}
+          type="number"
+          min={0}
+          step={1}
+          inputMode="numeric"
+          aria-label={`Valeur marchande de ${carte.titre}, en wikibidous`}
+          placeholder="Valeur"
+          className={CLASSE_CHAMP}
+          defaultValue={carte.valeurMarchande ?? ''}
+          onBlur={(e) => validerValeur(e.target)}
+        />
+      </td>
+      <td className={`${CELLULE} space-y-2`}>
+        <input
+          key={`prix-${carte.prixCible}`}
+          type="number"
+          min={0}
+          step={1}
+          inputMode="numeric"
+          aria-label={`Prix cible de ${carte.titre}, en wikibidous`}
+          placeholder="Prix cible"
+          className={CLASSE_CHAMP}
+          defaultValue={carte.prixCible ?? ''}
+          onBlur={(e) => validerPrix(e.target)}
+        />
+        <input
+          type="text"
+          maxLength={MAX_NOTE}
+          aria-label={`Note sur ${carte.titre}`}
+          placeholder="Note"
+          className={CLASSE_CHAMP}
+          defaultValue={carte.note}
+          onBlur={(e) => {
+            if (e.target.value !== carte.note) onEdition({ note: e.target.value });
+          }}
+        />
+      </td>
+    </tr>
   );
 };
 
