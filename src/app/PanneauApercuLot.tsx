@@ -35,6 +35,7 @@ import {
   carteTexte,
   libelleType,
   libelleErreurLancement,
+  phraseProgression,
   pourcentage,
   texteEnCours,
   texteFin,
@@ -147,6 +148,8 @@ const PanneauApercuLot: React.FC<Props> = ({
   const [ignorees, setIgnorees] = useState<Ignoree[]>([]);
   const [decochees, setDecochees] = useState<ReadonlySet<FamilleLot>>(new Set());
   const [pauseJusqua, setPauseJusqua] = useState<number | null>(null);
+  // Une erreur détaillée est stockée : le panneau d’erreur de l’onglet Synchro existe (sinon pas de lien).
+  const [erreurStockee, setErreurStockee] = useState(false);
   const [maintenant, setMaintenant] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setMaintenant(Date.now()), 15_000);
@@ -157,7 +160,9 @@ const PanneauApercuLot: React.FC<Props> = ({
     const lire = (): void => {
       chargerExecution()
         .then((e) => {
-          if (actif) setPauseJusqua(e?.pauseJusqua ?? null);
+          if (!actif) return;
+          setPauseJusqua(e?.pauseJusqua ?? null);
+          setErreurStockee(e?.erreur != null);
         })
         .catch(() => undefined);
     };
@@ -304,6 +309,7 @@ const PanneauApercuLot: React.FC<Props> = ({
 
       {zoneVisible && (
         <section
+          data-testid="zone-execution"
           aria-labelledby="titre-execution"
           className="mt-4 rounded border border-line border-l-4 border-l-paper bg-ink-2 p-4"
           onKeyDown={(e) => {
@@ -337,20 +343,32 @@ const PanneauApercuLot: React.FC<Props> = ({
             </>
           )}
           <div role="status" aria-live="polite" aria-atomic="true" className="mt-2">
+            {enCoursExec && exec && <p className="text-sm text-muted">{phraseProgression(exec.etat.traitees, exec.etat.total, exec.bilan.erreurs)}</p>}
             {exec && exec.etat.etat === 'terminee' && (
               <p>
+                <span aria-hidden="true">✓ </span>
                 <span className="font-semibold text-garder">{texteFin(exec.etat, exec.bilan, exec.deconnecte).titre}</span>
                 {NB}: {texteFin(exec.etat, exec.bilan, exec.deconnecte).detail}
               </p>
             )}
             {exec && exec.etat.etat === 'arretee' && (
-              <p>
-                <span className="font-semibold text-defausser">Lot arrêté.</span> Le détail de l’erreur et les choix sont dans l’onglet{' '}
-                <a href="#synchro" className="underline focus-visible:shadow-(--halo-focus)">
-                  Synchro
-                </a>
-                .
-              </p>
+              <>
+                <p className="font-semibold text-defausser">
+                  <span aria-hidden="true">✕ </span>
+                  {texteFin(exec.etat, exec.bilan, exec.deconnecte).titre}
+                </p>
+                <p className="mt-1">{texteFin(exec.etat, exec.bilan, exec.deconnecte).detail}</p>
+                {exec.bilan.dernierInconnu && <p className="mt-1 font-semibold text-vendre">Résultat inconnu, à vérifier sur le site.</p>}
+                {erreurStockee && (
+                  <p className="mt-1">
+                    Le détail de l’erreur et les choix sont dans l’onglet{' '}
+                    <a href="#synchro" className="underline focus-visible:shadow-(--halo-focus)">
+                      Synchro
+                    </a>
+                    .
+                  </p>
+                )}
+              </>
             )}
             {!exec && interrompu && (
               <p>
