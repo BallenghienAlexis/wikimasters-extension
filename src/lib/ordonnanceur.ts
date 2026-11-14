@@ -557,21 +557,26 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     const retenues = candidatsPrix().slice(0, Math.max(0, plafond));
     deps.annoncerPrix?.(retenues.length);
     let demandes = 0;
-    let premiereDemande: number | null = null;
+    let premiereDemande = 0;
     for (const carte of retenues) {
       const cardId = etat.cardIds[carte.id];
       if (cardId === undefined) continue;
       if (demandes > 0 && demandes % PRIX_PAR_LOT === 0) {
         journal(`Pause de ${PAUSE_ENTRE_LOTS_PRIX_MS / 1000} s après ${demandes} prix demandés (limite de débit supposée).`);
-        await horloge.attendreJusqua(horloge.now() + PAUSE_ENTRE_LOTS_PRIX_MS);
+        // Attente par tranches d’une seconde : un arrêt manuel n’attend pas la fin de la pause.
+        const fin = horloge.now() + PAUSE_ENTRE_LOTS_PRIX_MS;
+        while (horloge.now() < fin) {
+          if (deps.arretDemande?.()) throw new Interruption('manuel', null);
+          await horloge.attendreJusqua(Math.min(fin, horloge.now() + 1000));
+        }
         if (deps.arretDemande?.()) throw new Interruption('manuel', null);
       }
-      premiereDemande ??= horloge.now();
+      if (demandes === 0) premiereDemande = horloge.now();
       demandes += 1;
       const refusAvant = refusPrixTotal;
       const r = await requete(cheminPrix(cardId), false, carte.titre);
       if (r === null) {
-        if (refusPrixTotal > refusAvant) journal(`Diagnostic prix : refus pour « ${carte.titre} » (carte ${cardId}, rareté ${carte.rarete ?? '?'}) à la demande n° ${demandes}, ${Math.round((horloge.now() - (premiereDemande ?? 0)) / 1000)} s après la première.`);
+        if (refusPrixTotal > refusAvant) journal(`Diagnostic prix : refus pour « ${carte.titre} » (rareté ${carte.rarete ?? '?'}) à la demande n° ${demandes}, ${Math.round((horloge.now() - (premiereDemande)) / 1000)} s après la première.`);
         // Refus par carte : on ne la redemande pas avant la fin de l’ancienneté (30 jours), sans valeur inventée.
         if (refusPrixTotal > refusAvant) etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() };
         continue;

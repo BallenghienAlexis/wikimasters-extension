@@ -652,6 +652,48 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.codeHttp).toBe(403);
   })
 
+  it('prix : pause de 60 s après chaque lot de 30 prix, sans requête de plus', async () => {
+    const b = banc(siteFictif(35));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('termine');
+    const ventes = b.departs.filter((d) => d.chemin.includes('/sales'));
+    expect(ventes).toHaveLength(35);
+    const ecarts = ventes.slice(1).map((d, i) => d.t - (ventes[i]?.t ?? 0));
+    expect(ecarts.filter((e) => e >= 60_000)).toHaveLength(1);
+    expect(ecarts[29]).toBeGreaterThanOrEqual(60_000);
+    expect(b.journal.some((m) => m.startsWith('Pause de 60 s'))).toBe(true);
+  })
+
+  it('prix : un arrêt demandé pendant la pause empêche la 31e requête', async () => {
+    let ventes = 0;
+    let arret = false;
+    const site = siteFictif(40);
+    const b = banc(
+      (chemin) => {
+        if (chemin.includes('/sales')) {
+          ventes += 1;
+          if (ventes === 30) arret = true;
+        }
+        return site(chemin);
+      },
+      collectionDe([]),
+      etatInitial(),
+      { arretDemande: () => arret },
+    );
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('arret');
+    expect(b.departs.filter((d) => d.chemin.includes('/sales'))).toHaveLength(30);
+  })
+
+  it('prix : un refus journalise le titre, le rang et le délai depuis la première demande', async () => {
+    const site = siteFictif(6);
+    const b = banc((chemin) => (chemin.includes('card-3/sales') ? { statut: 403, json: null } : site(chemin)));
+    await synchroniser(b.deps);
+    const m = b.journal.find((x) => x.startsWith('Diagnostic prix'));
+    expect(m).toContain('Carte 3');
+    expect(m).toMatch(/demande n° 3, \d+ s après la première/);
+  })
+
   it('prix : 401 et 429 arrêtent toujours dès la première réponse', async () => {
     for (const code of [401, 429]) {
       const site = siteFictif(4);
