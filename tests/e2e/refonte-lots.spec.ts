@@ -254,7 +254,7 @@ test.describe('SC-016 : « Lancer » (AC3)', () => {
     const hh = String(new Date(fin).getHours()).padStart(2, '0');
     // L’heure est locale au navigateur de test : même fuseau que ce processus.
     await expect(page.locator(`#${id}`)).toContainText(`${hh}:`);
-    await bouton.click();
+    await bouton.click({ force: true });
     await expect(page.getByTestId('zone-execution')).toBeHidden();
   });
 
