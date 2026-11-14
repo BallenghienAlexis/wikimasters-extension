@@ -17,7 +17,7 @@ import type {
 import { normaliser, type Carte, type Collection } from './collection'
 import { LONGUEUR_MAX_ID } from './registre'
 import { amisConcernes, type Ami } from './tri'
-import { DEFINITIONS_THEMES, LIBELLES_THEMES, THEME_AUTRES, themesDeCarte } from './themes'
+import { LIBELLES_THEMES, themesDeCarte, themesPrincipaux } from './themes'
 
 /** Réglages du lot. */
 export interface Config {
@@ -73,17 +73,11 @@ const comparer = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
 
 const PREFIXE_ECHANGE = '#À échanger '
 
-const NB_ANCETRES: Record<string, number> = Object.fromEntries(DEFINITIONS_THEMES.map((t) => [t.id, t.parents?.length ?? 0]))
+/** Un ami peut aussi suivre une étiquette du site (Alexis, 2026-11-14) : sa clé est `site:<nom>`. */
+export const cleEtiquetteSite = (nom: string): string => `site:${nom}`
 
 /** Étiquette de repli d’une carte dont aucun thème n’est reconnu : toute carte reliée reçoit au moins une étiquette de thème. */
 export const ETIQUETTE_A_CLASSER = '#À classer'
-
-/** Thèmes de la carte, sauf `autres`, du plus précis au plus général puis par libellé (H5). */
-function themesOrdonnes(ids: readonly string[]): string[] {
-  return ids
-    .filter((id) => id !== THEME_AUTRES)
-    .sort((a, b) => (NB_ANCETRES[b] ?? 0) - (NB_ANCETRES[a] ?? 0) || COLLATEUR_FR.compare(LIBELLES_THEMES[a] ?? a, LIBELLES_THEMES[b] ?? b))
-}
 
 /** Clés de comparaison des noms d’amis, mémorisées : la même liste revient pour chaque carte. */
 const clesNoms = new Map<string, string>()
@@ -110,7 +104,7 @@ function etiquettesEchange(carte: Carte, themes: readonly string[], amis: readon
     }
   }
   ajouter(carte.ami ?? '')
-  for (const ami of amisConcernes(themes, amis)) ajouter(ami.nom)
+  for (const ami of amisConcernes([...themes, ...carte.etiquettesSite.map(cleEtiquetteSite)], amis)) ajouter(ami.nom)
   return noms.map((n) => `${PREFIXE_ECHANGE}${n}`)
 }
 
@@ -144,7 +138,8 @@ function calculerEtiquettes(carte: Carte, config?: Pick<Config, 'amis' | 'limite
   const themes = themesDeCarte(carte)
   // Étiquettes d’échange : jamais pour un favori (le site le verrouille, et c’est une carte aimée).
   const prioritaires = carte.favori ? [] : etiquettesEchange(carte, themes, config?.amis ?? [])
-  const precis = themesOrdonnes(themes).map((id) => LIBELLES_THEMES[id] ?? id)
+  // Les 4 thèmes les mieux établis seulement (Alexis, 2026-11-14) ; les parents ne servent qu’à désigner les amis.
+  const precis = themesPrincipaux(carte).map((id) => LIBELLES_THEMES[id] ?? id)
   const libellesThemes = precis.length > 0 ? precis : [ETIQUETTE_A_CLASSER]
   const tous = [...prioritaires, ...libellesThemes]
   const limite = config?.limiteParExemplaire

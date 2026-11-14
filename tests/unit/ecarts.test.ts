@@ -27,7 +27,7 @@ describe('calculerEcarts', () => {
     const c = carte('a', { ...CHIEN, etiquettesSite: [] })
     const e = calculerEcarts([c])[0]!
     expect(e.idCarte).toBe('a')
-    expect(e.manquantes).toEqual(['#Chien', '#Animaux', '#Nature'])
+    expect(e.manquantes).toEqual(['#Chien'])
     expect(e.enTrop).toEqual([])
   })
 

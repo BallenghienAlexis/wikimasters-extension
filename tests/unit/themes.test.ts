@@ -1,7 +1,7 @@
 import { meilleureDuree } from './duree';
 import { describe, expect, it } from 'vitest';
 import type { Carte } from '../../src/lib/collection';
-import { compterThemes, LIBELLES_THEMES, themesDeCarte } from '../../src/lib/themes';
+import { compterThemes, definirThemesWikipedia, LIBELLES_THEMES, themesDeCarte, themesPrincipaux } from '../../src/lib/themes';
 
 const themes = (description: string, titre = 'Titre fictif'): string[] => themesDeCarte({ titre, description });
 
@@ -359,5 +359,49 @@ describe('non-régression (SC-006)', () => {
   it('reste linéaire sur une description hostile de 120 000 caractères', () => {
     const carte = { titre: 'grand ', description: 'grand '.repeat(20000) + 'barrage-'.repeat(1000) };
     expect(meilleureDuree(() => void themesDeCarte(carte))).toBeLessThan(200);
+  });
+});
+
+describe('themesPrincipaux (fiabilité des étiquettes)', () => {
+  it('« Bee Train » est un nom de studio : ni #Train ni #Véhicule', () => {
+    const t = themesPrincipaux({
+      titre: 'Noir (anime)',
+      description: 'série télévisée d’animation japonaise réalisée par Kōichi Mashimo et produite par le studio Bee Train.',
+    });
+    expect(t).not.toContain('train');
+    expect(t).not.toContain('vehicule');
+  });
+
+  it('un vrai train reste un train', () => {
+    expect(themesPrincipaux({ titre: 'TGV', description: 'train à grande vitesse' })).toContain('train');
+  });
+
+  it('au plus 4 thèmes, sans les parents', () => {
+    const t = themesPrincipaux({
+      titre: 'Chien chat lion cheval',
+      description: 'chien, chat, cheval, lion, ours, singe, requin et serpent',
+    });
+    expect(t.length).toBeLessThanOrEqual(4);
+    expect(t).not.toContain('animaux');
+  });
+
+  it('le thème du titre passe avant une mention isolée en fin de description', () => {
+    const t = themesPrincipaux({ titre: 'Tigre', description: 'grand félin. Il apparaît dans un film de cinéma.' });
+    expect(t[0]).toBe('felin');
+  });
+});
+
+describe('themesPrincipaux avec le cache Wikipédia', () => {
+  it('les parents du cache ne sont pas posés', () => {
+    definirThemesWikipedia(new Map([['Rex', ['chien', 'animaux', 'nature']]]));
+    try {
+      expect(themesPrincipaux({ titre: 'Rex', description: 'chien célèbre' })).toEqual(['chien']);
+    } finally {
+      definirThemesWikipedia(new Map());
+    }
+  });
+
+  it('un article en majuscule ne fait pas un nom propre : « Le Chat botté »', () => {
+    expect(themesPrincipaux({ titre: 'Le Chat botté', description: 'conte' })).toContain('chat');
   });
 });

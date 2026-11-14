@@ -217,6 +217,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   let echecs = 0;
   /** Échecs sautés sur toute l’exécution : la synchro n’est pas déclarée complète s’il y en a. */
   let echecsTotal = 0;
+  /** Cartes vues sur le site pendant la dernière passe de lecture de cette synchro (les prix ne sont demandés que pour elles). */
+  let luesCetteSynchro = new Set<string>();
   /** Refus 403 consécutifs sur la route des prix (par carte, tolérés un à un). */
   let refusPrix = 0;
   let refusPrixTotal = 0;
@@ -352,7 +354,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       }
       resultat.complete = complet && echecsTotal === 0;
       await deps.enregistrer(instantane(), etat);
-      await relevePrix();
+      // Prix seulement après une lecture des pages menée à terme : sinon rien ne garantit que les cartes sont encore présentes.
+      if (lecture.ok) await relevePrix();
       await releveVentes();
     } catch (e) {
       if (!(e instanceof Interruption)) throw e;
@@ -420,6 +423,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     let ok = true;
     let tete: string | null = null;
     const vus = new Set<string>();
+    luesCetteSynchro = vus;
     let exemplairesLus = 0;
     // Identifiants d’exemplaires déjà comptés : un décalage de pagination peut répéter une ligne.
     const idsComptes = new Set<string>();
@@ -510,6 +514,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     const perimees: Carte[] = [];
     const anciennete = (c: Carte): number => etat.prix[c.id]?.releveLe ?? 0;
     for (const c of parId.values()) {
+      // Une carte absente de la lecture du jour (vendue, défaussée) n’a plus de route de prix : le site répondrait 403.
+      if (!luesCetteSynchro.has(c.id)) continue;
       if (!c.rarete || !etat.cardIds[c.id]) continue;
       const rec = etat.prix[c.id];
       const saisieMain = c.valeurMarchande !== null && rec?.valeur !== c.valeurMarchande;

@@ -458,6 +458,18 @@ describe('ordonnanceur — critère 3 : prix', () => {
     expect(r.prixReleves).toBe(3);
   });
 
+  it('ne demande jamais le prix d’une carte absente de la lecture du jour (403 évité)', async () => {
+    // Le site n’a que 2 cartes ; la carte locale n° 9 (déjà reliée, avec une édition locale) n’y est plus.
+    const cartes = [carteLocale(1, {}), carteLocale(2, {}), carteLocale(9, { note: 'garder' })];
+    const collection = collectionDe(cartes);
+    const ids = Object.fromEntries(cartes.map((c) => [c.id, `card-${c.id.slice(-1)}`]));
+    const b = banc(siteFictif(2), collection, etatLu(collection, ids));
+    await synchroniser(b.deps);
+    const demandes = cheminsPrix(b).map((c) => /card-(\d)/.exec(c)![1]);
+    expect(demandes).not.toContain('9');
+    expect(demandes.length).toBeGreaterThan(0);
+  });
+
   it('la périodicité est de 30 jours', () => {
     expect(ancienneteMaxPrixMs).toBe(30 * JOUR);
   });
