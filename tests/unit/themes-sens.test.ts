@@ -211,6 +211,7 @@ describe('faux positifs des domaines ajoutés', () => {
     ['Estomac', "organe de l'appareil digestif", 'alcool'],
     ['Pont de Normandie', 'pont en béton armé', 'armes'],
     ['Guerre civile', 'conflit armé', 'armes'],
+    ['Reims', 'capitale de la Champagne', 'alcool'],
     ['Totem', 'objet fétiche', 'sexualite'],
     ['Casino de Paris', 'music-hall parisien', 'jeux'],
     ['Café de Flore', 'café parisien', 'boisson'],
@@ -223,5 +224,17 @@ describe('faux positifs des domaines ajoutés', () => {
   });
   it('une espèce décrite avec « style » reste une espèce', () => {
     expect(genreDe('Le lynx est un mammifère carnivore, au style de chasse discret.')).toBe('espece');
+  });
+});
+
+describe('vrais cas des motifs resserrés', () => {
+  it.each([
+    ['Champagne', 'vin effervescent', 'vin'],
+    ['Héroïne', 'opioïde semi-synthétique', 'drogue'],
+    ['Casino Royale', 'établissement de jeux, casino', 'jeux'],
+    ['Cognac', 'digestif à base de vin', 'alcool'],
+    ['Expresso', 'café court et serré', 'boisson'],
+  ])('%s donne #%s', (titre, description, attendu) => {
+    expect(themesPrincipaux({ titre, description })).toContain(attendu);
   });
 });
