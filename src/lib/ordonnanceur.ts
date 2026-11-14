@@ -332,7 +332,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
           stats = fin;
           break;
         }
-        // Rien n’a bougé côté site mais les exemplaires lus ne correspondent pas au total : la tête de liste est stable : une nouvelle passe n’y changerait rien.
+        // Rien n’a bougé côté site mais les exemplaires lus ne correspondent pas au total, et la tête de liste est stable : une nouvelle passe n’y changerait rien.
         if (lecture.vus === null && teteStable && memesStats(stats, fin)) {
           stats = fin;
           break;
@@ -370,7 +370,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     const r = await requete(cheminPage(PREMIERE_PAGE, 'added'));
     if (r === null) return null;
     const lue = analyserPage(r.json);
-    return lue === null ? null : signatureTete(lue.cartes);
+    return lue === null ? echec('Page de contrôle de forme inattendue.') : signatureTete(lue.cartes);
   }
 
   async function lireStats(): Promise<StatsLues | null> {
