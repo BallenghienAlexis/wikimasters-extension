@@ -284,3 +284,24 @@ describe('filtres de l’historique (SC-018)', () => {
     expect(jeu[1]!.resultat).toBe('echouee');
   });
 });
+
+// T-307 (revue) : prop `titre` distincte de `idTest`, journal illisible signalé dans l'historique.
+describe('Journal : titre et journal illisible (revue T-307)', () => {
+  const registreVide: Registre = { version: 2, etiquettes: {}, couples: [] };
+  const rendre = (props: Record<string, unknown>): string =>
+    renderToStaticMarkup(
+      React.createElement(Journal, { entrees: [], registre: registreVide, retraitDisponible: false, ongletPret: false, onVider: () => {}, ...props }),
+    );
+  it('le titre est indépendant du repère de test', () => {
+    const html = rendre({ idTest: 'historique', titre: 'Historique' });
+    expect(html).toContain('data-testid="historique"');
+    expect(html).toContain('>Historique<');
+    expect(rendre({ idTest: 'journal' })).toContain('>Journal<');
+    expect(rendre({ idTest: 'autre', titre: 'Journal' })).toContain('>Journal<');
+  });
+  it('journal illisible : message, aucun filtre', () => {
+    const html = rendre({ idTest: 'historique', titre: 'Historique', illisible: true });
+    expect(html).toContain('Le journal est illisible et n’a pas été modifié.');
+    expect(html).not.toContain('Filtres de l’historique');
+  });
+});
