@@ -1,7 +1,7 @@
 // Sauvegarde complète : un seul fichier pour transvaser les données saisies à la main d'un PC à l'autre.
 // Logique pure, sans `chrome.*`. Liste blanche : seuls les champs ci-dessous sont écrits dans le fichier ;
 // aucun secret (jeton, cookie, clé), aucun identifiant d'exemplaire du site, aucun cache ni état de synchro.
-import { analyserStockage, meilleureDescription, MAX_CARTES, type Carte, type Collection, type DecidePar, type Statut } from './collection';
+import { analyserStockage, meilleureDescription, MAX_CARTES, type Carte, type Collection } from './collection';
 import { MAX_EVENEMENTS, validerEvenements, type EvenementVente } from './affluence';
 import { fusionnerAmisInitiaux, plafondDefausse, type Ami, type Preferences } from './tri';
 
@@ -18,7 +18,7 @@ export type PolitiqueConflit = 'garder-ici' | 'remplacer';
 /** Champs d'une carte conservés dans la sauvegarde. */
 export type CarteSauvegardee = Pick<
   Carte,
-  'id' | 'titre' | 'rarete' | 'description' | 'quantite' | 'url' | 'favori' | 'statut' | 'prixCible' | 'note' | 'ami' | 'valeurMarchande' | 'decidePar'
+  'id' | 'titre' | 'rarete' | 'description' | 'quantite' | 'url' | 'favori' | 'prixCible' | 'note' | 'ami' | 'valeurMarchande'
 >;
 
 export interface Sauvegarde {
@@ -49,12 +49,10 @@ const garderChamps = (c: Carte): CarteSauvegardee => ({
   quantite: c.quantite,
   url: c.url,
   favori: c.favori,
-  statut: c.statut,
   prixCible: c.prixCible,
   note: c.note,
   ami: c.ami,
   valeurMarchande: c.valeurMarchande,
-  decidePar: c.decidePar,
 });
 
 export function creerSauvegarde(donnees: Donnees, maintenant: Date): Sauvegarde {
@@ -146,11 +144,10 @@ export function lireSauvegarde(texte: string): ResultatLecture {
   };
 }
 
-const vierge = (c: Pick<Carte, 'statut' | 'prixCible' | 'note' | 'ami' | 'decidePar'>): boolean =>
-  c.statut === 'a-trier' && c.prixCible === null && c.note === '' && c.ami === null && c.decidePar === null;
+const vierge = (c: Pick<Carte, 'prixCible' | 'note' | 'ami'>): boolean => c.prixCible === null && c.note === '' && c.ami === null;
 
 const memeEdition = (a: CarteSauvegardee | Carte, b: CarteSauvegardee | Carte): boolean =>
-  a.statut === b.statut && a.prixCible === b.prixCible && a.note === b.note && a.ami === b.ami && a.decidePar === b.decidePar;
+  a.prixCible === b.prixCible && a.note === b.note && a.ami === b.ami;
 
 type Classe = 'nouvelle' | 'identique' | 'completee' | 'conflit';
 
@@ -229,7 +226,7 @@ export function appliquerImport(locales: Donnees, s: Sauvegarde, politique: Poli
     parId.set(sauvee.id, {
       ...locale,
       ...(prendEdition
-        ? { statut: sauvee.statut as Statut, prixCible: sauvee.prixCible, note: sauvee.note, ami: sauvee.ami, decidePar: sauvee.decidePar as DecidePar }
+        ? { prixCible: sauvee.prixCible, note: sauvee.note, ami: sauvee.ami }
         : {}),
       valeurMarchande: valeur,
       description: meilleureDescription(locale.description, sauvee.description),

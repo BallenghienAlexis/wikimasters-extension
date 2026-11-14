@@ -15,12 +15,10 @@ export const carteComplete = (c: Record<string, unknown>): object => ({
   favori: false,
   idsSite: null,
   etiquettesSite: [],
-  statut: 'a-trier',
   prixCible: null,
   note: '',
   ami: null,
   valeurMarchande: null,
-  decidePar: null,
   ...c,
 });
 
@@ -43,7 +41,6 @@ export const ONGLETS = [
   { id: 'synchro', nom: 'Synchro' },
   { id: 'lots', nom: 'Lots' },
   { id: 'collection', nom: 'Collection' },
-  { id: 'ventes', nom: 'Ventes' },
   { id: 'reglages', nom: 'Réglages' },
 ] as const;
 
@@ -81,15 +78,13 @@ export function jourFictif(decalage: number): string {
   return `${d.getFullYear()}-${deux(d.getMonth() + 1)}-${deux(d.getDate())}`;
 }
 
-/** Cartes fictives réparties sur les cinq colonnes du tableau de tri, avec quelques cartes en vente. */
-export function cartesFictivesRepartie(n: number, enVente = 0): Record<string, unknown>[] {
-  const statuts = ['garder', 'echanger', 'vendre', 'defausser', 'a-trier'];
+/** Cartes fictives en grand nombre (rareté, quantité et valeur variées). */
+export function cartesFictivesRepartie(n: number): Record<string, unknown>[] {
   return Array.from({ length: n }, (_, i) => ({
     id: `n${i}`,
     titre: `Carte fictive ${String(i).padStart(4, '0')}`,
     rarete: i % 3 === 0 ? 'Rare' : 'Commune',
     quantite: 1 + (i % 3),
-    statut: i < enVente ? 'en-vente' : (statuts[i % statuts.length] ?? 'a-trier'),
     valeurMarchande: i % 4 === 0 ? null : 3 + (i % 40),
   }));
 }
@@ -97,13 +92,13 @@ export function cartesFictivesRepartie(n: number, enVente = 0): Record<string, u
 /** Jeu de données fictif complet : toutes les clés v2 portent du contenu, pour que chaque onglet soit plein. */
 export async function ecrireJeuRiche(page: Page): Promise<void> {
   const cartes = [
-    { id: 'UR|Loutre fictive', titre: 'Loutre fictive', rarete: 'UR', quantite: 2, statut: 'garder', valeurMarchande: 120, decidePar: 'moi', favori: true, description: 'animal aquatique' },
-    { id: 'R|Renard fictif', titre: 'Renard fictif', rarete: 'R', quantite: 1, statut: 'echanger', valeurMarchande: 40, ami: 'Amie fictive' },
-    { id: 'C|Mouette fictive', titre: 'Mouette fictive', rarete: 'C', quantite: 3, statut: 'vendre', valeurMarchande: 25, prixCible: 30 },
-    { id: 'C|Abeille fictive', titre: 'Abeille fictive', rarete: 'C', quantite: 2, statut: 'defausser', valeurMarchande: 4 },
-    { id: 'C|Élan fictif', titre: 'Élan fictif', rarete: 'C', quantite: 3, statut: 'a-trier', valeurMarchande: null },
-    { id: 'R|Zèbre fictif', titre: 'Zèbre fictif', rarete: 'R', quantite: 1, statut: 'a-trier', valeurMarchande: 15 },
-    { id: 'UR|Loutre en vente', titre: 'Loutre en vente', rarete: 'UR', quantite: 1, statut: 'en-vente', valeurMarchande: 90 },
+    { id: 'UR|Loutre fictive', titre: 'Loutre fictive', rarete: 'UR', quantite: 2, valeurMarchande: 120, favori: true, description: 'animal aquatique' },
+    { id: 'R|Renard fictif', titre: 'Renard fictif', rarete: 'R', quantite: 1, valeurMarchande: 40, ami: 'Amie fictive' },
+    { id: 'C|Mouette fictive', titre: 'Mouette fictive', rarete: 'C', quantite: 3, valeurMarchande: 25, prixCible: 30 },
+    { id: 'C|Abeille fictive', titre: 'Abeille fictive', rarete: 'C', quantite: 2, valeurMarchande: 4 },
+    { id: 'C|Élan fictif', titre: 'Élan fictif', rarete: 'C', quantite: 3, valeurMarchande: null },
+    { id: 'R|Zèbre fictif', titre: 'Zèbre fictif', rarete: 'R', quantite: 1, valeurMarchande: 15 },
+    { id: 'UR|Loutre en vente', titre: 'Loutre en vente', rarete: 'UR', quantite: 1, valeurMarchande: 90 },
   ].map((c, i) => carteComplete({ ...c, idsSite: [`bbbbbbbb-bbbb-4bbb-8bbb-00000000000${i}`] }));
   const entreeJournal = (n: number, s: Record<string, unknown> = {}): Record<string, unknown> => ({
     id: `j-${n}`,

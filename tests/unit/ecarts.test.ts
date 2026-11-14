@@ -13,12 +13,10 @@ const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
   favori: false,
   idsSite: [`ex-${id}`],
   etiquettesSite: [],
-  statut: 'garder',
   prixCible: null,
   note: '',
   ami: null,
   valeurMarchande: null,
-  decidePar: null,
   ...extra,
 })
 
@@ -29,24 +27,24 @@ describe('calculerEcarts', () => {
     const c = carte('a', { ...CHIEN, etiquettesSite: [] })
     const e = calculerEcarts([c])[0]!
     expect(e.idCarte).toBe('a')
-    expect(e.manquantes).toContain('Statut · Garder')
+    expect(e.manquantes).toEqual(['#Chien', '#Animaux', '#Nature'])
     expect(e.enTrop).toEqual([])
   })
 
   it('signale une étiquette présente sur le site mais non attendue', () => {
-    const c = carte('b', { etiquettesSite: ['Statut · Garder', '#À classer', 'Statut · Vendre'] })
+    const c = carte('b', { etiquettesSite: ['#À classer', 'Statut · Vendre'] })
     const e = calculerEcarts([c])[0]!
     expect(e.enTrop).toEqual(['Statut · Vendre'])
     expect(e.manquantes).toEqual([])
   })
 
   it('ne renvoie rien quand les étiquettes correspondent', () => {
-    const c = carte('c', { etiquettesSite: ['Statut · Garder', '#À classer'] })
+    const c = carte('c', { etiquettesSite: ['#À classer'] })
     expect(calculerEcarts([c])).toEqual([])
   })
 
   it('traite les étiquettes d’échange avec les amis fournis', () => {
-    const c = carte('d', { ...CHIEN, statut: 'echanger' })
+    const c = carte('d', { ...CHIEN, })
     const e = calculerEcarts([c], { amis: [{ nom: 'Léa', themes: ['animaux'] }] })[0]!
     expect(e.manquantes).toContain('#À échanger Léa')
   })
@@ -58,8 +56,10 @@ describe('calculerEcarts', () => {
     expect(JSON.stringify(c)).toBe(avant)
   })
 
-  it('attend zéro étiquette pour un favori : tout ce qui est posé est en trop', () => {
-    const c = carte('f', { favori: true, etiquettesSite: ['Statut · Garder'] })
-    expect(calculerEcarts([c])[0]!.enTrop).toEqual(['Statut · Garder'])
+  it('un favori n’attend que ses thèmes : une ancienne étiquette de statut ou d’échange est en trop', () => {
+    const c = carte('f', { favori: true, etiquettesSite: ['Statut · Garder', '#À échanger Léa'] })
+    const e = calculerEcarts([c], { amis: [{ nom: 'Léa', themes: ['animaux'] }] })[0]!
+    expect(e.enTrop).toEqual(['Statut · Garder', '#À échanger Léa'])
+    expect(e.manquantes).toEqual(['#À classer'])
   })
 })

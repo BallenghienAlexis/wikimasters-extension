@@ -1,6 +1,6 @@
 import { allerA, ecrireJeuRiche, expect, fixerHorloge, ONGLETS, ouvrirIgnorees, ouvrirSectionsReglages, pieger, POINTS_DE_RUPTURE, test, THEMES } from './extension';
 
-// T-310 : captures finales de la refonte (SC-009), 6 onglets + tableau de tri × 3 largeurs × 2 thèmes.
+// T-310 : captures finales de la refonte (SC-009), 5 onglets × 3 largeurs × 2 thèmes.
 // Données fictives, horloge fixée, aucune requête réelle. Écrites dans `test-results/captures/` (jamais `captures-site/`).
 
 test.describe('Captures finales', () => {
@@ -14,19 +14,12 @@ test.describe('Captures finales', () => {
       await page.emulateMedia({ colorScheme: theme });
       for (const bp of POINTS_DE_RUPTURE) {
         await page.setViewportSize({ width: bp.width, height: bp.height });
-        for (const o of [...ONGLETS, { id: 'tableau-de-tri', nom: 'Tableau de tri' }]) {
-          if (o.id === 'tableau-de-tri') {
-            await allerA(page, 'collection');
-            await page.getByRole('button', { name: 'Tableau de tri' }).click();
-            await expect(page.getByTestId('tableau-tri')).toBeVisible();
-          } else {
-            await allerA(page, o.id as (typeof ONGLETS)[number]['id']);
-            if (o.id === 'collection') await page.getByRole('button', { name: 'Liste', exact: true }).click();
-            if (o.id === 'reglages') {
-              await ouvrirSectionsReglages(page);
-            }
-            if (o.id === 'synchro') await ouvrirIgnorees(page);
+        for (const o of ONGLETS) {
+          await allerA(page, o.id);
+          if (o.id === 'reglages') {
+            await ouvrirSectionsReglages(page);
           }
+          if (o.id === 'synchro') await ouvrirIgnorees(page);
           await page.waitForTimeout(250);
           const defile = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
           expect(defile, `${o.id} ${theme} ${bp.width}`).toBe(false);

@@ -2,6 +2,7 @@ import React from 'react';
 import { enregistrerAffichage } from '../lib/stockage';
 import { plafondDefausse } from '../lib/tri';
 import type { Donnees } from '../lib/sauvegarde';
+import GestionAmis from './GestionAmis';
 import EtiquettesPreexistantes from './EtiquettesPreexistantes';
 import PlafondDefausse from './PlafondDefausse';
 import { lancerSuppressionEtiquettes } from './pilotageLots';
@@ -65,9 +66,12 @@ const OngletReglages: React.FC<Props> = ({ donnees, onImportee }) => {
 
       <SectionRepliable id="reglage-themes" titre="Thèmes" resume="Mots-clés et amis">
         <p className="py-2 text-sm">
-          Les thèmes des cartes sont déduits du titre et de la description par mots-clés, puis complétés par Wikipédia. Vos thèmes et ceux de
-          vos amis se règlent dans l’assistant de tri.
+          Les thèmes des cartes sont déduits du titre et de la description par mots-clés, puis complétés par Wikipédia.
         </p>
+        <GestionAmis
+          preferences={preferences}
+          onChange={(p) => enregistrerLesPreferences(p, 'Enregistrement des amis impossible.')}
+        />
       </SectionRepliable>
 
       <SectionRepliable id="reglage-animations" titre="Animations" resume={`Animations${NB}: ${animations ? 'activées' : 'désactivées'}`}>

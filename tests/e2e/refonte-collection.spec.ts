@@ -31,7 +31,7 @@ const CARTES = [
   { id: 'a', titre: 'Zèbre fictif', rarete: 'Rare', quantite: 1, valeurMarchande: 10 },
   { id: 'b', titre: 'Élan fictif', rarete: 'Commune', quantite: 3, valeurMarchande: null },
   { id: 'c', titre: 'Abeille fictive', rarete: 'Rare', quantite: 2, valeurMarchande: 4 },
-  { id: 'd', titre: 'Mouette fictive', rarete: 'Commune', quantite: 2, valeurMarchande: 25, statut: 'vendre' },
+  { id: 'd', titre: 'Mouette fictive', rarete: 'Commune', quantite: 2, valeurMarchande: 25, },
 ];
 
 test.describe('SC-024 : tableau triable', () => {
@@ -41,7 +41,7 @@ test.describe('SC-024 : tableau triable', () => {
   });
 
   test('SC-024 : colonnes du tableau et aria-sort initial à none', async ({ pageCollection }) => {
-    for (const nom of ['Titre', 'Rareté', 'Quantité', 'Statut', 'Valeur']) {
+    for (const nom of ['Titre', 'Rareté', 'Quantité', 'Valeur']) {
       await expect(entete(pageCollection, nom)).toHaveAttribute('aria-sort', 'none');
     }
     await expect(lignes(pageCollection)).toHaveCount(4);
@@ -168,32 +168,27 @@ test.describe('SC-011 : 200 lignes et vérification Wikipédia', () => {
 });
 
 test.describe('SC-021 : analyses', () => {
-  const ANALYSES = ['doublons', 'a-trier', 'defaussables', 'valeur-par-decision', 'plus-cheres', 'themes'] as const;
+  const ANALYSES = ['doublons', 'plus-cheres', 'themes'] as const;
 
-  test('SC-021 : six analyses avec contenu', async ({ pageCollection }) => {
+  test('SC-021 : trois analyses avec contenu', async ({ pageCollection }) => {
     await chargerCartes(pageCollection, [
-      { id: 'a', titre: 'Doublon fictif', quantite: 3, valeurMarchande: 50, statut: 'vendre' },
-      { id: 'b', titre: 'Bricole fictive', quantite: 1, valeurMarchande: 2, statut: 'defausser' },
-      { id: 'c', titre: 'Inconnue fictive', quantite: 1, statut: 'a-trier' },
-      { id: 'd', titre: 'Trop chère fictive', quantite: 1, valeurMarchande: 90, statut: 'defausser' },
+      { id: 'a', titre: 'Doublon fictif', quantite: 3, valeurMarchande: 50, },
+      { id: 'b', titre: 'Bricole fictive', quantite: 1, valeurMarchande: 2, },
+      { id: 'c', titre: 'Inconnue fictive', quantite: 1, },
+      { id: 'd', titre: 'Trop chère fictive', quantite: 1, valeurMarchande: 90, },
     ]);
     await allerA(pageCollection, 'collection');
     for (const a of ANALYSES) await expect(pageCollection.getByTestId(`analyse-${a}`)).toBeVisible();
     await expect(pageCollection.getByTestId('analyse-doublons')).toContainText('Doublon fictif');
-    await expect(pageCollection.getByTestId('analyse-a-trier')).toContainText('Inconnue fictive');
-    // Plafond par défaut 5 : seule la carte de valeur 2 est défaussable.
-    await expect(pageCollection.getByTestId('analyse-defaussables')).toContainText('Bricole fictive');
-    await expect(pageCollection.getByTestId('analyse-defaussables')).not.toContainText('Trop chère fictive');
     const cheres = pageCollection.getByTestId('analyse-plus-cheres');
     await expect(cheres).toContainText('Trop chère fictive');
     expect(await cheres.innerText()).toMatch(/Trop chère fictive[\s\S]*Doublon fictif/);
-    await expect(pageCollection.getByTestId('analyse-valeur-par-decision')).toContainText(/Vendre/);
   });
 
   test('SC-021 : états vides écrits (aucune carte qui correspond)', async ({ pageCollection }) => {
-    await chargerCartes(pageCollection, [{ id: 'a', titre: 'Seule fictive', quantite: 1, statut: 'garder' }]);
+    await chargerCartes(pageCollection, [{ id: 'a', titre: 'Seule fictive', quantite: 1, }]);
     await allerA(pageCollection, 'collection');
-    for (const a of ['doublons', 'a-trier', 'defaussables', 'plus-cheres'] as const) {
+    for (const a of ['doublons', 'plus-cheres'] as const) {
       const bloc = pageCollection.getByTestId(`analyse-${a}`);
       await expect(bloc).toBeVisible();
       await expect(bloc).toContainText(/^[\s\S]*Aucun/i);
@@ -295,19 +290,20 @@ test.describe('SC-020 : évolution sur 30 jours', () => {
 });
 
 test.describe('SC-020 : édition inchangée', () => {
-  test('SC-024 : éditer le statut d’une ligne du tableau écrit toujours la carte', async ({ pageCollection }) => {
+  test('SC-024 : éditer le prix cible d’une ligne du tableau écrit toujours la carte', async ({ pageCollection }) => {
     await chargerCartes(pageCollection, CARTES);
     await allerA(pageCollection, 'collection');
-    await pageCollection.getByLabel('Statut de Zèbre fictif').selectOption('garder');
+    const prix = pageCollection.getByLabel('Prix cible de Zèbre fictif, en wikibidous');
+    await prix.fill('42');
+    await prix.blur();
     await expect
       .poll(() =>
         pageCollection.evaluate(async () => {
           const { collection } = (await chrome.storage.local.get('collection')) as { collection: { cartes: unknown[] } };
-          const c = (collection.cartes as { id: string; statut: string; decidePar: string | null }[]).find((x) => x.id === 'a');
-          return `${c?.statut}|${c?.decidePar}`;
+          return (collection.cartes as { id: string; prixCible: number | null }[]).find((x) => x.id === 'a')?.prixCible;
         }),
       )
-      .toBe('garder|moi');
+      .toBe(42);
   });
 });
 

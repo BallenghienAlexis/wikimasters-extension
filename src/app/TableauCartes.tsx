@@ -1,12 +1,12 @@
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
-import { LIBELLES_STATUT, type Carte, type EditionCarte } from '../lib/collection';
+import type { Carte, EditionCarte } from '../lib/collection';
 import { basculerTri, type SensTri, type ValeurTri } from '../lib/ordreTableau';
 import CarteLigne from './CarteLigne';
 import EnTeteTriable from './EnTeteTriable';
 import { courbeToken, dureeToken, useMouvement } from './useMouvement';
 import { useFlip } from './useFlip';
 
-export type CleTri = 'titre' | 'rarete' | 'quantite' | 'statut' | 'valeur';
+export type CleTri = 'titre' | 'rarete' | 'quantite' | 'valeur';
 export interface EtatTri {
   cle: CleTri | null;
   sens: SensTri;
@@ -16,7 +16,6 @@ export const COLONNES: { cle: CleTri; libelle: string }[] = [
   { cle: 'titre', libelle: 'Titre' },
   { cle: 'rarete', libelle: 'Rareté' },
   { cle: 'quantite', libelle: 'Quantité' },
-  { cle: 'statut', libelle: 'Statut' },
   { cle: 'valeur', libelle: 'Valeur' },
 ];
 
@@ -29,8 +28,6 @@ export function valeurDeTri(carte: Carte, cle: CleTri): ValeurTri {
       return carte.rarete || null;
     case 'quantite':
       return carte.quantite;
-    case 'statut':
-      return LIBELLES_STATUT[carte.statut];
     case 'valeur':
       return carte.valeurMarchande;
   }
@@ -115,7 +112,6 @@ const TableauCartes: React.FC<Props> = ({ cartes, tri, revision, cleFiltre, onTr
             <col />
             <col className="w-28" />
             <col className="w-26" />
-            <col className="w-32" />
             <col className="w-26" />
             <col className="w-40" />
           </colgroup>

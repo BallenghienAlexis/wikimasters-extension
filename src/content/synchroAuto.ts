@@ -15,8 +15,6 @@ import {
   enregistrerDerniereRelance,
   chargerStatutSynchro,
   chargerEtatSynchro,
-  chargerCacheWikipedia,
-  chargerPreferences,
   chargerSyncAuto,
   ecouterArretSynchro,
   ecouterRelanceSynchro,
@@ -36,11 +34,8 @@ import {
 import { gigueAleatoire } from '../lib/gigue';
 import { analyserStats } from '../lib/lectureApi';
 import { completerEntree, ouvrirEntree } from '../lib/journal';
-import { definirThemesWikipedia } from '../lib/themes';
-import { themesParTitre } from '../lib/wikipedia';
 import { extraireHorodatages, routeMarcheValide } from '../lib/affluence';
 import { CONFIG_AFFLUENCE } from '../config/affluence';
-import { proposerTri, type Preferences } from '../lib/tri';
 
 /** Délai minimal entre deux synchronisations, et période du minuteur tant que l'onglet est visible. */
 export const DELAI_SYNCHRO_MS = 30 * 60_000;
@@ -62,7 +57,6 @@ export interface DependancesSynchroAuto {
   chargerEtat: () => Promise<EtatOrdonnanceur | null>;
   enregistrerEtat: (etat: EtatOrdonnanceur) => Promise<void>;
   bail: Bail;
-  chargerPreferences: () => Promise<Preferences>;
   /** Statut détaillé pour l'interface (page en cours, cause d'arrêt) ; une erreur d'écriture est sans effet. */
   noterStatut?: (statut: StatutSynchro) => Promise<void>;
   /** Dernière relance exécutée (commune aux onglets) : limite d'une relance par minute. Absent : limite par page seulement. */
@@ -98,10 +92,9 @@ export interface SynchroAuto {
 /**
  * Applique le résultat sur la collection **actuellement stockée**, pour ne pas écraser ce que le joueur
  * a modifié pendant la synchro : seuls les faits du site sont repris, et la valeur marchande seulement si
- * la synchro l'a changée et que le joueur n'y a pas touché. Une carte classée par l'assistant est reclassée
- * comme le fait `enregistrerValeur`.
+ * la synchro l'a changée et que le joueur n'y a pas touché.
  */
-export function fusionner(stockee: Collection, produite: Collection, depart: ReadonlyMap<string, Carte>, preferences: Preferences | null): Collection {
+export function fusionner(stockee: Collection, produite: Collection, depart: ReadonlyMap<string, Carte>): Collection {
   const parId = new Map(stockee.cartes.map((c) => [c.id, c]));
   // Cartes présentes au départ et retirées par la synchro (vendues ou cédées, absentes d’une lecture complète) :
   // retirées aussi du stockage. Une carte ajoutée par le joueur pendant la synchro n’était pas au départ : elle reste.
@@ -109,7 +102,7 @@ export function fusionner(stockee: Collection, produite: Collection, depart: Rea
   for (const [id, avant] of depart) {
     const actuelle = parId.get(id);
     // Jamais une carte éditée (même pendant la synchro) ni aux enchères.
-    if (!gardees.has(id) && actuelle !== undefined && !aEditionLocale(actuelle) && !aEditionLocale(avant) && actuelle.statut !== 'en-vente') parId.delete(id);
+    if (!gardees.has(id) && actuelle !== undefined && !aEditionLocale(actuelle) && !aEditionLocale(avant)) parId.delete(id);
   }
   for (const p of produite.cartes) {
     const s = parId.get(p.id);
@@ -121,7 +114,6 @@ export function fusionner(stockee: Collection, produite: Collection, depart: Rea
     const avant = depart.get(p.id)?.valeurMarchande ?? null;
     if (p.valeurMarchande !== avant && s.valeurMarchande === avant) {
       carte = { ...carte, valeurMarchande: p.valeurMarchande };
-      if (carte.decidePar === 'assistant' && preferences !== null) carte = { ...carte, ...proposerTri(carte, preferences) };
     }
     parId.set(p.id, carte);
   }
@@ -334,9 +326,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         },
         enregistrer: async (produite, courant) => {
           const stockee = await deps.chargerCollection();
-          const valeurChangee = produite.cartes.some((c) => c.valeurMarchande !== (depart.get(c.id)?.valeurMarchande ?? null));
-          const preferences = valeurChangee ? await deps.chargerPreferences() : null;
-          const fusion = fusionner(stockee, produite, depart, preferences);
+          const fusion = fusionner(stockee, produite, depart);
           if (JSON.stringify(fusion) !== JSON.stringify(stockee)) await deps.enregistrerCollection(fusion);
           await deps.enregistrerEtat(courant);
         },
@@ -434,11 +424,6 @@ const synchroDuNavigateur = (): SynchroAuto =>
     chargerEtat: chargerEtatSynchro,
     enregistrerEtat: enregistrerEtatSynchro,
     bail: { lire: chargerBailSynchro, ecrire: enregistrerBailSynchro },
-    // Les thèmes Wikipédia en cache font partie de la proposition de tri : on les charge avec les préférences.
-    chargerPreferences: async () => {
-      definirThemesWikipedia(themesParTitre(await chargerCacheWikipedia()));
-      return chargerPreferences();
-    },
     noterStatut: enregistrerStatutSynchro,
     noterEtiquettesSite: enregistrerEtiquettesSite,
     chargerStatut: chargerStatutSynchro,

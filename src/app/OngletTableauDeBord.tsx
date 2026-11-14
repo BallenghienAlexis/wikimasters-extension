@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { CONFIG_PRIX } from '../config/prix';
 import { collectionVide, type Collection } from '../lib/collection';
 import type { EtatOrdonnanceur } from '../lib/ordonnanceur';
 import {
@@ -16,7 +15,6 @@ import {
 import type { StatutSynchroV2 } from '../lib/statutSynchro';
 import { calculerTableauDeBord, type ContexteTableauDeBord, type PastilleSynchro } from '../lib/tableauDeBord';
 import { preferencesParDefaut, type Preferences } from '../lib/tri';
-import BarreRepartition from './BarreRepartition';
 import CarteKpi from './CarteKpi';
 import SanteSynchro from './SanteSynchro';
 
@@ -73,7 +71,7 @@ function useLectureSynchro(): LectureSynchro {
 const accorder = (n: number, singulier: string, pluriel: string): string => `${n} ${n > 1 ? pluriel : singulier}`;
 
 /**
- * Onglet Tableau de bord (T-305) : quatre chiffres clés, répartition des décisions, santé de la synchro.
+ * Onglet Tableau de bord (T-305) : trois chiffres clés, santé de la synchro.
  * Lecture seule du stockage (collection, préférences, état de synchro) ; aucune requête, aucune vérification Wikipédia.
  */
 const OngletTableauDeBord: React.FC = () => {
@@ -93,8 +91,6 @@ const OngletTableauDeBord: React.FC = () => {
 
   const tableau = useMemo(() => {
     const contexte: ContexteTableauDeBord = {
-      maxVentesSimultanees: CONFIG_PRIX.maxVentesSimultanees,
-      ventesSite: synchro.etat?.ventesSite ?? null,
       synchro: { activee: synchro.activee, etat: pastilleDe(synchro), derniereTerminee: synchro.derniere },
       prix: synchro.etat?.prix ?? {},
       amis: preferences.amis,
@@ -105,7 +101,6 @@ const OngletTableauDeBord: React.FC = () => {
   // Avant la lecture du stockage, les chiffres partent de 0 : le compteur défile ensuite jusqu’à la valeur (D-61).
   const v = (n: number | null): number | null => (chargee ? n : 0);
   const vide = chargee && collection.cartes.length === 0;
-  const { places } = tableau;
 
   return (
     <section className="mt-4" aria-busy={!chargee}>
@@ -116,22 +111,16 @@ const OngletTableauDeBord: React.FC = () => {
           : 'Lecture de la collection…'}
       </p>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <CarteKpi
           libelle="Exemplaires"
           valeur={v(tableau.exemplaires)}
-          detail={`${accorder(tableau.distinctes, 'carte distincte', 'cartes distinctes')}${tableau.enVente > 0 ? ` · + ${tableau.enVente} en vente` : ''}`}
+          detail={accorder(tableau.distinctes, 'carte distincte', 'cartes distinctes')}
         />
         <CarteKpi
           libelle="Valeur estimée"
           valeur={v(tableau.valeur)}
           detail={tableau.partSansPrix === null ? 'Aucun prix connu' : `${tableau.partSansPrix}\u00a0% des cartes sans prix`}
-        />
-        <CarteKpi
-          libelle="Places"
-          valeur={v(places.occupees)}
-          suffixe={`/ ${places.max}`}
-          detail="Places d’enchères occupées"
         />
         <CarteKpi
           libelle="Écarts"
@@ -141,7 +130,6 @@ const OngletTableauDeBord: React.FC = () => {
       </div>
 
       {vide && <p className="mt-4 rounded border border-line bg-ink-2 p-4">Aucune carte</p>}
-      {chargee && !vide && <BarreRepartition repartition={tableau.repartition} />}
 
       <SanteSynchro
         pastille={tableau.sante.pastille}

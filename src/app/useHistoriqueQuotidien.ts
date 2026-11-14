@@ -9,7 +9,7 @@ import { chargerHistorique, enregistrerHistorique } from '../lib/stockage';
  * collection n’est pas lue. Un échec d’écriture n’interrompt rien : l’historique est un confort.
  */
 export function useHistoriqueQuotidien(collection: Collection, prete: boolean): void {
-  const exemplaires = collection.cartes.reduce((s, c) => (c.statut === 'en-vente' ? s : s + c.quantite), 0);
+  const exemplaires = collection.cartes.reduce((s, c) => s + c.quantite, 0);
   const avecCartes = collection.cartes.length > 0;
   useEffect(() => {
     // Collection vide : aucun point (pas de courbe à 0 avant la première lecture, et pas d’écriture concurrente

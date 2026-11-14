@@ -1,5 +1,5 @@
 import React from 'react';
-import { LIBELLES_STATUT, STATUTS, type Filtres } from '../lib/collection';
+import type { Filtres } from '../lib/collection';
 import { IDS_THEMES, LIBELLES_THEMES } from '../lib/themes';
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
 
 const CLASSE_CHAMP = 'min-h-11 rounded border border-line bg-ink px-3';
 
-/** Recherche, statut, thème et doublons de la liste (état remonté dans `App`, conservé au changement d’onglet). */
+/** Recherche, thème et doublons de la liste (état remonté dans `App`, conservé au changement d’onglet). */
 const FiltresCollection: React.FC<Props> = ({ filtres, theme, onFiltres, onTheme }) => (
   <div className="mt-4 flex flex-wrap items-center gap-3">
     <input
@@ -22,17 +22,6 @@ const FiltresCollection: React.FC<Props> = ({ filtres, theme, onFiltres, onTheme
       value={filtres.recherche}
       onChange={(e) => onFiltres({ ...filtres, recherche: e.target.value })}
     />
-    <select
-      aria-label="Filtrer par statut"
-      className={CLASSE_CHAMP}
-      value={filtres.statut}
-      onChange={(e) => onFiltres({ ...filtres, statut: e.target.value as Filtres['statut'] })}
-    >
-      <option value="tous">Tous les statuts</option>
-      {STATUTS.map((s) => (
-        <option key={s} value={s}>{LIBELLES_STATUT[s]}</option>
-      ))}
-    </select>
     <select aria-label="Filtrer par thème" className={CLASSE_CHAMP} value={theme} onChange={(e) => onTheme(e.target.value)}>
       <option value="tous">Tous les thèmes</option>
       {IDS_THEMES.map((id) => (

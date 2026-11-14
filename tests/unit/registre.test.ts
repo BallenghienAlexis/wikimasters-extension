@@ -134,7 +134,7 @@ describe('validerRegistre', () => {
     42,
     [],
     {},
-    { version: 3, etiquettes: {}, couples: [] },
+    { version: 4, etiquettes: {}, couples: [] },
     { version: 0, etiquettes: {}, couples: [] },
     { version: 1, etiquettes: [], couples: [] },
     { version: 1, etiquettes: { A: 3 }, couples: [] },
@@ -229,7 +229,7 @@ describe('migration v1 → v2 et bornes (SC-013, SC-018)', () => {
   })
 
   it('rejette une version inconnue sans rien écraser', () => {
-    expect(validerRegistre({ ...v1, version: 3 })).toBeNull()
+    expect(validerRegistre({ ...v1, version: 4 })).toBeNull()
   })
 
   it('pèse au plus 5 Mo pour 5 000 exemplaires à 12 couples', () => {

@@ -12,7 +12,6 @@
     {
       "matches": ["https://www.wiki-masters.com/*", "https://wiki-masters.com/*"],
       "js": ["content.js"],
-      "css": ["repere.css"],
       "run_at": "document_idle"
     }
   ],
