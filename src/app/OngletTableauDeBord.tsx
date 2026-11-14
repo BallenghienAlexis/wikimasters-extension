@@ -1,74 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { CONFIG_PRIX } from '../config/prix';
 import { collectionVide, type Collection } from '../lib/collection';
-import type { EtatOrdonnanceur } from '../lib/ordonnanceur';
-import {
-  chargerBailSynchro,
-  chargerCollection,
-  chargerDerniereSynchro,
-  chargerEtatSynchro,
-  chargerPreferences,
-  chargerStatutSynchro,
-  chargerSyncAuto,
-  ecouterCollection,
-  ecouterSynchroAuto,
-} from '../lib/stockage';
-import type { StatutSynchroV2 } from '../lib/statutSynchro';
-import { calculerTableauDeBord, type ContexteTableauDeBord, type PastilleSynchro } from '../lib/tableauDeBord';
+import { chargerCollection, chargerPreferences, ecouterCollection } from '../lib/stockage';
+import { calculerTableauDeBord, type ContexteTableauDeBord } from '../lib/tableauDeBord';
 import { preferencesParDefaut, type Preferences } from '../lib/tri';
 import BarreRepartition from './BarreRepartition';
 import CarteKpi from './CarteKpi';
 import SanteSynchro from './SanteSynchro';
-
-/** Relecture périodique : l’expiration du bail ou de la pause se constate sans événement. */
-const RELECTURE_MS = 15_000;
-
-interface LectureSynchro {
-  activee: boolean;
-  statut: StatutSynchroV2 | null;
-  bail: number | null;
-  derniere: number | null;
-  etat: EtatOrdonnanceur | null;
-  maintenant: number;
-}
-
-const LECTURE_INITIALE: LectureSynchro = { activee: true, statut: null, bail: null, derniere: null, etat: null, maintenant: 0 };
-
-/** Pastille D-40 déduite du statut, du bail et de la pause. Une lecture illisible n’empêche pas l’affichage. */
-function pastilleDe(l: LectureSynchro): PastilleSynchro {
-  const { activee, statut, bail, etat, maintenant } = l;
-  if (!activee) return 'arretee';
-  if (statut?.etat === 'en-cours' && bail !== null && bail > maintenant) return 'en-cours';
-  if (statut?.etat === 'arret' && statut.raison !== 'manuel') return 'erreur';
-  if (statut?.etat === 'arret' || (etat?.arretJusqua ?? 0) > maintenant) return 'arretee';
-  return 'a-jour';
-}
-
-function useLectureSynchro(): LectureSynchro {
-  const [lecture, setLecture] = useState<LectureSynchro>(LECTURE_INITIALE);
-  const relire = useCallback(async (): Promise<void> => {
-    const sans = <T,>(p: Promise<T>, defaut: T): Promise<T> => p.catch(() => defaut);
-    const [activee, statut, bail, derniere, etat] = await Promise.all([
-      sans(chargerSyncAuto(), true),
-      sans(chargerStatutSynchro(), null),
-      sans(chargerBailSynchro(), null),
-      sans(chargerDerniereSynchro(), null),
-      sans(chargerEtatSynchro(), null),
-    ]);
-    setLecture({ activee, statut, bail, derniere, etat, maintenant: Date.now() });
-  }, []);
-  useEffect(() => {
-    const premiere = setTimeout(() => void relire(), 0);
-    const minuteur = setInterval(() => void relire(), RELECTURE_MS);
-    const retirer = ecouterSynchroAuto(() => void relire());
-    return () => {
-      clearTimeout(premiere);
-      clearInterval(minuteur);
-      retirer();
-    };
-  }, [relire]);
-  return lecture;
-}
+import TableauRaretes from './TableauRaretes';
+import { pastilleDe, useLectureSynchro } from './useLectureSynchro';
 
 const accorder = (n: number, singulier: string, pluriel: string): string => `${n} ${n > 1 ? pluriel : singulier}`;
 
@@ -109,8 +49,8 @@ const OngletTableauDeBord: React.FC = () => {
 
   return (
     <section className="mt-4" aria-busy={!chargee}>
-      <h2 className="text-xl font-semibold">Tableau de bord</h2>
-      <p className="mt-2 text-sm" data-testid="resume">
+      <h2 className="sr-only">Tableau de bord</h2>
+      <p className="sr-only" data-testid="resume">
         {chargee
           ? `${tableau.exemplaires} exemplaires · ${accorder(tableau.distinctes, 'carte distincte', 'cartes distinctes')}`
           : 'Lecture de la collection…'}
@@ -119,16 +59,19 @@ const OngletTableauDeBord: React.FC = () => {
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <CarteKpi
           libelle="Exemplaires"
+          unite="exemplaires"
           valeur={v(tableau.exemplaires)}
           detail={`${accorder(tableau.distinctes, 'carte distincte', 'cartes distinctes')}${tableau.enVente > 0 ? ` · + ${tableau.enVente} en vente` : ''}`}
         />
         <CarteKpi
           libelle="Valeur estimée"
+          unite="pièces"
           valeur={v(tableau.valeur)}
           detail={tableau.partSansPrix === null ? 'Aucun prix connu' : `${tableau.partSansPrix}\u00a0% des cartes sans prix`}
         />
         <CarteKpi
           libelle="Places"
+          unite="places"
           valeur={v(places.occupees)}
           suffixe={`/ ${places.max}`}
           detail="Places d’enchères occupées"
@@ -141,14 +84,21 @@ const OngletTableauDeBord: React.FC = () => {
       </div>
 
       {vide && <p className="mt-4 rounded border border-line bg-ink-2 p-4">Aucune carte</p>}
-      {chargee && !vide && <BarreRepartition repartition={tableau.repartition} />}
-
-      <SanteSynchro
-        pastille={tableau.sante.pastille}
-        ageLibelle={tableau.sante.ageLibelle}
-        activee={synchro.activee}
-        prixReleves={tableau.fraicheurPrix.releves}
-      />
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {chargee && !vide && (
+          <section className="min-w-0 rounded border border-line bg-ink-2 p-4" aria-label="Répartition des décisions">
+            <h3 className="mb-2 text-[17px] font-semibold">Répartition des décisions</h3>
+            <BarreRepartition repartition={tableau.repartition} />
+            <TableauRaretes cartes={collection.cartes} />
+          </section>
+        )}
+        <SanteSynchro
+          pastille={tableau.sante.pastille}
+          ageLibelle={tableau.sante.ageLibelle}
+          activee={synchro.activee}
+          prixReleves={tableau.fraicheurPrix.releves}
+        />
+      </div>
     </section>
   );
 };

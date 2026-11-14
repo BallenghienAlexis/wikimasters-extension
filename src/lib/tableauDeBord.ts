@@ -52,7 +52,7 @@ export interface TableauDeBord {
 
 const MIN = 60_000
 
-function ageLibelle(synchro: ContexteTableauDeBord['synchro'], maintenant: number): string {
+export function ageLibelle(synchro: ContexteTableauDeBord['synchro'], maintenant: number): string {
   if (!synchro.activee) return 'synchro automatique coupée'
   if (synchro.derniereTerminee === null) return 'jamais'
   const minutes = Math.floor(Math.max(0, maintenant - synchro.derniereTerminee) / MIN)

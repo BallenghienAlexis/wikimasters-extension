@@ -93,7 +93,7 @@ const Onglets: React.FC<Props> = ({ actif, onChoisir }) => {
             aria-controls={idPanneau(o.id)}
             tabIndex={selectionne ? 0 : -1}
             onKeyDown={(e) => deplacer(e, i)}
-            className={`inline-flex min-h-11 shrink-0 items-center whitespace-nowrap px-4 no-underline focus-visible:shadow-(--halo-focus) ${selectionne ? 'text-paper font-semibold' : 'text-muted'}`}
+            className={`inline-flex min-h-11 min-w-[110px] flex-1 shrink-0 items-center justify-center whitespace-nowrap px-4 no-underline focus-visible:shadow-(--halo-focus) ${selectionne ? 'text-paper font-semibold' : 'text-paper'}`}
           >
             {o.nom}
             {o.id === 'synchro' && erreur && (
