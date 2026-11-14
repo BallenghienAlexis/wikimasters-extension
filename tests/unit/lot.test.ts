@@ -108,6 +108,14 @@ describe('garde-fous (SC-003, SC-004, SC-005)', () => {
 })
 
 describe('cartes écartées (SC-024, H47)', () => {
+  it('un favori ou une carte à trier non reliée ne produit ni action ni écart', () => {
+    for (const extra of [{ favori: true }, { statut: 'a-trier' as const }]) {
+      const lot = construireLot(coll(carte('a', { ...extra, idsSite: null })), registre(), config(), TOUS)
+      expect(lot.actions).toEqual([])
+      expect(lot.ecartees).toEqual([])
+    }
+  })
+
   it('une carte non reliée est écartée sans action', () => {
     const lot = construireLot(coll(carte('a', { idsSite: null })), registre(), config(), TOUS)
     expect(lot.actions).toEqual([])
