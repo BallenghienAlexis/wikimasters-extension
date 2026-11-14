@@ -320,19 +320,19 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         if (fin === null) break;
         // Contrôle de la tête (plus récents d’abord) : une carte ajoutée ou un favori basculé sur la première page pendant la
         // lecture, à total égal (remplacement), passe sinon inaperçu.
-        const teteFin = lecture.vus === null || lecture.tete === undefined || lecture.tete === null ? null : await lireTete();
+        const teteFin = lecture.tete == null ? null : await lireTete();
         // Contrôle impossible (requête en échec) : abandon sans nouvelle passe ni retrait local.
-        if (lecture.vus !== null && lecture.tete != null && teteFin === null) {
+        if (lecture.tete != null && teteFin === null) {
           stats = fin;
           break;
         }
-        const teteStable = lecture.vus === null || lecture.tete === undefined || lecture.tete === null || teteFin === lecture.tete;
+        const teteStable = lecture.tete == null || teteFin === lecture.tete;
         if (lecture.vus !== null && teteStable && memesStats(stats, fin)) {
           propre = true;
           stats = fin;
           break;
         }
-        // Rien n’a bougé côté site mais les exemplaires lus ne correspondent pas au total : une nouvelle passe n’y changerait rien.
+        // Rien n’a bougé côté site mais les exemplaires lus ne correspondent pas au total : la tête de liste est stable : une nouvelle passe n’y changerait rien.
         if (lecture.vus === null && teteStable && memesStats(stats, fin)) {
           stats = fin;
           break;

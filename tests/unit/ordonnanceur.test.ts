@@ -140,7 +140,7 @@ function banc(
   return { deps, horloge, departs, journal, bail, enregistrements, enVolMax: () => enVolMax };
 }
 
-describe('ordonnanceur — critère 1 : total inchangé, une seule requête', () => {
+describe('ordonnanceur — critère 1 : total inchangé, la collection est relue en entier', () => {
   it('relit toutes les pages même quand total, doublons et étiquettes sont inchangés (2026-11-14)', async () => {
     const site = siteFictif(4);
     const premier = banc(site);
@@ -187,7 +187,7 @@ describe('ordonnanceur — critère 2 : pages dans l’ordre jusqu’à la derni
     });
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });
     const pages = b.departs.map((d) => d.chemin).filter((c) => c.includes('page='));
-    expect(pages.map((c) => /page=(\d+)/.exec(c)![1])).toEqual(['0', '0']) // lecture + contrôle de tête;
+    expect(pages.map((c) => /page=(\d+)/.exec(c)![1])).toEqual(['0', '0']); // lecture + contrôle de tête
     expect(pages.every((c) => c.includes('stats=0'))).toBe(true);
     const c1 = r.collection.cartes.find((c) => c.id === idCarte(1))!;
     expect(c1.etiquettesSite).toEqual(['Garder']);
@@ -304,7 +304,7 @@ describe('ordonnanceur — pages : départ à 0 et plafond', () => {
       chemin.includes('/stats') ? { statut: 200, json: statsJson(100) } : { statut: 200, json: { collection: [exemplaire(1)] } },
     );
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(b.departs.filter((d) => d.chemin.includes('page=')).length).toBe(1);
+    expect(b.departs.filter((d) => d.chemin.includes('page=')).length).toBe(2); // lecture + contrôle de tête
     expect(r.issue).toBe('termine');
     expect(r.complete).toBe(false);
     expect(r.etat.derniereComplete).toBeNull();
@@ -717,7 +717,7 @@ describe('ordonnanceur — critère 5 : bail et décisions manuelles', () => {
     expect([a.issue, c.issue].sort()).toEqual(['bail-occupe', 'termine']);
   });
 
-  it('ne modifie jamais une décision decidePar: moi (statut, prix cible, note, ami)', async () => {
+  it('ne modifie jamais une édition locale (prix cible, note, ami)', async () => {
     const decidee = carteLocale(1, { prixCible: 42, note: 'ma note', ami: 'Léa', quantite: 3, valeurMarchande: 7 });
     const b = banc(siteFictif(2), collectionDe([decidee]), { ...etatInitial(), cardIds: { [idCarte(1)]: 'card-1' } });
     const r = await synchroniser(b.deps);
@@ -860,7 +860,7 @@ describe('ordonnanceur — robustesse aux changements pendant la lecture (Alexis
   });
 
   it('collection qui bouge à chaque passe : 3 passes au plus, lecture incomplète, aucun retrait local', async () => {
-    const locales = [carteLocale(1), carteLocale(2)];
+    const locales = [carteLocale(1), carteLocale(2), carteLocale(999)]; // la 999 est absente du site
     const site = siteMobile(60, (p, monde) => {
       if (p === 1) monde.push(exemplaire(1000 + monde.length));
     });
@@ -870,6 +870,7 @@ describe('ordonnanceur — robustesse aux changements pendant la lecture (Alexis
     expect(r.etat.derniereComplete).toBeNull();
     expect(b.journal.join('\n')).toMatch(/aucun retrait local/);
     expect(r.collection.cartes.some((c) => c.id === idCarte(1))).toBe(true);
+    expect(r.collection.cartes.some((c) => c.id === idCarte(999))).toBe(true);
     expect(b.departs.filter((d) => /page=1/.test(d.chemin)).length).toBeLessThanOrEqual(3);
   });
 });
