@@ -2,6 +2,7 @@
 // Calcul local par mots-clés, complété par les catégories Wikipédia mises en cache (voir wikipedia.ts) ; le résultat n'est jamais stocké.
 // Le libellé de chaque thème est l'étiquette à poser dans le jeu : c'est ici qu'on en ajoute.
 import { normaliser, type Carte } from './collection';
+import { definition, genreDe, type Genre } from './sens';
 
 export const THEME_AUTRES = 'autres';
 
@@ -87,6 +88,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   // Sport et société
   { id: 'sport', libelle: '#Sport', motifs: ['athlete', 'sportif', 'sportive', 'joueur de', 'joueuse de', 'championnat', 'tournoi', 'olympique', 'coureur', 'coureuse', 'rugby', 'tennis', 'basket'] },
   { id: 'football', libelle: '#Football', motifs: ['football', 'club de foot'], parents: ['sport'] },
+  { id: 'hockey', libelle: '#Hockey', motifs: ['hockey'], parents: ['sport'] },
   { id: 'cyclisme', libelle: '#Cyclisme', motifs: ['cyclis'], parents: ['sport'] },
   { id: 'combat', libelle: '#Arts martiaux', motifs: ['arts martiaux', 'boxeur', 'boxeuse', 'catcheur', 'judoka', 'karate'], parents: ['sport'] },
   { id: 'societe', libelle: '#Société', motifs: ['sociolog', "homme d'affaires", "femme d'affaires", 'entreprise', 'econom', 'droit', 'adulter', 'habitants'] },
@@ -119,6 +121,20 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'barrage', libelle: '#Barrage', motifsCategories: ['(?<!match(?:s)? de )(?<!play-offs? de )barrage(?![a-z0-9])'], motifs: ['barrage hydroelectrique', 'barrages hydroelectriques', 'barrage-voute', 'barrage-poids', 'grands? barrages?', "retenue d'eau", '(?<!match(?:s)? de )barrages(?![a-z0-9])(?! de (?:ligue|promotion|relegation))'], parents: ['architecture', 'arts'] },
   { id: 'gratteciel', libelle: '#Gratte-ciel', motifs: ['gratte-ciel'], parents: ['architecture', 'arts'] },
 
+  // Sexualité et adulte
+  { id: 'sexualite', libelle: '#Sexualité', motifs: ['sexuel', 'sexualite', 'erotis', 'erotique', 'prostitu', 'libertin', 'fetichis', 'fetish', 'kamasutra', 'sexe(?![a-z0-9])'], parents: ['societe'] },
+  { id: 'pornographie', libelle: '#Pornographie', motifs: ['pornograph', 'porno(?![a-z0-9])', 'film x(?![a-z0-9])', 'film pour adultes', 'actrice x(?![a-z0-9])'], parents: ['sexualite', 'societe'] },
+
+  // Autres domaines
+  { id: 'drogue', libelle: '#Drogue', motifs: ['drogue', 'stupefiant', 'cannabis', 'cocaine', "trafic d'heroine", 'heroine pure', 'heroine de synthese', 'heroinoman', 'opioide', 'opiace', 'opium', 'amphetamine', 'narcotique', 'narcotrafic', 'tabac(?![a-z0-9])', 'cigarette'], parents: ['societe'] },
+  { id: 'jeux', libelle: '#Jeux', motifs: ['jeu de societe', 'jeux de societe', 'jeu de cartes', 'jeu de role', 'echecs', 'poker', '(?<!groupe )casino(?![a-z0-9])(?! de paris)', 'jouet', 'puzzle', 'jeu de plateau'] },
+  { id: 'mode', libelle: '#Mode', motifs: ['couturier', 'couturiere', 'haute couture', 'defile de mode', 'mannequin', 'styliste', 'vetement', 'maison de couture', 'maison de mode', 'creation de mode', 'magazine de mode'] },
+  { id: 'danse', libelle: '#Danse', motifs: ['danse', 'danseu', 'choregraph', 'ballet'], parents: ['arts'] },
+  { id: 'armes', libelle: '#Armes', motifs: ['(?<!beton )(?<!conflit )(?<!groupe )(?<!force )(?<!forces )(?<!lutte )arme(?![a-z0-9])', 'armes(?![a-z0-9])', 'fusil', 'pistolet', 'epee(?![a-z0-9])', 'missile', 'arme a feu', 'munition'] },
+  { id: 'ecologie', libelle: '#Écologie', motifs: ['ecolog', 'climat', "protection de l'environnement", 'pollution', 'biodiversite', 'developpement durable', 'rechauffement'] },
+  { id: 'finance', libelle: '#Finance', motifs: ['banque', 'bourse(?![a-z0-9])', 'monnaie', 'cryptomonnaie', 'finance', 'financier', 'investisseur', 'boursier'], parents: ['societe'] },
+  { id: 'education', libelle: '#Éducation', motifs: ['education', 'pedagog', 'universite', 'lycee'], parents: ['societe'] },
+
   // Géographie
   { id: 'tibet', libelle: '#Tibet', motifs: ['tibet', 'lhassa', 'dalai'], parents: ['geographie'] },
   { id: 'ukraine', libelle: '#Ukraine', motifs: ['ukrain', 'kiev(?![a-z0-9])', 'kyiv', 'kharkiv', 'odessa', 'donbass'], parents: ['pays', 'geographie'] },
@@ -142,8 +158,10 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'fleur', libelle: '#Fleur', motifs: ['fleurs?(?![a-z0-9])', 'orchidee'], parents: ['plantes', 'nature'] },
   { id: 'champignon', libelle: '#Champignon', motifs: ['champignon'], parents: ['plantes', 'nature'] },
   { id: 'fromage', libelle: '#Fromage', motifs: ['fromage'], parents: ['gastronomie'] },
-  { id: 'vin', libelle: '#Vin', motifs: ['vins?(?![a-z0-9])', 'vignoble', 'cepage'], parents: ['gastronomie'] },
-  { id: 'biere', libelle: '#Bière', motifs: ['biere'], parents: ['gastronomie'] },
+  { id: 'vin', libelle: '#Vin', motifs: ['vins?(?![a-z0-9])', 'vignoble', 'cepage'], parents: ['alcool', 'gastronomie'] },
+  { id: 'biere', libelle: '#Bière', motifs: ['biere'], parents: ['alcool', 'gastronomie'] },
+  { id: 'alcool', libelle: '#Alcool', motifs: ['alcool', 'alcoolis', 'liqueur', 'cocktail', 'whisky', 'whiskey', 'vodka', 'rhum', 'gin(?![a-z0-9])', 'tequila', 'cognac', 'armagnac', 'spiritueux', 'eau-de-vie', '(?<!en )(?<!de )(?<!la )(?<!-)champagne(?![a-z0-9-])', 'coupe de champagne', 'aperitif', '(?<!appareil )(?<!systeme )(?<!tube )(?<!trouble )(?<!canal )digestifs?(?![a-z0-9])', 'absinthe', 'distillerie'], parents: ['gastronomie'] },
+  { id: 'boisson', libelle: '#Boissons', motifs: ['boisson', 'soda', 'limonade', 'jus de', 'cafe(?![a-z0-9])(?! de | parisien)', 'the (?:vert|noir|blanc|glace)', 'infusion', 'eau minerale'], parents: ['gastronomie'] },
   { id: 'fruit', libelle: '#Fruit', motifs: ['fruit', 'agrume'], parents: ['gastronomie'] },
   { id: 'dessert', libelle: '#Dessert', motifs: ['dessert', 'patisserie', 'gateau'], parents: ['gastronomie'] },
 
@@ -294,29 +312,71 @@ const NB_ANCETRES_THEME = (() => {
   return profondeur;
 })();
 
+/** Thèmes trouvés directement (parents non ajoutés) dans un texte : sert aux signaux mis en cache. */
+export const themesDirectsDeTexte = (texte: string, categories = false): string[] => [...occurrencesDirectes(texte, categories).keys()];
+
+/** Signaux lus par le sens sur la page Wikipédia ou Wikidata d’une carte (mis en cache avec l’entrée). */
+export interface SignauxPage {
+  /** Thèmes de la définition (« X est un film d’animation… ») et des classes Wikidata : fiables. */
+  fortes: string[];
+  /** Thèmes des catégories : utiles, mais seulement s’ils sont compatibles avec la nature du sujet. */
+  faibles: string[];
+  genre: Genre;
+}
+
+let signauxWikipedia: ReadonlyMap<string, SignauxPage> = new Map();
+
+export function definirSignauxWikipedia(signaux: ReadonlyMap<string, SignauxPage>): void {
+  signauxWikipedia = signaux;
+}
+
+// Thèmes « physiques » (animal, véhicule, astre, lieu naturel, science) : une personne, une œuvre ou une organisation ne les reçoit
+// que si sa définition le dit (« pilote de ligne »), jamais parce que son texte ou ses catégories citent un lion ou un avion.
+const PHYSIQUES = new Set(['nature', 'vehicule', 'espace', 'geographie', 'sciences']);
+const estPhysique = (id: string, vus = new Set<string>()): boolean => {
+  if (PHYSIQUES.has(id)) return true;
+  if (vus.has(id)) return false;
+  vus.add(id);
+  return (PARENTS.get(id) ?? []).some((p) => estPhysique(p, vus));
+};
+const GENRES_HUMAINS: ReadonlySet<Genre> = new Set(['personne', 'oeuvre', 'organisation', 'produit', 'notion']);
+
 /**
  * Thèmes qui caractérisent le plus la carte (au plus `MAX_THEMES_PAR_CARTE`), du mieux établi au moins bien établi.
- * Poids : titre ×3, première phrase de la description ×3, reste de la description ×1, thèmes vérifiés sur Wikipédia +2 (ancêtres exclus).
- * Un thème dont le poids est inférieur au tiers du meilleur est écarté ; à poids égal, le plus précis passe avant.
- * Les parents ne sont pas ajoutés : ils servent seulement à faire correspondre les amis (`themesDeCarte`).
+ * Le sens passe avant les mots : la définition (« X est un film d’animation japonais ») et les classes Wikidata pèsent 5,
+ * les catégories 2, le titre 1, le reste du texte moins encore. Un thème physique (animal, véhicule, astre…) venant d’un
+ * canal faible est écarté pour une personne, une œuvre ou une organisation. Un thème dont le poids est inférieur à 40 % du
+ * meilleur est écarté ; à poids égal, le plus précis passe avant. Les parents ne sont pas ajoutés (`themesDeCarte` les donne aux amis).
  */
 export function themesPrincipaux(carte: Pick<Carte, 'titre' | 'description'>): string[] {
   const poids = new Map<string, number>();
-  const ajouter = (comptes: Map<string, number>, facteur: number): void => {
-    for (const [id, n] of comptes) poids.set(id, (poids.get(id) ?? 0) + Math.min(n, 2) * facteur);
+  const ajouter = (ids: Iterable<string>, valeur: number): void => {
+    for (const id of ids) poids.set(id, (poids.get(id) ?? 0) + valeur);
   };
   const description = carte.description;
+  const defSite = definition(description);
+  const page = signauxWikipedia.get(carte.titre);
+  let genre = genreDe(description, defSite);
+  if (genre === 'autre' && page) genre = page.genre;
+  const faible = (ids: Iterable<string>, valeur: number): void => {
+    ajouter([...ids].filter((id) => !(GENRES_HUMAINS.has(genre) && estPhysique(id))), valeur);
+  };
+  ajouter(themesDirectsDeTexte(defSite), 5);
+  ajouter(page?.fortes ?? [], 5);
   const finPhrase = description.search(/[.!?](\s|$)/);
   const premiere = finPhrase === -1 ? description : description.slice(0, finPhrase + 1);
-  ajouter(occurrencesDirectes(carte.titre), 3);
-  ajouter(occurrencesDirectes(premiere), 3);
-  ajouter(occurrencesDirectes(description.slice(premiere.length)), 1);
-  // Le cache Wikipédia contient les parents et le résumé : les ancêtres n'y comptent pas, et le poids reste sous celui du titre.
-  const wiki = themesWikipedia.get(carte.titre) ?? [];
-  const ancetresWiki = new Set(wiki.flatMap((id) => [...ancetres(id)]));
-  for (const id of wiki) if (!ancetresWiki.has(id)) poids.set(id, (poids.get(id) ?? 0) + 2);
+  faible(themesDirectsDeTexte(carte.titre), 1);
+  faible(themesDirectsDeTexte(premiere), 1.5);
+  faible(themesDirectsDeTexte(description.slice(premiere.length)), 0.5);
+  if (page) faible(page.faibles, 2);
+  else {
+    // Entrée de cache ancienne (sans signaux) : elle contient les parents et le résumé, les ancêtres n'y comptent pas.
+    const wiki = themesWikipedia.get(carte.titre) ?? [];
+    const ancetresWiki = new Set(wiki.flatMap((id) => [...ancetres(id)]));
+    faible(wiki.filter((id) => !ancetresWiki.has(id)), 2);
+  }
   const meilleur = Math.max(0, ...poids.values());
-  const retenus = [...poids.entries()].filter(([, p]) => p * 3 >= meilleur);
+  const retenus = [...poids.entries()].filter(([, p]) => p * 5 >= meilleur * 2);
   // Un thème qui est l'ancêtre d'un autre thème retenu est écarté : « #Chien » suffit, pas « #Animaux » en plus.
   const ancetresRetenus = new Set(retenus.flatMap(([id]) => [...ancetres(id)]));
   return retenus

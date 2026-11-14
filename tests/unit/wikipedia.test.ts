@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import type { SignauxPage } from '../../src/lib/themes';
 import { verifierTitres, type Transport } from '../../src/app/verifierWikipedia';
 import { themesDeCarte, definirThemesWikipedia } from '../../src/lib/themes';
 import { creerPlanificateur } from '../../src/app/verifierWikipedia';
-import { cacheVide, lireReponse, lireReponseWikidata, themesDepuisWikidata, urlRequeteWikidata, themesDepuisCategories, titresAVerifier, urlRequete, validerCache, ajouterEntree, DUREE_CACHE_MS } from '../../src/lib/wikipedia';
+import { cacheVide, lireEntiteWikidata, lireLibellesWikidata, signauxWikipedia, urlEntiteWikidata, lireReponse, lireReponseWikidata, themesDepuisWikidata, urlRequeteWikidata, themesDepuisCategories, titresAVerifier, urlRequete, validerCache, ajouterEntree, DUREE_CACHE_MS } from '../../src/lib/wikipedia';
 
 const page = (extra: object) => ({ query: { pages: [{ title: 'X', ...extra }] } });
 
@@ -32,22 +33,24 @@ describe('themesDepuisCategories', () => {
   });
 });
 
+const SIG: SignauxPage = { fortes: [], faibles: [], genre: 'autre' };
+
 describe('résumé Wikipédia', () => {
   it('complète les catégories par le résumé', () => {
     expect(themesDepuisCategories([], 'Serre-Ponçon est un barrage hydroélectrique situé dans les Alpes.')).toContain('barrage');
     expect(themesDepuisCategories(['Barrage en France'], '')).toContain('barrage');
   });
   it('relit une fois une entrée sans thème enregistrée avant le résumé', () => {
-    const ancien = validerCache({ version: 1, entrees: { A: { themes: [], verifieLe: 1000 }, B: { themes: ['barrage'], verifieLe: 1000 } } })!;
+    const ancien = validerCache({ version: 1, entrees: { A: { themes: [], verifieLe: 1000 }, B: { themes: ['barrage'], verifieLe: 1000, signaux: SIG } } })!;
     // Toute entrée d'avant le filtre des noms propres est relue une fois (A sans thème, B calculée avant le filtre).
     expect(titresAVerifier(['A', 'B'], ancien, 2000)).toEqual(['A', 'B']);
-    expect(titresAVerifier(['A'], ajouterEntree(ancien, 'A', [], 2000, true), 3000)).toEqual([]);
+    expect(titresAVerifier(['A'], ajouterEntree(ancien, 'A', [], 2000, true, SIG), 3000)).toEqual([]);
   });
 });
 
 describe('cache et surcouche', () => {
   it('ne redemande pas une entrée récente, mais une entrée périmée', () => {
-    const cache = ajouterEntree(cacheVide(), 'A', ['chat'], 1000);
+    const cache = ajouterEntree(cacheVide(), 'A', ['chat'], 1000, false, SIG);
     expect(titresAVerifier(['A', 'B', 'B'], cache, 2000)).toEqual(['B']);
     expect(titresAVerifier(['A'], cache, 1000 + DUREE_CACHE_MS)).toEqual(['A']);
   });
@@ -111,10 +114,14 @@ describe('Wikidata', () => {
     const r = await verifierTitres({ titres: ['A', 'B'], cache: cacheVide(), signal: new AbortController().signal, surProgres: () => undefined, attendre: async () => undefined, transport });
     expect(r).toEqual({ verifiees: 0, arret: 'code-http', codeHttp: 429 });
   });
+  it('relit une fois une entrée sans signaux (enregistrée avant la lecture par le sens)', () => {
+    const c = validerCache({ version: 1, entrees: { A: { themes: ['chat'], verifieLe: 1000, avecResume: true } } })!;
+    expect(titresAVerifier(['A'], c, 2000)).toEqual(['A']);
+  });
   it('relit une fois une entrée sans thème enregistrée avant Wikidata', () => {
     const c = validerCache({ version: 1, entrees: { A: { themes: [], verifieLe: 1000, avecResume: true } } })!;
     expect(titresAVerifier(['A'], c, 2000)).toEqual(['A']);
-    expect(titresAVerifier(['A'], ajouterEntree(c, 'A', [], 2000, true), 3000)).toEqual([]);
+    expect(titresAVerifier(['A'], ajouterEntree(c, 'A', [], 2000, true, SIG), 3000)).toEqual([]);
   });
 });
 
@@ -306,11 +313,51 @@ describe('creerPlanificateur', () => {
   });
 });
 
+describe('type et métier d’après Wikidata', () => {
+  const sansPause = async (): Promise<void> => undefined;
+  // Réponses reconstituées sur la forme relevée le 2026-11-14 (public, aucune donnée du compte).
+  const pageAvecQid = { query: { pages: [{ title: 'Lions', pageprops: { wikibase_item: 'Q105334176' }, categories: [{ title: 'Catégorie:Club de hockey sur glace au Québec' }] }] } };
+  const entite = { entities: { Q105334176: { claims: { P31: [{ mainsnak: { datavalue: { value: { id: 'Q1' } } } }], P641: [{ mainsnak: { datavalue: { value: { id: 'Q2' } } } }] } } } };
+  const libelles = { entities: { Q1: { labels: { fr: { value: 'équipe de hockey sur glace' } } }, Q2: { labels: { fr: { value: 'hockey sur glace' } } } } };
+
+  it('lit l’identifiant, les classes (liste blanche de propriétés) et le caractère humain', () => {
+    expect(lireReponse(pageAvecQid)).toMatchObject({ type: 'ok', qid: 'Q105334176' });
+    expect(lireEntiteWikidata(entite, 'Q105334176')).toEqual({ humain: false, classes: ['Q1', 'Q2'] });
+    const humain = { entities: { Q9: { claims: { P31: [{ mainsnak: { datavalue: { value: { id: 'Q5' } } } }], P999: [{ mainsnak: { datavalue: { value: { id: 'Q7' } } } }] } } } };
+    expect(lireEntiteWikidata(humain, 'Q9')).toEqual({ humain: true, classes: [] });
+    expect(lireEntiteWikidata({ entities: {} }, 'Q9')).toBeNull();
+    expect(lireLibellesWikidata(libelles)).toEqual(['équipe de hockey sur glace', 'hockey sur glace']);
+    expect(urlEntiteWikidata('Q1')).toBe('https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&props=claims&ids=Q1');
+  });
+  it('lit les classes en 2 GET, les met dans les signaux, et le caractère humain fixe la nature', async () => {
+    const urls: string[] = [];
+    const transport: Transport = async (url) => {
+      urls.push(url);
+      return { status: 200, json: async () => (url.includes('fr.wikipedia') ? pageAvecQid : url.includes('props=claims') ? entite : libelles) };
+    };
+    let dernier = cacheVide();
+    const r = await verifierTitres({ titres: ['Lions'], cache: cacheVide(), signal: new AbortController().signal, surProgres: (c) => { dernier = c; }, attendre: sansPause, transport });
+    expect(r).toEqual({ verifiees: 1, arret: null, codeHttp: null });
+    expect(urls).toHaveLength(3);
+    expect(dernier.entrees.Lions?.signaux?.fortes).toContain('hockey');
+    expect(dernier.entrees.Lions?.signaux?.genre).toBe('organisation');
+    expect(signauxWikipedia([], '', [], [], true).genre).toBe('personne');
+  });
+  it('un échec de Wikidata ne bloque pas la carte, un 429 arrête', async () => {
+    const panne: Transport = async (url) => (url.includes('fr.wikipedia') ? { status: 200, json: async () => pageAvecQid } : { status: 500, json: async () => ({}) });
+    const r = await verifierTitres({ titres: ['Lions'], cache: cacheVide(), signal: new AbortController().signal, surProgres: () => undefined, attendre: sansPause, transport: panne });
+    expect(r.verifiees).toBe(1);
+    const limite: Transport = async (url) => (url.includes('fr.wikipedia') ? { status: 200, json: async () => pageAvecQid } : { status: 429, json: async () => ({}) });
+    const r2 = await verifierTitres({ titres: ['Lions', 'B'], cache: cacheVide(), signal: new AbortController().signal, surProgres: () => undefined, attendre: sansPause, transport: limite });
+    expect(r2).toEqual({ verifiees: 0, arret: 'code-http', codeHttp: 429 });
+  });
+});
+
 describe('cache calculé avant le filtre des noms propres', () => {
   it('une entrée ancienne est relue une fois', () => {
     const ancien = { version: 1 as const, entrees: { Noir: { themes: ['train'], verifieLe: 1_000, avecResume: true as const } } };
     expect(titresAVerifier(['Noir'], ancien, 2_000)).toEqual(['Noir']);
-    const neuf = ajouterEntree(cacheVide(), 'Noir', ['train'], 1_000);
+    const neuf = ajouterEntree(cacheVide(), 'Noir', ['train'], 1_000, false, SIG);
     expect(titresAVerifier(['Noir'], neuf, 2_000)).toEqual([]);
   });
 });

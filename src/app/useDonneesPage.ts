@@ -25,9 +25,9 @@ import {
   enregistrerPreferences,
   noterEvenementVente,
 } from '../lib/stockage';
-import { definirThemesWikipedia } from '../lib/themes';
+import { definirSignauxWikipedia, definirThemesWikipedia } from '../lib/themes';
 import { preferencesParDefaut, type Preferences } from '../lib/tri';
-import { cacheVide, themesParTitre, type CacheWikipedia } from '../lib/wikipedia';
+import { cacheVide, signauxParTitre, themesParTitre, type CacheWikipedia } from '../lib/wikipedia';
 
 interface EtatStockageSynchro {
   registre: Registre | null;
@@ -114,12 +114,14 @@ export function useDonneesPage() {
   // La surcouche des thèmes est posée avant l’état : les rendus qui suivent lisent déjà le nouveau cache.
   const appliquerCacheWiki = useCallback((cache: CacheWikipedia): void => {
     definirThemesWikipedia(themesParTitre(cache));
+    definirSignauxWikipedia(signauxParTitre(cache));
     setCacheWiki(cache);
   }, []);
 
   useEffect(() => {
     void chargerCacheWikipedia().then((c) => {
       definirThemesWikipedia(themesParTitre(c));
+      definirSignauxWikipedia(signauxParTitre(c));
       setCacheWiki(c);
     });
   }, []);

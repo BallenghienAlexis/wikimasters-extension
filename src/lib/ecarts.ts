@@ -6,7 +6,9 @@
  * sont `Carte.etiquettesSite`. Une carte non reliée est ignorée : rien n’y serait posé.
  */
 import type { Carte } from './collection'
+import type { Registre } from './actions'
 import { etiquettesDeCarte, type Config } from './lot'
+import { estRefuse } from './registre'
 
 export interface EcartCarte {
   idCarte: string
@@ -20,6 +22,8 @@ export interface EcartCarte {
 export function calculerEcarts(
   cartes: readonly Carte[],
   config?: Pick<Config, 'amis' | 'limiteParExemplaire'>,
+  /** Registre : une étiquette retirée à la main par le joueur n'est plus « manquante ». */
+  registre?: Registre,
 ): EcartCarte[] {
   const ecarts: EcartCarte[] = []
   for (const c of cartes) {
@@ -27,7 +31,8 @@ export function calculerEcarts(
     const attendues = etiquettesDeCarte(c, config).retenues
     const surSite = new Set(c.etiquettesSite)
     const prevues = new Set(attendues)
-    const manquantes = attendues.filter((nom) => !surSite.has(nom))
+    const refusee = (nom: string): boolean => registre !== undefined && c.idsSite !== null && c.idsSite.some((ex) => estRefuse(registre, ex, nom))
+    const manquantes = attendues.filter((nom) => !surSite.has(nom) && !refusee(nom))
     const enTrop = [...surSite].filter((nom) => !prevues.has(nom))
     if (manquantes.length > 0 || enTrop.length > 0) {
       ecarts.push({ idCarte: c.id, titre: c.titre, manquantes, enTrop })

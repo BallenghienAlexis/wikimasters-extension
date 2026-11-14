@@ -15,7 +15,7 @@ import type {
   TypesDisponibles,
 } from './actions'
 import { normaliser, type Carte, type Collection } from './collection'
-import { LONGUEUR_MAX_ID } from './registre'
+import { estRefuse, LONGUEUR_MAX_ID } from './registre'
 import { amisConcernes, type Ami } from './tri'
 import { LIBELLES_THEMES, themesDeCarte, themesPrincipaux } from './themes'
 
@@ -283,6 +283,8 @@ export function construireLot(
 
       for (const nom of etiquettes) {
         if (presents.includes(nom)) continue
+        // Retirée à la main par le joueur : jamais reposée (la synchro ne défait pas ses décisions).
+        if (estRefuse(registre, idExemplaire, nom)) continue
         if (nom.length > limite) {
           tropLong = true
           nonPoseeCarte(nom, 'nom-trop-long')
@@ -309,6 +311,8 @@ export function construireLot(
       }
     }
 
+    // Les étiquettes retirées à la main (`registre.refus`) ne sont pas comptées à part : si le joueur retire tous les thèmes d'une carte,
+    // c'est son choix, la carte n'est pas signalée.
     // Contrôle : une carte reliée doit garder au moins une étiquette de thème (hors échange) ;
     // sinon (nom trop long, homonyme, limite de noms du compte), elle est signalée dans l’aperçu.
     const estTheme = (nom: string): boolean => !nom.startsWith(PREFIXE_ECHANGE)

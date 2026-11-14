@@ -1,6 +1,6 @@
 // Exécuteur de la vérification Wikipédia : seul fichier de l'application qui appelle `fetch` vers Wikipédia.
 // GET en lecture seule vers fr.wikipedia.org (et www.wikidata.org si Wikipédia ne donne aucun thème), un titre de carte par requête, sans cookie ni en-tête ajouté.
-import { ajouterEntree, lireReponse, lireReponseWikidata, themesDepuisCategories, themesDepuisWikidata, titresAVerifier, urlRequete, urlRequeteWikidata, type CacheWikipedia } from '../lib/wikipedia';
+import { ajouterEntree, lireEntiteWikidata, lireLibellesWikidata, lireReponse, lireReponseWikidata, themesDepuisCategories, themesDepuisWikidata, signauxWikipedia, titresAVerifier, urlEntiteWikidata, urlLibellesWikidata, urlRequete, urlRequeteWikidata, type CacheWikipedia } from '../lib/wikipedia';
 
 export type Transport = (url: string, signal: AbortSignal) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
@@ -41,11 +41,44 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
   let verifiees = 0;
   let echecs = 0;
   let echecsWikidata = 0;
+  let codeArret = 0;
+  // Lit les classes de l'entité Wikidata (2 GET). null = rien d'exploitable (on continue sans) ; 'arret' = 403/429 ou arrêt manuel.
+  const lireEnrichissement = async (qid: string): Promise<{ classes: string[]; humain: boolean } | 'arret' | null> => {
+    const appeler = async (url: string): Promise<unknown> => {
+      await attendre(PAUSE_MS, signal);
+      if (signal.aborted) throw new DOMException('arret', 'AbortError');
+      let r;
+      try {
+        r = await transport(url, signal);
+      } catch {
+        if (signal.aborted) throw new DOMException('arret', 'AbortError');
+        return null;
+      }
+      if (r.status === 403 || r.status === 429) {
+        codeArret = r.status;
+        throw new DOMException('arret', 'AbortError');
+      }
+      try {
+        return r.status === 200 ? await r.json() : null;
+      } catch {
+        return null;
+      }
+    };
+    try {
+      const entite = lireEntiteWikidata(await appeler(urlEntiteWikidata(qid)), qid);
+      if (entite === null) return null;
+      if (entite.classes.length === 0) return { classes: [], humain: entite.humain };
+      const libelles = lireLibellesWikidata(await appeler(urlLibellesWikidata(entite.classes)));
+      return libelles === null ? null : { classes: libelles, humain: entite.humain };
+    } catch {
+      return 'arret';
+    }
+  };
   for (const titre of titres) {
     if (signal.aborted) return { verifiees, arret: 'manuel', codeHttp: null };
     // MediaWiki découpe `titles` sur « | » : un tel titre interrogerait plusieurs pages, on le saute.
     if (titre.includes('|')) {
-      cache = ajouterEntree(cache, titre, [], maintenant(), true);
+      cache = ajouterEntree(cache, titre, [], maintenant(), true, { fortes: [], faibles: [], genre: 'autre' });
       await surProgres(cache, ++verifiees);
       continue;
     }
@@ -71,7 +104,24 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
     } else {
       echecs = 0;
       // Page absente ou ambiguë : on mémorise « aucun thème » pour ne pas la redemander avant 30 jours.
+      let signaux = lecture.type === 'ok' ? signauxWikipedia(lecture.categories, lecture.resume) : undefined;
+      // Type et métier d'après Wikidata (instance de, occupation, genre, sport) : deux GET de plus, seulement si la page a un identifiant.
+      // Un échec de cette étape n'en est pas un : la carte garde ce que Wikipédia a donné (403 et 429 arrêtent toujours).
+      let classes: string[] = [];
+      let humain = false;
+      let enrichi = false;
+      if (lecture.type === 'ok' && lecture.qid !== undefined) {
+        const lu = await lireEnrichissement(lecture.qid);
+        if (lu === 'arret') return { verifiees, arret: signal.aborted ? 'manuel' : 'code-http', codeHttp: signal.aborted ? null : codeArret };
+        if (lu !== null) {
+          classes = lu.classes;
+          humain = lu.humain;
+          enrichi = true;
+        }
+      }
+      if (enrichi && signaux !== undefined && lecture.type === 'ok') signaux = signauxWikipedia(lecture.categories, lecture.resume, [], classes, humain);
       let themes = lecture.type === 'ok' ? themesDepuisCategories(lecture.categories, lecture.resume) : [];
+      if (enrichi) themes = [...new Set([...themes, ...themesDepuisWikidata(classes)])];
       // Wikipédia n'a rien donné : courte description Wikidata (même cadence, titre seul), sinon l'entrée sera relue une fois.
       let wikidata = false;
       if (themes.length === 0) {
@@ -91,6 +141,7 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
             const l2 = lireReponseWikidata(await r2.json(), titre);
             if (l2.type === 'ok') {
               themes = themesDepuisWikidata(l2.descriptions);
+              signaux = signauxWikipedia(lecture.type === 'ok' ? lecture.categories : [], lecture.type === 'ok' ? lecture.resume : '', l2.descriptions);
               wikidata = true;
               lu2 = true;
             }
@@ -106,7 +157,7 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
         }
         echecsWikidata = 0;
       }
-      cache = ajouterEntree(cache, titre, themes, maintenant(), wikidata);
+      cache = ajouterEntree(cache, titre, themes, maintenant(), wikidata || enrichi, signaux);
       verifiees += 1;
       await surProgres(cache, verifiees);
     }
