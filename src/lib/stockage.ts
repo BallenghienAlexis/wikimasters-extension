@@ -1,5 +1,5 @@
 import type { Donnees } from './sauvegarde';
-import { analyserStockage,appliquerEdition, collectionVide, fusionnerCartesLues, type CarteLueSite, type Collection } from './collection';
+import { analyserStockage, collectionVide, type Collection } from './collection';
 import type { EtatExecution, EtatExecutionV2, Registre } from './actions';
 import { validerJournal, type Journal } from './journal';
 import { validerExecution } from './etatExecution';
@@ -10,14 +10,12 @@ import { AFFICHAGE_DEFAUT, validerAffichage, type Affichage } from './affichage'
 import { cacheVide, validerCache, type CacheWikipedia } from './wikipedia';
 import { registreVide, validerRegistre } from './registre';
 import { validerEtiquettesSite, type EtiquetteSite } from './etiquettesPreexistantes';
-import { lireSynchro, noterPage, type Pagination, type Synchro } from './synchro';
 import type { EtatOrdonnanceur } from './ordonnanceur';
 import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../config/amis';
 import { ajouterEvenement, validerEvenements, VERSION_VENTES, type EvenementVente } from './affluence';
-import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, proposerTri, type Preferences } from './tri';
+import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, type Preferences } from './tri';
 
 const CLE = 'collection';
-const CLE_SYNCHRO = 'synchro';
 const CLE_PREFERENCES = 'preferences';
 const CLE_AMIS_INITIAUX = 'amisInitiaux';
 const CLE_REGISTRE = 'registre';
@@ -50,7 +48,6 @@ export const VERSION_JOURNAL = 2;
 /** Toutes les clés locales de l’extension. */
 export const CLES_STOCKAGE = {
   collection: CLE,
-  synchro: CLE_SYNCHRO,
   preferences: CLE_PREFERENCES,
   amisInitiaux: CLE_AMIS_INITIAUX,
   registre: CLE_REGISTRE,
@@ -433,45 +430,6 @@ export async function chargerPreferences(): Promise<Preferences> {
 
 export async function enregistrerPreferences(preferences: Preferences): Promise<void> {
   await chrome.storage.local.set({ [CLE_PREFERENCES]: preferences });
-}
-
-// N'écrit que si la lecture apporte du nouveau.
-export async function fusionnerDansStockage(cartes: CarteLueSite[]): Promise<Collection> {
-  const avant = await chargerCollection();
-  const apres = fusionnerCartesLues(avant, cartes);
-  if (JSON.stringify(apres) !== JSON.stringify(avant)) await enregistrerCollection(apres);
-  return apres;
-}
-
-// Une carte triée par l'assistant est reclassée dès que sa valeur est connue.
-export async function enregistrerValeur(id: string, valeurMarchande: number): Promise<void> {
-  const collection = await chargerCollection();
-  const carte = collection.cartes.find((c) => c.id === id);
-  if (!carte || carte.valeurMarchande === valeurMarchande) return;
-  const avecValeur = { ...carte, valeurMarchande };
-  const edition = carte.decidePar === 'assistant' ? proposerTri(avecValeur, await chargerPreferences()) : {};
-  await enregistrerCollection(appliquerEdition(collection, id, { valeurMarchande, ...edition }));
-}
-
-export async function chargerSynchro(): Promise<Synchro | null> {
-  const contenu = await chrome.storage.local.get(CLE_SYNCHRO);
-  return lireSynchro(contenu[CLE_SYNCHRO]);
-}
-
-export async function enregistrerPage(cle: string, pagination: Pagination): Promise<Synchro> {
-  const avant = await chargerSynchro();
-  const apres = noterPage(avant, cle, pagination);
-  if (JSON.stringify(apres) !== JSON.stringify(avant)) await chrome.storage.local.set({ [CLE_SYNCHRO]: apres });
-  return apres;
-}
-
-export function ecouterSynchro(rappel: (synchro: Synchro | null) => void): () => void {
-  const ecouteur = (changements: Record<string, chrome.storage.StorageChange>, zone: string): void => {
-    const changement = changements[CLE_SYNCHRO];
-    if (zone === 'local' && changement) rappel(lireSynchro(changement.newValue));
-  };
-  chrome.storage.onChanged.addListener(ecouteur);
-  return () => chrome.storage.onChanged.removeListener(ecouteur);
 }
 
 export function ecouterCollection(rappel: (collection: Collection) => void): () => void {

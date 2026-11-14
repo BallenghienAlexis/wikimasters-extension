@@ -410,9 +410,8 @@ describe('stockage : migration à la lecture (faux chrome.storage)', () => {
 
   it('SC-019 : une donnée illisible lève une erreur et n’est jamais écrasée', async () => {
     const { set } = installer({ collection: { version: 3, cartes: [{ id: 'x' }] } });
-    const { chargerCollection, fusionnerDansStockage } = await import('../../src/lib/stockage');
+    const { chargerCollection } = await import('../../src/lib/stockage');
     await expect(chargerCollection()).rejects.toThrow(/illisibles/);
-    await expect(fusionnerDansStockage([{ id: 'n', titre: 'N', rarete: null, quantite: 1, url: null }])).rejects.toThrow();
     expect(set).not.toHaveBeenCalled();
   });
 });
