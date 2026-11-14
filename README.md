@@ -12,7 +12,7 @@ Extension Chrome (Manifest V3) pour préparer le tri, l’échange et la vente d
 - Prépare les étiquettes (statut, thème, « #À échanger <ami> ») avec un aperçu, puis les envoie au site si vous cliquez sur « Lancer ».
 - Liste les ventes à lancer selon vos places libres et conseille un délai selon les heures de forte affluence.
 - Se synchronise avec le site (collection, étiquettes, prix du marché) tant qu’un onglet WikiMasters est ouvert.
-- Organise la page de gestion en six onglets : Tableau de bord (chiffres, répartition, santé de la synchro), Synchro (progression), Lots (étiquettes, enchères et défausses à lancer par famille, avec panneau d’erreur et reprise), Collection (filtres, analyses, tableau de tri), Ventes (places d’enchères, heures fortes) et Réglages (sauvegarde, plafond, Wikipédia, thèmes, animations). Un bandeau d’activité reste visible pendant une synchro ou une exécution. L’onglet actif est mémorisé dans le fragment d’URL.
+- Organise la page de gestion en six onglets : Tableau de bord (chiffres, répartition, santé de la synchro), Synchro (progression, panneau d’erreur et reprise, actions ignorées, journal), Lots (étiquettes, enchères et défausses à lancer par famille), Collection (filtres, analyses, évolution, tableau de tri), Ventes (places d’enchères, heures fortes, assistant de tri, thèmes et amis) et Réglages (sauvegarde, plafond de défausse, étiquettes préexistantes, Wikipédia, thèmes, animations). Un bandeau d’activité reste visible pendant une synchro ou une exécution. L’onglet actif est mémorisé dans le fragment d’URL.
 - Permet d’éditer chaque carte (statut, prix cible, note), de filtrer, de repérer les doublons, et de sauvegarder / restaurer vos données d’un PC à l’autre (voir « Sauvegarde complète »).
 
 Les données sont stockées localement dans `chrome.storage.local`. Il n’y a ni serveur ni base de données.
@@ -25,7 +25,7 @@ Le détail et les décisions datées sont dans [AGENTS.md](AGENTS.md), qui fait 
 - L’extension appelle pourtant l’API interne du site (lecture de la collection, des étiquettes et des prix), et peut mettre aux enchères, défausser et poser ou retirer des étiquettes. Ces actions ne partent qu’après votre clic sur « Lancer ». Le propriétaire du projet assume le risque de bannissement ; **vous devez décider du vôtre**.
 - La synchronisation automatique est **activée par défaut** ; l’interrupteur est dans la page de gestion. Elle s’arrête sur une réponse 401, 403 ou 429 ou après 3 échecs.
 - L’extension ne stocke jamais de mot de passe, de cookie ni de jeton. Elle lit en mémoire le jeton de session au moment d’une requête d’écriture, et seulement pour l’envoyer au site.
-- Aucune donnée n’est envoyée à un serveur tiers, sauf le titre d’une carte vers `fr.wikipedia.org` pour affiner ses thèmes.
+- Aucune donnée n’est envoyée à un serveur tiers, sauf le titre d’une carte vers `fr.wikipedia.org` (puis `www.wikidata.org`) pour affiner ses thèmes.
 
 ## Prérequis
 
@@ -74,7 +74,7 @@ La CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) lance lint, types
 
 | Chemin | Rôle |
 |---|---|
-| `public/manifest.json` | Manifeste. Permission `storage` seule ; `host_permissions` limité à `fr.wikipedia.org` ; content script limité à WikiMasters. |
+| `public/manifest.json` | Manifeste. Permission `storage` seule ; `host_permissions` limité à `fr.wikipedia.org` et `www.wikidata.org` ; content script limité à WikiMasters. |
 | `src/background.ts` | Service worker (éphémère, sans état) : le clic sur l’icône ouvre `collection.html`. |
 | `src/content/` | Content script, construit à part : lecture des cartes, repères, synchronisation automatique, exécution des ordres d’écriture. |
 | `collection.html` + `src/app/` | Page de gestion en React 19, en six onglets (`Onglets.tsx`, `definitionOnglets.ts`) : tableau de bord, synchro, lots, collection, ventes, réglages. |
