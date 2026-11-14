@@ -58,14 +58,14 @@ async function glisser(page: Page, source: Locator, cible: Locator): Promise<voi
 // ───────────────────────────── SC-011 : aucune requête ─────────────────────────────
 
 test.describe('SC-011 : aucune requête hors extension', () => {
-  test.setTimeout(120_000);
+  test.setTimeout(60_000);
 
-  test('SC-011 : six onglets, bandeau déplié, tri, glisser, ignorées : seule la vue liste interroge Wikipédia/Wikidata', async ({ context, pageCollection: page }) => {
+  const preparer = async (context: BrowserContext, page: Page): Promise<Awaited<ReturnType<typeof pieger>>> => {
     await fixerHorloge(context);
     const banc = await pieger(context);
     await ecrireJeuRiche(page);
     await chargerCartes(page, CARTES);
-    // Ignorées stockées (cartes existantes) pour « Reprendre » ; puis, sans recharger, un traitement de synchro en cours pour le bandeau.
+    // Ignorées stockées (cartes existantes, postérieures au début de synchro) pour « Reprendre ».
     await page.evaluate(
       (n) =>
         chrome.storage.local.set({
@@ -74,14 +74,17 @@ test.describe('SC-011 : aucune requête hors extension', () => {
       MAINTENANT,
     );
     await page.reload();
+    return banc;
+  };
 
-    // Phase 1 : tous les onglets sauf la Collection (aucune requête, même Wikipédia).
+  test('SC-011 : six onglets hors Collection, bandeau déplié, ignorées puis reprendre : aucune requête', async ({ context, pageCollection: page }) => {
+    const banc = await preparer(context, page);
     banc.phase.nom = 'hors-collection';
     for (const o of ONGLETS.filter((x) => x.id !== 'collection')) {
       await allerA(page, o.id);
-      await page.waitForTimeout(700);
+      await page.waitForTimeout(250);
     }
-    // Bandeau déplié (synchro et lots en cours, ici un traitement simulé par le stockage).
+    // Bandeau déplié (synchro en cours simulée par le stockage).
     await page.evaluate(
       (n) =>
         chrome.storage.local.set({
@@ -105,19 +108,34 @@ test.describe('SC-011 : aucune requête hors extension', () => {
     await ouvrirIgnorees(page);
     await ignorees.getByRole('button', { name: /^Reprendre « .+ » pour « Zèbre fictif »$/ }).click();
     await expect(ignorees).toContainText('Aucune action ignorée');
-    await page.waitForTimeout(700);
+    expect(((await stockage(page, 'ignorees')) as { entrees: unknown[] }).entrees).toHaveLength(0);
+    // Retour aux autres onglets : toujours rien.
+    for (const o of ONGLETS.filter((x) => x.id !== 'collection')) {
+      await allerA(page, o.id);
+      await page.waitForTimeout(250);
+    }
+    await page.waitForTimeout(500);
+    expect(banc.vues, 'aucune requête hors de la Collection').toEqual([]);
+  });
 
-    // Phase 2 : vue liste de la Collection (Wikipédia et Wikidata autorisés, titre seul), puis tri de la liste.
+  test('SC-011 : vue liste seule : Wikipédia/Wikidata, titre seul, aucun autre hôte', async ({ context, pageCollection: page }) => {
+    const banc = await preparer(context, page);
     banc.phase.nom = 'liste';
     await allerA(page, 'collection');
     await expect(page.getByText(/titres des cartes affichées sont vérifiés/)).toBeVisible();
     await page.getByTestId('tableau-cartes').getByRole('columnheader', { name: 'Titre' }).getByRole('button').click();
-    await expect.poll(() => banc.vues.filter((v) => v.phase === 'liste').length, { timeout: 15_000 }).toBeGreaterThan(0);
+    await expect.poll(() => banc.vues.length, { timeout: 15_000 }).toBeGreaterThan(0);
+    for (const v of banc.vues) expect(v.url).toMatch(/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\/w\/api\.php\?/);
+  });
 
-    // Phase 3 : tableau de tri (flèche, glisser, recherche). On laisse finir une requête éventuellement en vol.
+  test('SC-011 : tableau de tri (flèche, glisser, recherche) : aucune vérification', async ({ context, pageCollection: page }) => {
+    const banc = await preparer(context, page);
+    banc.phase.nom = 'bascule';
+    await allerA(page, 'collection');
     await page.getByRole('button', { name: 'Tableau de tri' }).click();
     await expect(page.getByTestId('tableau-tri')).toBeVisible();
-    await page.waitForTimeout(2000);
+    // On laisse finir une requête éventuellement en vol depuis la vue liste, puis plus rien ne doit partir.
+    await page.waitForTimeout(1500);
     banc.phase.nom = 'tri';
     await page.getByRole('button', { name: 'Déplacer « Zèbre fictif » vers Échanger' }).click();
     await expect(colonne(page, 'echanger').getByTestId('carte-tri')).toHaveCount(1);
@@ -126,21 +144,9 @@ test.describe('SC-011 : aucune requête hors extension', () => {
     await expect(colonne(page, 'garder').getByTestId('carte-tri').filter({ hasText: 'Mouette fictive' })).toHaveCount(1);
     await page.getByLabel('Rechercher une carte').fill('élan');
     await expect(page.getByTestId('carte-tri')).toHaveCount(1);
-    await page.waitForTimeout(1500);
-
-    // Retour aux autres onglets : toujours rien.
-    banc.phase.nom = 'apres';
-    for (const o of ONGLETS.filter((x) => x.id !== 'collection')) {
-      await allerA(page, o.id);
-      await page.waitForTimeout(500);
-    }
-
-    const autres = banc.vues.filter((v) => !/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\/w\/api\.php\?/.test(v.url));
-    expect(autres, 'aucune requête vers WikiMasters, Supabase ou un autre hôte').toEqual([]);
-    for (const phase of ['hors-collection', 'tri', 'apres']) {
-      expect(banc.vues.filter((v) => v.phase === phase), `requêtes en phase « ${phase} »`).toEqual([]);
-    }
-    expect(banc.vues.filter((v) => v.phase === 'depart')).toEqual([]);
+    await page.waitForTimeout(1200);
+    expect(banc.vues.filter((v) => v.phase === 'tri')).toEqual([]);
+    expect(banc.vues.filter((v) => !/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\/w\/api\.php\?/.test(v.url))).toEqual([]);
   });
 
   test('SC-011 : 5 000 cartes, le tableau de tri et le tableau de bord ne déclenchent aucune vérification', async ({ context, pageCollection: page }) => {
@@ -149,19 +155,22 @@ test.describe('SC-011 : aucune requête hors extension', () => {
     await chargerCartes(page, cartesFictivesRepartie(5000));
     banc.phase.nom = 'sans-liste';
     await allerA(page, 'tableau-de-bord');
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(1000);
+    expect(banc.vues.filter((v) => v.phase === 'sans-liste'), 'tableau de bord').toEqual([]);
+    // La bascule passe un instant par la vue liste : requêtes éventuelles comptées à part.
+    banc.phase.nom = 'bascule';
     await page.evaluate(() => {
       window.location.hash = 'collection';
     });
     await page.getByRole('button', { name: 'Tableau de tri' }).click();
     await expect(page.getByTestId('tableau-tri')).toBeVisible();
-    await page.waitForTimeout(2500);
-    // La première bascule a pu laisser partir une requête en vol depuis la vue liste : on regarde la suite.
-    const avant = banc.vues.length;
+    await page.waitForTimeout(1500);
+    banc.phase.nom = 'tri-seul';
     await colonne(page, 'a-trier').getByRole('button', { name: 'Afficher plus' }).click();
-    await page.waitForTimeout(2500);
-    expect(banc.vues.length).toBe(avant);
-    expect(banc.vues.filter((v) => !/wikipedia|wikidata/.test(v.url))).toEqual([]);
+    await expect(colonne(page, 'a-trier').getByTestId('carte-tri')).toHaveCount(100);
+    await page.waitForTimeout(1500);
+    expect(banc.vues.filter((v) => v.phase === 'tri-seul'), 'tableau de tri').toEqual([]);
+    expect(banc.vues.filter((v) => !/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\/w\/api\.php\?/.test(v.url))).toEqual([]);
   });
 });
 
@@ -233,7 +242,8 @@ test.describe('SC-011 : sauter, ignorer, reprendre sont locaux (exécution simul
   const panneau = (p: Page): Locator => p.getByTestId('panneau-erreur');
 
   test('SC-011 : « Sauter cette action » n’envoie rien au site', async ({ context, pageCollection: page }) => {
-    await preparerLot(page); // d’abord le stockage (synchro automatique coupée), puis l’onglet du site
+    await pieger(context); // routes d’abord (aucun hôte réel ne peut être atteint), puis le stockage
+    await preparerLot(page); // ensuite le stockage (synchro automatique coupée), puis l’onglet du site
     const banc = await ouvrirSiteSimule(context, 401);
     await lancerLot(page);
     await allerA(page, 'synchro');
@@ -247,7 +257,8 @@ test.describe('SC-011 : sauter, ignorer, reprendre sont locaux (exécution simul
   });
 
   test('SC-011 : « Ignorer jusqu’à la prochaine synchro » puis « Reprendre » n’envoient rien au site', async ({ context, pageCollection: page }) => {
-    await preparerLot(page); // d’abord le stockage (synchro automatique coupée), puis l’onglet du site
+    await pieger(context); // routes d’abord (aucun hôte réel ne peut être atteint), puis le stockage
+    await preparerLot(page); // ensuite le stockage (synchro automatique coupée), puis l’onglet du site
     const banc = await ouvrirSiteSimule(context, 401);
     await lancerLot(page);
     await allerA(page, 'synchro');
@@ -258,7 +269,10 @@ test.describe('SC-011 : sauter, ignorer, reprendre sont locaux (exécution simul
     await expect(ignorees.getByRole('button', { name: /^Ignorées \([1-9]/ })).toBeVisible();
     const titreIgnorees = ignorees.getByRole('button', { name: /^Ignorées/ });
     if ((await titreIgnorees.getAttribute('aria-expanded')) === 'false') await titreIgnorees.click();
+    const nbIgnorees = ((await stockage(page, 'ignorees')) as { entrees: unknown[] }).entrees.length;
+    expect(nbIgnorees).toBeGreaterThan(0);
     await ignorees.getByRole('button', { name: /^Reprendre « .+ » pour « Loutre fictive \d »$/ }).first().click();
+    await expect.poll(async () => ((await stockage(page, 'ignorees')) as { entrees: unknown[] }).entrees.length).toBe(nbIgnorees - 1);
     await page.waitForTimeout(1000);
     expect(banc.rest.length).toBe(avant);
     expect(banc.externes).toEqual([]);
@@ -599,8 +613,20 @@ test.describe('SC-007 : stockage piégé, rien de sensible dans le DOM', () => {
     await page.getByRole('button', { name: 'Tableau de tri' }).click();
     instantanes.push(await page.content());
     // Bandeau déplié.
-    const entete = page.getByTestId('ligne-activite-lots').getByRole('button').first();
-    if (await entete.count()) await entete.click();
+    await page.evaluate(
+      ({ n, secret }) =>
+        chrome.storage.local.set({
+          statutSynchro: {
+            version: 2, etat: 'en-cours', page: 3, pages: 10, raison: null, codeHttp: null, le: n, ajoutees: 0, etiquettes: 0, prix: 0,
+            etape: 'pages', prixFaits: null, prixPrevus: null, debut: n - 10_000, access_token: secret,
+          },
+          bailSynchro: n + 120_000,
+        }),
+      { n: MAINTENANT, secret: SECRET },
+    );
+    const entete = page.getByTestId('ligne-activite-synchro').getByRole('button').first();
+    await entete.click();
+    await expect(entete).toHaveAttribute('aria-expanded', 'true');
     instantanes.push(await page.content());
 
     const dom = instantanes.join('\n----\n');
