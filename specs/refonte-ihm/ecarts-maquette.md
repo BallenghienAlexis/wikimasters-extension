@@ -17,3 +17,5 @@ Source : maquette « Refonte IHM · 3 variantes », variante 1, v15 (`Main.dc.ht
 Choix assumés (fonctions réelles absentes de la maquette) : panneau d’erreur détaillé, champs modifiables de la liste, aperçu du lot, sauvegarde.
 
 Éléments de maquette sans objet depuis #140 : onglet Ventes, tableau de tri, répartition par décision et tableau par rareté (colonnes Garder / Échanger / Vendre), « valeur par décision », places d’enchères et chiffre « Enchères », plafond de défausse, interrupteur de lot « défausses » et « enchères ». La maquette comporte donc six onglets contre cinq dans l’extension.
+
+Non-régression : `tests/e2e/refonte-conformite-maquette.spec.ts` mesure en-tête, onglets, encadré de risque, cartes de la Collection et résumés de Réglages (3 largeurs, 2 thèmes) ; il échoue si l’extension s’éloigne de nouveau de la maquette.
