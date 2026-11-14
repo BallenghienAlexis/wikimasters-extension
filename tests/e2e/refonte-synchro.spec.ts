@@ -448,6 +448,17 @@ test.describe('Revue T-306 : couleur par état, bail expiré, pastille D-40', ()
     await expect(pageCollection.getByTestId('etapes-synchro')).not.toContainText('▶');
     await expect(pageCollection.getByTestId('duree-restante')).toHaveCount(0);
     await expect(pageCollection.getByTestId('pastille-synchro')).not.toContainText('En cours');
+    await expect(pageCollection.getByTestId('pastille-synchro')).toContainText('Arrêtée');
+  });
+
+  test('retouche T-306 : étape « en attente » (statut périmé) sans barre d’étape', async ({ pageCollection }) => {
+    await poser(pageCollection, {
+      bailSynchro: Date.now() - 5_000,
+      statutSynchro: statut({ etape: 'pages', page: 11, pages: 40 }),
+    });
+    await expect(etape(pageCollection, 'pages')).toHaveAttribute('data-etat', 'attente');
+    await expect(etape(pageCollection, 'pages').getByRole('progressbar')).toHaveCount(0);
+    await expect(etape(pageCollection, 'prix').getByRole('progressbar')).toHaveCount(0);
   });
 
   test('D-40 : pastille de statut affichée (En cours pendant une synchro, Erreur après un 403)', async ({ pageCollection }) => {

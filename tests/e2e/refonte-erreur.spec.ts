@@ -167,9 +167,11 @@ test.describe('SC-017 : après rechargement', () => {
     await expect(panneau(page)).toHaveCount(0);
   });
 
-  test('SC-016 : pause stockée, « Reprise possible à HH:MM » affichée', async ({ pageCollection: page }) => {
+  test('retouche T-307 : pause stockée après rechargement, « non, la page a été rechargée » et non une heure de reprise', async ({ pageCollection: page }) => {
     await poser(page, { execution: execution({ pauseJusqua: Date.now() + 25 * 60_000 }) });
-    await expect(panneau(page)).toContainText(/Reprise possible à \d{2}:\d{2}/);
+    await expect(panneau(page)).toContainText(/Reprise possible\s*:?\s*non, la page a été rechargée/);
+    await expect(panneau(page)).not.toContainText(/Reprise possible\s*:?\s*à \d{2}:\d{2}/);
+    await expect(panneau(page)).toContainText('ne peut pas reprendre après un rechargement');
   });
 
   test('SC-019 : état d’exécution illisible, message, rien de lançable ni de sautable', async ({ pageCollection: page }) => {

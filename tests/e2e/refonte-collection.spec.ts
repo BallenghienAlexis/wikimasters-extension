@@ -261,6 +261,36 @@ test.describe('SC-020 : évolution sur 30 jours', () => {
     await expect(alt).toHaveClass(/sr-only/);
     await expect(alt.locator('tbody tr')).not.toHaveCount(0);
   });
+
+  test('retouche T-308 : un point de plus de 30 jours ne compte ni dans le seuil, ni dans le maximum, ni dans le tableau', async ({ pageCollection }) => {
+    await pageCollection.evaluate(
+      (pts) => chrome.storage.local.set({ historique: { version: 1, points: pts } }),
+      [{ jour: jourDecale(40), exemplaires: 5000 }],
+    );
+    await chargerCartes(pageCollection, CARTES);
+    await allerA(pageCollection, 'collection');
+    const evo = pageCollection.getByTestId('evolution');
+    // Un seul point dans la fenêtre (aujourd’hui) : message de constitution, pas de colonnes.
+    await expect(evo).toContainText('Historique en cours de constitution (1 jour)');
+    await expect(evo.getByTestId('evolution-colonne')).toHaveCount(0);
+
+    await pageCollection.evaluate(
+      (pts) => chrome.storage.local.set({ historique: { version: 1, points: pts } }),
+      [
+        { jour: jourDecale(40), exemplaires: 5000 },
+        { jour: jourDecale(3), exemplaires: 4 },
+        { jour: jourDecale(2), exemplaires: 6 },
+      ],
+    );
+    await expect(evo.getByTestId('evolution-colonne')).toHaveCount(4);
+    const hauteurs = await evo.getByTestId('evolution-colonne').evaluateAll((els) =>
+      els.map((e) => parseFloat((e.firstElementChild as HTMLElement).style.height)),
+    );
+    expect(Math.max(...hauteurs)).toBe(100);
+    const lignes = evo.locator('table tbody tr');
+    await expect(lignes).toHaveCount(4);
+    await expect(evo.locator('table')).not.toContainText(jourDecale(40));
+  });
 });
 
 test.describe('SC-020 : édition inchangée', () => {
