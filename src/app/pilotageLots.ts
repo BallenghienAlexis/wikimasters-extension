@@ -56,6 +56,15 @@ const parametreDe = (a: Action): string | null =>
 
 let contexte: ContexteExecution | null = null;
 
+const MESSAGE_ECRITURE_EXECUTION = 'L’état d’exécution n’a pas pu être enregistré : l’affichage peut être en retard après un rechargement.';
+const ecouteursEchecEcriture = new Set<(message: string) => void>();
+
+/** Notifie un échec d’écriture de l’état d’exécution (retouche T-307) ; renvoie le désabonnement. */
+export function abonnerEchecEcriture(rappel: (message: string) => void): () => void {
+  ecouteursEchecEcriture.add(rappel);
+  return () => void ecouteursEchecEcriture.delete(rappel);
+}
+
 const titreDe = async (idCarte: string): Promise<string> =>
   (await chargerCollection()).cartes.find((c) => c.id === idCarte)?.titre ?? idCarte;
 
@@ -170,7 +179,9 @@ export function contexteExecution(): ContexteExecution {
           erreur: arretee && e.erreur !== null ? await construireErreur(e.erreur, maintenant) : null,
         });
       })
-      .catch(() => {});
+      .catch(() => {
+        for (const rappel of ecouteursEchecEcriture) rappel(MESSAGE_ECRITURE_EXECUTION);
+      });
   });
   execution.ecouter();
   void execution.signaler().catch(() => {});

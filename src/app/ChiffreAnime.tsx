@@ -15,9 +15,14 @@ const ChiffreAnime: React.FC<Props> = ({ valeur, libelle }) => {
   const mouvement = useMouvement();
   const [affiche, setAffiche] = useState(valeur);
   const dernier = useRef(valeur);
+  // Mouvement coupé : la valeur affichée en mémoire suit la valeur réelle, pour ne pas ressortir périmée à la réactivation.
+  if (!mouvement && affiche !== valeur) setAffiche(valeur);
 
   useLayoutEffect(() => {
-    if (!mouvement) return;
+    if (!mouvement) {
+      dernier.current = valeur;
+      return;
+    }
     const duree = dureeToken('--d-base');
     if (duree === null) return;
     const depart = dernier.current;

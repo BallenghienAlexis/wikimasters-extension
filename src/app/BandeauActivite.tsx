@@ -10,7 +10,7 @@ import {
   type Annonce,
 } from '../lib/progression';
 import LigneActivite, { type BarreDetail, type Commande } from './LigneActivite';
-import { arreterTout, pause, reprendre } from './pilotageLots';
+import { abonnerEchecEcriture, arreterTout, pause, reprendre } from './pilotageLots';
 import { useActiviteSynchro } from './useActiviteSynchro';
 
 const NB = ' ';
@@ -47,7 +47,11 @@ const LigneErreur: React.FC<{ exec: EtatExecutionV2 }> = ({ exec }) => (
  */
 const BandeauActivite: React.FC = () => {
   const { synchro, lots, erreur, enPause, autreOnglet, progSynchro, progLots } = useActiviteSynchro();
-  const [message, setMessage] = useState('');
+  // Échec d’une demande d’arrêt, rattaché à la synchro en cours : il disparaît avec elle.
+  const [arretRefuse, setArretRefuse] = useState<number | null | undefined>(undefined);
+  const [echecEcriture, setEchecEcriture] = useState('');
+  // Échec d’écriture de l’état d’exécution (retouche T-307) : visible, jamais avalé.
+  useEffect(() => abonnerEchecEcriture(setEchecEcriture), []);
   const cleSynchro = synchro ? `${synchro.debut ?? ''}|${synchro.etape ?? ''}` : '';
   const synchroCalculee = progSynchro;
   const lotsCalcules = progLots;
@@ -77,7 +81,8 @@ const BandeauActivite: React.FC = () => {
     </div>
   );
 
-  if (!synchro && !lots && !erreur) return vue;
+  const alerteEcriture = echecEcriture !== '' && <p role="alert" className="mt-3 text-sm text-defausser">{echecEcriture}</p>;
+  if (!synchro && !lots && !erreur) return <>{vue}{alerteEcriture}</>;
 
   const commandesSynchro: Commande[] | null = autreOnglet
     ? null
@@ -85,8 +90,9 @@ const BandeauActivite: React.FC = () => {
         {
           nom: 'Arrêter',
           onActiver: () => {
-            setMessage('');
-            enregistrerArretSynchro(Date.now()).catch(() => setMessage('La demande d’arrêt n’a pas pu être enregistrée.'));
+            setArretRefuse(undefined);
+            const debut = synchro?.debut ?? null;
+            enregistrerArretSynchro(Date.now()).catch(() => setArretRefuse(debut));
           },
         },
       ];
@@ -139,7 +145,10 @@ const BandeauActivite: React.FC = () => {
           />
         )}
         {erreur && <LigneErreur exec={erreur} />}
-        {message !== '' && <p className="text-sm text-defausser">{message}</p>}
+        {alerteEcriture}
+        {synchro && arretRefuse !== undefined && arretRefuse === (synchro.debut ?? null) && (
+          <p role="alert" className="text-sm text-defausser">La demande d’arrêt n’a pas pu être enregistrée.</p>
+        )}
       </section>
     </>
   );

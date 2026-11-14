@@ -26,29 +26,29 @@ export const ETAPES_SYNCHRO: readonly EtapeSynchro[] = ['stats', 'pages', 'prix'
 
 const plafonner = (p: number): number => Math.max(0, Math.min(100, Math.floor(p)))
 
-function monotone(pourcent: number, precedent?: Barre | null): number {
-  return precedent && precedent.pourcent !== null ? Math.max(pourcent, precedent.pourcent) : pourcent
+function monotone(pourcent: number, precedent?: Partial<Pick<Barre, 'pourcent'>> | null): number {
+  return precedent && precedent.pourcent !== null && precedent.pourcent !== undefined ? Math.max(pourcent, precedent.pourcent) : pourcent
 }
 
 /** Barre « N / M · P % », ou « N lus » (indéterminée) quand M est inconnu. */
-function barre(n: number, m: number | null, precedent?: Barre | null): Barre {
+function barre(n: number, m: number | null, precedent?: Partial<Pick<Barre, 'pourcent'>> | null, unite = ''): Barre {
   const valeur = Math.max(0, n)
   if (m === null) {
     return { valeur, max: null, pourcent: null, indeterminee: true, texte: `${valeur} lus` }
   }
   const brut = m > 0 ? plafonner((100 * valeur) / m) : 0
   const pourcent = monotone(brut, precedent)
-  return { valeur, max: m, pourcent, indeterminee: false, texte: `${valeur} / ${m} · ${pourcent} %` }
+  return { valeur, max: m, pourcent, indeterminee: false, texte: `${valeur} / ${m}${unite} · ${pourcent} %` }
 }
 
 /** Progression d’un lot : N = traitées + sautées, M = total. */
 export function progressionLot(lot: LotExecution, precedent?: Barre | null): Barre {
-  return barre(lot.traitees + lot.sautees, lot.total, precedent)
+  return barre(lot.traitees + lot.sautees, lot.total, precedent, ' actions')
 }
 
 /** Progression globale d’une exécution : N = traitées, M = total. */
 export function progressionExecution(etat: EtatExecutionV2, precedent?: Barre | null): Barre {
-  return barre(etat.traitees, etat.total, precedent)
+  return barre(etat.traitees, etat.total, precedent, ' actions')
 }
 
 export interface EtapeProgression {
@@ -66,14 +66,14 @@ export interface ProgressionSynchro {
   etapes: EtapeProgression[]
 }
 
-function barreEtape(etape: EtapeSynchro, etat: EtapeProgression['etat'], s: StatutSynchroV2): Barre {
+function barreEtape(etape: EtapeSynchro, etat: EtapeProgression['etat'], s: StatutSynchroV2, precedent?: Partial<Pick<Barre, 'pourcent'>> | null): Barre {
   if (etat === 'faite') return { valeur: 1, max: 1, pourcent: 100, indeterminee: false, texte: '1 / 1 · 100 %' }
   const courante = etat === 'en-cours'
   if (etape === 'pages') {
     const lues = courante && s.page !== null ? s.page - 1 : 0
-    return barre(lues, s.pages)
+    return barre(lues, s.pages, precedent)
   }
-  if (etape === 'prix') return barre(courante ? (s.prixFaits ?? 0) : 0, s.prixPrevus)
+  if (etape === 'prix') return barre(courante ? (s.prixFaits ?? 0) : 0, s.prixPrevus, precedent)
   return barre(0, 1)
 }
 
@@ -85,7 +85,7 @@ function fraction(etape: EtapeSynchro, s: StatutSynchroV2): number {
 }
 
 /** Barre globale « Étape i / 4 · P % » (4 étapes de poids égal). */
-export function progressionSynchro(statut: StatutSynchroV2, precedent?: Barre | null): ProgressionSynchro {
+export function progressionSynchro(statut: StatutSynchroV2, precedent?: (Partial<Barre> & { etapes?: readonly EtapeProgression[] }) | null): ProgressionSynchro {
   const nbEtapes = 4 as const
   const termine = statut.etat === 'termine'
   if (statut.etape === null && !termine) {
@@ -97,7 +97,7 @@ export function progressionSynchro(statut: StatutSynchroV2, precedent?: Barre | 
   const index = statut.etape === null ? 4 : ETAPES_SYNCHRO.indexOf(statut.etape) + 1
   const etapes = ETAPES_SYNCHRO.map((etape, i): EtapeProgression => {
     const etat = termine || i + 1 < index ? 'faite' : i + 1 === index ? 'en-cours' : 'attente'
-    return { etape, etat, barre: barreEtape(etape, etat, statut) }
+    return { etape, etat, barre: barreEtape(etape, etat, statut, precedent?.etapes?.find((e) => e.etape === etape)?.barre) }
   })
   const brut = termine ? 100 : plafonner((100 * (index - 1 + fraction(statut.etape as EtapeSynchro, statut))) / nbEtapes)
   const pourcent = monotone(brut, precedent)

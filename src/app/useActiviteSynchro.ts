@@ -22,9 +22,6 @@ export interface Activite {
   progLots: Barre | null;
 }
 
-const barrePrecedente = (pourcent: number | null | undefined): Barre | null =>
-  pourcent === null || pourcent === undefined ? null : { valeur: null, max: null, pourcent, indeterminee: false, texte: '' };
-
 const VIDE: Activite = { synchro: null, lots: null, erreur: null, enPause: false, autreOnglet: false, progSynchro: null, progLots: null };
 
 /**
@@ -56,7 +53,7 @@ export function useActiviteSynchro(): Activite {
       const synchro = synchroVive ? statut : null;
       setActivite((avant) => {
         const cleSynchro = (s: StatutSynchroV2 | null): string => (s ? `${s.debut ?? ''}|${s.etape ?? ''}` : '');
-        const precSynchro = synchro && cleSynchro(avant.synchro) === cleSynchro(synchro) ? barrePrecedente(avant.progSynchro?.pourcent) : null;
+        const precSynchro = synchro && cleSynchro(avant.synchro) === cleSynchro(synchro) ? avant.progSynchro : null;
         const precLots = lots && avant.lots?.idLot === lots.idLot ? avant.progLots : null;
         return {
           synchro,

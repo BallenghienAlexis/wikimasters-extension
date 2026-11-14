@@ -280,15 +280,16 @@ test.describe('SC-020 : évolution sur 30 jours', () => {
         { jour: jourDecale(40), exemplaires: 5000 },
         { jour: jourDecale(3), exemplaires: 4 },
         { jour: jourDecale(2), exemplaires: 6 },
+        { jour: jourDecale(0), exemplaires: 8 },
       ],
     );
-    await expect(evo.getByTestId('evolution-colonne')).toHaveCount(4);
+    await expect(evo.getByTestId('evolution-colonne')).toHaveCount(3);
     const hauteurs = await evo.getByTestId('evolution-colonne').evaluateAll((els) =>
       els.map((e) => parseFloat((e.firstElementChild as HTMLElement).style.height)),
     );
     expect(Math.max(...hauteurs)).toBe(100);
     const lignes = evo.locator('table tbody tr');
-    await expect(lignes).toHaveCount(4);
+    await expect(lignes).toHaveCount(3);
     await expect(evo.locator('table')).not.toContainText(jourDecale(40));
   });
 });
