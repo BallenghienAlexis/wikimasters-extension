@@ -76,6 +76,7 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
       let wikidata = false;
       if (themes.length === 0) {
         await attendre(PAUSE_MS, signal);
+        if (signal.aborted) return { verifiees, arret: 'manuel', codeHttp: null };
         let r2;
         try {
           r2 = await transport(urlRequeteWikidata(titre), signal);
@@ -134,7 +135,10 @@ export interface OptionsPlanificateur {
 export interface Planificateur {
   /** Met en file les titres jamais tentés depuis le chargement de la page ; sans effet si c'est suspendu. */
   demander: (titres: string[]) => void;
-  /** Retire de la file les titres pas encore partis (la vue liste a été quittée) ; la requête en vol va à son terme. */
+  /**
+   * Vue liste quittée : vide la file et coupe la requête en vol ainsi que la suite (Wikidata) du titre en cours ;
+   * ces titres seront redemandés au retour. La cadence d'une requête par seconde reste garantie après une annulation.
+   */
   annuler: () => void;
   etat: () => EtatPlanificateur;
   abonner: (rappel: () => void) => () => void;
@@ -148,12 +152,25 @@ const MESSAGE_ECHECS = 'Vérification suspendue : trop d’échecs de lecture. E
  * suspension définitive (jusqu'au rechargement) sur 403/429 ou 3 échecs de suite. À créer une seule fois par page.
  */
 export function creerPlanificateur(options: OptionsPlanificateur): Planificateur {
-  const { chargerCache, surCache, maintenant = Date.now, attendre, transport } = options;
+  const { chargerCache, surCache, maintenant = Date.now, attendre = attendreReel, transport = transportReel } = options;
+  // Début de la dernière requête réellement partie : la cadence d'une par seconde tient même après une annulation.
+  let dernierDepart = Number.NEGATIVE_INFINITY;
+  const transportHorodate: Transport = (url, signal) => {
+    if (!signal.aborted) dernierDepart = maintenant();
+    return transport(url, signal);
+  };
+  const respecterCadence = async (): Promise<void> => {
+    const reste = PAUSE_MS - (maintenant() - dernierDepart);
+    // Signal neuf : cette attente ne doit jamais être raccourcie par une annulation.
+    if (reste > 0) await attendre(reste, new AbortController().signal);
+  };
   const file: string[] = [];
   const tentes = new Set<string>();
   const ecouteurs = new Set<() => void>();
   let etat: EtatPlanificateur = { enCours: false, suspendue: null, faites: 0, total: 0 };
   let cache: CacheWikipedia | null = null;
+  // Annulé quand la vue liste est quittée : coupe la requête en vol et la suite (Wikidata) du titre en cours.
+  let controleur = new AbortController();
 
   const changer = (suite: Partial<EtatPlanificateur>): void => {
     etat = { ...etat, ...suite };
@@ -165,22 +182,28 @@ export function creerPlanificateur(options: OptionsPlanificateur): Planificateur
     let echecs = 0;
     try {
       cache ??= await chargerCache();
-      const signal = new AbortController().signal;
       while (file.length > 0) {
         const titre = file.shift() as string;
         if (titresAVerifier([titre], cache, maintenant()).length === 0) continue;
+        await respecterCadence();
+        const signal = controleur.signal;
         const r = await verifierTitres({
           titres: [titre],
           cache,
           signal,
           maintenant,
-          ...(attendre ? { attendre } : {}),
-          ...(transport ? { transport } : {}),
+          attendre,
+          transport: transportHorodate,
           surProgres: async (nouveau) => {
             cache = nouveau;
             await surCache(nouveau);
           },
         });
+        if (signal.aborted && r.arret === 'manuel') {
+          // Vue quittée : ce titre sera redemandé au retour, rien n'est compté.
+          tentes.delete(titre);
+          continue;
+        }
         if (r.arret === 'code-http') return void changer({ suspendue: MESSAGE_CODE(r.codeHttp) });
         // Aucune page lue et aucun arrêt : réponse illisible ou erreur réseau.
         echecs = r.verifiees === 0 ? echecs + 1 : 0;
@@ -207,6 +230,8 @@ export function creerPlanificateur(options: OptionsPlanificateur): Planificateur
       else if (etat.enCours) changer({ total: etat.faites + file.length });
     },
     annuler() {
+      controleur.abort();
+      controleur = new AbortController();
       for (const titre of file) tentes.delete(titre);
       file.length = 0;
       if (etat.enCours) changer({ total: etat.faites });
