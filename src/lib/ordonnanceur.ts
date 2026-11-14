@@ -301,30 +301,10 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       let complet = true;
       const stats = await lireStats();
       if (stats === null) complet = false;
-      const inchange =
-        stats !== null &&
-        etat.derniereComplete !== null &&
-        stats.total === etat.total &&
-        stats.totalUnique === etat.totalUnique &&
-        signature(stats) === etat.signatureEtiquettes;
-
-      // Arrêt anticipé seulement si le site n’a fait que gagner des exemplaires (total en hausse, cartes distinctes non en baisse)
-      // avec les mêmes étiquettes ; la lecture doit ensuite retrouver exactement cet écart avant de s’arrêter.
-      const gain =
-        stats !== null &&
-        etat.derniereComplete !== null &&
-        etat.total !== null &&
-        etat.totalUnique !== null &&
-        stats.total > etat.total &&
-        stats.totalUnique >= etat.totalUnique &&
-        signature(stats) === etat.signatureEtiquettes
-          ? { exemplaires: stats.total - etat.total, cartes: stats.totalUnique - etat.totalUnique }
-          : null;
-      if (!inchange) {
-        const lecture = await lirePages(stats?.total ?? null, gain);
-        complet = lecture.ok && complet;
-        if (lecture.vus !== null && lecture.ok && echecsTotal === 0 && resultat.ignorees === 0) retirerDisparues(lecture.vus);
-      }
+      // Toutes les cartes sont relues à chaque synchro (Alexis, 2026-11-14) : ni saut « rien n’a changé », ni arrêt anticipé.
+      const lecture = await lirePages(stats?.total ?? null, null);
+      complet = lecture.ok && complet;
+      if (lecture.vus !== null && lecture.ok && echecsTotal === 0 && resultat.ignorees === 0) retirerDisparues(lecture.vus);
       if (complet && stats !== null) {
         etat.total = stats.total;
         etat.totalUnique = stats.totalUnique;

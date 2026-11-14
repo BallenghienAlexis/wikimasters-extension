@@ -143,7 +143,7 @@ function banc(
 }
 
 describe('ordonnanceur — critère 1 : total inchangé, une seule requête', () => {
-  it('ne fait que `stats` quand total, doublons et étiquettes sont inchangés', async () => {
+  it('relit toutes les pages même quand total, doublons et étiquettes sont inchangés (2026-11-14)', async () => {
     const site = siteFictif(4);
     const premier = banc(site);
     const r1 = await synchroniser(premier.deps);
@@ -155,7 +155,11 @@ describe('ordonnanceur — critère 1 : total inchangé, une seule requête', ()
     second.horloge.t = T0 + 1000 * 60 * 60;
     const r2 = await synchroniser({ ...second.deps, maxPrix: 0 });
     expect(r2.issue).toBe('termine');
-    expect(second.departs.map((d) => d.chemin)).toEqual(['/api/my-collection/stats?sort=added', '/api/marketplace/mine']);
+    expect(second.departs.map((d) => d.chemin)).toEqual([
+      '/api/my-collection/stats?sort=added',
+      '/api/my-collection?sort=added&page=0&stats=0',
+      '/api/marketplace/mine',
+    ]);
   });
 
   it('relit les pages si une étiquette change de effectif malgré un total identique', async () => {
@@ -201,13 +205,13 @@ describe('ordonnanceur — critère 2 : pages dans l’ordre jusqu’à la derni
   };
   const cheminsPages = (b: { departs: Array<{ chemin: string }> }) => b.departs.filter((d) => d.chemin.includes('page=')).map((d) => d.chemin);
 
-  it('arrêt anticipé : 20 nouvelles cartes en tête, mêmes étiquettes → s’arrête à la première page identique', async () => {
+  it('20 nouvelles cartes en tête, mêmes étiquettes : plus d’arrêt anticipé, toutes les pages sont relues', async () => {
     const connus = Array.from({ length: 200 }, (_, i) => exemplaire(i + 1));
     const r1 = await synchroniser({ ...banc(siteTrie(connus, 200, 200)).deps, maxPrix: 0 });
     const recents = Array.from({ length: 20 }, (_, i) => exemplaire(1000 + i));
     const b = banc(siteTrie([...recents, ...connus], 220, 220), r1.collection, r1.etat);
     await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(cheminsPages(b)).toEqual(['/api/my-collection?sort=added&page=0&stats=0', '/api/my-collection?sort=added&page=1&stats=0']);
+    expect(cheminsPages(b).length).toBe(5); // 220 exemplaires : 5 pages
   });
 
   it('total en baisse, étiquettes inchangées : lecture complète', async () => {
