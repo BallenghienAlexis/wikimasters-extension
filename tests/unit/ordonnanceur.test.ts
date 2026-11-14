@@ -629,18 +629,24 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.issue).toBe('termine');
     expect(r.etat.arretJusqua).toBeNull();
     expect(r.prixReleves).toBeGreaterThan(0);
+    // La carte qui a déclenché le contrôle est mémorisée aussi : pas redemandée à la synchro suivante.
+    for (const id of ['R|Carte 1', 'R|Carte 2', 'R|Carte 3']) {
+      expect(r.etat.prix[id]?.valeur).toBeNull();
+      expect(r.etat.prix[id]?.releveLe).toBeGreaterThan(0);
+    }
+    const chemins = b.departs.map((d) => d.chemin);
+    const i3 = chemins.findIndex((c) => c.includes('card-3/sales'));
+    expect(chemins[i3 + 1]).toContain('stats');
+    expect(b.journal.join('\n')).toContain('Carte 1');
+    const b2 = banc(site, r.collection, r.etat);
+    b2.horloge.t += 31 * 60_000;
+    await synchroniser({ ...b2.deps });
+    expect(b2.departs.some((d) => /card-[123]\/sales/.test(d.chemin))).toBe(false);
   })
 
-  it('prix : 10 refus 403 sur l’exécution déclenchent un contrôle de session, qui arrête si le site refuse', async () => {
+  it('prix : 10 refus 403 sur l’exécution arrêtent même séparés par des succès', async () => {
     const site = siteFictif(40);
-    let controleRefuse = false;
-    const b = banc((chemin) => {
-      if (/card-(\d+)\/sales/.test(chemin) && Number(/card-(\d+)\//.exec(chemin)![1]) % 2 === 0) {
-        controleRefuse = true;
-        return { statut: 403, json: null };
-      }
-      return controleRefuse && /stats/.test(chemin) ? { statut: 403, json: null } : site(chemin);
-    });
+    const b = banc((chemin) => (/card-(\d+)\/sales/.test(chemin) && Number(/card-(\d+)\//.exec(chemin)![1]) % 2 === 0 ? { statut: 403, json: null } : site(chemin)));
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('arret');
     expect(r.codeHttp).toBe(403);

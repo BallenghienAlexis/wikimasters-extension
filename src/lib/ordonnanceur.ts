@@ -27,7 +27,7 @@ export const DUREE_BAIL_MS = 2 * 60_000;
 export const MAX_PRIX_PAR_EXECUTION = 100;
 /** Refus 403 d’affilée sur les prix qui arrêtent la synchro : en dessous, c’est une carte sans route de prix, pas la session. */
 export const MAX_REFUS_PRIX_CONSECUTIFS = 3;
-/** Tous les N refus de prix sur l’exécution (même séparés par des succès), un contrôle de session est fait. */
+/** Plafond de refus de prix sur toute une exécution, qu’un succès ou un contrôle réussi ne remet jamais à zéro. */
 export const MAX_REFUS_PRIX_PAR_EXECUTION = 10;
 /** Échecs sautés au plus sur toute une exécution, même séparés par des lectures réussies. */
 export const MAX_ECHECS_PAR_EXECUTION = 10;
@@ -281,14 +281,18 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     }
     if (prix !== false && (reponse.statut === 403 || reponse.statut === 404)) {
       // Prix d’une seule carte refusé : carte vendue, défaussée ou sans marché. On l’ignore et on journalise son titre.
-      // Après 3 refus d’affilée (ou tous les 10 refus de l’exécution), un contrôle (stats) départage « session refusée »
+      // Après 3 refus d’affilée, un contrôle (stats) départage « session refusée »
       // (arrêt, pause de 30 min) et « cartes sans marché » (la synchro continue). 401 et 429 arrêtent toujours.
       refusPrix += 1;
       refusPrixTotal += 1;
       journal(`Prix indisponible (réponse ${reponse.statut}) pour « ${prix} » : carte ignorée (${refusPrix}/${MAX_REFUS_PRIX_CONSECUTIFS} refus d’affilée).`);
-      if (refusPrix >= MAX_REFUS_PRIX_CONSECUTIFS || refusPrixTotal % MAX_REFUS_PRIX_PAR_EXECUTION === 0) {
+      if (refusPrixTotal >= MAX_REFUS_PRIX_PAR_EXECUTION) throw new Interruption('code-http', reponse.statut);
+      if (refusPrix >= MAX_REFUS_PRIX_CONSECUTIFS) {
         const controle = await requete(cheminStats(), true);
-        if (controle === null) throw new Interruption('code-http', reponse.statut);
+        if (controle === null) {
+          journal('Contrôle de session en échec : la synchro s’arrête.');
+          throw new Interruption('code-http', reponse.statut);
+        }
         journal('Contrôle de session réussi : les refus viennent de ces cartes (sans marché), la synchro continue.');
         refusPrix = 0;
       }
@@ -551,11 +555,11 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     for (const carte of retenues) {
       const cardId = etat.cardIds[carte.id];
       if (cardId === undefined) continue;
-      const refusAvant = refusPrix;
+      const refusAvant = refusPrixTotal;
       const r = await requete(cheminPrix(cardId), false, carte.titre);
       if (r === null) {
         // Refus par carte : on ne la redemande pas avant la fin de l’ancienneté (30 jours), sans valeur inventée.
-        if (refusPrix > refusAvant) etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() };
+        if (refusPrixTotal > refusAvant) etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() };
         continue;
       }
       refusPrix = 0;
