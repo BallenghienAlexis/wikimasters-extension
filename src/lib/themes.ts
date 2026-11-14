@@ -122,15 +122,15 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'gratteciel', libelle: '#Gratte-ciel', motifs: ['gratte-ciel'], parents: ['architecture', 'arts'] },
 
   // Sexualité et adulte
-  { id: 'sexualite', libelle: '#Sexualité', motifs: ['sexuel', 'sexualite', 'erotis', 'erotique', 'prostitu', 'libertin', 'fetich', 'kamasutra', 'sexe(?![a-z0-9])'], parents: ['societe'] },
+  { id: 'sexualite', libelle: '#Sexualité', motifs: ['sexuel', 'sexualite', 'erotis', 'erotique', 'prostitu', 'libertin', 'fetichis', 'fetish', 'kamasutra', 'sexe(?![a-z0-9])'], parents: ['societe'] },
   { id: 'pornographie', libelle: '#Pornographie', motifs: ['pornograph', 'porno(?![a-z0-9])', 'film x(?![a-z0-9])', 'film pour adultes', 'actrice x(?![a-z0-9])'], parents: ['sexualite', 'societe'] },
 
   // Autres domaines
-  { id: 'drogue', libelle: '#Drogue', motifs: ['drogue', 'stupefiant', 'cannabis', 'cocaine', 'heroine', 'opium', 'amphetamine', 'narcotique', 'narcotrafic', 'tabac(?![a-z0-9])', 'cigarette'], parents: ['societe'] },
-  { id: 'jeux', libelle: '#Jeux', motifs: ['jeu de societe', 'jeux de societe', 'jeu de cartes', 'jeu de role', 'echecs', 'poker', 'casino', 'jouet', 'puzzle', 'jeu de plateau'] },
+  { id: 'drogue', libelle: '#Drogue', motifs: ['drogue', 'stupefiant', 'cannabis', 'cocaine', "trafic d'heroine", 'heroine pure', 'heroine de synthese', 'heroinoman', 'opium', 'amphetamine', 'narcotique', 'narcotrafic', 'tabac(?![a-z0-9])', 'cigarette'], parents: ['societe'] },
+  { id: 'jeux', libelle: '#Jeux', motifs: ['jeu de societe', 'jeux de societe', 'jeu de cartes', 'jeu de role', 'echecs', 'poker', '(?<!groupe )casino(?![a-z0-9])(?! de paris)', 'jouet', 'puzzle', 'jeu de plateau'] },
   { id: 'mode', libelle: '#Mode', motifs: ['couturier', 'couturiere', 'haute couture', 'defile de mode', 'mannequin', 'styliste', 'vetement', 'maison de couture', 'maison de mode', 'creation de mode', 'magazine de mode'] },
   { id: 'danse', libelle: '#Danse', motifs: ['danse', 'danseu', 'choregraph', 'ballet'], parents: ['arts'] },
-  { id: 'armes', libelle: '#Armes', motifs: ['arme(?![a-z0-9])', 'armes(?![a-z0-9])', 'fusil', 'pistolet', 'epee(?![a-z0-9])', 'missile', 'arme a feu', 'munition'] },
+  { id: 'armes', libelle: '#Armes', motifs: ['(?<!beton )(?<!conflit )(?<!groupe )(?<!force )(?<!forces )(?<!lutte )arme(?![a-z0-9])', 'armes(?![a-z0-9])', 'fusil', 'pistolet', 'epee(?![a-z0-9])', 'missile', 'arme a feu', 'munition'] },
   { id: 'ecologie', libelle: '#Écologie', motifs: ['ecolog', 'climat', "protection de l'environnement", 'pollution', 'biodiversite', 'developpement durable', 'rechauffement'] },
   { id: 'finance', libelle: '#Finance', motifs: ['banque', 'bourse(?![a-z0-9])', 'monnaie', 'cryptomonnaie', 'finance', 'financier', 'investisseur', 'boursier'], parents: ['societe'] },
   { id: 'education', libelle: '#Éducation', motifs: ['education', 'pedagog', 'universite', 'lycee'], parents: ['societe'] },
@@ -160,8 +160,8 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'fromage', libelle: '#Fromage', motifs: ['fromage'], parents: ['gastronomie'] },
   { id: 'vin', libelle: '#Vin', motifs: ['vins?(?![a-z0-9])', 'vignoble', 'cepage'], parents: ['alcool', 'gastronomie'] },
   { id: 'biere', libelle: '#Bière', motifs: ['biere'], parents: ['alcool', 'gastronomie'] },
-  { id: 'alcool', libelle: '#Alcool', motifs: ['alcool', 'alcoolis', 'liqueur', 'cocktail', 'whisky', 'whiskey', 'vodka', 'rhum', 'gin(?![a-z0-9])', 'tequila', 'cognac', 'armagnac', 'spiritueux', 'eau-de-vie', 'champagne', 'aperitif', 'digestif', 'absinthe', 'brasserie', 'distillerie'], parents: ['gastronomie'] },
-  { id: 'boisson', libelle: '#Boissons', motifs: ['boisson', 'soda', 'limonade', 'jus de', 'cafe(?![a-z0-9])', 'the (?:vert|noir|blanc|glace)', 'infusion', 'eau minerale'], parents: ['gastronomie'] },
+  { id: 'alcool', libelle: '#Alcool', motifs: ['alcool', 'alcoolis', 'liqueur', 'cocktail', 'whisky', 'whiskey', 'vodka', 'rhum', 'gin(?![a-z0-9])', 'tequila', 'cognac', 'armagnac', 'spiritueux', 'eau-de-vie', '(?<!en )(?<!de )(?<!-)champagne(?![a-z0-9-])', 'coupe de champagne', 'aperitif', '(?<!appareil )(?<!systeme )(?<!tube )(?<!trouble )(?<!canal )digestifs?(?![a-z0-9])', 'absinthe', 'distillerie'], parents: ['gastronomie'] },
+  { id: 'boisson', libelle: '#Boissons', motifs: ['boisson', 'soda', 'limonade', 'jus de', 'cafe(?![a-z0-9])(?! de | parisien)', 'the (?:vert|noir|blanc|glace)', 'infusion', 'eau minerale'], parents: ['gastronomie'] },
   { id: 'fruit', libelle: '#Fruit', motifs: ['fruit', 'agrume'], parents: ['gastronomie'] },
   { id: 'dessert', libelle: '#Dessert', motifs: ['dessert', 'patisserie', 'gateau'], parents: ['gastronomie'] },
 

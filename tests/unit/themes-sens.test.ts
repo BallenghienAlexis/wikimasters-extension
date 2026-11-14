@@ -201,3 +201,27 @@ describe('faux positifs évités', () => {
     expect(themesPrincipaux({ titre: 'The Beatles', description: 'groupe de rock britannique' })).not.toContain('boisson');
   });
 });
+
+describe('faux positifs des domaines ajoutés', () => {
+  it.each([
+    ['Lara Croft', 'héroïne de la série de jeux vidéo Tomb Raider', 'drogue'],
+    ['Wonder Woman', 'super-héroïne de bande dessinée', 'drogue'],
+    ['Reims', 'ville de Champagne', 'alcool'],
+    ['Thibaut IV', 'comte de Champagne', 'alcool'],
+    ['Estomac', "organe de l'appareil digestif", 'alcool'],
+    ['Pont de Normandie', 'pont en béton armé', 'armes'],
+    ['Guerre civile', 'conflit armé', 'armes'],
+    ['Totem', 'objet fétiche', 'sexualite'],
+    ['Casino de Paris', 'music-hall parisien', 'jeux'],
+    ['Café de Flore', 'café parisien', 'boisson'],
+  ])('%s ne donne pas #%s', (titre, description, interdit) => {
+    expect(themesPrincipaux({ titre, description })).not.toContain(interdit);
+  });
+  it('les vrais cas restent reconnus', () => {
+    expect(themesPrincipaux({ titre: 'Héroïne', description: "trafic d'héroïne" })).toContain('drogue');
+    expect(themesPrincipaux({ titre: 'Pistolet', description: 'arme à feu' })).toContain('armes');
+  });
+  it('une espèce décrite avec « style » reste une espèce', () => {
+    expect(genreDe('Le lynx est un mammifère carnivore, au style de chasse discret.')).toBe('espece');
+  });
+});
