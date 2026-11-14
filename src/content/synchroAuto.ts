@@ -418,7 +418,14 @@ let fileJournal: Promise<void> = Promise.resolve();
 /** Écrit les diagnostics de prix dans le journal, un à la fois ; une erreur d’écriture est sans effet. */
 export function journaliserDiagnostic(message: string, ecrire: (e: EvenementSynchro) => Promise<void> = ecrireEvenementJournal): void {
   if (!estDiagnosticPrix(message)) return;
-  fileJournal = fileJournal.then(() => ecrire({ titre: 'Synchronisation automatique : prix', parametre: message.slice(0, 200), resultat: 'reussie', codeHttp: null })).catch(() => undefined);
+  const refus = /^(Prix indisponible|Diagnostic prix|Contrôle de session en échec)/.test(message);
+  fileJournal = fileJournal.then(() => ecrire({ titre: 'Synchronisation automatique : prix', parametre: message.slice(0, 200), resultat: refus ? 'interrompue' : 'reussie', codeHttp: null })).catch(() => undefined);
+}
+
+/** Écriture d’un événement fixe après les diagnostics en attente : une seule écriture du journal à la fois. */
+function ecrireEnSerie(evenement: EvenementSynchro): Promise<void> {
+  fileJournal = fileJournal.then(() => ecrireEvenementJournal(evenement)).catch(() => undefined);
+  return fileJournal;
 }
 
 const synchroDuNavigateur = (): SynchroAuto =>
@@ -438,7 +445,7 @@ const synchroDuNavigateur = (): SynchroAuto =>
     noterEtiquettesSite: enregistrerEtiquettesSite,
     chargerStatut: chargerStatutSynchro,
     derniereRelance: { lire: chargerDerniereRelance, ecrire: enregistrerDerniereRelance },
-    journaliser: (evenement) => ecrireEvenementJournal(evenement),
+    journaliser: (evenement) => ecrireEnSerie(evenement),
     journal: (message) => journaliserDiagnostic(message),
     routeMarche: CONFIG_AFFLUENCE.routeMarche,
     champsHorodatage: CONFIG_AFFLUENCE.champsHorodatage,
