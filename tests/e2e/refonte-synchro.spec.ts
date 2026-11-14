@@ -182,16 +182,17 @@ test.describe('SC-002 : barre globale et étapes', () => {
   });
 
   test('SC-002 : l’affichage suit le stockage en moins d’une seconde et le pourcentage ne décroît pas', async ({ pageCollection }) => {
+    const debut = Date.now() - 60_000;
     await poser(pageCollection, {
       bailSynchro: Date.now() + 120_000,
-      statutSynchro: statut({ etape: 'pages', page: 11, pages: 40 }),
+      statutSynchro: statut({ etape: 'pages', page: 11, pages: 40, debut }),
     });
     await expect(global(pageCollection)).toContainText('Étape 2 / 4 · 31 %');
-    await maj(pageCollection, { statutSynchro: statut({ etape: 'pages', page: 31, pages: 40 }) });
+    await maj(pageCollection, { statutSynchro: statut({ etape: 'pages', page: 31, pages: 40, debut }) });
     // (1 + 30/40) / 4 = 43 %, vu dans la seconde.
     await expect(global(pageCollection)).toContainText('Étape 2 / 4 · 43 %', { timeout: 1000 });
     // Une valeur plus basse (pages relues) ne fait pas reculer la barre.
-    await maj(pageCollection, { statutSynchro: statut({ etape: 'pages', page: 5, pages: 40 }) });
+    await maj(pageCollection, { statutSynchro: statut({ etape: 'pages', page: 5, pages: 40, debut }) });
     await pageCollection.waitForTimeout(1200);
     await expect(global(pageCollection)).not.toContainText(/Étape 2 \/ 4 · (?:[0-3]\d|4[0-2]) %/);
   });
@@ -459,5 +460,36 @@ test.describe('Revue T-306 : couleur par état, bail expiré, pastille D-40', ()
       statutSynchro: statut({ etat: 'arret', etape: 'pages', raison: 'code-http', codeHttp: 403, page: 5, pages: 40 }),
     });
     await expect(pageCollection.getByTestId('pastille-synchro')).toContainText('Erreur');
+  });
+
+  test('SC-002 : nouvelle synchro (autre début), la barre repart de la valeur réelle', async ({ pageCollection }) => {
+    const debutA = Date.now() - 120_000;
+    await poser(pageCollection, {
+      bailSynchro: Date.now() + 120_000,
+      statutSynchro: statut({ etape: 'pages', page: 30, pages: 40, debut: debutA }),
+    });
+    await expect(global(pageCollection)).toContainText('Étape 2 / 4 · 43 %');
+    await maj(pageCollection, { statutSynchro: statut({ etape: 'pages', page: 5, pages: 40, debut: debutA + 10_000 }) });
+    const barre = global(pageCollection).getByRole('progressbar', { name: /^Progression de la synchronisation/ });
+    await expect(barre).toHaveAttribute('aria-valuenow', '27');
+    await expect(global(pageCollection)).toContainText('Étape 2 / 4 · 27 %');
+  });
+
+  test('SC-002 : l’annonce finale refusée par la fenêtre de 2 s est reprogrammée', async ({ pageCollection }) => {
+    await poser(pageCollection, {
+      bailSynchro: Date.now() + 120_000,
+      statutSynchro: statut({ etape: 'pages', page: 11, pages: 40 }),
+    });
+    const zone = pageCollection.getByTestId('annonce-synchro');
+    await expect(zone).toContainText('Étape 2 / 4 · 31 %');
+    await maj(pageCollection, {
+      bailSynchro: null,
+      derniereSynchro: Date.now(),
+      statutSynchro: statut({ etat: 'termine', etape: null, page: 40, pages: 40, prixFaits: 20, prixPrevus: 20 }),
+    });
+    // Juste après : toujours l’ancienne annonce (fenêtre de 2 s) ; puis l’annonce finale arrive d’elle-même.
+    await pageCollection.waitForTimeout(300);
+    await expect(zone).toContainText('Étape 2 / 4 · 31 %');
+    await expect(zone).toContainText('100 %', { timeout: 2500 });
   });
 });
