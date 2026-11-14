@@ -51,12 +51,10 @@ const carteLocale = (n: number, surcharge: Partial<Carte> = {}): Carte => ({
   favori: false,
   idsSite: [`ex-${n}`],
   etiquettesSite: [],
-  statut: 'garder',
   prixCible: null,
   note: '',
   ami: null,
   valeurMarchande: null,
-  decidePar: null,
   ...surcharge,
 });
 
@@ -158,6 +156,8 @@ describe('ordonnanceur — critère 1 : total inchangé, une seule requête', ()
     expect(second.departs.map((d) => d.chemin)).toEqual([
       '/api/my-collection/stats?sort=added',
       '/api/my-collection?sort=added&page=0&stats=0',
+      '/api/my-collection/stats?sort=added',
+      '/api/my-collection?sort=added&page=0&stats=0',
       '/api/marketplace/mine',
     ]);
   });
@@ -173,7 +173,7 @@ describe('ordonnanceur — critère 1 : total inchangé, une seule requête', ()
   it('relit les pages tant qu’aucune synchro complète n’a eu lieu', async () => {
     const b = banc(siteFictif(2));
     await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(b.departs.length).toBe(1 + 1 + 1); // stats, page 0 (courte : dernière), marketplace/mine
+    expect(b.departs.length).toBe(1 + 1 + 1 + 1 + 1); // stats, page 0, stats de contrôle, page 0 de contrôle, marketplace/mine
   });
 });
 
@@ -187,7 +187,7 @@ describe('ordonnanceur — critère 2 : pages dans l’ordre jusqu’à la derni
     });
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });
     const pages = b.departs.map((d) => d.chemin).filter((c) => c.includes('page='));
-    expect(pages.map((c) => /page=(\d+)/.exec(c)![1])).toEqual(['0']);
+    expect(pages.map((c) => /page=(\d+)/.exec(c)![1])).toEqual(['0', '0']) // lecture + contrôle de tête;
     expect(pages.every((c) => c.includes('stats=0'))).toBe(true);
     const c1 = r.collection.cartes.find((c) => c.id === idCarte(1))!;
     expect(c1.etiquettesSite).toEqual(['Garder']);
@@ -211,7 +211,7 @@ describe('ordonnanceur — critère 2 : pages dans l’ordre jusqu’à la derni
     const recents = Array.from({ length: 20 }, (_, i) => exemplaire(1000 + i));
     const b = banc(siteTrie([...recents, ...connus], 220, 220), r1.collection, r1.etat);
     await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(cheminsPages(b).length).toBe(5); // 220 exemplaires : 5 pages
+    expect(cheminsPages(b).length).toBe(6); // 220 exemplaires : 5 pages + contrôle de tête
   });
 
   it('total en baisse, étiquettes inchangées : lecture complète', async () => {
@@ -219,7 +219,7 @@ describe('ordonnanceur — critère 2 : pages dans l’ordre jusqu’à la derni
     const r1 = await synchroniser({ ...banc(siteTrie(connus, 200, 200)).deps, maxPrix: 0 });
     const b = banc(siteTrie(connus.slice(5), 195, 195), r1.collection, r1.etat);
     await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(cheminsPages(b).length).toBe(4); // 4 pages, aucune page au-delà de la fin
+    expect(cheminsPages(b).length).toBe(5); // 4 pages + contrôle de tête, aucune page au-delà de la fin
   });
 
   it('doublon par count sur une carte ancienne : pas d’arrêt anticipé, quantité corrigée', async () => {
@@ -228,7 +228,7 @@ describe('ordonnanceur — critère 2 : pages dans l’ordre jusqu’à la derni
     const modifie = connus.map((e, i) => (i === 150 ? { ...e, count: 2 } : e));
     const b = banc(siteTrie(modifie, 201, 200), r1.collection, r1.etat);
     const r2 = await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(cheminsPages(b).length).toBe(4);
+    expect(cheminsPages(b).length).toBe(5);
     expect(r2.collection.cartes.find((c) => c.id === idCarte(151))!.quantite).toBe(2);
   });
 
@@ -237,7 +237,7 @@ describe('ordonnanceur — critère 2 : pages dans l’ordre jusqu’à la derni
     const r1 = await synchroniser({ ...premier.deps, maxPrix: 0 });
     const b = banc(siteFictif(120, { tags: [['Nouvelle', 3]] }), r1.collection, { ...r1.etat, total: 119 });
     await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(b.departs.filter((d) => d.chemin.includes('page=')).length).toBe(3);
+    expect(b.departs.filter((d) => d.chemin.includes('page=')).length).toBe(4);
   });
 
   it('tri par date non confirmé : repli sur la lecture complète par rareté', async () => {
@@ -285,7 +285,7 @@ describe('ordonnanceur — pages : départ à 0 et plafond', () => {
     const base = siteFictif(100);
     const b = banc((chemin) => (/page=([2-9])/.test(chemin) ? { statut: 403, json: null } : base(chemin)));
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(b.departs.filter((d) => d.chemin.includes('page=')).map((d) => /page=(\d+)/.exec(d.chemin)![1])).toEqual(['0', '1']);
+    expect(b.departs.filter((d) => d.chemin.includes('page=')).map((d) => /page=(\d+)/.exec(d.chemin)![1])).toEqual(['0', '1', '0']);
     expect(r.issue).toBe('termine');
     expect(r.raison).toBeNull();
     expect(r.complete).toBe(true);
@@ -295,7 +295,7 @@ describe('ordonnanceur — pages : départ à 0 et plafond', () => {
   it('une page courte est la dernière : pas de requête supplémentaire', async () => {
     const b = banc(siteFictif(120));
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(b.departs.filter((d) => d.chemin.includes('page=')).length).toBe(3);
+    expect(b.departs.filter((d) => d.chemin.includes('page=')).length).toBe(4);
     expect(r.complete).toBe(true);
   });
 
@@ -312,25 +312,22 @@ describe('ordonnanceur — pages : départ à 0 et plafond', () => {
 });
 
 describe('ordonnanceur — cartes disparues du site (vendues, défaussées)', () => {
-  const sansEdition = (n: number) => carteLocale(n, { statut: 'a-trier' });
+  const sansEdition = (n: number) => carteLocale(n, { });
 
-  it('retire les cartes absentes sans édition locale, garde les éditées sans lien au site, ne touche jamais une carte en vente', async () => {
+  it('retire les cartes absentes sans édition locale, garde les éditées sans lien au site', async () => {
     const locales = [
       sansEdition(1),
       sansEdition(2),
       sansEdition(3),
       sansEdition(4),
-      carteLocale(5, { statut: 'garder', note: 'à garder', decidePar: 'moi' }),
-      carteLocale(6, { statut: 'en-vente' }),
+      carteLocale(5, { note: 'à garder' }),
     ];
     const b = banc(siteFictif(3), collectionDe(locales), etatInitial());
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(r.collection.cartes.map((c) => c.id)).toEqual([idCarte(1), idCarte(2), idCarte(3), idCarte(5), idCarte(6)]);
+    expect(r.collection.cartes.map((c) => c.id)).toEqual([idCarte(1), idCarte(2), idCarte(3), idCarte(5)]);
     const editee = r.collection.cartes.find((c) => c.id === idCarte(5))!;
     expect(editee.idsSite).toBeNull();
     expect(editee.note).toBe('à garder');
-    expect(editee.decidePar).toBe('moi');
-    expect(r.collection.cartes.find((c) => c.id === idCarte(6))!.idsSite).toEqual(['ex-6']);
     expect(b.journal.join('\n')).toMatch(/1 retirée\(s\), 1 gardée\(s\)/);
   });
 
@@ -441,12 +438,12 @@ describe('ordonnanceur — critère 3 : prix', () => {
 
   const cheminsPrix = (b: Banc) => b.departs.map((d) => d.chemin).filter((c) => c.includes('/sales'));
 
-  it('relève d’abord les cartes à décider, puis valeur absente, puis périmée', async () => {
+  it('relève d’abord les valeurs absentes, puis périmées', async () => {
     const cartes = [
-      carteLocale(1, { statut: 'garder', valeurMarchande: 50 }), // périmée (relevée il y a 40 j)
-      carteLocale(2, { statut: 'garder' }), // absente
-      carteLocale(3, { statut: 'a-trier' }), // à décider
-      carteLocale(4, { statut: 'garder', valeurMarchande: 60 }), // fraîche : à ne pas relever
+      carteLocale(1, { valeurMarchande: 50 }), // périmée (relevée il y a 40 j)
+      carteLocale(2, { }), // absente
+      carteLocale(3, { }), // absente
+      carteLocale(4, { valeurMarchande: 60 }), // fraîche : à ne pas relever
     ];
     const collection = collectionDe(cartes);
     const ids = Object.fromEntries(cartes.map((c, i) => [c.id, `card-${i + 1}`]));
@@ -455,7 +452,7 @@ describe('ordonnanceur — critère 3 : prix', () => {
     etat.prix[idCarte(4)] = { valeur: 60, releveLe: T0 - 2 * JOUR };
     const b = banc(siteFictif(4), collection, etat);
     const r = await synchroniser(b.deps);
-    expect(cheminsPrix(b).map((c) => /card-(\d)/.exec(c)![1])).toEqual(['3', '2', '1']);
+    expect(cheminsPrix(b).map((c) => /card-(\d)/.exec(c)![1])).toEqual(['2', '3', '1']);
     expect(r.collection.cartes.find((c) => c.id === idCarte(3))!.valeurMarchande).toBe(103);
     expect(r.collection.cartes.find((c) => c.id === idCarte(4))!.valeurMarchande).toBe(60);
     expect(r.prixReleves).toBe(3);
@@ -465,25 +462,17 @@ describe('ordonnanceur — critère 3 : prix', () => {
     expect(ancienneteMaxPrixMs).toBe(30 * JOUR);
   });
 
-  it('ne réécrit pas une valeur saisie à la main et la signale', async () => {
-    const cartes = [carteLocale(1, { statut: 'a-trier', valeurMarchande: 999 })];
+  it('ne relève pas et ne réécrit pas une valeur saisie à la main', async () => {
+    const cartes = [carteLocale(1, { valeurMarchande: 999 })];
     const etat = etatLu(collectionDe(cartes), { [idCarte(1)]: 'card-1' });
     const b = banc(siteFictif(1), collectionDe(cartes), etat);
     const r = await synchroniser(b.deps);
-    expect(r.collection.cartes[0]?.valeurMarchande).toBe(999);
-    expect(r.signalements).toEqual([{ idCarte: idCarte(1), saisie: 999, site: 101 }]);
-  });
-
-  it('ne relève pas une valeur saisie à la main hors des cartes à décider', async () => {
-    const cartes = [carteLocale(1, { statut: 'garder', valeurMarchande: 999 })];
-    const etat = etatLu(collectionDe(cartes), { [idCarte(1)]: 'card-1' });
-    const b = banc(siteFictif(1), collectionDe(cartes), etat);
-    await synchroniser(b.deps);
     expect(cheminsPrix(b)).toEqual([]);
+    expect(r.collection.cartes[0]?.valeurMarchande).toBe(999);
   });
 
   it('écrase une valeur qu’elle avait elle-même relevée, sans signalement', async () => {
-    const cartes = [carteLocale(1, { statut: 'garder', valeurMarchande: 50 })];
+    const cartes = [carteLocale(1, { valeurMarchande: 50 })];
     const etat = etatLu(collectionDe(cartes), { [idCarte(1)]: 'card-1' });
     etat.prix[idCarte(1)] = { valeur: 50, releveLe: T0 - 40 * JOUR };
     const b = banc(siteFictif(1), collectionDe(cartes), etat);
@@ -493,7 +482,7 @@ describe('ordonnanceur — critère 3 : prix', () => {
   });
 
   it('n’emploie jamais la route /sales sans ?scope=summary', async () => {
-    const cartes = [1, 2, 3].map((n) => carteLocale(n, { statut: 'a-trier' }));
+    const cartes = [1, 2, 3].map((n) => carteLocale(n, { }));
     const ids = Object.fromEntries(cartes.map((c, i) => [c.id, `card-${i + 1}`]));
     const b = banc(siteFictif(3), collectionDe(cartes), etatLu(collectionDe(cartes), ids));
     await synchroniser(b.deps);
@@ -503,7 +492,7 @@ describe('ordonnanceur — critère 3 : prix', () => {
   });
 
   it('une rareté absente de la réponse ne compte pas comme un échec et n’est pas redemandée avant 30 jours', async () => {
-    const cartes = [carteLocale(1, { statut: 'a-trier' })];
+    const cartes = [carteLocale(1, { })];
     const etat = etatLu(collectionDe(cartes), { [idCarte(1)]: 'card-1' });
     const b = banc(siteFictif(1, { prix: () => null }), collectionDe(cartes), etat);
     const r = await synchroniser(b.deps);
@@ -515,7 +504,7 @@ describe('ordonnanceur — critère 3 : prix', () => {
   });
 
   it('plafonne le nombre de prix relevés par exécution', async () => {
-    const cartes = [1, 2, 3, 4].map((n) => carteLocale(n, { statut: 'a-trier' }));
+    const cartes = [1, 2, 3, 4].map((n) => carteLocale(n, { }));
     const ids = Object.fromEntries(cartes.map((c, i) => [c.id, `card-${i + 1}`]));
     const b = banc(siteFictif(4), collectionDe(cartes), etatLu(collectionDe(cartes), ids));
     const r = await synchroniser({ ...b.deps, maxPrix: 2 });
@@ -687,7 +676,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
   });
 
   it('n’envoie jamais autre chose qu’un chemin de lecture connu', async () => {
-    const cartes = [carteLocale(1, { statut: 'a-trier' })];
+    const cartes = [carteLocale(1, { })];
     const b = banc(siteFictif(5), collectionDe(cartes), { ...etatInitial(), cardIds: { [idCarte(1)]: 'card-1' } });
     await synchroniser(b.deps);
     for (const d of b.departs) {
@@ -729,16 +718,16 @@ describe('ordonnanceur — critère 5 : bail et décisions manuelles', () => {
   });
 
   it('ne modifie jamais une décision decidePar: moi (statut, prix cible, note, ami)', async () => {
-    const decidee = carteLocale(1, { decidePar: 'moi', statut: 'vendre', prixCible: 42, note: 'ma note', ami: 'Léa', quantite: 3, valeurMarchande: 7 });
+    const decidee = carteLocale(1, { prixCible: 42, note: 'ma note', ami: 'Léa', quantite: 3, valeurMarchande: 7 });
     const b = banc(siteFictif(2), collectionDe([decidee]), { ...etatInitial(), cardIds: { [idCarte(1)]: 'card-1' } });
     const r = await synchroniser(b.deps);
     const apres = r.collection.cartes.find((c) => c.id === idCarte(1))!;
-    expect(apres).toMatchObject({ decidePar: 'moi', statut: 'vendre', prixCible: 42, note: 'ma note', ami: 'Léa', valeurMarchande: 7 });
+    expect(apres).toMatchObject({ prixCible: 42, note: 'ma note', ami: 'Léa', valeurMarchande: 7 });
     expect(apres.quantite).toBe(1); // les faits du site sont mis à jour
   });
 
   it('enregistre après chaque page et chaque prix, sans jeton ni en-tête dans l’état', async () => {
-    const cartes = [carteLocale(1, { statut: 'a-trier' })];
+    const cartes = [carteLocale(1, { })];
     const b = banc(siteFictif(2), collectionDe(cartes), { ...etatInitial(), cardIds: { [idCarte(1)]: 'card-1' } });
     const r = await synchroniser(b.deps);
     expect(b.enregistrements.length).toBeGreaterThanOrEqual(2);
@@ -773,5 +762,114 @@ describe('ordonnanceur — délai variable et enchères du site', () => {
     expect(r.complete).toBe(true);
     expect(r.etat.ventesSite ?? null).toBeNull();
     expect(b.journal.join('\n')).not.toMatch(/Échec/);
+  });
+});
+
+
+describe('ordonnanceur — robustesse aux changements pendant la lecture (Alexis, 2026-11-14)', () => {
+  type Ex = ReturnType<typeof exemplaire>;
+  /** Site mobile : `avant(page, monde)` peut modifier la collection juste avant de servir une page. */
+  function siteMobile(n: number, avant: (page: number, monde: Ex[]) => void) {
+    const monde: Ex[] = Array.from({ length: n }, (_, i) => exemplaire(i + 1));
+    const nbPassesPage0 = { v: 0 };
+    return {
+      monde,
+      reponse: (chemin: string): ReponseApi => {
+        if (chemin.startsWith('/api/my-collection/stats')) return { statut: 200, json: statsJson(monde.length) };
+        const page = /\/api\/my-collection\?.*page=(\d+)/.exec(chemin);
+        if (page) {
+          const p = Number(page[1]);
+          if (p === 0) nbPassesPage0.v += 1;
+          avant(p, monde);
+          return { statut: 200, json: { collection: monde.slice(p * 50, (p + 1) * 50) } };
+        }
+        return { statut: 404, json: {} };
+      },
+      nbPassesPage0,
+    };
+  }
+  const pagesDemandees = (b: Banc): number => b.departs.filter((d) => /page=0/.test(d.chemin)).length;
+
+  it('carte ajoutée pendant la lecture : nouvelle passe, toutes les cartes sont là', async () => {
+    let fait = false;
+    const site = siteMobile(120, (p, monde) => {
+      if (p === 1 && !fait) {
+        fait = true;
+        monde.unshift(exemplaire(500));
+      }
+    });
+    const b = banc(site.reponse);
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.collection.cartes).toHaveLength(121);
+    expect(r.collection.cartes.some((c) => c.id === idCarte(500))).toBe(true);
+    expect(r.complete).toBe(true);
+    expect(site.nbPassesPage0.v).toBeGreaterThanOrEqual(3); // passe 1, contrôle de tête, passe 2
+    expect(pagesDemandees(b)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('carte retirée pendant la lecture : nouvelle passe, la carte disparue est retirée du local', async () => {
+    let fait = false;
+    const site = siteMobile(120, (p, monde) => {
+      if (p === 1 && !fait) {
+        fait = true;
+        monde.splice(0, 1); // la carte 1 (déjà lue) disparaît : les pages suivantes se décalent
+      }
+    });
+    const b = banc(site.reponse);
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.collection.cartes).toHaveLength(119);
+    expect(r.collection.cartes.some((c) => c.id === idCarte(1))).toBe(false);
+    expect(r.complete).toBe(true);
+  });
+
+  it('favori basculé pendant la lecture sur une page pas encore lue : pris en compte', async () => {
+    const site = siteMobile(120, (p, monde) => {
+      if (p === 0) monde[80] = exemplaire(81, { starred: true });
+    });
+    const b = banc(site.reponse);
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.collection.cartes.find((c) => c.id === idCarte(81))?.favori).toBe(true);
+  });
+
+  it('favori basculé en tête de liste après sa lecture : détecté par le contrôle de tête, nouvelle passe', async () => {
+    let n = 0;
+    const site = siteMobile(120, (p, monde) => {
+      if (p === 2) {
+        n += 1;
+        if (n === 1) monde[3] = exemplaire(4, { starred: true });
+      }
+    });
+    const b = banc(site.reponse);
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.collection.cartes.find((c) => c.id === idCarte(4))?.favori).toBe(true);
+    expect(r.complete).toBe(true);
+  });
+
+  it('remplacement à total égal en tête : détecté, la carte remplacée est retirée', async () => {
+    let fait = false;
+    const site = siteMobile(120, (p, monde) => {
+      if (p === 2 && !fait) {
+        fait = true;
+        monde[2] = exemplaire(900); // la carte 3 est remplacée par la 900, total inchangé
+      }
+    });
+    const b = banc(site.reponse);
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.collection.cartes.some((c) => c.id === idCarte(900))).toBe(true);
+    expect(r.collection.cartes.some((c) => c.id === idCarte(3))).toBe(false);
+  });
+
+  it('collection qui bouge à chaque passe : 3 passes au plus, lecture incomplète, aucun retrait local', async () => {
+    const locales = [carteLocale(1), carteLocale(2)];
+    const site = siteMobile(60, (p, monde) => {
+      if (p === 1) monde.push(exemplaire(1000 + monde.length));
+    });
+    const b = banc(site.reponse, collectionDe(locales), etatInitial());
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.complete).toBe(false);
+    expect(r.etat.derniereComplete).toBeNull();
+    expect(b.journal.join('\n')).toMatch(/aucun retrait local/);
+    expect(r.collection.cartes.some((c) => c.id === idCarte(1))).toBe(true);
+    expect(b.departs.filter((d) => /page=1/.test(d.chemin)).length).toBeLessThanOrEqual(3);
   });
 });

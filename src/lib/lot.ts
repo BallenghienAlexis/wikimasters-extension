@@ -1,8 +1,8 @@
 /**
  * Construction du lot de la synchronisation : ce qui sera envoyé au site.
  *
- * Fonction pure : aucun accès à `chrome.*`, aucun appel à l’assistant de tri
- * (le statut stocké décide, SC-005), aucune mutation des entrées. Une erreur ici
+ * Fonction pure : aucun accès à `chrome.*`, aucune mutation des entrées. Depuis le 2026-11-14 il n’y a plus de statut :
+ * le lot ne contient que des étiquettes (thèmes, échanges aux amis) ; ni enchère ni défausse n’en sont déduites. Une erreur ici
  * a des effets définitifs sur le site : les garde-fous priment sur tout le reste.
  */
 import type {
@@ -14,9 +14,9 @@ import type {
   TypeAction,
   TypesDisponibles,
 } from './actions'
-import { LIBELLES_STATUT, normaliser, type Carte, type Collection, type Statut } from './collection'
+import { normaliser, type Carte, type Collection } from './collection'
 import { LONGUEUR_MAX_ID } from './registre'
-import { amisConcernes, plafondDefausse, prixDepart, type Ami } from './tri'
+import { amisConcernes, type Ami } from './tri'
 import { DEFINITIONS_THEMES, LIBELLES_THEMES, THEME_AUTRES, themesDeCarte } from './themes'
 
 /** Réglages du lot. */
@@ -55,17 +55,8 @@ export interface EtiquetteNonPosee {
   raison: RaisonNonPosee
 }
 
-/** Étiquette de l’extension encore posée sur une carte favori ou à trier (H18). */
-export interface EtiquetteObsolete {
-  idCarte: string
-  titre: string
-  idExemplaire: string
-  nomEtiquette: string
-}
-
 /** Lot construit, avec les étiquettes obsolètes conservées à signaler dans l’aperçu. */
 export interface LotConstruit extends Lot {
-  obsoletes: EtiquetteObsolete[]
   nonPosees: EtiquetteNonPosee[]
 }
 
@@ -80,10 +71,7 @@ const COLLATEUR_FR = new Intl.Collator('fr')
 
 const comparer = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
 
-const STATUTS_ETIQUETES = new Set<Statut>(['garder', 'echanger', 'vendre'])
-
 const PREFIXE_ECHANGE = '#À échanger '
-const PREFIXE_STATUT = 'Statut · '
 
 const NB_ANCETRES: Record<string, number> = Object.fromEntries(DEFINITIONS_THEMES.map((t) => [t.id, t.parents?.length ?? 0]))
 
@@ -135,9 +123,8 @@ const MEMO_ETIQUETTES = new WeakMap<Carte, { amis: readonly Ami[] | undefined; l
 
 /**
  * Étiquettes d’une carte pour chaque exemplaire relié, dans l’ordre de priorité de H5 :
- * Statut, étiquettes d’échange (carte `echanger`), puis thèmes. `ecartees` : thèmes au-delà de la
- * limite du site par exemplaire ; Statut et échanges ne sont jamais écartés au profit d’un thème.
- * Vide pour un favori, une carte à trier, à défausser ou en vente sur le site, ou non reliée.
+ * étiquettes d’échange (cartes non favorites), puis thèmes. `ecartees` : étiquettes au-delà de la
+ * limite du site par exemplaire. Vide pour une carte non reliée.
  */
 export function etiquettesDeCarte(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire'>): EtiquettesCarte {
   // Le lot, l’aperçu et le regroupement demandent trois fois les mêmes étiquettes pour les mêmes cartes
@@ -152,23 +139,17 @@ export function etiquettesDeCarte(carte: Carte, config?: Pick<Config, 'amis' | '
 }
 
 function calculerEtiquettes(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire'>): EtiquettesCarte {
-  // Une carte en vente ou à défausser n’est pas étiquetée (le site refuse, ou l’exemplaire va disparaître) ; les autres
-  // le sont toutes, favoris et cartes à trier compris : chacune reçoit au moins une étiquette de thème.
-  if (carte.statut === 'en-vente' || (carte.statut === 'defausser' && !carte.favori) || !carte.idsSite) return { retenues: [], ecartees: [] }
+  // Toute carte reliée reçoit au moins une étiquette de thème, favoris compris (« #À classer » à défaut de thème).
+  if (!carte.idsSite) return { retenues: [], ecartees: [] }
   const themes = themesDeCarte(carte)
-  // Statut et échanges ne concernent que les cartes décidées (ni favori ni à trier).
-  const decidee = !carte.favori && STATUTS_ETIQUETES.has(carte.statut)
-  const prioritaires: string[] = []
-  if (decidee) {
-    prioritaires.push(`${PREFIXE_STATUT}${LIBELLES_STATUT[carte.statut]}`)
-    if (carte.statut === 'echanger') prioritaires.push(...etiquettesEchange(carte, themes, config?.amis ?? []))
-  }
+  // Étiquettes d’échange : jamais pour un favori (le site le verrouille, et c’est une carte aimée).
+  const prioritaires = carte.favori ? [] : etiquettesEchange(carte, themes, config?.amis ?? [])
   const precis = themesOrdonnes(themes).map((id) => LIBELLES_THEMES[id] ?? id)
   const libellesThemes = precis.length > 0 ? precis : [ETIQUETTE_A_CLASSER]
   const tous = [...prioritaires, ...libellesThemes]
   const limite = config?.limiteParExemplaire
   if (limite === null || limite === undefined || !Number.isFinite(limite)) return { retenues: tous, ecartees: [] }
-  // Au moins une étiquette par exemplaire, et toujours le thème le plus précis : Statut et échanges cèdent la place d’abord.
+  // Au moins une étiquette par exemplaire, et toujours le thème le plus précis : les échanges cèdent la place d’abord.
   const n = Math.max(1, Math.floor(limite))
   if (tous.length <= n) return { retenues: tous, ecartees: [] }
   const p = Math.min(prioritaires.length, n - 1)
@@ -178,7 +159,7 @@ function calculerEtiquettes(carte: Carte, config?: Pick<Config, 'amis' | 'limite
 
 /**
  * Exemplaires reliés d’une carte et étiquettes attendues sur chacun.
- * Vide pour un favori, une carte à trier, à défausser ou en vente sur le site, ou non reliée.
+ * Vide pour une carte non reliée.
  */
 export function exemplairesAttendus(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire'>): ExemplaireAttendu[] {
   const { retenues } = etiquettesDeCarte(carte, config)
@@ -189,7 +170,7 @@ export function exemplairesAttendus(carte: Carte, config?: Pick<Config, 'amis' |
 /**
  * Noms exclus par la limite de noms du compte (H6). Tous les noms du registre restent sur le compte
  * et occupent des places (même s’ils ne sont plus attendus) ; il reste `limite − noms du registre`
- * places pour les nouveaux noms : Statut et échanges d’abord, puis les thèmes par nombre
+ * places pour les nouveaux noms : les échanges d’abord, puis les thèmes par nombre
  * d’exemplaires décroissant et par libellé.
  */
 function nomsAuDelaDeLaLimite(
@@ -207,70 +188,12 @@ function nomsAuDelaDeLaLimite(
     if (nb === 0) continue
     for (const nom of retenues) compte.set(nom, (compte.get(nom) ?? 0) + nb)
   }
-  const rang = (nom: string): number => (nom.startsWith(PREFIXE_STATUT) || nom.startsWith(PREFIXE_ECHANGE) ? 1 : 2)
+  const rang = (nom: string): number => (nom.startsWith(PREFIXE_ECHANGE) ? 1 : 2)
   const nouveaux = [...compte.keys()]
     .filter((nom) => !dansRegistre.has(nom))
     .sort((a, b) => rang(a) - rang(b) || (rang(a) === 2 ? (compte.get(b) ?? 0) - (compte.get(a) ?? 0) : 0) || COLLATEUR_FR.compare(a, b))
   const places = Math.max(0, Math.floor(limiteNoms) - dansRegistre.size)
   return new Set(nouveaux.slice(places))
-}
-
-/**
- * Enchères du lot : `candidates` = cartes `vendre` reliées, sans conflit (les autres sont
- * déjà écartées par `construireLot`). Une enchère par carte, sur le premier exemplaire de
- * `idsSite`, dans la limite des places libres. Une enchère est définitive côté site.
- */
-export function construireEncheres(
-  candidates: readonly Carte[],
-  enVente: number,
-  config: Config,
-  disponibles: TypesDisponibles,
-): { actions: Action[]; ecartees: CarteEcartee[] } {
-  const ecartees: CarteEcartee[] = []
-  const valides: Array<{ carte: Carte; prix: number; valeur: number; idExemplaire: string }> = []
-  const autorisee = config.lienCardId === true && disponibles.has('enchere')
-
-  for (const c of candidates) {
-    // Garde-fou propre : jamais d’enchère sur un favori ou une carte qui n’est pas à vendre.
-    if (c.favori || c.statut !== 'vendre') continue
-    const ecarter = (raison: RaisonEcart): void => {
-      ecartees.push({ idCarte: c.id, titre: c.titre, raison })
-    }
-    const valeur = c.valeurMarchande
-    if (valeur === null) {
-      ecarter('valeur-absente')
-      continue
-    }
-    const prix = c.prixCible ?? prixDepart(valeur)
-    if (prix === null || !Number.isSafeInteger(prix) || prix < 1) {
-      ecarter('prix-invalide')
-      continue
-    }
-    if (prix >= valeur) {
-      ecarter('prix-superieur-valeur')
-      continue
-    }
-    const idExemplaire = c.idsSite?.[0]
-    if (idExemplaire === undefined) {
-      ecarter('non-reliee')
-      continue
-    }
-    if (!autorisee) {
-      ecarter('action-non-disponible')
-      continue
-    }
-    valides.push({ carte: c, prix, valeur, idExemplaire })
-  }
-
-  valides.sort((a, b) => b.prix - a.prix || b.valeur - a.valeur || comparer(a.carte.id, b.carte.id))
-  const occupation = placesEncheres(config, enVente)
-  const places = Math.max(0, Math.floor(occupation.max - occupation.occupees))
-  const actions: Action[] = []
-  valides.forEach(({ carte, prix, idExemplaire }, rang) => {
-    if (rang < places) actions.push({ type: 'enchere', idCarte: carte.id, idExemplaire, prix })
-    else ecartees.push({ idCarte: carte.id, titre: carte.titre, raison: 'en-attente-place' })
-  })
-  return { actions, ecartees }
 }
 
 /**
@@ -313,39 +236,19 @@ export function construireLot(
   const creations: Action[] = []
   const retraits: Action[] = []
   const poses: Action[] = []
-  const defausses: Action[] = []
   const ecartees: CarteEcartee[] = []
-  const obsoletes: EtiquetteObsolete[] = []
   const nonPosees: EtiquetteNonPosee[] = []
   const parCarte = new Map(cartes.map((c) => [c.id, etiquettesDeCarte(c, config)] as const))
   const exclus = nomsAuDelaDeLaLimite(cartes, parCarte, registre, config.limiteNoms)
   const creesCeLot = new Set<string>()
-  const aVendre: Carte[] = []
-  let enVente = 0
 
   const dispo = (t: TypeAction): boolean => disponibles.has(t)
 
   for (const c of cartes) {
-    if (c.statut === 'en-vente') enVente++
     const ecarter = (raison: RaisonEcart): void => {
       ecartees.push({ idCarte: c.id, titre: c.titre, raison })
     }
 
-    // Favori et « à trier » : étiquetés par thème seulement, sans Statut ni échange. Les étiquettes de l’extension
-    // déjà posées (statut d’avant) sont signalées sans être retirées (SC-003, SC-004, amendés le 2026-11-14).
-    const neutre = c.favori || c.statut === 'a-trier'
-    if (neutre) {
-      const gardees = new Set(parCarte.get(c.id)?.retenues ?? [])
-      for (const id of c.idsSite ?? []) {
-        for (const nom of couplesParExemplaire.get(id) ?? []) {
-          if (gardees.has(nom)) continue
-          obsoletes.push({ idCarte: c.id, titre: c.titre, idExemplaire: id, nomEtiquette: nom })
-        }
-      }
-    }
-
-    // Favori ou « à trier » non relié : rien à étiqueter, et rien à signaler (cas courant après une simple lecture).
-    if (c.idsSite === null && neutre) continue
     if (c.idsSite === null) {
       ecarter('non-reliee')
       continue
@@ -355,33 +258,8 @@ export function construireLot(
       continue
     }
 
-    // Un favori n’est jamais défaussé, quel que soit son statut stocké (SC-003).
-    if (c.statut === 'defausser' && !c.favori) {
-      // Aucun retrait d’étiquette avant défausse (H19).
-      const ids = c.idsSite.slice(0, Math.max(0, c.quantite))
-      if (ids.length > 0 && !(c.valeurMarchande !== null && c.valeurMarchande <= plafondDefausse({ plafondDefausse: config.plafondDefausse }))) {
-        ecarter('valeur-defausse-elevee')
-      } else if (ids.length > 0) {
-        if (dispo('defausse')) {
-          for (const idExemplaire of ids) defausses.push({ type: 'defausse', idCarte: c.id, idExemplaire })
-        } else {
-          ecarter('action-non-disponible')
-        }
-      }
-      if (c.quantite > c.idsSite.length) ecarter('exemplaires-non-relies')
-      continue
-    }
-
-    // Une carte aux enchères n'est plus dans la collection du joueur : le site refuse (403) toute pose
-    // sur son exemplaire. On n'envoie donc aucune étiquette, ni pose ni retrait ni création.
-    if (c.statut === 'en-vente') {
-      ecarter('en-vente-sur-site')
-      continue
-    }
-
-    if (c.statut === 'vendre' && !c.favori) aVendre.push(c)
-
-    // Étiquettes (SC-007, SC-008).
+    // Étiquettes (SC-007, SC-008). Les anciennes étiquettes « Statut · … » posées par l’extension ne sont plus attendues :
+    // elles sont retirées comme toute étiquette du registre qui n’est plus attendue.
     let nonDispo = false
     let tropLong = false
     let homonyme = false
@@ -403,7 +281,7 @@ export function construireLot(
       const presents = couplesParExemplaire.get(idExemplaire) ?? []
 
       for (const nom of presents) {
-        if (attendu.has(nom) || neutre) continue
+        if (attendu.has(nom)) continue
         if (dispo('retrait-etiquette')) retraits.push({ type: 'retrait-etiquette', idCarte: c.id, idExemplaire, nomEtiquette: nom })
         else nonDispo = true
       }
@@ -436,9 +314,9 @@ export function construireLot(
       }
     }
 
-    // Contrôle : une carte reliée doit garder au moins une étiquette de thème (hors Statut et échange) ;
+    // Contrôle : une carte reliée doit garder au moins une étiquette de thème (hors échange) ;
     // sinon (nom trop long, homonyme, limite de noms du compte), elle est signalée dans l’aperçu.
-    const estTheme = (nom: string): boolean => !nom.startsWith(PREFIXE_STATUT) && !nom.startsWith(PREFIXE_ECHANGE)
+    const estTheme = (nom: string): boolean => !nom.startsWith(PREFIXE_ECHANGE)
     if (c.idsSite.length > 0 && !retenues.some((nom) => estTheme(nom) && !exclus.has(nom) && nom.length <= limite && !(!Object.prototype.hasOwnProperty.call(registre.etiquettes, nom) && connus.has(nom)))) {
       ecarter('sans-etiquette-theme')
     }
@@ -447,10 +325,7 @@ export function construireLot(
     if (nonDispo) ecarter('action-non-disponible')
   }
 
-  const encheres = construireEncheres(aVendre, enVente, config, disponibles)
-  ecartees.push(...encheres.ecartees)
-
-  // Une même raison n’est donnée qu’une fois par carte (ex. étiquettes et enchère indisponibles).
+  // Une même raison n’est donnée qu’une fois par carte.
   const vues = new Set<string>()
   const ecarteesUniques = ecartees.filter((e) => {
     const cle = JSON.stringify([e.idCarte, e.raison])
@@ -460,10 +335,8 @@ export function construireLot(
   })
 
   return {
-    // Les actions `lecture` (SC-024) s’inséreront ici, avant les créations (H9).
-    actions: [...creations, ...retraits, ...poses, ...encheres.actions, ...defausses],
+    actions: [...creations, ...retraits, ...poses],
     ecartees: ecarteesUniques,
-    obsoletes,
     nonPosees,
   }
 }

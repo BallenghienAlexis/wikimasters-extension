@@ -6,8 +6,8 @@ import { trierEtiquettes } from '../../src/lib/etiquettesPreexistantes'
 // Données fictives uniquement.
 const carte = (id: string, etiquettesSite: string[], extra: Partial<Carte> = {}): Carte => ({
   id, titre: `Carte ${id}`, rarete: 'commune', description: '', quantite: 1, url: null, favori: false,
-  idsSite: [`ex-${id}`], etiquettesSite, statut: 'garder', prixCible: null, note: '', ami: null,
-  valeurMarchande: null, decidePar: null, ...extra,
+  idsSite: [`ex-${id}`], etiquettesSite, prixCible: null, note: '', ami: null,
+  valeurMarchande: null, ...extra,
 })
 
 describe('trierEtiquettes', () => {

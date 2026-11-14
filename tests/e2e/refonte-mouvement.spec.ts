@@ -4,8 +4,8 @@ import { allerA, chargerCartes, expect, ONGLETS, test } from './extension';
 // T-902 : volet e2e de SC-025 (durées calculées par type d’élément, tokens D-08). Données uniquement fictives.
 
 const CARTES = [
-  { id: 'a', titre: 'Zèbre fictif', rarete: 'Rare', quantite: 1, statut: 'garder' },
-  { id: 'b', titre: 'Élan fictif', rarete: 'Commune', quantite: 3, statut: 'a-trier' },
+  { id: 'a', titre: 'Zèbre fictif', rarete: 'Rare', quantite: 1, },
+  { id: 'b', titre: 'Élan fictif', rarete: 'Commune', quantite: 3, },
 ];
 
 const duree = (l: Locator, propriete = 'transition-duration') =>
@@ -38,43 +38,13 @@ test.describe('SC-025 : durées calculées', () => {
   });
 
   test('SC-025 : au moins un bouton de la page de gestion a une transition de 0,2 s', async ({ pageCollection: page }) => {
-    // On parcourt les six onglets : le critère porte sur « au moins un bouton » de l’interface.
+    // On parcourt les cinq onglets : le critère porte sur « au moins un bouton » de l’interface.
     const toutes: number[] = [];
     for (const { id } of ONGLETS) {
       await allerA(page, id);
       toutes.push(...(await dureesDesBoutons(page)));
     }
     expect(toutes).toContain(0.2);
-  });
-
-  test('SC-025 : survol d’un bouton actif → 1 px vers le haut, courbe --ease-spring ; flèche aria-disabled → immobile', async ({ pageCollection: page }) => {
-    await allerA(page, 'collection');
-    await page.getByRole('button', { name: 'Tableau de tri' }).click();
-    const carte = page.getByTestId('carte-tri').filter({ hasText: 'Élan fictif' });
-    const actif = carte.getByRole('button').first();
-    const inactif = carte.getByRole('button').nth(1);
-    await expect(actif).not.toHaveAttribute('aria-disabled', 'true');
-    await expect(inactif).toHaveAttribute('aria-disabled', 'true');
-    const ressort = await page.evaluate(() => {
-      const s = document.createElement('div');
-      s.style.transitionTimingFunction = 'var(--ease-spring)';
-      document.body.append(s);
-      const v = getComputedStyle(s).transitionTimingFunction;
-      s.remove();
-      return v;
-    });
-    await actif.hover();
-    await expect.poll(() => duree(actif, 'translate')).toBe('0px -1px');
-    expect(await duree(actif, 'transition-timing-function')).toBe(ressort);
-    await inactif.hover();
-    expect(await duree(inactif, 'translate')).toBe('none');
-  });
-
-  test('SC-025 : colonne et carte du tableau de tri → 0,2 s (--d-fast)', async ({ pageCollection: page }) => {
-    await allerA(page, 'collection');
-    await page.getByRole('button', { name: 'Tableau de tri' }).click();
-    expect(await durees(page.getByTestId('colonne-tri-garder'))).toEqual([0.2]);
-    expect(await durees(page.getByTestId('carte-tri'), 'transition-duration')).toEqual([0.2]);
   });
 
   test('SC-025 : chevron et panneau dépliable → 0,4 s (--d-base)', async ({ pageCollection: page }) => {

@@ -13,17 +13,17 @@ const THEMES = ['light', 'dark'] as const;
 const nomOnglet = (i: number): RegExp => new RegExp(`^${ONGLETS[i]?.nom ?? ''}`);
 
 test.describe('SC-012 : onglets', () => {
-  test('SC-012 : six onglets dans l’ordre, motif tablist/tab/tabpanel', async ({ pageCollection }) => {
+  test('SC-012 : cinq onglets dans l’ordre, motif tablist/tab/tabpanel', async ({ pageCollection }) => {
     const liste = pageCollection.getByRole('tablist', { name: 'Sections' });
     await expect(liste).toBeVisible();
     const onglets = liste.getByRole('tab');
-    await expect(onglets).toHaveCount(6);
-    for (let i = 0; i < 6; i++) {
+    await expect(onglets).toHaveCount(5);
+    for (let i = 0; i < 5; i++) {
       await expect(onglets.nth(i)).toHaveText(nomOnglet(i));
     }
     // Défaut : Tableau de bord, un seul onglet dans l’ordre de tabulation (tabindex itinérant).
     await expect(onglets.nth(0)).toHaveAttribute('aria-selected', 'true');
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 5; i++) {
       await expect(onglets.nth(i)).toHaveAttribute('tabindex', i === 0 ? '0' : '-1');
       if (i > 0) await expect(onglets.nth(i)).toHaveAttribute('aria-selected', 'false');
     }
@@ -55,8 +55,8 @@ test.describe('SC-012 : onglets', () => {
     await expect(onglets.nth(1)).toBeFocused();
     await expect(onglets.nth(1)).toHaveAttribute('aria-selected', 'true');
     await pageCollection.keyboard.press('End');
-    await expect(onglets.nth(5)).toBeFocused();
-    await expect(onglets.nth(5)).toHaveAttribute('aria-selected', 'true');
+    await expect(onglets.nth(4)).toBeFocused();
+    await expect(onglets.nth(4)).toHaveAttribute('aria-selected', 'true');
     await expect(pageCollection).toHaveURL(/#reglages$/);
     await pageCollection.keyboard.press('Home');
     await expect(onglets.nth(0)).toBeFocused();
@@ -97,8 +97,6 @@ test.describe('SC-012 : onglets', () => {
     await chargerCollectionFictive(pageCollection);
     await allerA(pageCollection, 'collection');
     await expect(pageCollection.getByTestId('resume')).toBeVisible();
-    await allerA(pageCollection, 'ventes');
-    await expect(pageCollection.getByTestId('file-vente')).toBeVisible();
     await allerA(pageCollection, 'lots');
     await expect(pageCollection.getByTestId('apercu')).toBeVisible();
     await allerA(pageCollection, 'synchro');
@@ -113,7 +111,7 @@ test.describe('SC-012 : onglets', () => {
 });
 
 test.describe('SC-012 : collection illisible', () => {
-  test('SC-012 : le message et le téléchargement restent au-dessus des onglets, sur les six', async ({ pageCollection }) => {
+  test('SC-012 : le message et le téléchargement restent au-dessus des onglets, sur les cinq', async ({ pageCollection }) => {
     await pageCollection.evaluate(() => chrome.storage.local.set({ collection: { version: 9999, cartes: 'illisible' } }));
     await pageCollection.reload();
     for (const o of ONGLETS) {
@@ -135,7 +133,7 @@ test.describe('SC-012 : collection illisible', () => {
 });
 
 test.describe('SC-009 : largeurs et captures', () => {
-  test('SC-009 : aucun défilement horizontal de la page sur les six onglets, 3 largeurs, 2 thèmes', async ({ pageCollection }) => {
+  test('SC-009 : aucun défilement horizontal de la page sur les cinq onglets, 3 largeurs, 2 thèmes', async ({ pageCollection }) => {
     test.setTimeout(180_000);
     await chargerCollectionFictive(pageCollection);
     for (const theme of THEMES) {
@@ -161,7 +159,7 @@ test.describe('SC-009 : largeurs et captures', () => {
   test('SC-009 : à 375 px, la barre d’onglets défile dans son conteneur', async ({ pageCollection }) => {
     await pageCollection.setViewportSize({ width: 375, height: 812 });
     await allerA(pageCollection, 'reglages');
-    const dernier = pageCollection.getByRole('tab', { name: nomOnglet(5) });
+    const dernier = pageCollection.getByRole('tab', { name: nomOnglet(4) });
     await dernier.focus();
     await expect(dernier).toBeInViewport();
     const sw = await pageCollection.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
@@ -200,7 +198,7 @@ test.describe('SC-011 : vérification Wikipédia', () => {
     await chargerCollectionFictive(pageCollection);
     await allerA(pageCollection, 'collection');
     await expect.poll(() => requetes.length, { timeout: 15_000 }).toBeGreaterThan(0);
-    await allerA(pageCollection, 'ventes');
+    await allerA(pageCollection, 'lots');
     await allerA(pageCollection, 'reglages');
     // Laisse finir une éventuelle requête en vol, puis le compte ne bouge plus.
     await pageCollection.waitForTimeout(1500);

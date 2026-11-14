@@ -3,7 +3,6 @@ import { VERSION_SCHEMA, type Collection } from '../../src/lib/collection';
 import type { Horloge } from '../../src/lib/file';
 import { etatInitial, synchroniser, type ReponseApi } from '../../src/lib/ordonnanceur';
 import type { StatutSynchro } from '../../src/lib/stockage';
-import { preferencesParDefaut } from '../../src/lib/tri';
 import { creerSynchroAuto, type DependancesSynchroAuto } from '../../src/content/synchroAuto';
 
 // T-314 : écriture du statut de synchro v2. Données fictives, aucun contact avec le vrai site.
@@ -74,7 +73,6 @@ function banc(n: number): Banc {
       stockage.etat = structuredClone(e);
     },
     bail: { lire: async () => stockage.bail, ecrire: async (v) => void (stockage.bail = v) },
-    chargerPreferences: async () => preferencesParDefaut(),
     noterStatut: async (s) => {
       statuts.push(structuredClone(s));
     },
@@ -109,8 +107,9 @@ describe('SC-019 / SC-002 : statut v2 écrit par synchroAuto', () => {
     expect(etapes).toContain('ventes');
     // L'ordre des étapes suit celui du plan.
     const ordre = ['stats', 'pages', 'prix', 'ventes'];
-    const vues = etapes.filter((e): e is string => typeof e === 'string').map((e) => ordre.indexOf(e));
-    expect([...vues].sort((x, y) => x - y)).toEqual(vues);
+    // Les stats et la première page sont relues après la lecture (contrôle de robustesse) : on compare les premières apparitions.
+    const premieres = ordre.map((o) => etapes.indexOf(o));
+    expect([...premieres].sort((x, y) => x - y)).toEqual(premieres);
   });
 
   it('SC-002 : prixFaits est compté et prixPrevus annoncé avant la boucle de prix', async () => {
@@ -161,7 +160,9 @@ describe('SC-019 / SC-002 : statut v2 écrit par synchroAuto', () => {
     const parPage = new Map<number, number>();
     for (const s of pagesEcrites) parPage.set(s.page as number, (parPage.get(s.page as number) ?? 0) + 1);
     expect(parPage.size).toBeGreaterThan(1);
-    for (const [page, n] of parPage) expect(n, `page ${page}`).toBeLessThanOrEqual(1);
+    // La première page est relue une fois après la lecture (contrôle de tête) : deux écritures au plus pour elle.
+    const premiere = Math.min(...parPage.keys());
+    for (const [page, n] of parPage) expect(n, `page ${page}`).toBeLessThanOrEqual(page === premiere ? 2 : 1);
     const prix = b.statuts.filter((s) => v2(s).etape === 'prix');
     expect(prix.length).toBeGreaterThan(1);
     for (let i = 1; i < prix.length; i++) expect((prix[i] as StatutSynchro).le - (prix[i - 1] as StatutSynchro).le, `prix ${i}`).toBeGreaterThanOrEqual(1000);

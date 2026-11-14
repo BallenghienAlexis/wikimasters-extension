@@ -5,7 +5,6 @@ import BarreProgression from "../../src/app/BarreProgression";
 import ChiffreAnime from "../../src/app/ChiffreAnime";
 import EnTeteTriable from "../../src/app/EnTeteTriable";
 import PastilleStatut from "../../src/app/PastilleStatut";
-import PastilleStatutCarte from "../../src/app/PastilleStatutCarte";
 import SectionRepliable from "../../src/app/SectionRepliable";
 import { ContexteAffichage, useMouvement } from "../../src/app/useMouvement";
 
@@ -17,17 +16,6 @@ import { ContexteAffichage, useMouvement } from "../../src/app/useMouvement";
 //   onBasculer() sans argument.
 const h = React.createElement;
 const rendre = (el: React.ReactElement) => renderToStaticMarkup(el);
-// Texte visible d'un rendu : parcours caractère par caractère, sans nettoyage par regex.
-const texteDe = (html: string): string => {
-  let dansBalise = false;
-  let texte = "";
-  for (const c of html) {
-    if (c === "<") dansBalise = true;
-    else if (c === ">") dansBalise = false;
-    else if (!dansBalise) texte += c;
-  }
-  return texte;
-};
 const avecAnimations = (animations: boolean, el: React.ReactElement) =>
   rendre(h(ContexteAffichage.Provider, { value: { animations } }, el));
 
@@ -217,28 +205,3 @@ describe("D-40 : PastilleStatut", () => {
   }
 });
 
-describe("D-13 : PastilleStatutCarte", () => {
-  const cas: Array<[string, string]> = [
-    ["garder", "Garder"],
-    ["echanger", "Échanger"],
-    ["vendre", "Vendre"],
-    ["defausser", "Défausser"],
-    ["en-vente", "En vente"],
-  ];
-  for (const [statut, mot] of cas) {
-    it(`D-13 : ${statut} affiche le mot « ${mot} » et un symbole`, () => {
-      const html = rendre(h(PastilleStatutCarte, { statut: statut as never }));
-      expect(html).toContain(mot);
-      expect(
-        texteDe(html)
-          .replace(mot, "")
-          .trim().length,
-      ).toBeGreaterThan(0);
-    });
-  }
-  it("D-13 : sans statut, « À trier »", () => {
-    expect(rendre(h(PastilleStatutCarte, { statut: null as never }))).toContain(
-      "À trier",
-    );
-  });
-});

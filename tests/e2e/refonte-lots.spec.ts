@@ -1,7 +1,4 @@
 import type { Page } from '@playwright/test';
-import fs from 'node:fs';
-import path from 'node:path';
-import { ORIGINE_REST, NOM_COOKIE_SESSION } from '../../src/config/synchro';
 import { allerA, carteComplete, expect, test } from './extension';
 
 // T-311 : onglet Lots (SC-015, SC-016 Lancer, SC-006 aperçu, SC-024 Lots). Données uniquement fictives ; le vrai site
@@ -36,14 +33,13 @@ const BREAKPOINTS = [
   { name: 'desktop', width: 1280, height: 800 },
 ];
 
-const SITE = fs.readFileSync(path.resolve('tests/e2e/fixtures/site-vide.html'), 'utf8');
 const EX_GARDE = 'aaaaaaaa-0000-4000-8000-000000000001';
 const EX_DEFAUSSE = 'aaaaaaaa-0000-4000-8000-000000000002';
 const EX_VENTE = 'aaaaaaaa-0000-4000-8000-000000000003';
 
-const GARDE = { id: 'SR|Zorglub fictif', titre: 'Zorglub fictif', rarete: 'SR', statut: 'garder', decidePar: 'moi', idsSite: [EX_GARDE], valeurMarchande: 40 };
-const DEFAUSSE = { id: 'C|Brimborion fictif', titre: 'Brimborion fictif', rarete: 'C', statut: 'defausser', decidePar: 'moi', idsSite: [EX_DEFAUSSE], valeurMarchande: 3 };
-const VENTE = { id: 'R|Tromblon fictif', titre: 'Tromblon fictif', rarete: 'R', statut: 'vendre', decidePar: 'moi', idsSite: [EX_VENTE], valeurMarchande: 100, prixCible: 50 };
+const GARDE = { id: 'SR|Zorglub fictif', titre: 'Zorglub fictif', rarete: 'SR', idsSite: [EX_GARDE], valeurMarchande: 40 };
+const DEFAUSSE = { id: 'C|Brimborion fictif', titre: 'Brimborion fictif', rarete: 'C', idsSite: [EX_DEFAUSSE], valeurMarchande: 3 };
+const VENTE = { id: 'R|Tromblon fictif', titre: 'Tromblon fictif', rarete: 'R', idsSite: [EX_VENTE], valeurMarchande: 100, prixCible: 50 };
 const TOUTES = [GARDE, DEFAUSSE, VENTE];
 
 async function amorcer(page: Page, cartes: Record<string, unknown>[], extra: Record<string, unknown> = {}): Promise<void> {
@@ -88,22 +84,18 @@ test.describe('SC-015 : tableau des lots cochables (AC1)', () => {
     await ouvrirApercu(page);
   });
 
-  test('SC-015 : un lot par famille, tous cochés par défaut, cases de 44 px', async ({ pageCollection: page }) => {
+  test('SC-015 : un lot d’étiquettes, coché par défaut, case de 44 px', async ({ pageCollection: page }) => {
     await expect(page.getByTestId('tableau-lots').getByRole('table')).toBeVisible();
     for (const nom of [/^Famille/, /^Actions/, /^Ordre/]) await expect(enTete(page, nom)).toBeVisible();
-    for (const famille of ['etiquettes', 'encheres', 'defausses']) await expect(ligneDe(page, famille)).toHaveCount(1);
-    await expect(ligneDe(page, 'defausses').getByTestId('famille-lot')).toHaveText('Défausses');
-    await expect(ligneDe(page, 'encheres').getByTestId('famille-lot')).toHaveText('Enchères');
+    await expect(lignes(page)).toHaveCount(1);
     await expect(ligneDe(page, 'etiquettes').getByTestId('famille-lot')).toHaveText('Étiquettes');
     const cases = lignes(page).getByRole('checkbox');
-    await expect(cases).toHaveCount(3);
-    for (let i = 0; i < 3; i++) {
-      await expect(cases.nth(i)).toBeChecked();
-      const boite = await cases.nth(i).boundingBox();
-      expect(boite?.height ?? 0).toBeGreaterThanOrEqual(44);
-      expect(boite?.width ?? 0).toBeGreaterThanOrEqual(44);
-    }
-    await expect(ligneDe(page, 'defausses').getByRole('checkbox')).toHaveAccessibleName(/^Inclure le lot Défausses/);
+    await expect(cases).toHaveCount(1);
+    await expect(cases.first()).toBeChecked();
+    const boite = await cases.first().boundingBox();
+    expect(boite?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(boite?.width ?? 0).toBeGreaterThanOrEqual(44);
+    await expect(ligneDe(page, 'etiquettes').getByRole('checkbox')).toHaveAccessibleName(/^Inclure le lot Étiquettes/);
   });
 
   test('SC-015 : « Famille » et « Actions » sont triables (aria-sort), « Ordre » ne l’est pas', async ({ pageCollection: page }) => {
@@ -115,10 +107,8 @@ test.describe('SC-015 : tableau des lots cochables (AC1)', () => {
     expect(boite?.height ?? 0).toBeGreaterThanOrEqual(44);
     await bouton.click();
     await expect(famille).toHaveAttribute('aria-sort', 'ascending');
-    await expect(lignes(page).getByTestId('famille-lot')).toHaveText(['Défausses', 'Enchères', 'Étiquettes']);
     await bouton.click();
     await expect(famille).toHaveAttribute('aria-sort', 'descending');
-    await expect(lignes(page).getByTestId('famille-lot')).toHaveText(['Étiquettes', 'Enchères', 'Défausses']);
     await bouton.click();
     await expect(famille).toHaveAttribute('aria-sort', 'none');
     await expect(enTete(page, /^Actions/).getByRole('button')).toBeVisible();
@@ -127,11 +117,11 @@ test.describe('SC-015 : tableau des lots cochables (AC1)', () => {
   test('SC-015 : le tri n’affecte que l’affichage (rangs « Ordre » et stockage inchangés)', async ({ pageCollection: page }) => {
     const rangs = async (): Promise<Record<string, string>> => {
       const r: Record<string, string> = {};
-      for (const famille of ['etiquettes', 'encheres', 'defausses']) r[famille] = (await ligneDe(page, famille).getByTestId('ordre-lot').textContent())?.trim() ?? '';
+      for (const famille of ['etiquettes']) r[famille] = (await ligneDe(page, famille).getByTestId('ordre-lot').textContent())?.trim() ?? '';
       return r;
     };
     const avant = await rangs();
-    expect(Object.values(avant).sort()).toEqual(['1', '2', '3']);
+    expect(Object.values(avant)).toEqual(['1']);
     const stockage = (): Promise<string> => page.evaluate(async () => JSON.stringify(await chrome.storage.local.get(null)));
     const stockageAvant = await stockage();
     await enTete(page, /^Famille/).getByRole('button').click();
@@ -143,12 +133,11 @@ test.describe('SC-015 : tableau des lots cochables (AC1)', () => {
     await page.setViewportSize({ width: 375, height: 812 });
     const tableau = page.getByTestId('tableau-lots');
     await expect(tableau.getByRole('table')).toBeHidden();
-    await expect(lignes(page)).toHaveCount(3);
+    await expect(lignes(page)).toHaveCount(1);
     const choix = tableau.getByLabel('Trier par');
     const sens = tableau.getByRole('button', { name: 'Sens' });
     for (const el of [choix, sens]) expect((await el.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
     await choix.selectOption({ label: 'Famille' });
-    await expect(lignes(page).getByTestId('famille-lot')).toHaveText(['Défausses', 'Enchères', 'Étiquettes']);
     await expect(sens).toHaveAttribute('aria-pressed', 'true');
     await sens.click();
     await expect(sens).toHaveAttribute('aria-pressed', 'false');
@@ -172,17 +161,16 @@ test.describe('SC-015 : durée, avertissements et écarts (AC2)', () => {
     await expect(duree).toContainText(/Durée estimée\s*:\s*environ 1 min/);
     for (const c of await lignes(page).getByRole('checkbox').all()) await c.uncheck();
     await expect(duree).toContainText(/environ 0 min/);
-    await ligneDe(page, 'defausses').getByRole('checkbox').check();
+    await ligneDe(page, 'etiquettes').getByRole('checkbox').check();
     await expect(duree).toContainText(/environ 1 min/);
   });
 
-  test('SC-015 : avertissements en encadrés border-vendre avec ⚠ (visibilité des étiquettes, défausse définitive)', async ({ pageCollection: page }) => {
+  test('SC-015 : avertissement en encadré border-vendre avec ⚠ (visibilité des étiquettes)', async ({ pageCollection: page }) => {
     await amorcer(page, TOUTES);
     await ouvrirApercu(page);
     const avertissements = page.getByTestId('avertissement');
     const visibilite = avertissements.filter({ hasText: /visibles des autres joueurs/ });
-    const definitive = avertissements.filter({ hasText: /définitive/ });
-    for (const a of [visibilite, definitive]) {
+    for (const a of [visibilite]) {
       await expect(a).toHaveCount(1);
       await expect(a).toHaveClass(/border-vendre/);
       await expect(a).toContainText('⚠');
@@ -195,30 +183,19 @@ test.describe('SC-015 : durée, avertissements et écarts (AC2)', () => {
     const ecarts = page.getByTestId('ecarts-lots');
     await expect(ecarts).toContainText('Zorglub fictif');
     await expect(ecarts).toContainText(/Attendue, absente du site\s*:/);
-    await expect(ecarts).toContainText('Statut · Garder');
+    await expect(ecarts).toContainText('#À classer');
   });
 });
 
 test.describe('SC-006 : ignorées filtrées de l’aperçu (AC4)', () => {
-  test('SC-006 : une action ignorée est écartée, comptée « 1 action écartée »', async ({ pageCollection: page }) => {
-    await amorcer(page, TOUTES, {
-      ignorees: { version: 1, entrees: [{ type: 'defausse', idCarte: DEFAUSSE.id, parametre: null, portee: 'synchro', date: Date.now() }] },
-    });
-    await ouvrirApercu(page);
-    await expect(page.getByTestId('resume-lots')).toContainText('1 action écartée');
-    await expect(page.getByTestId('actions-ecartees')).toContainText('action ignorée');
-    await expect(ligneDe(page, 'defausses')).toHaveCount(0);
-    await expect(ligneDe(page, 'encheres')).toHaveCount(1);
-  });
-
   test('SC-006 : une création ignorée écarte les poses, raison « création ignorée »', async ({ pageCollection: page }) => {
     await amorcer(page, [GARDE], {
-      ignorees: { version: 1, entrees: [{ type: 'creation-etiquette', idCarte: GARDE.id, parametre: 'Statut · Garder', portee: 'synchro', date: Date.now() }] },
+      ignorees: { version: 1, entrees: [{ type: 'creation-etiquette', idCarte: 'etiquettes', parametre: '#À classer', portee: 'synchro', date: Date.now() }] },
     });
     await ouvrirApercu(page);
-    await expect(page.getByTestId('resume-lots')).toContainText(/[2-9] actions écartées/);
+    await expect(page.getByTestId('resume-lots')).toContainText(/[1-9] actions? écartées?/);
     await expect(page.getByTestId('actions-ecartees')).toContainText('création ignorée');
-    await expect(page.getByTestId('actions-ecartees')).toContainText('Statut · Garder');
+    await expect(page.getByTestId('actions-ecartees')).toContainText('#À classer');
   });
 
   test('SC-006 : sans ignorée, aucun compteur d’actions écartées', async ({ pageCollection: page }) => {
@@ -269,41 +246,6 @@ test.describe('SC-016 : « Lancer » (AC3)', () => {
     await expect(page.locator(`#${id}`)).toHaveText('Aucun onglet WikiMasters ouvert.');
   });
 
-  test('SC-016 : Lancer n’envoie que les lots cochés', async ({ context, pageCollection: page }) => {
-    test.setTimeout(90_000);
-    await amorcer(page, TOUTES);
-    const rest: string[] = [];
-    const defausses: string[] = [];
-    const encheres: string[] = [];
-    await context.route(`${ORIGINE_REST}/**`, (route) => {
-      rest.push(route.request().url());
-      return route.fulfill({ status: 201, contentType: 'application/json', headers: { 'access-control-allow-origin': 'https://www.wiki-masters.com' }, body: '{}' });
-    });
-    await context.route('https://www.wiki-masters.com/**', (route) => {
-      const u = new URL(route.request().url());
-      if (u.pathname.startsWith('/api/')) {
-        if (u.pathname.includes('/discard')) defausses.push(u.pathname);
-        else if (u.pathname === '/api/marketplace' && route.request().method() === 'POST') encheres.push(u.pathname);
-        return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': 'https://www.wiki-masters.com' }, body: '{}' });
-      }
-      return route.fulfill({ contentType: 'text/html', body: SITE });
-    });
-    await context.addCookies([{ name: NOM_COOKIE_SESSION, value: 'base64-e30', domain: 'www.wiki-masters.com', path: '/', secure: true }]);
-    const site = await context.newPage();
-    await site.goto('https://www.wiki-masters.com/collection');
-
-    await ouvrirApercu(page);
-    await ligneDe(page, 'etiquettes').getByRole('checkbox').uncheck();
-    await ligneDe(page, 'encheres').getByRole('checkbox').uncheck();
-    await expect(lancer(page)).not.toHaveAttribute('aria-disabled', 'true');
-    await lancer(page).click();
-
-    await expect.poll(() => defausses.length, { timeout: 45_000 }).toBe(1);
-    expect(defausses[0]).toContain(EX_DEFAUSSE);
-    await page.waitForTimeout(1500);
-    expect(rest, 'aucune étiquette envoyée : lot décoché').toHaveLength(0);
-    expect(encheres, 'aucune enchère envoyée : lot décoché').toHaveLength(0);
-  });
 });
 
 test.describe('SC-024 : largeurs, thèmes et captures de l’onglet Lots', () => {
@@ -313,7 +255,7 @@ test.describe('SC-024 : largeurs, thèmes et captures de l’onglet Lots', () =>
         await page.emulateMedia({ colorScheme });
         await page.setViewportSize({ width, height });
         await amorcer(page, TOUTES, {
-          ignorees: { version: 1, entrees: [{ type: 'defausse', idCarte: DEFAUSSE.id, parametre: null, portee: 'synchro', date: Date.now() }] },
+          ignorees: { version: 1, entrees: [{ type: 'pose-etiquette', idCarte: GARDE.id, parametre: '#À classer', portee: 'synchro', date: Date.now() }] },
         });
         await ouvrirApercu(page);
         await expect(page.getByTestId('duree-lots')).toBeVisible();

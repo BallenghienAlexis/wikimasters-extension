@@ -257,7 +257,7 @@ describe('journal', () => {
   });
 
   it('AC1 : version inconnue → erreur lisible, valeur non écrasée', async () => {
-    const brut = { version: 3, entrees: journalRempli() };
+    const brut = { version: 4, entrees: journalRempli() };
     faux.donnees.set('journal', brut);
     await expect(chargerJournal()).rejects.toThrow(/^Données stockées illisibles/);
     expect(faux.set).not.toHaveBeenCalled();
@@ -299,7 +299,7 @@ describe('exécution', () => {
   it.each([
     ['état inconnu', { ...execution(), etat: 'pause' }],
     ['idLot vide', { ...execution(), idLot: '' }],
-    ['version 3', { ...execution(), version: 3 }],
+    ['version 3', { ...execution(), version: 4 }],
     ['traitees > total', { ...execution(), traitees: 6, total: 5 }],
     ['traitees négatif', { ...execution(), traitees: -1 }],
     ['total non entier', { ...execution(), total: 2.5 }],
@@ -423,25 +423,24 @@ describe('amis initiaux (SC-024)', () => {
 });
 
 describe('T-202 : migration de la collection stockée', () => {
-  it('SC-012 : une collection v2 stockée est lue en v3 avec etiquettesSite vide', async () => {
+  it('SC-012 : une collection v2 stockée est lue en v4 avec etiquettesSite vide', async () => {
     const v2: Record<string, unknown> = {
       id: 'c1', titre: 'Loutre', rarete: 'Rare', quantite: 1, url: null, favori: false, idsSite: ['s1'], etiquettesSite: [],
-      description: '', statut: 'garder', prixCible: null, note: '', ami: null, valeurMarchande: 12, decidePar: 'moi',
-    };
+      description: '', prixCible: null, note: '', ami: null, valeurMarchande: 12,    };
     delete v2.etiquettesSite;
     faux.donnees.set('collection', { version: 2, cartes: [v2] });
     const c = await chargerCollection();
-    expect(c.version).toBe(3);
+    expect(c.version).toBe(4);
     expect(c.cartes[0]).toEqual({ ...v2, etiquettesSite: [] });
   });
 
-  it('SC-012 : une collection vide a la version 3', async () => {
-    expect((await chargerCollection()).version).toBe(3);
+  it('SC-012 : une collection vide a la version 4', async () => {
+    expect((await chargerCollection()).version).toBe(4);
   });
 
   it('SC-012 : les étiquettes du site font l’aller-retour', async () => {
     const c = collectionVide();
-    await enregistrerCollection({ ...c, cartes: [{ id: 'c1', titre: 'L', rarete: null, quantite: 1, url: null, favori: false, idsSite: null, etiquettesSite: ['Thème · Mer'], description: '', statut: 'a-trier', prixCible: null, note: '', ami: null, valeurMarchande: null, decidePar: null }] });
+    await enregistrerCollection({ ...c, cartes: [{ id: 'c1', titre: 'L', rarete: null, quantite: 1, url: null, favori: false, idsSite: null, etiquettesSite: ['Thème · Mer'], description: '', prixCible: null, note: '', ami: null, valeurMarchande: null, }] });
     expect((await chargerCollection()).cartes[0]?.etiquettesSite).toEqual(['Thème · Mer']);
   });
 });
@@ -597,7 +596,7 @@ describe('T-206 : statut détaillé de la synchronisation', () => {
   it('traite une valeur illisible comme absente, sans lever d’erreur', async () => {
     for (const brut of [
       'x',
-      { ...statut(), version: 3 },
+      { ...statut(), version: 4 },
       { ...statut(), etat: 'autre' },
       { ...statut(), page: -1 },
       { ...statut(), page: 1.5 },
@@ -638,7 +637,7 @@ describe('T-206 : statut détaillé de la synchronisation', () => {
 
 describe('récupération d’une collection illisible', () => {
   it('lit le contenu brut sans le valider ni le modifier', async () => {
-    const futur = { version: 3, cartes: [{ id: 'Rare|Loutre' }] };
+    const futur = { version: 4, cartes: [{ id: 'Rare|Loutre' }] };
     faux.donnees.set('collection', futur);
     await expect(chargerCollection()).rejects.toThrow('Données stockées illisibles');
     expect(await lireCollectionBrute()).toEqual(futur);
@@ -650,7 +649,7 @@ describe('récupération d’une collection illisible', () => {
   });
 
   it('réinitialise la seule clé de la collection', async () => {
-    faux.donnees.set('collection', { version: 3 });
+    faux.donnees.set('collection', { version: 4 });
     faux.donnees.set('preferences', { a: 1 });
     faux.donnees.set('ventes', { version: 1, evenements: [{ type: 'debut', at: 1 }] });
     await reinitialiserCollection();

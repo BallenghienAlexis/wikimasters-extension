@@ -4,19 +4,15 @@
  * Logique pure, sans `chrome.*`. L’aperçu est figé (H24) : la revérification rattrape
  * les modifications faites ensuite, et l’état local ne bouge qu’après un succès.
  */
-import { plafondDefausse } from './tri'
 import { CODES_CARTE_INDISPONIBLE, type Action, type Registre, type ResultatAction } from './actions'
 import {
   aEditionLocale,
-  appliquerEdition,
   retirerCarte,
   retirerIdSite,
-  type Carte,
   type Collection,
 } from './collection'
 import { exemplairesAttendus, type Config } from './lot'
 import { enregistrerEtiquette, poserCouple, purgerCarte, purgerExemplaire, retirerCouple, supprimerEtiquetteDuRegistre } from './registre'
-import { prixDepart, valeurDeCarte } from './tri'
 
 /** Résultat d’une action, avec l’identifiant d’étiquette renvoyé par une création réussie. */
 export type ResultatApplicable = ResultatAction & { idEtiquette?: string }
@@ -26,18 +22,10 @@ export interface EtatLocal {
   registre: Registre
 }
 
-/** Prix de départ courant (H4) : `prixCible` s’il est renseigné, sinon la matrice. */
-function prixCourant(carte: Carte): number | null {
-  if (carte.prixCible !== null) return carte.prixCible
-  const valeur = valeurDeCarte(carte)
-  return valeur === null ? null : prixDepart(valeur)
-}
-
 /**
  * Juge la cohérence de l’action avec l’état ACTUEL, et non le changement depuis l’aperçu :
  * une carte modifiée puis remise dans l’état d’origine reste « ok ».
- * « passee » si la carte n’existe plus, est devenue favori, a changé de statut,
- * de prix de départ ou d’ami, ou si l’exemplaire visé n’est plus dans son `idsSite`.
+ * « passee » si la carte n’existe plus, est devenue favori, a changé d’ami, ou si l’exemplaire visé n’est plus dans son `idsSite`.
  */
 export function reverifierAction(
   action: Action,
@@ -50,18 +38,12 @@ export function reverifierAction(
   if (action.type === 'lecture' || action.type === 'suppression-etiquette') return 'ok'
   const carte = collection.cartes.find((c) => c.id === action.idCarte)
   if (!carte) return 'passee'
-  // Un favori n’a jamais ni enchère, ni défausse ; il ne reçoit que des étiquettes de thème (jamais de retrait de Statut).
-  if (carte.favori && (action.type === 'enchere' || action.type === 'defausse')) return 'passee'
-  if (action.type === 'retrait-etiquette' && (carte.favori || carte.statut === 'a-trier')) return 'passee'
 
   switch (action.type) {
+    // Sans statut (2026-11-14), aucun lot ne produit d’enchère ni de défausse : un ordre ancien est toujours passé.
     case 'enchere':
-      if (carte.statut !== 'vendre' || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
-      return prixCourant(carte) === action.prix ? 'ok' : 'passee'
     case 'defausse':
-      if (carte.statut !== 'defausser' || carte.quantite < 1) return 'passee'
-      if (!(typeof carte.valeurMarchande === 'number' && carte.valeurMarchande <= plafondDefausse({ plafondDefausse: config.plafondDefausse }))) return 'passee'
-      return carte.idsSite?.includes(action.idExemplaire) ? 'ok' : 'passee'
+      return 'passee'
     case 'creation-etiquette':
       return exemplairesAttendus(carte, config).some((e) => e.etiquettes.includes(action.nomEtiquette)) ? 'ok' : 'passee'
     case 'pose-etiquette': {
@@ -96,8 +78,7 @@ export function appliquerResultat(
     case 'suppression-etiquette':
       return { collection, registre: supprimerEtiquetteDuRegistre(registre, action.nomEtiquette) }
     case 'enchere':
-      if (!carte) return { collection, registre }
-      return { collection: appliquerEdition(collection, carte.id, { statut: 'en-vente' }), registre }
+      return { collection, registre }
     case 'defausse': {
       if (!carte) return { collection, registre }
       const quantite = Math.max(0, carte.quantite - 1)
@@ -131,7 +112,7 @@ export function appliquerResultat(
  * Le site a refusé (403, 404) une action sur un exemplaire : il n’est plus dans la collection (vendu, défaussé,
  * échangé ou aux enchères). On le retire du local comme une défausse réussie : identifiant d’exemplaire oublié,
  * quantité diminuée ; le registre d’étiquettes n’est jamais touché ; à zéro, la carte disparaît si elle n’a aucune édition locale, sinon elle
- * est gardée mais déliée du site (`idsSite` nul). Une carte `en-vente` n’est jamais retirée. Actions sans exemplaire : rien.
+ * est gardée mais déliée du site (`idsSite` nul). Actions sans exemplaire : rien.
  */
 export function appliquerIndisponible(collection: Collection, registre: Registre, action: Action): EtatLocal {
   if (action.type !== 'pose-etiquette' && action.type !== 'retrait-etiquette' && action.type !== 'enchere' && action.type !== 'defausse') {
@@ -143,7 +124,7 @@ export function appliquerIndisponible(collection: Collection, registre: Registre
   // étiquettes posées, seules retirables. Un couple périmé est inoffensif (un retrait sur un identifiant périmé répond 204).
   const sansId = retirerIdSite(collection, carte.id, action.idExemplaire)
   const quantite = Math.max(0, carte.quantite - 1)
-  if (quantite === 0 && carte.statut !== 'en-vente' && !aEditionLocale(carte)) {
+  if (quantite === 0 && !aEditionLocale(carte)) {
     return { collection: retirerCarte(sansId, carte.id), registre }
   }
   return {

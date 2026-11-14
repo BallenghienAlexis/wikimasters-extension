@@ -1,26 +1,14 @@
 import React from 'react';
 import {
-  LIBELLES_STATUT,
   MAX_NOTE,
-  STATUTS,
   estPrixValide,
   excedent,
   type Carte,
   type EditionCarte,
-  type Statut,
 } from '../lib/collection';
 import { LIBELLES_THEMES, themesDeCarte } from '../lib/themes';
 
 const CLASSE_CHAMP = 'min-h-11 w-full rounded border border-line bg-ink px-3';
-
-const COULEUR_STATUT: Record<Statut, string> = {
-  'a-trier': 'text-muted',
-  garder: 'text-garder',
-  echanger: 'text-echanger',
-  vendre: 'text-vendre',
-  'en-vente': 'text-vendre',
-  defausser: 'text-defausser',
-};
 
 interface Props {
   carte: Carte;
@@ -51,8 +39,7 @@ const CarteLigne: React.FC<Props> = ({ carte, onEdition, refLigne }) => {
 
   const validerPrix = (champ: HTMLInputElement): void => {
     const prix = lireNombre(champ, carte.prixCible);
-    // Un prix choisi à la main ne doit pas être remplacé par l'assistant.
-    if (prix !== undefined && prix !== carte.prixCible) onEdition({ prixCible: prix, decidePar: 'moi' });
+    if (prix !== undefined && prix !== carte.prixCible) onEdition({ prixCible: prix });
   };
 
   const validerValeur = (champ: HTMLInputElement): void => {
@@ -87,19 +74,6 @@ const CarteLigne: React.FC<Props> = ({ carte, onEdition, refLigne }) => {
       <td className={CELLULE}>
         <Etiquette texte="Quantité" />
         {carte.quantite}
-      </td>
-      <td className={CELLULE}>
-        <Etiquette texte="Statut" />
-        <select
-          aria-label={`Statut de ${carte.titre}`}
-          className={`${CLASSE_CHAMP} ${COULEUR_STATUT[carte.statut]}`}
-          value={carte.statut}
-          onChange={(e) => onEdition({ statut: e.target.value as Statut, ami: null, decidePar: 'moi' })}
-        >
-          {STATUTS.map((s) => (
-            <option key={s} value={s}>{LIBELLES_STATUT[s]}</option>
-          ))}
-        </select>
       </td>
       <td className={CELLULE}>
         <Etiquette texte="Valeur marchande" />

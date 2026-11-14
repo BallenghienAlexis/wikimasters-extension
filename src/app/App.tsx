@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { collectionVide, type Filtres } from '../lib/collection';
-import { appliquerTri, type Preferences } from '../lib/tri';
-import { chargerPreferences, enregistrerPreferences } from '../lib/stockage';
 import BandeauActivite from './BandeauActivite';
 import BlocageCollection from './BlocageCollection';
 import MessageStockage from './MessageStockage';
@@ -11,7 +9,6 @@ import OngletLots from './OngletLots';
 import OngletReglages from './OngletReglages';
 import OngletSynchro from './OngletSynchro';
 import OngletTableauDeBord from './OngletTableauDeBord';
-import OngletVentes from './OngletVentes';
 import { idOnglet, idPanneau } from './definitionOnglets';
 import { ContexteAffichage } from './useMouvement';
 import { useAffichage } from './useAffichage';
@@ -20,40 +17,21 @@ import { useHistoriqueQuotidien } from './useHistoriqueQuotidien';
 import { useOngletActif } from './useOngletActif';
 
 /**
- * Coquille de la page de gestion : en-tête, blocage et messages de stockage (au-dessus des onglets, sur les six),
+ * Coquille de la page de gestion : en-tête, blocage et messages de stockage (au-dessus des onglets, sur les cinq),
  * barre d’onglets, puis le seul panneau actif. Les lectures du stockage et les états de la Collection
- * (filtres, thème, pagination) et de l’assistant vivent ici, pour survivre au changement d’onglet.
+ * (filtres, thème, pagination) vivent ici, pour survivre au changement d’onglet.
  */
 const App: React.FC = () => {
   const donnees = useDonneesPage();
   const affichage = useAffichage();
   const [actif, aller] = useOngletActif();
-  const { collection, chargee, blocage, message, preferences, appliquer } = donnees;
+  const { collection, chargee, blocage, message } = donnees;
   useHistoriqueQuotidien(collection, chargee && !blocage);
 
   const [revision, setRevision] = useState(0);
   const [limite, setLimite] = useState(TAILLE_PAGE);
-  const [filtres, setFiltres] = useState<Filtres>({ recherche: '', statut: 'tous', doublonsSeulement: false });
+  const [filtres, setFiltres] = useState<Filtres>({ recherche: '', doublonsSeulement: false });
   const [theme, setTheme] = useState('tous');
-  const [assistantOuvert, setAssistantOuvert] = useState(false);
-
-  const appliquerAssistant = (reponses: Preferences): void => {
-    // Le plafond de défausse n'est pas une réponse de l'assistant : il garde la valeur réglée (autre onglet comprise).
-    const choix = { ...reponses, plafondDefausse: preferences.plafondDefausse };
-    donnees.setPreferences(choix);
-    setAssistantOuvert(false);
-    void chargerPreferences()
-      .catch(() => choix)
-      .then((stockees) => {
-        const final = { ...choix, plafondDefausse: stockees.plafondDefausse };
-        donnees.setPreferences(final);
-        enregistrerPreferences(final).catch(() => donnees.setMessage('Enregistrement de vos réponses impossible.'));
-        // Le tri applique le plafond relu dans le stockage (autre onglet compris).
-        appliquer(appliquerTri(collection, final));
-        setRevision((r) => r + 1);
-        donnees.setMessage('Tri appliqué. À vous d’agir sur WikiMasters : les repères vous guident sur chaque carte.');
-      });
-  };
 
   let panneau: React.ReactNode = null;
   if (!blocage && chargee) {
@@ -78,16 +56,6 @@ const App: React.FC = () => {
             onFiltres={setFiltres}
             onTheme={setTheme}
             onLimite={setLimite}
-          />
-        );
-        break;
-      case 'ventes':
-        panneau = (
-          <OngletVentes
-            donnees={donnees}
-            assistantOuvert={assistantOuvert}
-            onAssistant={setAssistantOuvert}
-            onAppliquerAssistant={appliquerAssistant}
           />
         );
         break;

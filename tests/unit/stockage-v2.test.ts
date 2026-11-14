@@ -78,7 +78,7 @@ describe('T-303 journal', () => {
   });
 
   it('SC-019 : version 3 → illisible, jamais écrasée', async () => {
-    const brut = { version: 3, entrees: [entreeV1] };
+    const brut = { version: 4, entrees: [entreeV1] };
     faux.donnees.set('journal', brut);
     await expect(chargerJournal()).rejects.toThrow(/^Données stockées illisibles/);
     expect(faux.set).not.toHaveBeenCalled();
@@ -97,7 +97,7 @@ describe('T-303 exécution', () => {
   });
 
   it('SC-019 : version 3 → illisible, non écrasée', async () => {
-    const brut = { version: 3, idLot: 'lot-1', etat: 'en-cours', traitees: 1, total: 4 };
+    const brut = { version: 4, idLot: 'lot-1', etat: 'en-cours', traitees: 1, total: 4 };
     faux.donnees.set('execution', brut);
     await expect(chargerExecution()).rejects.toThrow(/^Données stockées illisibles/);
     expect(faux.set).not.toHaveBeenCalled();
@@ -109,7 +109,7 @@ describe('T-303 statut de synchro', () => {
   it('SC-019 : v1 lue en v2 (null) ; version inconnue → null', async () => {
     faux.donnees.set('statutSynchro', statutV1);
     expect(await chargerStatutSynchro()).toEqual({ ...statutV1, version: 2, etape: null, prixFaits: null, prixPrevus: null, debut: null });
-    faux.donnees.set('statutSynchro', { ...statutV1, version: 3 });
+    faux.donnees.set('statutSynchro', { ...statutV1, version: 4 });
     expect(await chargerStatutSynchro()).toBeNull();
   });
 

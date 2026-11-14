@@ -33,8 +33,8 @@ const BREAKPOINTS = [
 const THEMES = ['light', 'dark'] as const;
 
 const CARTES = [
-  { id: 'sy-1', titre: 'Cerf de démonstration', rarete: 'Commune', quantite: 2, statut: 'garder' },
-  { id: 'sy-2', titre: 'Renard de démonstration', rarete: 'Rare', quantite: 1, statut: 'vendre' },
+  { id: 'sy-1', titre: 'Cerf de démonstration', rarete: 'Commune', quantite: 2, },
+  { id: 'sy-2', titre: 'Renard de démonstration', rarete: 'Rare', quantite: 1, },
 ];
 
 interface Statut {

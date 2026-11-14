@@ -50,7 +50,6 @@ test.describe('page de collection', () => {
   test('l’édition survit au rechargement', async ({ pageCollection }) => {
     await chargerCollectionFictive(pageCollection);
     await allerA(pageCollection, 'collection');
-    await pageCollection.getByLabel('Statut de Loutre de démonstration').selectOption('vendre');
     const prix = pageCollection.getByLabel('Prix cible de Loutre de démonstration, en wikibidous');
     await prix.fill('120');
     await prix.blur();
@@ -69,7 +68,6 @@ test.describe('page de collection', () => {
 
     await pageCollection.reload();
 
-    await expect(pageCollection.getByLabel('Statut de Loutre de démonstration')).toHaveValue('vendre');
     await expect(pageCollection.getByLabel('Prix cible de Loutre de démonstration, en wikibidous')).toHaveValue('120');
     await expect(pageCollection.getByLabel('Note sur Loutre de démonstration')).toHaveValue('Attendre une bonne offre');
   });

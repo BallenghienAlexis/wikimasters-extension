@@ -28,7 +28,7 @@ describe('T-303 statut de synchro v2', () => {
   });
 
   it.each([
-    ['version 3', { version: 3 }],
+    ['version 3', { version: 4 }],
     ['étape inconnue', { etape: 'tout' }],
     ['prixFaits négatif', { prixFaits: -1 }],
     ['prixPrevus non entier', { prixPrevus: 1.5 }],

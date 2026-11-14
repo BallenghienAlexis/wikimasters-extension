@@ -12,17 +12,15 @@ const carte = (id: string, plus: Partial<Carte> = {}): Carte => ({
   favori: false,
   idsSite: ['secret-id'],
   etiquettesSite: ['Étiquette'],
-  statut: 'a-trier',
   prixCible: null,
   note: '',
   ami: null,
   valeurMarchande: null,
-  decidePar: null,
   ...plus,
 });
 
 const donnees = (cartes: Carte[], plus: Partial<Donnees> = {}): Donnees => ({
-  collection: { version: 3, cartes },
+  collection: { version: 4, cartes },
   preferences: { version: 2, mesThemes: ['barrage'], amis: [{ nom: 'Ami1', themes: ['tibet'] }] },
   syncAuto: true,
   ventes: [{ type: 'debut', at: 1000 }],
@@ -39,7 +37,7 @@ const lire = (texte: string) => {
 
 describe('export', () => {
   it('n’écrit que la liste blanche : ni identifiants du site, ni étiquettes, ni secret', () => {
-    const texte = ecrire(donnees([carte('a', { statut: 'garder', note: 'ma note' })]));
+    const texte = ecrire(donnees([carte('a', { note: 'ma note' })]));
     expect(texte).not.toContain('secret-id');
     expect(texte).not.toContain('idsSite');
     expect(texte).not.toContain('etiquettesSite');
@@ -54,9 +52,9 @@ describe('export', () => {
   });
 
   it('fait un aller-retour sans perte', () => {
-    const d = donnees([carte('a', { statut: 'vendre', prixCible: 3, note: 'n', ami: 'Ami1', decidePar: 'moi', valeurMarchande: 4, favori: true })]);
+    const d = donnees([carte('a', { prixCible: 3, note: 'n', ami: 'Ami1', valeurMarchande: 4, favori: true })]);
     const s = lire(ecrire(d));
-    expect(s.cartes[0]).toMatchObject({ id: 'a', statut: 'vendre', prixCible: 3, note: 'n', ami: 'Ami1', decidePar: 'moi', valeurMarchande: 4, favori: true });
+    expect(s.cartes[0]).toMatchObject({ id: 'a', prixCible: 3, note: 'n', ami: 'Ami1', valeurMarchande: 4, favori: true });
     expect(s.preferences).toEqual(d.preferences);
     expect(s.syncAuto).toBe(true);
     expect(s.ventes).toEqual(d.ventes);
@@ -83,7 +81,7 @@ describe('lecture stricte', () => {
   });
 
   it('désigne la carte fautive', () => {
-    refuse({ ...base(), cartes: [{ id: 'x', titre: 'T', statut: 'bidon' }] }, /Carte n° 1/);
+    refuse({ ...base(), cartes: [{ id: 'x', titre: 'T', prixCible: -1 }] }, /Carte n° 1/);
   });
 
   it('refuse des réglages, ventes ou booléens invalides', () => {
@@ -110,27 +108,27 @@ describe('fusion', () => {
 
   it('PC vide : toutes les cartes arrivent, sans identifiants du site', () => {
     const vide = donnees([], { preferences: { version: 2, mesThemes: [], amis: [] }, ventes: [], syncAuto: false });
-    const s = sauvee([carte('a', { statut: 'garder' })]);
+    const s = sauvee([carte('a', { })]);
     const r = appliquerImport(vide, s, 'garder-ici');
-    expect(r.ok && r.donnees.collection.cartes).toEqual([expect.objectContaining({ id: 'a', statut: 'garder', idsSite: null, etiquettesSite: [] })]);
+    expect(r.ok && r.donnees.collection.cartes).toEqual([expect.objectContaining({ id: 'a', idsSite: null, etiquettesSite: [] })]);
     expect(apercuImport(vide, s)).toMatchObject({ cartesNouvelles: 1, themesAjoutes: 1, amisAjoutes: 1, ventesAjoutees: 1 });
   });
 
   it('complète une édition vierge, garde la locale en conflit (par défaut)', () => {
-    const s = sauvee([carte('a', { statut: 'garder' }), carte('b', { statut: 'vendre', note: 'sauvée' }), carte('c', { statut: 'garder' })]);
-    const ici = donnees([carte('a'), carte('b', { statut: 'defausser', decidePar: 'moi' }), carte('c', { statut: 'garder' })]);
+    const s = sauvee([carte('a', { prixCible: 7 }), carte('b', { note: 'sauvée' }), carte('c', { })]);
+    const ici = donnees([carte('a'), carte('b', { prixCible: 9 }), carte('c', { })]);
     expect(apercuImport(ici, s)).toMatchObject({ cartesCompletees: 1, cartesEnConflit: 1, cartesIdentiques: 1, cartesNouvelles: 0 });
     const r = appliquerImport(ici, s, 'garder-ici');
     const cartes = r.ok ? r.donnees.collection.cartes : [];
-    expect(cartes.find((c) => c.id === 'a')?.statut).toBe('garder');
-    expect(cartes.find((c) => c.id === 'b')).toMatchObject({ statut: 'defausser', note: '' });
+    expect(cartes.find((c) => c.id === 'a')?.prixCible).toBe(7);
+    expect(cartes.find((c) => c.id === 'b')).toMatchObject({ note: '', prixCible: 9 });
   });
 
   it('« remplacer » prend la sauvegarde en conflit, mais garde favori, quantité et identifiants d’ici', () => {
-    const s = sauvee([carte('b', { statut: 'vendre', note: 'sauvée', favori: true, quantite: 9 })]);
-    const ici = donnees([carte('b', { statut: 'defausser', decidePar: 'moi', idsSite: ['ici'], quantite: 2 })], { syncAuto: false });
+    const s = sauvee([carte('b', { note: 'sauvée', favori: true, quantite: 9 })]);
+    const ici = donnees([carte('b', { idsSite: ['ici'], quantite: 2 })], { syncAuto: false });
     const r = appliquerImport(ici, s, 'remplacer');
-    expect(r.ok && r.donnees.collection.cartes[0]).toMatchObject({ statut: 'vendre', note: 'sauvée', favori: false, quantite: 2, idsSite: ['ici'] });
+    expect(r.ok && r.donnees.collection.cartes[0]).toMatchObject({ note: 'sauvée', favori: false, quantite: 2, idsSite: ['ici'] });
     expect(r.ok && r.donnees.syncAuto).toBe(false);
     expect(r.ok && r.donnees.preferences.amis.map((a) => a.nom)).toEqual(['Ami1']);
   });
@@ -176,7 +174,7 @@ describe('fusion', () => {
   });
 
   it('est idempotente', () => {
-    const d = donnees([carte('a', { statut: 'garder', decidePar: 'moi' })]);
+    const d = donnees([carte('a', { })]);
     const s = lire(ecrire(d));
     const r = appliquerImport(d, s, 'garder-ici');
     expect(r.ok && r.donnees).toEqual(d);

@@ -10,7 +10,7 @@ const TITRE_BASE = 'Étiquettes prévues';
 const TITRE_INDISPONIBLE = `${TITRE_BASE} (envoi pas encore possible)`;
 
 /** Texte exact de l’avertissement (DT-04, SC-015). */
-const AVERTISSEMENT = `les étiquettes de thème, de statut et d’échange, dont les prénoms de vos amis, sont peut-être visibles par les autres joueurs.`;
+const AVERTISSEMENT = `les étiquettes de thème et d’échange, dont les prénoms de vos amis, sont peut-être visibles par les autres joueurs.`;
 
 const RAISONS: Record<RaisonNonPosee, string> = {
   homonyme: 'homonyme d’une étiquette à vous',

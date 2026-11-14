@@ -55,12 +55,10 @@ const carteLocale = (surcharge: object = {}): object => ({
   favori: false,
   idsSite: ['exemplaire-fictif-1'],
   etiquettesSite: [],
-  statut: 'garder',
   prixCible: null,
   note: '',
   ami: null,
   valeurMarchande: null,
-  decidePar: null,
   ...surcharge,
 });
 
@@ -124,7 +122,7 @@ test.describe('synchronisation automatique sur site fictif', () => {
 
   test('activée sans synchro récente : stats puis pages jusqu’à la fin, collection mise à jour sans interaction (SC-002)', async ({ context, serviceWorker }) => {
     test.setTimeout(90_000);
-    await poser(serviceWorker, { collection: { version: 3, cartes: [carteLocale({ statut: 'a-trier' })] }, syncAuto: true });
+    await poser(serviceWorker, { collection: { version: 3, cartes: [carteLocale({ })] }, syncAuto: true });
     const site = await ouvrirSite(context, {
       [CHEMIN_STATS]: { corps: STATS },
       [CHEMIN_PAGE(0)]: { corps: PAGE_0 },
@@ -133,9 +131,10 @@ test.describe('synchronisation automatique sur site fictif', () => {
     });
 
     // Prix en dernier : la carte à décider est relevée une fois la collection lue.
-    await expect.poll(() => site.api.length, { timeout: 60_000, intervals: [500] }).toBeGreaterThanOrEqual(3);
+    await expect.poll(() => site.api.length, { timeout: 60_000, intervals: [500] }).toBeGreaterThanOrEqual(4);
     // Aucune page au-delà de la fin : la page 0 est courte, la lecture s'arrête là (le site refuse la page suivante en 403).
-    expect(chemins(site.api).slice(0, 3)).toEqual([CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_PRIX]);
+    // Lecture complète, puis relecture des stats pour détecter un changement en cours de lecture, puis les prix.
+    expect(chemins(site.api).slice(0, 4)).toEqual([CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_STATS, CHEMIN_PRIX]);
     expect(chemins(site.api)).not.toContain(CHEMIN_PAGE(1));
 
     await expect
@@ -151,7 +150,7 @@ test.describe('synchronisation automatique sur site fictif', () => {
     test.setTimeout(90_000);
     const stats = JSON.stringify({ total: 2, totalUnique: 1, tagOptions: [{ id: 'tag-fictif-1', name: 'Étiquette fictive', color: '#808080', cardCount: 1 }] });
     await poser(serviceWorker, {
-      collection: { version: 3, cartes: [carteLocale({ statut: 'a-trier' }), carteLocale({ id: 'C|Carte vendue', titre: 'Carte vendue', rarete: 'C', idsSite: ['exemplaire-vendu'], statut: 'a-trier' })] },
+      collection: { version: 3, cartes: [carteLocale({ }), carteLocale({ id: 'C|Carte vendue', titre: 'Carte vendue', rarete: 'C', idsSite: ['exemplaire-vendu'], })] },
       syncAuto: true,
     });
     const site = await ouvrirSite(context, {
@@ -174,7 +173,7 @@ test.describe('synchronisation automatique sur site fictif', () => {
 
   test('403 isolé sur le prix d\u2019une carte : ignoré, la synchro va au bout sans pause', async ({ context, serviceWorker }) => {
     test.setTimeout(90_000);
-    await poser(serviceWorker, { collection: { version: 3, cartes: [carteLocale({ statut: 'a-trier' })] }, syncAuto: true });
+    await poser(serviceWorker, { collection: { version: 3, cartes: [carteLocale({ })] }, syncAuto: true });
     const site = await ouvrirSite(context, {
       [CHEMIN_STATS]: { corps: STATS },
       [CHEMIN_PAGE(0)]: { corps: PAGE_0 },
@@ -188,7 +187,7 @@ test.describe('synchronisation automatique sur site fictif', () => {
     verifierLectureSeule(site.api);
   });
 
-  test('total inchangé depuis la dernière synchro complète : une seule requête de synchro (stats), puis le relevé du marché (SC-003)', async ({ context, serviceWorker }) => {
+  test('total inchangé depuis la dernière synchro complète : toute la collection est relue quand même (stats, page, contrôle des stats), puis le relevé du marché (SC-003)', async ({ context, serviceWorker }) => {
     const maintenant = Date.now();
     await poser(serviceWorker, {
       collection: { version: 3, cartes: [carteLocale({ quantite: 2, etiquettesSite: ['Étiquette fictive'], valeurMarchande: 276 })] },
@@ -210,15 +209,15 @@ test.describe('synchronisation automatique sur site fictif', () => {
     // Avec 0,2 s entre deux requêtes, les trois GET partent en moins d'une demi-seconde : on attend le premier, la suite exacte est vérifiée ci-dessous.
     await expect.poll(() => site.api.length, { intervals: [250] }).toBeGreaterThanOrEqual(1);
     await site.page.waitForTimeout(PLUS_QU_UNE_CADENCE_MS);
-    // Synchro terminée, puis un GET vers marketplace/mine (délai variable), puis un seul GET vers le listing du marché, jamais de page ni de prix.
-    await expect.poll(() => chemins(site.api), { timeout: 45_000, intervals: [250] }).toEqual([CHEMIN_STATS, CHEMIN_VENTES, CHEMIN_MARCHE]);
+    // Synchro terminée (lecture complète sans prix à relever), puis marketplace/mine, puis un seul GET vers le listing du marché.
+    await expect.poll(() => chemins(site.api), { timeout: 45_000, intervals: [250] }).toEqual([CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_STATS, CHEMIN_VENTES, CHEMIN_MARCHE]);
     await site.page.waitForTimeout(PLUS_QU_UNE_CADENCE_MS);
-    expect(chemins(site.api)).toEqual([CHEMIN_STATS, CHEMIN_VENTES, CHEMIN_MARCHE]);
+    expect(chemins(site.api)).toEqual([CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_STATS, CHEMIN_VENTES, CHEMIN_MARCHE]);
     verifierLectureSeule(site.api);
   });
 
   test('réponse 403 : arrêt immédiat, statut visible dans la page de gestion (SC-006)', async ({ context, serviceWorker, pageCollection }) => {
-    await poser(serviceWorker, { collection: { version: 3, cartes: [carteLocale({ statut: 'a-trier' })] }, syncAuto: true });
+    await poser(serviceWorker, { collection: { version: 3, cartes: [carteLocale({ })] }, syncAuto: true });
     const site = await ouvrirSite(context, {
       [CHEMIN_STATS]: { corps: '{"error":"forbidden"}', statut: 403 },
       [CHEMIN_PAGE(0)]: { corps: PAGE_0 },

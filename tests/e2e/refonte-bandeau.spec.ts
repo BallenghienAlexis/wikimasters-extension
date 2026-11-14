@@ -59,7 +59,7 @@ const ecrire = (page: Page, valeurs: Record<string, unknown>) => page.evaluate((
 const vider = (page: Page, cles: string[]) => page.evaluate((c) => chrome.storage.local.remove(c), cles);
 
 test.describe('SC-013 : présence du bandeau', () => {
-  test('SC-013 : sans activité, le bandeau n’est pas rendu sur les six onglets', async ({ pageCollection }) => {
+  test('SC-013 : sans activité, le bandeau n’est pas rendu sur les cinq onglets', async ({ pageCollection }) => {
     for (const o of ONGLETS) {
       await allerA(pageCollection, o.id);
       await expect(bandeau(pageCollection)).toHaveCount(0);
@@ -67,7 +67,7 @@ test.describe('SC-013 : présence du bandeau', () => {
     }
   });
 
-  test('SC-013 : synchro en cours avec bail non expiré : ligne Synchro sur les six onglets', async ({ pageCollection }) => {
+  test('SC-013 : synchro en cours avec bail non expiré : ligne Synchro sur les cinq onglets', async ({ pageCollection }) => {
     const n = Date.now();
     await ecrire(pageCollection, { statutSynchro: STATUT_EN_COURS(n), bailSynchro: n + 120_000 });
     for (const o of ONGLETS) {
@@ -166,7 +166,7 @@ test.describe('SC-013, SC-002 : ligne repliée et dépliée', () => {
     const apres = await pageCollection.evaluate(async () => JSON.stringify(await chrome.storage.local.get(null)));
     expect(apres).toBe(avant);
     // Le dépliage survit au changement d’onglet de la page (le bandeau est au-dessus des panneaux) mais pas à un rechargement.
-    await allerA(pageCollection, 'ventes');
+    await allerA(pageCollection, 'collection');
     await expect(l.getByRole('button', { name: /^Lots/ })).toHaveAttribute('aria-expanded', 'true');
     await entete.click();
     await expect(entete).toHaveAttribute('aria-expanded', 'false');
@@ -283,8 +283,8 @@ const NB_CARTES = 20;
 
 const carte = (i: number): object => ({
   id: `UR|Loutre fictive ${i}`, titre: `Loutre fictive ${i}`, rarete: 'UR', description: '', quantite: 1, url: null, favori: false,
-  idsSite: [`bbbbbbbb-bbbb-4bbb-8bbb-${String(i).padStart(12, '0')}`], etiquettesSite: [], statut: 'garder', prixCible: null,
-  note: '', ami: null, valeurMarchande: null, decidePar: 'moi',
+  idsSite: [`bbbbbbbb-bbbb-4bbb-8bbb-${String(i).padStart(12, '0')}`], etiquettesSite: [], prixCible: null,
+  note: '', ami: null, valeurMarchande: null,
 });
 
 test.describe('SC-014, SC-013 : Pause, Reprendre, Arrêter appellent le pilotage', () => {

@@ -12,12 +12,10 @@ const carte = (n: number, surcharge: Record<string, unknown> = {}) => ({
   favori: false,
   idsSite: [`ex-${n}`],
   etiquettesSite: [],
-  statut: 'garder',
   prixCible: null,
   note: '',
   ami: null,
   valeurMarchande: null,
-  decidePar: null,
   ...surcharge,
 });
 

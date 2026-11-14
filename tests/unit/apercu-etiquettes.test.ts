@@ -19,12 +19,10 @@ const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
   url: null,
   favori: false,
   idsSite: [`ex-${id}`],
-  statut: 'garder',
   prixCible: null,
   note: '',
   ami: null,
   valeurMarchande: null,
-  decidePar: null,
   ...extra,
 })
 const coll = (...cartes: Carte[]): Collection => ({ ...collectionVide(), cartes })
@@ -38,34 +36,27 @@ const AMIS = [
 ]
 
 describe('regrouperEtiquettes : lignes (AC1)', () => {
-  it('une carte en vente sur le site ne produit aucune ligne (aucune étiquette envoyée)', () => {
-    const lignes = regrouperEtiquettes(coll(carte('a', { ...CHIEN, statut: 'en-vente' })), registre(), config())
-    expect(JSON.stringify(lignes)).not.toContain('En vente')
-    expect(JSON.stringify(lignes)).not.toContain('#Chien')
-  })
-
   it('regroupe par nom, avec cartes, exemplaires, nouveauté et genre', () => {
-    const a = carte('a', { ...CHIEN, statut: 'echanger', idsSite: ['e1', 'e2'], quantite: 2 })
-    const b = carte('b', { ...CHIEN, statut: 'echanger' })
-    const r = regrouperEtiquettes(coll(a, b), registre([], { 'Statut · Échanger': 'et-1' }), config({ amis: AMIS }))
-    const statut = r.lignes.find((l) => l.nom === 'Statut · Échanger')!
-    expect(statut).toMatchObject({ cartes: 2, exemplaires: 3, nouvelle: false, genre: 'statut' })
+    const a = carte('a', { ...CHIEN, idsSite: ['e1', 'e2'], quantite: 2 })
+    const b = carte('b', { ...CHIEN, })
+    const r = regrouperEtiquettes(coll(a, b), registre([], { '#Chien': 'et-1' }), config({ amis: AMIS }))
+    const chien = r.lignes.find((l) => l.nom === '#Chien')!
+    expect(chien).toMatchObject({ cartes: 2, exemplaires: 3, nouvelle: false, genre: 'theme' })
     const lea = r.lignes.find((l) => l.nom === '#À échanger Léa')!
     expect(lea).toMatchObject({ cartes: 2, exemplaires: 3, nouvelle: true, genre: 'echange' })
-    expect(r.lignes.find((l) => l.nom === '#Chien')?.genre).toBe('theme')
   })
 
-  it('ordre : Statut, échanges, puis thèmes du plus précis au plus général', () => {
-    const r = regrouperEtiquettes(coll(carte('a', { ...CHIEN, statut: 'echanger' })), registre(), config({ amis: AMIS }))
+  it('ordre : échanges, puis thèmes du plus précis au plus général', () => {
+    const r = regrouperEtiquettes(coll(carte('a', { ...CHIEN, })), registre(), config({ amis: AMIS }))
     const genres = r.lignes.map((l) => l.genre)
-    expect(genres.indexOf('statut')).toBe(0)
+    expect(genres[0]).toBe('echange')
     expect(genres.lastIndexOf('echange')).toBeLessThan(genres.indexOf('theme'))
     const themes = r.lignes.filter((l) => l.genre === 'theme').map((l) => l.nom)
     expect(themes.indexOf('#Chien')).toBeLessThan(themes.indexOf('#Animaux'))
   })
 
-  it('aucune ligne ni total pour une collection sans étiquette attendue', () => {
-    const r = regrouperEtiquettes(coll(carte('a', { statut: 'en-vente' }), carte('b', { statut: 'defausser' })), registre(), config())
+  it('aucune ligne ni total pour une collection vide', () => {
+    const r = regrouperEtiquettes(coll(), registre(), config())
     expect(r.lignes).toEqual([])
     expect(r.restantes).toBe(0)
     expect(r.totaux.poses).toBe(0)
@@ -84,20 +75,19 @@ describe('regrouperEtiquettes : lignes (AC1)', () => {
 
 describe('regrouperEtiquettes : totaux et durée (AC2)', () => {
   it('compte les poses, dont thèmes et échanges, et les noms nouveaux', () => {
-    const r = regrouperEtiquettes(coll(carte('a', { ...CHIEN, statut: 'echanger' })), registre(), config({ amis: AMIS }))
+    const r = regrouperEtiquettes(coll(carte('a', { ...CHIEN, })), registre(), config({ amis: AMIS }))
     const poses = r.lignes.reduce((n, l) => n + l.exemplaires, 0)
     expect(r.totaux.poses).toBe(poses)
     expect(r.totaux.echanges).toBe(2)
-    expect(r.totaux.themes).toBe(poses - 3)
+    expect(r.totaux.themes).toBe(poses - 2)
     expect(r.totaux.nomsNouveaux).toBe(r.lignes.length)
   })
 
   it('un nom déjà posé par l’extension n’est pas une pose prévue', () => {
-    const c = carte('a', { statut: 'garder' })
-    const r = regrouperEtiquettes(coll(c), registre([{ ex: 'ex-a', nom: 'Statut · Garder' }, { ex: 'ex-a', nom: '#À classer' }], { 'Statut · Garder': 'et-1', '#À classer': 'et-2' }), config())
+    const c = carte('a', { })
+    const r = regrouperEtiquettes(coll(c), registre([{ ex: 'ex-a', nom: '#À classer' }], { '#À classer': 'et-2' }), config())
     expect(r.totaux.poses).toBe(0)
     expect(r.totaux.nomsNouveaux).toBe(0)
-    expect(r.lignes.find((l) => l.nom === 'Statut · Garder')).toMatchObject({ nouvelle: false })
   })
 
   it('durée : ⌈requêtes × 6 s / 60⌉, identique à la synchronisation', () => {
@@ -122,7 +112,7 @@ describe('regrouperEtiquettes : totaux et durée (AC2)', () => {
 describe('regrouperEtiquettes : non posées et plafond (AC3, AC4)', () => {
   it('expose les étiquettes non posées avec carte et raison', () => {
     const r = regrouperEtiquettes(
-      coll(carte('a', { statut: 'echanger', ami: 'x'.repeat(60) })),
+      coll(carte('a', { ami: 'x'.repeat(60) })),
       registre(),
       config({ longueurMaxEtiquette: 20 }),
     )
@@ -132,29 +122,29 @@ describe('regrouperEtiquettes : non posées et plafond (AC3, AC4)', () => {
 
   it('au plus 100 lignes, avec le nombre restant', () => {
     const amis = Array.from({ length: 150 }, (_, i) => ({ nom: `Ami ${String(i).padStart(3, '0')}`, themes: ['animaux'] }))
-    const r = regrouperEtiquettes(coll(carte('a', { ...CHIEN, statut: 'echanger' })), registre(), config({ amis }))
+    const r = regrouperEtiquettes(coll(carte('a', { ...CHIEN, })), registre(), config({ amis }))
     expect(r.lignes).toHaveLength(100)
-    // Statut + 150 échanges + un thème par libellé détecté, moins les 100 lignes affichées.
+    // 150 échanges + un thème par libellé détecté, moins les 100 lignes affichées.
     const nbThemes = themesDeCarte({ ...CHIEN }).filter((t) => t !== THEME_AUTRES).length
     expect(nbThemes).toBeGreaterThan(0)
-    expect(r.restantes).toBe(1 + 150 + nbThemes - 100)
-    expect(r.lignes[0]!.genre).toBe('statut')
+    expect(r.restantes).toBe(150 + nbThemes - 100)
+    expect(r.lignes[0]!.genre).toBe('echange')
   })
 })
 
 describe('regrouperEtiquettes : retraits (H11)', () => {
-  it('expose les retraits dus à un changement de statut', () => {
-    const c = carte('a', { statut: 'vendre' })
+  it('expose le retrait d’une ancienne étiquette « Statut · … » de l’extension', () => {
+    const c = carte('a', { })
     const r = regrouperEtiquettes(
       coll(c),
       registre([{ ex: 'ex-a', nom: 'Statut · Garder' }], { 'Statut · Garder': 'et-1' }),
       config(),
     )
-    // Statut · Vendre et l’étiquette de repli « #À classer » (carte sans thème) sont à créer et à poser.
+    // L’étiquette de repli « #À classer » (carte sans thème) est à créer et à poser, l’ancien Statut est retiré.
     expect(r.totaux.retraits).toBe(1)
-    expect(r.totaux.poses).toBe(2)
-    expect(r.totaux.nomsNouveaux).toBe(2)
-    expect(r.totaux.requetes).toBe(5)
+    expect(r.totaux.poses).toBe(1)
+    expect(r.totaux.nomsNouveaux).toBe(1)
+    expect(r.totaux.requetes).toBe(3)
   })
 })
 
@@ -163,7 +153,7 @@ describe('regrouperEtiquettes : performance (AC5)', () => {
     const themes = ['animaux', 'pont', 'chien', 'chat', 'volcan', 'lac', 'tunnel', 'cheval', 'ile', 'ski']
     const amis = Array.from({ length: 20 }, (_, i) => ({ nom: `Ami ${i}`, themes }))
     const cartes = Array.from({ length: 5000 }, (_, i) =>
-      carte(`c${String(i).padStart(5, '0')}`, { titre: `Carte ${i}`, description: i % 2 ? 'race de chien' : 'pont sur un lac', statut: 'echanger' }),
+      carte(`c${String(i).padStart(5, '0')}`, { titre: `Carte ${i}`, description: i % 2 ? 'race de chien' : 'pont sur un lac', }),
     )
     const cfg = config({ amis })
     expect(meilleureDuree(() => void regrouperEtiquettes(coll(...cartes), registre(), cfg))).toBeLessThan(500)
@@ -172,7 +162,7 @@ describe('regrouperEtiquettes : performance (AC5)', () => {
 
 describe('regrouperEtiquettes : pureté (AC6)', () => {
   it('ne mute pas ses entrées', () => {
-    const c = coll(carte('a', { ...CHIEN, statut: 'echanger' }))
+    const c = coll(carte('a', { ...CHIEN, }))
     const r = registre()
     const avant = JSON.stringify([c, r])
     regrouperEtiquettes(c, r, config({ amis: AMIS }))
