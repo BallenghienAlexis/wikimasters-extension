@@ -31,7 +31,7 @@ const OngletReglages: React.FC<Props> = ({ donnees, onImportee }) => {
   const avecCartes = collection.cartes.length > 0;
   return (
     <div className="mt-4 flex flex-col gap-3">
-      <SectionRepliable id="reglage-synchro" titre="Synchronisation automatique" resume={syncAuto.actif === null ? 'Lecture…' : syncAuto.actif ? 'Activée' : 'Désactivée'}>
+      <SectionRepliable id="reglage-synchro" titre="Synchronisation automatique" resume={syncAuto.actif === null ? (syncAuto.erreur !== null ? 'Lecture impossible' : 'Lecture…') : syncAuto.actif ? 'Activée' : 'Désactivée'}>
         <ReglageSynchroAuto {...syncAuto} />
       </SectionRepliable>
 
