@@ -78,7 +78,7 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
     if (signal.aborted) return { verifiees, arret: 'manuel', codeHttp: null };
     // MediaWiki découpe `titles` sur « | » : un tel titre interrogerait plusieurs pages, on le saute.
     if (titre.includes('|')) {
-      cache = ajouterEntree(cache, titre, [], maintenant(), true);
+      cache = ajouterEntree(cache, titre, [], maintenant(), true, { fortes: [], faibles: [], genre: 'autre' });
       await surProgres(cache, ++verifiees);
       continue;
     }

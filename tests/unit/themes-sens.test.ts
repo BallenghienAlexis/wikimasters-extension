@@ -103,6 +103,11 @@ describe('sens des phrases', () => {
     expect(definition('Les Lions de Trois-Rivières sont une franchise de hockey sur glace de l’ECHL basée à Trois-Rivières.')).toBe('franchise de hockey sur glace de l\'echl');
     expect(definition('reine consort des Belges')).toBe('reine consort des belges');
   });
+  it('ne coupe pas la phrase sur une initiale et reconnaît « né » sans métier listé', () => {
+    expect(definition('J. R. R. Tolkien est un écrivain britannique.')).toBe('ecrivain britannique');
+    expect(genreDe('Neil Armstrong, né le 5 août 1930, est un astronaute américain.')).toBe('personne');
+    expect(genreDe('Série (1994-2004) japonaise')).not.toBe('personne');
+  });
   it('reconnaît la nature du sujet', () => {
     expect(genreDe('Élisabeth, née le 25 juillet 1876 à Laeken, est reine des Belges.')).toBe('personne');
     expect(genreDe('film de Hervé Palud, sorti en 1998')).toBe('oeuvre');
@@ -127,5 +132,15 @@ describe('classes Wikidata seules', () => {
     expect(themes.length).toBeLessThanOrEqual(MAX_THEMES_PAR_CARTE);
     for (const t of attendus) expect(themes, themes.join(', ')).toContain(t);
     for (const t of interdits) expect(themes, themes.join(', ')).not.toContain(t);
+  });
+});
+
+describe('métiers annexes Wikidata', () => {
+  it('Élisabeth reste centrée sur l’essentiel malgré des occupations annexes', () => {
+    const titre = 'Élisabeth en Bavière (1876-1965)';
+    definirSignauxWikipedia(new Map([[titre, signauxWikipedia([], '', [], ['reine consort', 'photographe', 'infirmière', 'peintre', 'musicienne'], true)]]));
+    const themes = themesPrincipaux({ titre, description: 'reine consort des Belges' });
+    expect(themes.length).toBeLessThanOrEqual(MAX_THEMES_PAR_CARTE);
+    expect(themes).toContain('royaute');
   });
 });

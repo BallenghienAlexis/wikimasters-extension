@@ -14,7 +14,7 @@ const MAX_MOTS = 14;
 export function definition(texte: string): string {
   const net = texte.replaceAll('’', "'").replace(PARENTHESES, ' ').replace(PARENTHESES, ' ').replace(/\s+/g, ' ').trim();
   if (net === '') return '';
-  const premiere = /^.*?[.!?](?=\s|$)/.exec(net)?.[0] ?? net;
+  const premiere = /^.*?(?<!(?:^|\s)\p{Lu})[.!?](?=\s|$)/u.exec(net)?.[0] ?? net;
   const norm = normaliser(premiere);
   // Sans verbe (« physicienne et chimiste polonaise »), la définition est le début de la phrase, jusqu’à la première virgule.
   const m = COPULE.exec(norm);
@@ -32,12 +32,13 @@ const GENRES: [Genre, RegExp][] = [
   ['lieu', /(^|[^a-z])(ville|commune|village|localite|region|departement|province|pays|etat|fleuve|riviere|montagne|volcan|ile|lac|desert|ocean|mer|quartier|capitale|monument|batiment|pont|barrage|tour|chateau|cathedrale|parc|site|territoire|canton|comte)/],
 ];
 
-const NAISSANCE = /\(\s*(?:ne|nee)\b|\(\s*(?:\d{1,2}(?:er)?\s+\p{L}+\s+)?\d{3,4}\s*[-–]|\bne\s+le\b|\bnee\s+le\b|\b(?:ne|nee)\s+en\s+\d/iu;
+// Sur texte normalisé (minuscules, sans accents) : « né le », « née en 1930 », « (14 décembre 1960 - … ». Des années seules « (1994-2004) » ne suffisent pas (séries).
+const NAISSANCE = /\(\s*(?:ne|nee)\b|\(\s*\d{1,2}(?:er)?\s+[a-z]+\s+\d{3,4}\s*[-–]|\b(?:ne|nee)\s+(?:le|en|a)\b/;
 const METIERS = /(^|[^a-z])(chanteu|chanteuse|acteur|actrice|realisat|ecrivain|autrice|auteur|peintre|sculpteur|compositeur|compositrice|musicien|musicienne|rappeu|pianiste|guitariste|batteur|homme|femme|personnalite|dirigeant|dirigeante|president|presidente|ministre|depute|senateur|chancelier|roi|reine|empereur|imperatrice|prince|princesse|duc|duchesse|pape|saint|sainte|philosophe|physicien|physicienne|chimiste|mathematicien|mathematicienne|biologiste|astronome|explorateur|exploratrice|inventeur|inventrice|ingenieur|ingenieure|journaliste|animateur|animatrice|humoriste|comedien|comedienne|athlete|joueur|joueuse|footballeur|footballeuse|sportif|sportive|cycliste|pilote|boxeur|boxeuse|nageur|nageuse|tennisman|tenniswoman|entraineur|entraineuse|general|maréchal|marechal|militaire|dictateur|criminel|tueur|poete|poetesse|dramaturge|architecte|photographe|dessinateur|dessinatrice|scenariste|producteur|productrice|danseur|danseuse|medecin|chirurgien|avocat|juge|espion|espionne|activiste|militant|militante|diplomate|economiste|sociologue|historien|historienne|theologien|theologienne|mannequin|influenceur|influenceuse|youtubeur|youtubeuse)/;
 
 /** Genre du sujet d’après sa présentation (définition d’abord, indices de naissance ensuite). */
 export function genreDe(texte: string, def = definition(texte)): Genre {
-  if (NAISSANCE.test(texte.replaceAll('’', "'").slice(0, 400))) return 'personne';
+  if (NAISSANCE.test(normaliser(texte.replaceAll('’', "'")).slice(0, 400))) return 'personne';
   // Le premier mot de tête qui apparaît dans la définition l’emporte : « équipe de hockey » est une organisation, pas un lieu.
   let meilleur: { genre: Genre; position: number } | null = null;
   for (const [genre, motif] of GENRES) {
