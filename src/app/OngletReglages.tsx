@@ -2,6 +2,7 @@ import React from 'react';
 import { enregistrerAffichage } from '../lib/stockage';
 import { plafondDefausse } from '../lib/tri';
 import type { Donnees } from '../lib/sauvegarde';
+import MesThemes from './MesThemes';
 import GestionAmis from './GestionAmis';
 import EtiquettesPreexistantes from './EtiquettesPreexistantes';
 import PlafondDefausse from './PlafondDefausse';
@@ -69,11 +70,17 @@ const OngletReglages: React.FC<Props> = ({ donnees, onImportee }) => {
         </p>
       </SectionRepliable>
 
-      <SectionRepliable id="reglage-themes" titre="Thèmes" resume="Mots-clés et amis">
+      <SectionRepliable id="reglage-themes" titre="Thèmes" resume="Mes thèmes et amis">
         <p className="py-2 text-sm">
-          Les thèmes des cartes sont déduits du titre et de la description par mots-clés, puis complétés par Wikipédia.
+          Les thèmes des cartes sont déduits du titre et de la description par mots-clés, puis complétés par Wikipédia. Au plus 4 étiquettes de thème par carte, les mieux établies.
         </p>
+        <MesThemes
+          cartes={collection.cartes}
+          preferences={preferences}
+          onChange={(p) => enregistrerLesPreferences(p, 'Enregistrement des thèmes impossible.')}
+        />
         <GestionAmis
+          etiquettesSite={etiquettesSite}
           preferences={preferences}
           onChange={(p) => enregistrerLesPreferences(p, 'Enregistrement des amis impossible.')}
         />

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { IDS_THEMES, LIBELLES_THEMES } from '../lib/themes';
+import { cleEtiquetteSite } from '../lib/lot';
+import type { EtiquetteSite } from '../lib/etiquettesPreexistantes';
 import type { Preferences } from '../lib/tri';
 
 const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded border border-line bg-ink-2 px-4';
@@ -11,10 +13,13 @@ const basculer = (liste: string[], valeur: string): string[] =>
 interface Props {
   preferences: Preferences;
   onChange: (preferences: Preferences) => void;
+  /** Étiquettes du compte lues sur le site à la dernière synchro : un ami peut en suivre. */
+  etiquettesSite?: readonly EtiquetteSite[] | null;
 }
 
 /** Amis et thèmes qu’ils aiment : les cartes dont un thème correspond reçoivent « #À échanger <nom> » au prochain lot. */
-const GestionAmis: React.FC<Props> = ({ preferences, onChange }) => {
+const GestionAmis: React.FC<Props> = ({ preferences, onChange, etiquettesSite }) => {
+  const etiquettes = (etiquettesSite ?? []).filter((e) => !e.nom.startsWith('#À échanger ')).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
   const [nomAmi, setNomAmi] = useState('');
 
   const ajouterAmi = (): void => {
@@ -63,6 +68,24 @@ const GestionAmis: React.FC<Props> = ({ preferences, onChange }) => {
                     {LIBELLES_THEMES[theme]}
                   </label>
                 ))}
+                {etiquettes.map((e) => {
+                  const cle = cleEtiquetteSite(e.nom);
+                  return (
+                    <label key={cle} className="inline-flex min-h-11 items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={ami.themes.includes(cle)}
+                        onChange={() =>
+                          onChange({
+                            ...preferences,
+                            amis: preferences.amis.map((a) => (a.nom === ami.nom ? { ...a, themes: basculer(a.themes, cle) } : a)),
+                          })
+                        }
+                      />
+                      {e.nom} <span className="text-muted">(site)</span>
+                    </label>
+                  );
+                })}
               </div>
             </fieldset>
             <button
