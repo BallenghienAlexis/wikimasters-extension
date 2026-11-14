@@ -311,6 +311,8 @@ export function construireLot(
       }
     }
 
+    // Les étiquettes retirées à la main (`registre.refus`) ne sont pas comptées à part : si le joueur retire tous les thèmes d'une carte,
+    // c'est son choix, la carte n'est pas signalée.
     // Contrôle : une carte reliée doit garder au moins une étiquette de thème (hors échange) ;
     // sinon (nom trop long, homonyme, limite de noms du compte), elle est signalée dans l’aperçu.
     const estTheme = (nom: string): boolean => !nom.startsWith(PREFIXE_ECHANGE)

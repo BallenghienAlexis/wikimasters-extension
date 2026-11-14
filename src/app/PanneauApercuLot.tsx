@@ -19,7 +19,7 @@ import ListeEcarts from './ListeEcarts';
 import SectionRepliable from './SectionRepliable';
 import TableauLots from './TableauLots';
 import { useExecution } from './useExecution';
-import { actionsRetrait, contexteExecution, lancerLot, marquerRetraitsManuels, nouvelIdLot } from './pilotageLots';
+import { actionsRetrait, contexteExecution, lancerLot, marquerRetraitsManuels, nouvelIdLot, oublierRetraitsManuels } from './pilotageLots';
 import {
   CADENCE_TEXTE,
   CLASSE_ACTIF,
@@ -211,7 +211,7 @@ const PanneauApercuLot: React.FC<Props> = ({
   const lignesLots = useMemo(() => lotsAffiches.map((l, i) => ({ famille: l.famille, nbActions: l.actions.length, ordre: i + 1 })), [lotsAffiches]);
   const detailsCochees = useMemo(() => detailsDuLot(actionsCochees, cartes), [actionsCochees, cartes]);
   const pageCochees = useMemo(() => pageActions(actionsCochees), [actionsCochees]);
-  const ecartsSite = useMemo(() => calculerEcarts(collection.cartes, { amis: preferences.amis }), [collection.cartes, preferences.amis]);
+  const ecartsSite = useMemo(() => calculerEcarts(collection.cartes, { amis: preferences.amis }, registreCourant), [collection.cartes, preferences.amis, registreCourant]);
   const detailsEcartees = useMemo(() => detailsDuLot((filtre?.ecartees ?? []).map((e) => e.action), cartes), [filtre, cartes]);
   const basculerLot = (f: FamilleLot): void =>
     setDecochees((d) => {
@@ -261,9 +261,11 @@ const PanneauApercuLot: React.FC<Props> = ({
     setErreurLancement(null);
     setInterrompu(false);
     setFermee(false);
-    lancerLot(actions, idLot).catch((e: unknown) =>
-      setErreurLancement(libelleErreurLancement(e)),
-    );
+    lancerLot(actions, idLot).catch((e: unknown) => {
+      // Lancement refusé : un retrait demandé par le joueur n'a pas eu lieu, il ne doit pas compter comme un refus.
+      oublierRetraitsManuels(actions);
+      setErreurLancement(libelleErreurLancement(e));
+    });
   };
   const lancerDepuisApercu = (actions: Action[]): void => (onLancer ?? ((a: Action[]) => lancer(a, nouvelIdLot('lot'))))(actions);
 

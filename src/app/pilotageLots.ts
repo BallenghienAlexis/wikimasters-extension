@@ -333,6 +333,11 @@ export function marquerRetraitsManuels(actions: readonly Action[]): void {
   for (const a of actions) if (a.type === 'retrait-etiquette') retraitsManuels.add(`${a.idExemplaire}\u0000${a.nomEtiquette}`);
 }
 
+/** Annule la marque quand le lancement a été refusé (bail pris, pause) : le retrait n'a pas eu lieu. */
+export function oublierRetraitsManuels(actions: readonly Action[]): void {
+  for (const a of actions) if (a.type === 'retrait-etiquette') retraitsManuels.delete(`${a.idExemplaire}\u0000${a.nomEtiquette}`);
+}
+
 /** Actions de retrait pour un couple (carte, étiquette) encore posé au registre ; aucune si le retrait n’est pas disponible. */
 export function actionsRetrait(couple: CoupleRetrait, collection: Collection, registre: Registre, retraitDisponible: boolean): Action[] {
   if (!retraitDisponible) return [];

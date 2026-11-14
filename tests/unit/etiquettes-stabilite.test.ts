@@ -5,6 +5,7 @@ import type { Action, Registre, TypeAction } from '../../src/lib/actions'
 import { TYPES_ACTION } from '../../src/lib/actions'
 import type { Carte, Collection } from '../../src/lib/collection'
 import { collectionVide } from '../../src/lib/collection'
+import { calculerEcarts } from '../../src/lib/ecarts'
 import { construireLot, etiquettesDeCarte, type Config } from '../../src/lib/lot'
 import { refuserCouple, registreVide, validerRegistre } from '../../src/lib/registre'
 import { appliquerResultat } from '../../src/lib/revision'
@@ -87,6 +88,16 @@ describe('retraits voulus par le joueur', () => {
     const r = refuserCouple(registreVide(), 'ex-a', '#Cinéma')
     expect(validerRegistre(JSON.parse(JSON.stringify(r)))?.refus).toEqual([{ ex: 'ex-a', nom: '#Cinéma' }])
     expect(validerRegistre({ ...r, refus: [42, { ex: 'x' }] })?.refus).toBeUndefined()
+  })
+})
+
+describe('écarts', () => {
+  it('une étiquette refusée n’est plus « manquante »', () => {
+    const c = CARTES[0] as Carte
+    const sans = calculerEcarts([c], config, registreVide())
+    expect(sans[0]?.manquantes).toContain('#Cinéma')
+    const avec = calculerEcarts([c], config, refuserCouple(registreVide(), 'ex-a', '#Cinéma'))
+    expect(avec[0]?.manquantes ?? []).not.toContain('#Cinéma')
   })
 })
 

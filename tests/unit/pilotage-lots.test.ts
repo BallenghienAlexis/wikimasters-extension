@@ -729,3 +729,33 @@ describe('état d’exécution illisible : rien ne part', () => {
     expect(banc.appels).toHaveLength(2);
   });
 });
+
+describe('retraits voulus par le joueur : registre.refus', () => {
+  const retrait: Action = { type: 'retrait-etiquette', idCarte: 'Rare|Carte 1', idExemplaire: 'ex-1', nomEtiquette: '#Chien' };
+
+  it('retrait marqué « manuel » et réussi : le couple entre dans registre.refus', async () => {
+    const api = await frais();
+    api.marquerRetraitsManuels([retrait]);
+    await api.lancerLot([retrait], 'retrait-1');
+    expect((await api.chargerRegistre()).refus).toEqual([{ ex: 'ex-1', nom: '#Chien' }]);
+  });
+  it('retrait produit par un lot (non marqué) : refus inchangé', async () => {
+    const api = await frais();
+    await api.lancerLot([retrait], 'lot-1');
+    expect((await api.chargerRegistre()).refus).toBeUndefined();
+  });
+  it('retrait manuel en échec : refus inchangé', async () => {
+    const api = await frais();
+    banc.reponse = reponses({ 1: echec(500) });
+    api.marquerRetraitsManuels([retrait]);
+    await api.lancerLot([retrait], 'retrait-1').catch(() => undefined);
+    expect((await api.chargerRegistre()).refus).toBeUndefined();
+  });
+  it('lancement refusé : la marque est oubliée, un retrait de lot ultérieur ne devient pas un refus', async () => {
+    const api = await frais();
+    api.marquerRetraitsManuels([retrait]);
+    api.oublierRetraitsManuels([retrait]);
+    await api.lancerLot([retrait], 'lot-2');
+    expect((await api.chargerRegistre()).refus).toBeUndefined();
+  });
+});
