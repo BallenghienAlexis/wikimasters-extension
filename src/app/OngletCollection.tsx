@@ -1,7 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { STATUTS, LIBELLES_STATUT, filtrerCartes, resumer, type Filtres } from '../lib/collection';
 import { themesDeCarte } from '../lib/themes';
-import CarteLigne from './CarteLigne';
+import { trierLignes } from '../lib/ordreTableau';
+import { plafondDefausse } from '../lib/tri';
+import AnalysesCollection from './AnalysesCollection';
+import GraphiqueEvolution from './GraphiqueEvolution';
+import TableauCartes, { valeurDeTri, type EtatTri } from './TableauCartes';
 import FiltresCollection from './FiltresCollection';
 import VerificationWikipedia from './VerificationWikipedia';
 import type { DonneesPage } from './useDonneesPage';
@@ -23,7 +27,7 @@ interface Props {
 const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded border border-line bg-ink-2 px-4';
 
 /**
- * Onglet Collection : résumé, filtres et liste (contenu actuel, déplacé tel quel). La vérification Wikipédia
+ * Onglet Collection : résumé, filtres, tableau triable, analyses et évolution sur 30 jours. La vérification Wikipédia
  * n’y est montée que dans cette vue liste, pour les cartes affichées (pages de 200).
  */
 const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, revision, onFiltres, onTheme, onLimite }) => {
@@ -35,7 +39,14 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
     [collection.cartes, filtres, theme, cacheWiki],
   );
   // Cartes consultées = cartes affichées dans la liste (les pages suivantes comptent quand on les ouvre).
-  const titresConsultes = useMemo(() => visibles.slice(0, limite).map((c) => c.titre), [visibles, limite]);
+  const [tri, setTri] = useState<EtatTri>({ cle: null, sens: null });
+  // Le tri est d’affichage seulement : jamais écrit. Il précède la coupe à `limite` lignes.
+  const rendues = useMemo(() => {
+    const cle = tri.cle;
+    const triees = cle === null ? visibles : trierLignes(visibles, (c) => valeurDeTri(c, cle), tri.sens);
+    return triees.slice(0, limite);
+  }, [visibles, tri, limite]);
+  const titresConsultes = useMemo(() => rendues.map((c) => c.titre), [rendues]);
   const resume = useMemo(() => resumer(collection.cartes), [collection.cartes]);
 
   if (collection.cartes.length === 0) {
@@ -59,11 +70,14 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
       {visibles.length === 0 ? (
         <p className="mt-6">Aucune carte ne correspond à ces filtres.</p>
       ) : (
-        <ul className="mt-4 divide-y divide-line border-y border-line">
-          {visibles.slice(0, limite).map((carte) => (
-            <CarteLigne key={`${carte.id}-${revision}`} carte={carte} onEdition={(edition) => editer(carte.id, edition)} />
-          ))}
-        </ul>
+        <TableauCartes
+          cartes={rendues}
+          tri={tri}
+          revision={revision}
+          cleFiltre={`${filtres.recherche}|${filtres.statut}|${filtres.doublonsSeulement}|${theme}`}
+          onTri={setTri}
+          onEdition={editer}
+        />
       )}
 
       {visibles.length > limite && (
@@ -71,6 +85,9 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
           Afficher plus ({visibles.length - limite} restantes)
         </button>
       )}
+
+      <AnalysesCollection cartes={collection.cartes} plafond={plafondDefausse(donnees.preferences)} cacheWiki={cacheWiki} />
+      <GraphiqueEvolution />
     </>
   );
 };
