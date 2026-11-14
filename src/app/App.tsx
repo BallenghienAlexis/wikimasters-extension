@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { collectionVide, type Filtres } from '../lib/collection';
 import { appliquerTri, type Preferences } from '../lib/tri';
 import { chargerPreferences, enregistrerPreferences } from '../lib/stockage';
+import BandeauActivite from './BandeauActivite';
 import BlocageCollection from './BlocageCollection';
 import MessageStockage from './MessageStockage';
 import Onglets from './Onglets';
@@ -131,6 +132,8 @@ const App: React.FC = () => {
         </p>
 
         <MessageStockage message={message} />
+
+        <BandeauActivite />
 
         <Onglets actif={actif} onChoisir={aller} />
 
