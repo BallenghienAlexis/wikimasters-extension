@@ -2,7 +2,7 @@
 // quelle est la définition (« X est un film d’animation japonais… ») ? Logique pure, sans dépendance aux thèmes.
 import { normaliser } from './collection';
 
-export type Genre = 'personne' | 'oeuvre' | 'organisation' | 'lieu' | 'espece' | 'autre';
+export type Genre = 'personne' | 'oeuvre' | 'organisation' | 'produit' | 'notion' | 'lieu' | 'espece' | 'autre';
 
 const PARENTHESES = /\([^()]*\)/g;
 const COPULE = /(?:^|[\s,])(?:est|etait|fut|sont|etaient|furent|sera)\s+(?:(?:une|un|les|le|la|l'|des|du|de la|d')\s*)?/;
@@ -28,6 +28,10 @@ export function definition(texte: string): string {
 const GENRES: [Genre, RegExp][] = [
   ['oeuvre', /(^|[^a-z])(film|serie|anime|manga|roman|album|chanson|single|jeu video|jeu de|bande dessinee|telefilm|dessin anime|oeuvre|piece de theatre|opera|emission|comedie|documentaire|feuilleton|nouvelle|poeme|tableau|sculpture|episode|saga|recueil)/],
   ['organisation', /(^|[^a-z])(equipe|club|entreprise|societe|groupe|parti|association|franchise|ligue|marque|constructeur|label|studio|federation|syndicat|organisation|institution|ecole|universite|journal|magazine|chaine|banque|armee|gouvernement|ministere)/],
+  // Produit de consommation (boisson, plat) : « Malibu (liqueur) » n'est pas la ville de Malibu.
+  ['produit', /(^|[^a-z])(liqueur|cocktail|boisson|biere|vin(?![a-z])|whisky|vodka|rhum|gin(?![a-z])|tequila|spiritueux|aliment|plat(?![a-z])|dessert|fromage|patisserie|specialite culinaire|condiment|soda|cafe)/],
+  // Notion, pratique ou terme : « position sexuelle » n'est pas un bateau, même si le titre en parle.
+  ['notion', /(^|[^a-z])(position|technique|pratique|concept|notion|theorie|terme|expression|phenomene|methode|doctrine|courant|mouvement|style|figure de style|tradition|coutume|rituel)/],
   ['espece', /(^|[^a-z])(espece|taxon|genre de|famille de|sous-espece|race de|ordre de|plante|animal|mammifere|oiseau|insecte|poisson|reptile|champignon|arbre)/],
   ['lieu', /(^|[^a-z])(ville|commune|village|localite|region|departement|province|pays|etat|fleuve|riviere|montagne|volcan|ile|lac|desert|ocean|mer|quartier|capitale|monument|batiment|pont|barrage|tour|chateau|cathedrale|parc|site|territoire|canton|comte)/],
 ];

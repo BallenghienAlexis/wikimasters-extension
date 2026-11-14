@@ -176,7 +176,7 @@ function lireSignaux(brut: unknown, connus: Set<string>): SignauxPage | null {
   return { fortes: ids(brut.fortes), faibles: ids(brut.faibles), genre: brut.genre as Genre };
 }
 
-const GENRES: readonly Genre[] = ['personne', 'oeuvre', 'organisation', 'lieu', 'espece', 'autre'];
+const GENRES: readonly Genre[] = ['personne', 'oeuvre', 'organisation', 'produit', 'notion', 'lieu', 'espece', 'autre'];
 
 /** Signaux par le sens : thèmes de la définition (fiables) et des catégories (à recouper), nature du sujet. */
 export function signauxWikipedia(categories: string[], resume: string, descriptionsWikidata: string[] = [], classes: string[] = [], humain = false): SignauxPage {

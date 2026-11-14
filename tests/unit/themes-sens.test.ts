@@ -76,6 +76,39 @@ const CAS: Cas[] = [
     interdits: ['mythologie'],
   },
   {
+    titre: 'Malibu (alcool)',
+    site: 'liqueur à base de noix de coco',
+    categories: ['Malibu', 'Marque de rhum', 'Boisson alcoolisée à base de noix de coco'],
+    resume: 'Malibu est une liqueur à base de rhum et de noix de coco, produite à la Barbade.',
+    attendus: ['alcool'],
+    interdits: ['ville', 'geographie'],
+  },
+  {
+    titre: 'Golden Dream',
+    site: 'cocktail alcoolisé',
+    attendus: ['alcool'],
+    interdits: ['autres'],
+  },
+  {
+    titre: 'Axel Braun',
+    site: 'réalisateur et producteur italien de films pornographiques',
+    categories: ['Naissance en 1965', 'Réalisateur de films pornographiques', 'Histoire du cinéma'],
+    attendus: ['pornographie', 'cinema'],
+    interdits: ['histoire'],
+  },
+  {
+    titre: 'Sister Dearest',
+    site: 'film pornographique de Jonathan Ross sorti en 1984',
+    attendus: ['pornographie', 'cinema'],
+    interdits: [],
+  },
+  {
+    titre: 'Position du bateau ivre',
+    site: 'position sexuelle',
+    attendus: ['sexualite'],
+    interdits: ['vehicule', 'bateaux'],
+  },
+  {
     titre: 'Daft Punk',
     site: 'duo français de musique électronique',
     resume: 'Daft Punk est un groupe de musique électronique français, formé à Paris en 1993.',
@@ -142,5 +175,29 @@ describe('métiers annexes Wikidata', () => {
     const themes = themesPrincipaux({ titre, description: 'reine consort des Belges' });
     expect(themes.length).toBeLessThanOrEqual(MAX_THEMES_PAR_CARTE);
     expect(themes).toContain('royaute');
+  });
+});
+
+describe('domaines ajoutés', () => {
+  it.each([
+    ['Whisky', 'spiritueux écossais', 'alcool'],
+    ['Opium', 'drogue extraite du pavot', 'drogue'],
+    ['Poker', 'jeu de cartes', 'jeux'],
+    ['Chanel', 'maison de haute couture française', 'mode'],
+    ['Le Lac des cygnes', 'ballet de Tchaïkovski', 'danse'],
+    ['Kalachnikov', 'fusil d’assaut soviétique', 'armes'],
+    ['Réchauffement climatique', 'hausse des températures', 'ecologie'],
+    ['Bitcoin', 'cryptomonnaie décentralisée', 'finance'],
+    ['Sorbonne', 'université parisienne', 'education'],
+    ['Thé vert', 'boisson issue d’une infusion', 'boisson'],
+    ['The Beatles', 'groupe de rock britannique', 'rock'],
+  ])('%s -> %s', (titre, description, attendu) => {
+    expect(themesPrincipaux({ titre, description })).toContain(attendu);
+  });
+});
+
+describe('faux positifs évités', () => {
+  it('« The » dans un titre ne donne pas #Boissons', () => {
+    expect(themesPrincipaux({ titre: 'The Beatles', description: 'groupe de rock britannique' })).not.toContain('boisson');
   });
 });
