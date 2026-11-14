@@ -296,7 +296,7 @@ const NB_ANCETRES_THEME = (() => {
 
 /**
  * Thèmes qui caractérisent le plus la carte (au plus `MAX_THEMES_PAR_CARTE`), du mieux établi au moins bien établi.
- * Poids : titre ×3, première phrase de la description ×3, reste de la description ×1, thèmes vérifiés sur Wikipédia ×3.
+ * Poids : titre ×3, première phrase de la description ×3, reste de la description ×1, thèmes vérifiés sur Wikipédia +2 (ancêtres exclus).
  * Un thème dont le poids est inférieur au tiers du meilleur est écarté ; à poids égal, le plus précis passe avant.
  * Les parents ne sont pas ajoutés : ils servent seulement à faire correspondre les amis (`themesDeCarte`).
  */
