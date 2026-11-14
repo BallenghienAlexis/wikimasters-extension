@@ -267,7 +267,7 @@ test.describe('exécution réelle (site fictif)', () => {
     await r.focus();
     await expect(r).toBeFocused();
     const avant = banc.rest.length;
-    await r.click();
+    await r.click({ force: true });
     await page.waitForTimeout(500);
     expect(banc.rest.length).toBe(avant);
     for (const nom of [/^Sauter cette action/, /^Sauter ce lot/, /^Ignorer jusqu’à/, /^Arrêter tout/]) {
@@ -284,7 +284,7 @@ test.describe('exécution réelle (site fictif)', () => {
     await expect(panneau(page)).toContainText(/401/);
     const avant = banc.rest.length;
     await bouton(page, /^Sauter cette action/).click();
-    await expect.poll(async () => ((await stockage(page, 'journal')) as Array<{ cause: string | null }>).some((e) => e.cause === 'sautee')).toBe(true);
+    await expect.poll(async () => ((await stockage(page, 'journal')) as { entrees: Array<{ cause: string | null }> }).entrees.some((e) => e.cause === 'sautee')).toBe(true);
     await page.waitForTimeout(800);
     expect(banc.rest.length).toBe(avant);
     for (const nom of [/^Sauter cette action/, /^Sauter ce lot/, /^Ignorer jusqu’à/]) {
@@ -320,14 +320,14 @@ test.describe('exécution réelle (site fictif)', () => {
     const raison = await r.getAttribute('aria-describedby');
     await expect(page.locator(`[id="${raison}"]`)).toContainText('Résultat inconnu : vérifiez sur WikiMasters, puis sautez l’action');
     const avant = banc.rest.length;
-    await r.click();
+    await r.click({ force: true });
     await page.waitForTimeout(500);
     expect(banc.rest.length).toBe(avant);
     await expect(bouton(page, /^Sauter cette action/)).not.toHaveAttribute('aria-disabled', 'true');
   });
 
   test('SC-006 : écriture de « ignorees » refusée, message role alert sous le bouton, rien d’ignoré', async ({ context, pageCollection: page }) => {
-    await amorcerLot(page, 2);
+    await amorcerLot(page, 4);
     await ouvrirSite(context, reponses(500));
     await lancer(page);
     await allerA(page, 'synchro');
@@ -408,17 +408,17 @@ test.describe('Historique', () => {
   const lignes = (p: Page): Locator => p.getByTestId('historique').getByTestId('ligne-historique');
 
   test('SC-018 : libellés H5 affichés sans modifier le stockage', async ({ pageCollection: page }) => {
-    await poser(page, { journal });
+    await poser(page, { journal: { version: 2, entrees: journal } });
     await page.evaluate(() => { window.location.hash = 'synchro'; });
     const h = page.getByTestId('historique');
     await expect(h).toContainText('Passée : exemplaire indisponible');
     await expect(h).toContainText('Passée : sautée');
     await expect(h).toContainText('Passée : ignorée jusqu’à la prochaine synchro');
-    expect(((await stockage(page, 'journal')) as Array<{ resultat: string }>)[1]!.resultat).toBe('echouee');
+    expect(((await stockage(page, 'journal')) as { entrees: Array<{ resultat: string }> }).entrees[1]!.resultat).toBe('echouee');
   });
 
   test('SC-018 : filtres type, résultat, carte, exécution combinés en ET, puis « Aucune action ne correspond »', async ({ pageCollection: page }) => {
-    await poser(page, { journal });
+    await poser(page, { journal: { version: 2, entrees: journal } });
     const h = page.getByTestId('historique');
     await expect(lignes(page)).toHaveCount(4);
     await h.getByLabel('Type').selectOption({ label: 'Étiquette' });
@@ -435,7 +435,7 @@ test.describe('Historique', () => {
   });
 
   test('SC-008 : filtres au clavier (Tab atteint les quatre filtres)', async ({ pageCollection: page }) => {
-    await poser(page, { journal });
+    await poser(page, { journal: { version: 2, entrees: journal } });
     const h = page.getByTestId('historique');
     for (const nom of ['Type', 'Résultat', 'Carte', 'Exécution']) {
       await h.getByLabel(nom).focus();
@@ -455,7 +455,7 @@ test.describe('Captures', () => {
         await poser(page, {
           execution: execution({ pauseJusqua: Date.now() + 20 * 60_000 }),
           ignorees: { version: 1, entrees: [ignoree(1)] },
-          journal: [entreeJournal(1), entreeJournal(2, { resultat: 'passee', cause: 'sautee' })],
+          journal: { version: 2, entrees: [entreeJournal(1), entreeJournal(2, { resultat: 'passee', cause: 'sautee' })] },
         });
         await page.getByTestId('ignorees').getByRole('button', { name: /^Ignorées/ }).click();
         await expect(panneau(page)).toBeVisible();
