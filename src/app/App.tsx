@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { collectionVide, type Filtres } from '../lib/collection';
 import { appliquerTri, type Preferences } from '../lib/tri';
 import { chargerPreferences, enregistrerPreferences } from '../lib/stockage';
+import BandeauActivite from './BandeauActivite';
 import BlocageCollection from './BlocageCollection';
 import MessageStockage from './MessageStockage';
 import Onglets from './Onglets';
@@ -133,6 +134,8 @@ const App: React.FC = () => {
         <MessageStockage message={message} />
 
         <Onglets actif={actif} onChoisir={aller} />
+
+        <BandeauActivite />
 
         <div role="tabpanel" id={idPanneau(actif)} aria-labelledby={idOnglet(actif)} tabIndex={0}>
           {panneau}
