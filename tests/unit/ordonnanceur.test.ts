@@ -605,9 +605,16 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(b2.departs.some((d) => d.chemin.includes('card-2/sales'))).toBe(false);
   })
 
-  it('prix : 3 refus 403 d’affilée (session refusée) arrêtent la synchro avec pause de 30 min', async () => {
+  it('prix : 3 refus 403 d’affilée avec session refusée (contrôle en 403) arrêtent la synchro avec pause de 30 min', async () => {
     const site = siteFictif(8);
-    const b = banc((chemin) => (chemin.includes('/sales') ? { statut: 403, json: null } : site(chemin)));
+    let apresPrix = false;
+    const b = banc((chemin) => {
+      if (chemin.includes('/sales')) {
+        apresPrix = true;
+        return { statut: 403, json: null };
+      }
+      return apresPrix ? { statut: 403, json: null } : site(chemin);
+    });
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('arret');
     expect(r.codeHttp).toBe(403);
@@ -615,9 +622,25 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.etat.arretJusqua).toBe(b.horloge.t + PAUSE_APRES_ARRET_MS);
   })
 
-  it('prix : 10 refus 403 sur l’exécution arrêtent même séparés par des succès', async () => {
+  it('prix : 3 refus 403 d’affilée mais session saine (contrôle réussi) : cartes sans marché sautées, la synchro continue', async () => {
+    const site = siteFictif(8);
+    const b = banc((chemin) => (/card-[0-3]\/sales/.test(chemin) ? { statut: 403, json: null } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('termine');
+    expect(r.etat.arretJusqua).toBeNull();
+    expect(r.prixReleves).toBeGreaterThan(0);
+  })
+
+  it('prix : 10 refus 403 sur l’exécution déclenchent un contrôle de session, qui arrête si le site refuse', async () => {
     const site = siteFictif(40);
-    const b = banc((chemin) => (/card-(\d+)\/sales/.test(chemin) && Number(/card-(\d+)\//.exec(chemin)![1]) % 2 === 0 ? { statut: 403, json: null } : site(chemin)));
+    let controleRefuse = false;
+    const b = banc((chemin) => {
+      if (/card-(\d+)\/sales/.test(chemin) && Number(/card-(\d+)\//.exec(chemin)![1]) % 2 === 0) {
+        controleRefuse = true;
+        return { statut: 403, json: null };
+      }
+      return controleRefuse && /stats/.test(chemin) ? { statut: 403, json: null } : site(chemin);
+    });
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('arret');
     expect(r.codeHttp).toBe(403);
