@@ -656,6 +656,15 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.etat.derniereComplete).toBeNull();
   });
 
+  it('des échecs séparés par des lectures réussies sont sautés : seuls 3 échecs d’affilée arrêtent', async () => {
+    const site = siteFictif(10);
+    const b = banc((chemin, n) => (n === 2 || n === 4 || n === 6 ? { statut: 500, json: null } : site(chemin)));
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.issue).toBe('termine');
+    expect(r.raison).not.toBe('echecs');
+    expect(r.complete).toBe(false);
+  })
+
   it('s’arrête sur demande manuelle avant la requête suivante', async () => {
     const b = banc(siteFictif(10));
     const r = await synchroniser({ ...b.deps, maxPrix: 0, arretDemande: () => b.departs.length >= 2 });

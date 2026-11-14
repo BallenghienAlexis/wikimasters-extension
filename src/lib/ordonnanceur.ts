@@ -205,7 +205,10 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     signalements: [],
   };
 
+  /** Échecs d’affilée (remis à zéro par une lecture réussie) : 3 de suite arrêtent la synchro. */
   let echecs = 0;
+  /** Échecs sautés sur toute l’exécution : la synchro n’est pas déclarée complète s’il y en a. */
+  let echecsTotal = 0;
   /** Refus 403 consécutifs sur la route des prix (par carte, tolérés un à un). */
   let refusPrix = 0;
   let refusPrixTotal = 0;
@@ -285,7 +288,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
 
   function echec(message: string): null {
     echecs += 1;
-    journal(`Échec ${echecs}/${MAX_ECHECS} : ${message}`);
+    echecsTotal += 1;
+    journal(`Échec ${echecs}/${MAX_ECHECS} d’affilée : ${message} Élément sauté, la synchronisation continue.`);
     if (echecs >= MAX_ECHECS) throw new Interruption('echecs', null);
     return null;
   }
@@ -317,7 +321,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       if (!inchange) {
         const lecture = await lirePages(stats?.total ?? null, gain);
         complet = lecture.ok && complet;
-        if (lecture.vus !== null && lecture.ok && echecs === 0 && resultat.ignorees === 0) retirerDisparues(lecture.vus);
+        if (lecture.vus !== null && lecture.ok && echecsTotal === 0 && resultat.ignorees === 0) retirerDisparues(lecture.vus);
       }
       if (complet && stats !== null) {
         etat.total = stats.total;
@@ -327,7 +331,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       } else if (!complet) {
         etat.derniereComplete = null;
       }
-      resultat.complete = complet && echecs === 0;
+      resultat.complete = complet && echecsTotal === 0;
       await deps.enregistrer(instantane(), etat);
       await relevePrix();
       await releveVentes();
@@ -428,6 +432,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         }
       }
       resultat.pagesLues += 1;
+      echecs = 0;
       exemplairesLus += lue.ignorees;
       if (lue.ignorees > 0) {
         resultat.ignorees += lue.ignorees;
@@ -519,6 +524,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         continue;
       }
       refusPrix = 0;
+      echecs = 0;
       const valeur = analyserPrix(r.json, carte.rarete as string);
       const courante = parId.get(carte.id) as Carte;
       const saisieMain = courante.valeurMarchande !== null && etat.prix[carte.id]?.valeur !== courante.valeurMarchande;
