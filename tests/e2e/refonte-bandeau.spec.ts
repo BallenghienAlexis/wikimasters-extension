@@ -151,6 +151,8 @@ test.describe('SC-013, SC-002 : ligne repliée et dépliée', () => {
   test('SC-013 : déplier une ligne Lots montre une barre par lot, Pause et Arrêter ; état non stocké', async ({ pageCollection }) => {
     await ecrire(pageCollection, { execution: EXECUTION_EN_COURS });
     const l = ligne(pageCollection, 'lots');
+    // L'initialisation de la page écrit `historique` : on l'attend pour ne comparer que l'effet du dépliage.
+    await pageCollection.waitForFunction(async () => 'historique' in (await chrome.storage.local.get('historique')));
     const avant = await pageCollection.evaluate(async () => JSON.stringify(await chrome.storage.local.get(null)));
     const entete = l.getByRole('button', { name: /^Lots/ });
     await entete.click();
