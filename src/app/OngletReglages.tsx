@@ -7,6 +7,7 @@ import EtiquettesPreexistantes from './EtiquettesPreexistantes';
 import PlafondDefausse from './PlafondDefausse';
 import { lancerSuppressionEtiquettes } from './pilotageLots';
 import ReglageAnimations from './ReglageAnimations';
+import ReglageSynchroAuto from './ReglageSynchroAuto';
 import Sauvegarde from './Sauvegarde';
 import SectionRepliable from './SectionRepliable';
 import { useAffichage } from './useAffichage';
@@ -19,7 +20,7 @@ interface Props {
 
 const NB = ' ';
 
-/** Onglet Réglages (D-50) : six sections repliées par défaut, titre et résumé visibles. */
+/** Onglet Réglages (D-50) : sept sections repliées par défaut, titre et résumé visibles. */
 const OngletReglages: React.FC<Props> = ({ donnees, onImportee }) => {
   const { collection, registre, preferences, preferencesLues, etiquettesSite, executionEnCours, enregistrerLesPreferences, setMessage } = donnees;
   const { animations } = useAffichage();
@@ -27,6 +28,10 @@ const OngletReglages: React.FC<Props> = ({ donnees, onImportee }) => {
   const avecCartes = collection.cartes.length > 0;
   return (
     <div className="mt-4 flex flex-col gap-3">
+      <SectionRepliable id="reglage-synchro" titre="Synchronisation automatique" resume="Activer ou couper">
+        <ReglageSynchroAuto />
+      </SectionRepliable>
+
       <SectionRepliable id="reglage-sauvegarde" titre="Sauvegarde" resume="Exporter, importer">
         <Sauvegarde onImportee={onImportee} />
       </SectionRepliable>

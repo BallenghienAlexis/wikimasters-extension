@@ -219,9 +219,9 @@ export async function contraste(cible: import('@playwright/test').Locator): Prom
   });
 }
 
-/** Ouvre les six sections repliables de l'onglet Réglages (une par une, sans supposer qu'elles restent ouvertes ensemble). */
+/** Ouvre les sept sections repliables de l'onglet Réglages (une par une, sans supposer qu'elles restent ouvertes ensemble). */
 export async function ouvrirSectionsReglages(page: Page): Promise<void> {
-  for (const titre of ['Sauvegarde', 'Plafond de défausse', 'Étiquettes préexistantes', 'Wikipédia', 'Thèmes', 'Animations']) {
+  for (const titre of ['Synchronisation automatique', 'Sauvegarde', 'Plafond de défausse', 'Étiquettes préexistantes', 'Wikipédia', 'Thèmes', 'Animations']) {
     const b = page.getByRole('button', { name: new RegExp(`^${titre}`) });
     if ((await b.getAttribute('aria-expanded')) === 'false') await b.click();
   }

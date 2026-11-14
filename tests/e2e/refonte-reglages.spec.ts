@@ -8,7 +8,7 @@ const CARTES = [
   { id: 'b', titre: 'Planète fictive', rarete: 'C', description: 'planète lointaine', valeurMarchande: 8 },
 ];
 
-const SECTIONS = ['Sauvegarde', 'Plafond de défausse', 'Étiquettes préexistantes', 'Wikipédia', 'Thèmes', 'Animations'] as const;
+const SECTIONS = ['Synchronisation automatique', 'Sauvegarde', 'Plafond de défausse', 'Étiquettes préexistantes', 'Wikipédia', 'Thèmes', 'Animations'] as const;
 
 const BREAKPOINTS = [
   { name: 'mobile', width: 375, height: 812 },
@@ -24,12 +24,25 @@ test.beforeEach(async ({ pageCollection }) => {
 });
 
 test.describe('SC-028 : sections repliables', () => {
-  test('SC-028 : six sections fermées par défaut, avec résumé', async ({ pageCollection: page }) => {
+  test('SC-028 : sept sections fermées par défaut, avec résumé', async ({ pageCollection: page }) => {
     for (const titre of SECTIONS) {
       await expect(bouton(page, titre)).toHaveAttribute('aria-expanded', 'false');
     }
     await expect(bouton(page, 'Plafond de défausse')).toContainText('Plafond : 5');
     await expect(bouton(page, 'Animations')).toContainText('Animations : activées');
+  });
+
+  test('l’interrupteur de synchro des Réglages suit celui de l’onglet Synchro', async ({ pageCollection: page }) => {
+    await bouton(page, 'Synchronisation automatique').click();
+    const reglage = page.getByRole('switch', { name: 'Synchronisation automatique' });
+    await expect(reglage).toBeChecked();
+    await reglage.uncheck();
+    await allerA(page, 'synchro');
+    await expect(page.getByRole('switch', { name: 'Synchronisation automatique' })).toHaveAttribute('aria-checked', 'false');
+    await page.getByRole('switch', { name: 'Synchronisation automatique' }).click();
+    await allerA(page, 'reglages');
+    await bouton(page, 'Synchronisation automatique').click();
+    await expect(page.getByRole('switch', { name: 'Synchronisation automatique' })).toBeChecked();
   });
 
   test('SC-028 : le contenu replié est hors tabulation, visible une fois ouvert', async ({ pageCollection: page }) => {
@@ -64,15 +77,11 @@ test.describe('SC-028 : sections repliables', () => {
     await expect(page.getByTestId('plafond-defausse')).toBeVisible();
   });
 
-  test('SC-028 : synchro auto et relance ne sont pas dans Réglages', async ({ pageCollection: page }) => {
+  test('SC-028 : Réglages porte l’interrupteur de synchro, pas la relance (décision d’Alexis, 14/11)', async ({ pageCollection: page }) => {
     for (const titre of SECTIONS) await bouton(page, titre).click();
     const panneau = page.getByRole('tabpanel');
-    await expect(panneau.getByRole('checkbox', { name: /synchronisation automatique/i })).toHaveCount(0);
-    await expect(panneau.getByRole('switch', { name: /synchronisation automatique/i })).toHaveCount(0);
+    await expect(panneau.getByRole('switch', { name: /synchronisation automatique/i })).toHaveCount(1);
     await expect(panneau.getByRole('button', { name: /Relancer la synchro/ })).toHaveCount(0);
-    // Ils restent dans Synchro.
-    await allerA(page, 'synchro');
-    await expect(page.getByRole('tabpanel').getByText(/synchronisation automatique/i).first()).toBeVisible();
   });
 });
 
