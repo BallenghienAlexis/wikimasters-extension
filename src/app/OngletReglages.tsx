@@ -12,6 +12,7 @@ import ReglageSynchroAuto from './ReglageSynchroAuto';
 import Sauvegarde from './Sauvegarde';
 import SectionRepliable from './SectionRepliable';
 import { useAffichage } from './useAffichage';
+import { useSyncAuto } from './useSyncAuto';
 import type { DonneesPage } from './useDonneesPage';
 
 interface Props {
@@ -25,15 +26,16 @@ const NB = ' ';
 const OngletReglages: React.FC<Props> = ({ donnees, onImportee }) => {
   const { collection, registre, preferences, preferencesLues, etiquettesSite, executionEnCours, enregistrerLesPreferences, setMessage } = donnees;
   const { animations } = useAffichage();
+  const syncAuto = useSyncAuto();
   const plafond = plafondDefausse(preferences);
   const avecCartes = collection.cartes.length > 0;
   return (
     <div className="mt-4 flex flex-col gap-3">
-      <SectionRepliable id="reglage-synchro" titre="Synchronisation automatique" resume="Activer ou couper">
-        <ReglageSynchroAuto />
+      <SectionRepliable id="reglage-synchro" titre="Synchronisation automatique" resume={syncAuto.actif === null ? 'Lecture…' : syncAuto.actif ? 'Activée' : 'Désactivée'}>
+        <ReglageSynchroAuto {...syncAuto} />
       </SectionRepliable>
 
-      <SectionRepliable id="reglage-sauvegarde" titre="Sauvegarde" resume="Exporter, importer">
+      <SectionRepliable id="reglage-sauvegarde" titre="Sauvegarde" resume="Fichier JSON">
         <Sauvegarde onImportee={onImportee} />
       </SectionRepliable>
 
@@ -63,7 +65,7 @@ const OngletReglages: React.FC<Props> = ({ donnees, onImportee }) => {
         )}
       </SectionRepliable>
 
-      <SectionRepliable id="reglage-wikipedia" titre="Wikipédia" resume="Vérification automatique">
+      <SectionRepliable id="reglage-wikipedia" titre="Wikipédia" resume="Automatique">
         <p className="py-2 text-sm">
           Les titres des cartes affichées dans la Collection sont vérifiés sur Wikipédia (puis Wikidata) pour affiner leurs thèmes, une requête
           par seconde. Seul le titre de la carte est envoyé, jamais une donnée du compte. Les résultats sont gardés 30{NB}jours.

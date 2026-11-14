@@ -28,9 +28,11 @@ const SectionRepliable: React.FC<Props> = ({ titre, resume, id, niveau = 3, chil
           className="flex min-h-11 w-full items-center justify-between gap-2 px-3 text-left focus-visible:shadow-(--halo-focus)"
         >
           <span className="font-bold">{titre}</span>
-          <span className="text-sm text-muted">{resume}</span>
-          <span aria-hidden="true" className="wm-chevron" data-ouvert={ouvert}>
-            ▼
+          <span className="flex items-center gap-2">
+            <span className="text-sm text-muted">{resume}</span>
+            <span aria-hidden="true" className="wm-chevron" data-ouvert={ouvert}>
+              ▼
+            </span>
           </span>
         </button>
       </Titre>

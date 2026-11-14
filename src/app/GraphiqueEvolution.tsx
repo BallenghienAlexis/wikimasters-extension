@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { serie30Jours, type PointHistorique } from '../lib/historique';
 import { chargerHistorique, ecouterHistorique } from '../lib/stockage';
 
+const nombre = new Intl.NumberFormat('fr-FR');
 const jourCourt = (jour: string): string => `${jour.slice(8, 10)}/${jour.slice(5, 7)}`;
 
 /**
@@ -31,11 +32,20 @@ const GraphiqueEvolution: React.FC = () => {
   const serie = useMemo(() => serie30Jours(points, new Date()), [points]);
   const dansFenetre = serie.filter((j): j is { jour: string; exemplaires: number } => j.exemplaires !== null);
   const maximum = Math.max(1, ...dansFenetre.map((j) => j.exemplaires));
+  const premier = dansFenetre[0]?.exemplaires ?? 0;
+  const dernier = dansFenetre[dansFenetre.length - 1]?.exemplaires ?? 0;
+  const delta = dernier - premier;
   const survol = serie.find((j) => j.jour === actif && j.exemplaires !== null);
 
   return (
-    <section data-testid="evolution" aria-labelledby="titre-evolution" className="mt-8">
-      <h2 id="titre-evolution" className="text-xl font-semibold">Évolution sur 30 jours</h2>
+    <section data-testid="evolution" aria-labelledby="titre-evolution" className="mt-4 rounded border border-line bg-ink-2 p-4">
+      <h2 id="titre-evolution" className="font-semibold">Évolution de la collection (30 jours)</h2>
+      {dansFenetre.length >= 2 && (
+        <p className="mt-1 text-sm text-muted">
+          Exemplaires à la fin de chaque jour · de {nombre.format(premier)} à {nombre.format(dernier)} ({delta >= 0 ? '+' : '−'}
+          {nombre.format(Math.abs(delta))})
+        </p>
+      )}
       {dansFenetre.length < 2 ? (
         <p className="mt-2 text-muted">Historique en cours de constitution ({dansFenetre.length} jour)</p>
       ) : (
@@ -43,7 +53,7 @@ const GraphiqueEvolution: React.FC = () => {
           <p data-testid="evolution-valeur" className="mt-2 min-h-6" aria-live="off">
             {survol ? `${jourCourt(survol.jour)} : ${survol.exemplaires} exemplaires` : 'Survolez ou focalisez une colonne pour lire sa valeur.'}
           </p>
-          <div className="mt-2 flex h-32 items-end gap-px rounded border border-line bg-ink-2 p-2">
+          <div className="mt-2 flex h-32 items-end gap-px rounded border border-line bg-ink p-2">
             {serie.map((j) =>
               j.exemplaires === null ? (
                 <div key={j.jour} data-testid="evolution-trou" aria-hidden="true" className="h-full min-w-0 flex-1" />
@@ -65,6 +75,10 @@ const GraphiqueEvolution: React.FC = () => {
                 </div>
               ),
             )}
+          </div>
+          <div aria-hidden="true" className="mt-1 flex justify-between text-xs text-muted">
+            <span>{jourCourt(serie[0]?.jour ?? '')}</span>
+            <span>{jourCourt(serie[serie.length - 1]?.jour ?? '')}</span>
           </div>
           <table className="sr-only">
             <caption>Exemplaires par jour sur 30 jours</caption>

@@ -46,6 +46,7 @@ const AnalysesCollection: React.FC<Props> = ({ cartes, cacheWiki }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [cartes, cacheWiki],
   );
+  const maxTheme = Math.max(1, ...a.themes.map((t) => t.nombre));
   const liste = (cs: Carte[], suffixe?: (c: Carte) => string): React.ReactNode[] => [
     ...cs.slice(0, AFFICHEES).map((c) => <Ligne key={c.id} carte={c} suffixe={suffixe?.(c)} />),
     ...(cs.length > AFFICHEES ? [<Reste key="reste" total={cs.length} />] : []),
@@ -64,9 +65,15 @@ const AnalysesCollection: React.FC<Props> = ({ cartes, cacheWiki }) => {
         </Bloc>
         <Bloc id="themes" titre="10 thèmes" vide="Aucun thème repéré.">
           {a.themes.map((t) => (
-            <li key={t.theme}>
-              {LIBELLES_THEMES[t.theme] ?? t.theme}
-              <span className="text-muted"> : {nombre.format(t.nombre)} cartes</span>
+            <li key={t.theme} className="grid grid-cols-[minmax(0,7rem)_1fr_2rem] items-center gap-3">
+              <span className="truncate">{LIBELLES_THEMES[t.theme] ?? t.theme}</span>
+              <span aria-hidden="true" className="h-2 overflow-hidden rounded-full bg-line">
+                <span className="block h-2 rounded-full bg-echanger" style={{ width: `${Math.max(3, (t.nombre / maxTheme) * 100)}%` }} />
+              </span>
+              <span className="text-right text-muted">
+                {nombre.format(t.nombre)}
+                <span className="sr-only"> cartes</span>
+              </span>
             </li>
           ))}
         </Bloc>
