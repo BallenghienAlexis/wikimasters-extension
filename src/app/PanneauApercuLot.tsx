@@ -19,7 +19,7 @@ import ListeEcarts from './ListeEcarts';
 import SectionRepliable from './SectionRepliable';
 import TableauLots from './TableauLots';
 import { useExecution } from './useExecution';
-import { actionsRetrait, contexteExecution, lancerLot, nouvelIdLot } from './pilotageLots';
+import { actionsRetrait, contexteExecution, lancerLot, marquerRetraitsManuels, nouvelIdLot } from './pilotageLots';
 import {
   CADENCE_TEXTE,
   CLASSE_ACTIF,
@@ -275,6 +275,7 @@ const PanneauApercuLot: React.FC<Props> = ({
   const retirer = (couple: CoupleRetrait): void => {
     const actions = actionsRetrait(couple, collection, registreCourant, dispo.has('retrait-etiquette'));
     if (actions.length === 0) return;
+    marquerRetraitsManuels(actions);
     const ctx = contexteExecution();
     if (ctx.file.etat()?.etat === 'en-cours' && ctx.file.ajouter(actions)) return;
     lancer(actions, nouvelIdLot('retrait'));

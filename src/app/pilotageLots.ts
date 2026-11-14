@@ -27,7 +27,7 @@ import {
   enregistrerJournal,
   enregistrerRegistre,
 } from '../lib/stockage';
-import { avecIdEtiquette } from '../lib/registre';
+import { avecIdEtiquette, refuserCouple } from '../lib/registre';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
 import type { CoupleRetrait } from './Journal';
 import { SYNCHRO_EN_COURS, bilanVide, configDuLot, type Bilan } from './apercuLot';
@@ -132,7 +132,11 @@ export function contexteExecution(): ContexteExecution {
         const liste = await chargerEtiquettesSite();
         if (liste !== null) await enregistrerEtiquettesSite(liste.filter((e) => e.id !== action.idEtiquette));
       }
-      const suivant = appliquerResultat(collection, registre, action, resultat);
+      let suivant = appliquerResultat(collection, registre, action, resultat);
+      // Retrait voulu par le joueur (bouton « Retirer ») et réussi : l’étiquette ne sera pas reposée par la synchro.
+      if (action.type === 'retrait-etiquette' && retraitsManuels.delete(`${action.idExemplaire}\u0000${action.nomEtiquette}`) && resultat.classe === 'reussie') {
+        suivant = { ...suivant, registre: refuserCouple(suivant.registre, action.idExemplaire, action.nomEtiquette) };
+      }
       if (suivant.collection !== collection) await enregistrerCollection(suivant.collection);
       if (suivant.registre !== registre) await enregistrerRegistre(suivant.registre);
     },
@@ -319,6 +323,14 @@ export async function lancerSuppressionEtiquettes(etiquettes: ReadonlyArray<{ id
     idEtiquette: e.id,
   }));
   return lancerLot(actions, nouvelIdLot('suppression'));
+}
+
+/** Retraits demandés par le joueur (exemplaire et nom), en mémoire : un succès les inscrit au registre comme refusés. */
+const retraitsManuels = new Set<string>();
+
+/** À appeler quand le joueur retire lui-même une étiquette (pas pour un retrait produit par un lot). */
+export function marquerRetraitsManuels(actions: readonly Action[]): void {
+  for (const a of actions) if (a.type === 'retrait-etiquette') retraitsManuels.add(`${a.idExemplaire}\u0000${a.nomEtiquette}`);
 }
 
 /** Actions de retrait pour un couple (carte, étiquette) encore posé au registre ; aucune si le retrait n’est pas disponible. */

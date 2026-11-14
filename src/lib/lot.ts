@@ -15,7 +15,7 @@ import type {
   TypesDisponibles,
 } from './actions'
 import { normaliser, type Carte, type Collection } from './collection'
-import { LONGUEUR_MAX_ID } from './registre'
+import { estRefuse, LONGUEUR_MAX_ID } from './registre'
 import { amisConcernes, type Ami } from './tri'
 import { LIBELLES_THEMES, themesDeCarte, themesPrincipaux } from './themes'
 
@@ -283,6 +283,8 @@ export function construireLot(
 
       for (const nom of etiquettes) {
         if (presents.includes(nom)) continue
+        // Retirée à la main par le joueur : jamais reposée (la synchro ne défait pas ses décisions).
+        if (estRefuse(registre, idExemplaire, nom)) continue
         if (nom.length > limite) {
           tropLong = true
           nonPoseeCarte(nom, 'nom-trop-long')

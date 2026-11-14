@@ -166,6 +166,8 @@ export interface Registre {
   etiquettes: Record<string, string>
   /** Couples (exemplaire, nom d’étiquette) posés par l’extension. */
   couples: Array<{ ex: string; nom: string }>
+  /** Étiquettes retirées à la main par le joueur sur un exemplaire : jamais reposées par l’extension (facultatif, sans migration). */
+  refus?: Array<{ ex: string; nom: string }>
 }
 
 /** État de l’exécution en cours, persisté pour détecter une interruption. */
