@@ -2,6 +2,7 @@
 // Calcul local par mots-clés, complété par les catégories Wikipédia mises en cache (voir wikipedia.ts) ; le résultat n'est jamais stocké.
 // Le libellé de chaque thème est l'étiquette à poser dans le jeu : c'est ici qu'on en ajoute.
 import { normaliser, type Carte } from './collection';
+import { definition, genreDe, type Genre } from './sens';
 
 export const THEME_AUTRES = 'autres';
 
@@ -87,6 +88,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   // Sport et société
   { id: 'sport', libelle: '#Sport', motifs: ['athlete', 'sportif', 'sportive', 'joueur de', 'joueuse de', 'championnat', 'tournoi', 'olympique', 'coureur', 'coureuse', 'rugby', 'tennis', 'basket'] },
   { id: 'football', libelle: '#Football', motifs: ['football', 'club de foot'], parents: ['sport'] },
+  { id: 'hockey', libelle: '#Hockey', motifs: ['hockey'], parents: ['sport'] },
   { id: 'cyclisme', libelle: '#Cyclisme', motifs: ['cyclis'], parents: ['sport'] },
   { id: 'combat', libelle: '#Arts martiaux', motifs: ['arts martiaux', 'boxeur', 'boxeuse', 'catcheur', 'judoka', 'karate'], parents: ['sport'] },
   { id: 'societe', libelle: '#Société', motifs: ['sociolog', "homme d'affaires", "femme d'affaires", 'entreprise', 'econom', 'droit', 'adulter', 'habitants'] },
@@ -282,27 +284,67 @@ const NB_ANCETRES_THEME = (() => {
   return profondeur;
 })();
 
+/** Thèmes trouvés directement (parents non ajoutés) dans un texte : sert aux signaux mis en cache. */
+export const themesDirectsDeTexte = (texte: string, categories = false): string[] => [...occurrencesDirectes(texte, categories).keys()];
+
+/** Signaux lus par le sens sur la page Wikipédia ou Wikidata d’une carte (mis en cache avec l’entrée). */
+export interface SignauxPage {
+  /** Thèmes de la définition (« X est un film d’animation… ») et des classes Wikidata : fiables. */
+  fortes: string[];
+  /** Thèmes des catégories : utiles, mais seulement s’ils sont compatibles avec la nature du sujet. */
+  faibles: string[];
+  genre: Genre;
+}
+
+let signauxWikipedia: ReadonlyMap<string, SignauxPage> = new Map();
+
+export function definirSignauxWikipedia(signaux: ReadonlyMap<string, SignauxPage>): void {
+  signauxWikipedia = signaux;
+}
+
+// Thèmes « physiques » (animal, véhicule, astre, lieu naturel, science) : une personne, une œuvre ou une organisation ne les reçoit
+// que si sa définition le dit (« pilote de ligne »), jamais parce que son texte ou ses catégories citent un lion ou un avion.
+const PHYSIQUES = new Set(['nature', 'vehicule', 'espace', 'geographie', 'sciences']);
+const estPhysique = (id: string, vus = new Set<string>()): boolean => {
+  if (PHYSIQUES.has(id)) return true;
+  if (vus.has(id)) return false;
+  vus.add(id);
+  return (PARENTS.get(id) ?? []).some((p) => estPhysique(p, vus));
+};
+const GENRES_HUMAINS: ReadonlySet<Genre> = new Set(['personne', 'oeuvre', 'organisation']);
+
 /**
  * Thèmes qui caractérisent le plus la carte (au plus `MAX_THEMES_PAR_CARTE`), du mieux établi au moins bien établi.
- * Poids : titre ×3, première phrase de la description ×3, reste de la description ×1, thèmes vérifiés sur Wikipédia ×3.
- * Un thème dont le poids est inférieur au tiers du meilleur est écarté ; à poids égal, le plus précis passe avant.
- * Les parents ne sont pas ajoutés : ils servent seulement à faire correspondre les amis (`themesDeCarte`).
+ * Le sens passe avant les mots : la définition (« X est un film d’animation japonais ») et les classes Wikidata pèsent 5,
+ * les catégories 2, le titre 1, le reste du texte moins encore. Un thème physique (animal, véhicule, astre…) venant d’un
+ * canal faible est écarté pour une personne, une œuvre ou une organisation. Un thème dont le poids est inférieur à 40 % du
+ * meilleur est écarté ; à poids égal, le plus précis passe avant. Les parents ne sont pas ajoutés (`themesDeCarte` les donne aux amis).
  */
 export function themesPrincipaux(carte: Pick<Carte, 'titre' | 'description'>): string[] {
   const poids = new Map<string, number>();
-  const ajouter = (comptes: Map<string, number>, facteur: number): void => {
-    for (const [id, n] of comptes) poids.set(id, (poids.get(id) ?? 0) + Math.min(n, 2) * facteur);
+  const ajouter = (ids: Iterable<string>, valeur: number): void => {
+    for (const id of ids) poids.set(id, (poids.get(id) ?? 0) + valeur);
   };
   const description = carte.description;
+  const defSite = definition(description);
+  const page = signauxWikipedia.get(carte.titre);
+  let genre = genreDe(description, defSite);
+  if (genre === 'autre' && page) genre = page.genre;
+  const faible = (ids: Iterable<string>, valeur: number): void => {
+    ajouter([...ids].filter((id) => !(GENRES_HUMAINS.has(genre) && estPhysique(id))), valeur);
+  };
+  ajouter(themesDirectsDeTexte(defSite), 5);
+  ajouter(page?.fortes ?? [], 5);
   const finPhrase = description.search(/[.!?](\s|$)/);
   const premiere = finPhrase === -1 ? description : description.slice(0, finPhrase + 1);
-  ajouter(occurrencesDirectes(carte.titre), 3);
-  ajouter(occurrencesDirectes(premiere), 3);
-  ajouter(occurrencesDirectes(description.slice(premiere.length)), 1);
-  for (const id of themesWikipedia.get(carte.titre) ?? []) poids.set(id, (poids.get(id) ?? 0) + 3);
+  faible(themesDirectsDeTexte(carte.titre), 1);
+  faible(themesDirectsDeTexte(premiere), 1.5);
+  faible(themesDirectsDeTexte(description.slice(premiere.length)), 0.5);
+  if (page) faible(page.faibles, 2);
+  else faible(themesWikipedia.get(carte.titre) ?? [], 2);
   const meilleur = Math.max(0, ...poids.values());
   return [...poids.entries()]
-    .filter(([, p]) => p * 3 >= meilleur)
+    .filter(([, p]) => p * 5 >= meilleur * 2)
     .sort(([a, pa], [b, pb]) => pb - pa || (NB_ANCETRES_THEME.get(b) ?? 0) - (NB_ANCETRES_THEME.get(a) ?? 0) || a.localeCompare(b))
     .slice(0, MAX_THEMES_PAR_CARTE)
     .map(([id]) => id);

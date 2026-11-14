@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { SignauxPage } from '../../src/lib/themes';
 import { verifierTitres, type Transport } from '../../src/app/verifierWikipedia';
 import { themesDeCarte, definirThemesWikipedia } from '../../src/lib/themes';
 import { creerPlanificateur } from '../../src/app/verifierWikipedia';
@@ -32,21 +33,23 @@ describe('themesDepuisCategories', () => {
   });
 });
 
+const SIG: SignauxPage = { fortes: [], faibles: [], genre: 'autre' };
+
 describe('résumé Wikipédia', () => {
   it('complète les catégories par le résumé', () => {
     expect(themesDepuisCategories([], 'Serre-Ponçon est un barrage hydroélectrique situé dans les Alpes.')).toContain('barrage');
     expect(themesDepuisCategories(['Barrage en France'], '')).toContain('barrage');
   });
   it('relit une fois une entrée sans thème enregistrée avant le résumé', () => {
-    const ancien = validerCache({ version: 1, entrees: { A: { themes: [], verifieLe: 1000 }, B: { themes: ['barrage'], verifieLe: 1000 } } })!;
+    const ancien = validerCache({ version: 1, entrees: { A: { themes: [], verifieLe: 1000 }, B: { themes: ['barrage'], verifieLe: 1000, signaux: SIG } } })!;
     expect(titresAVerifier(['A', 'B'], ancien, 2000)).toEqual(['A']);
-    expect(titresAVerifier(['A'], ajouterEntree(ancien, 'A', [], 2000, true), 3000)).toEqual([]);
+    expect(titresAVerifier(['A'], ajouterEntree(ancien, 'A', [], 2000, true, SIG), 3000)).toEqual([]);
   });
 });
 
 describe('cache et surcouche', () => {
   it('ne redemande pas une entrée récente, mais une entrée périmée', () => {
-    const cache = ajouterEntree(cacheVide(), 'A', ['chat'], 1000);
+    const cache = ajouterEntree(cacheVide(), 'A', ['chat'], 1000, false, SIG);
     expect(titresAVerifier(['A', 'B', 'B'], cache, 2000)).toEqual(['B']);
     expect(titresAVerifier(['A'], cache, 1000 + DUREE_CACHE_MS)).toEqual(['A']);
   });
@@ -110,10 +113,14 @@ describe('Wikidata', () => {
     const r = await verifierTitres({ titres: ['A', 'B'], cache: cacheVide(), signal: new AbortController().signal, surProgres: () => undefined, attendre: async () => undefined, transport });
     expect(r).toEqual({ verifiees: 0, arret: 'code-http', codeHttp: 429 });
   });
+  it('relit une fois une entrée sans signaux (enregistrée avant la lecture par le sens)', () => {
+    const c = validerCache({ version: 1, entrees: { A: { themes: ['chat'], verifieLe: 1000, avecResume: true } } })!;
+    expect(titresAVerifier(['A'], c, 2000)).toEqual(['A']);
+  });
   it('relit une fois une entrée sans thème enregistrée avant Wikidata', () => {
     const c = validerCache({ version: 1, entrees: { A: { themes: [], verifieLe: 1000, avecResume: true } } })!;
     expect(titresAVerifier(['A'], c, 2000)).toEqual(['A']);
-    expect(titresAVerifier(['A'], ajouterEntree(c, 'A', [], 2000, true), 3000)).toEqual([]);
+    expect(titresAVerifier(['A'], ajouterEntree(c, 'A', [], 2000, true, SIG), 3000)).toEqual([]);
   });
 });
 

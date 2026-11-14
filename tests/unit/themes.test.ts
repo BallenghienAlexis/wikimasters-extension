@@ -265,7 +265,7 @@ describe('taxonomie précise (SC-001 à SC-003)', () => {
     expect(IDS_THEMES[IDS_THEMES.length - 1]).toBe('autres');
     const libelles = IDS_THEMES.slice(0, -1).map((id) => LIBELLES_THEMES[id] ?? id);
     expect(libelles).toEqual([...libelles].sort((a, b) => a.localeCompare(b, 'fr')));
-    expect(IDS_THEMES).toHaveLength(57 + 60 + 1);
+    expect(IDS_THEMES).toHaveLength(57 + 61 + 1);
   });
 
   it('fige les identifiants et libellés existants (SC-002)', () => {

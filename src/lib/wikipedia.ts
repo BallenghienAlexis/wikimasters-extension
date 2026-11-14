@@ -1,6 +1,7 @@
 // Vérification des thèmes d'une carte d'après les catégories de sa vraie page Wikipédia.
 // Logique pure (URL, lecture de la réponse, cache) : l'appel réseau est dans `src/app/verifierWikipedia.ts`.
-import { IDS_THEMES, themesDeTexte } from './themes';
+import { definition, genreDe, type Genre } from './sens';
+import { IDS_THEMES, themesDeTexte, themesDirectsDeTexte, type SignauxPage } from './themes';
 
 export const HOTE_WIKIPEDIA = 'https://fr.wikipedia.org';
 export const HOTE_WIKIDATA = 'https://www.wikidata.org';
@@ -18,6 +19,8 @@ export interface EntreeWikipedia {
   avecResume?: true;
   /** Vrai quand Wikidata a été interrogé (page Wikipédia sans thème) ; sans lui, une entrée sans thème est relue une fois. */
   avecWikidata?: true;
+  /** Signaux lus par le sens (définition, catégories, nature du sujet) ; absents des entrées plus anciennes. */
+  signaux?: SignauxPage;
 }
 
 export interface CacheWikipedia {
@@ -111,6 +114,25 @@ export function themesDepuisCategories(categories: string[], resume = ''): strin
   return [...themes];
 }
 
+function lireSignaux(brut: unknown, connus: Set<string>): SignauxPage | null {
+  if (!estObjet(brut) || !Array.isArray(brut.fortes) || !Array.isArray(brut.faibles) || !GENRES.includes(brut.genre as Genre)) return null;
+  const ids = (a: unknown[]): string[] => a.filter((t): t is string => typeof t === 'string' && connus.has(t));
+  return { fortes: ids(brut.fortes), faibles: ids(brut.faibles), genre: brut.genre as Genre };
+}
+
+const GENRES: readonly Genre[] = ['personne', 'oeuvre', 'organisation', 'lieu', 'espece', 'autre'];
+
+/** Signaux par le sens : thèmes de la définition (fiables) et des catégories (à recouper), nature du sujet. */
+export function signauxWikipedia(categories: string[], resume: string, descriptionsWikidata: string[] = []): SignauxPage {
+  const utiles = categories.filter((c) => !CATEGORIE_TECHNIQUE.test(c.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()));
+  const def = definition(resume);
+  const fortes = new Set(themesDirectsDeTexte(def));
+  // Une courte description Wikidata (« film américain de 2005 ») est une classification : elle compte comme une définition.
+  for (const d of descriptionsWikidata) for (const id of themesDirectsDeTexte(d)) fortes.add(id);
+  const genre = genreDe(resume, def) !== 'autre' ? genreDe(resume, def) : (descriptionsWikidata.map((d) => genreDe(d)).find((g) => g !== 'autre') ?? 'autre');
+  return { fortes: [...fortes], faibles: themesDirectsDeTexte(utiles.join(' . '), true), genre };
+}
+
 export function validerCache(brut: unknown): CacheWikipedia | null {
   if (!estObjet(brut) || brut.version !== 1 || !estObjet(brut.entrees)) return null;
   const cles = Object.keys(brut.entrees);
@@ -126,13 +148,14 @@ export function validerCache(brut: unknown): CacheWikipedia | null {
       verifieLe: e.verifieLe,
       ...(e.avecResume === true ? { avecResume: true as const } : {}),
       ...(e.avecWikidata === true ? { avecWikidata: true as const } : {}),
+      ...(lireSignaux(e.signaux, connus) ? { signaux: lireSignaux(e.signaux, connus) as SignauxPage } : {}),
     };
   }
   return { version: 1, entrees: { ...entrees } };
 }
 
-export function ajouterEntree(cache: CacheWikipedia, titre: string, themes: string[], maintenant: number, wikidata = false): CacheWikipedia {
-  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, ...(wikidata ? { avecWikidata: true as const } : {}) };
+export function ajouterEntree(cache: CacheWikipedia, titre: string, themes: string[], maintenant: number, wikidata = false, signaux?: SignauxPage): CacheWikipedia {
+  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, ...(wikidata ? { avecWikidata: true as const } : {}), ...(signaux ? { signaux } : {}) };
   return { version: 1, entrees: { ...cache.entrees, [titre]: entree } };
 }
 
@@ -145,9 +168,15 @@ export function titresAVerifier(titres: string[], cache: CacheWikipedia, mainten
     vus.add(titre);
     const entree = Object.hasOwn(cache.entrees, titre) ? cache.entrees[titre] : undefined;
     // Une entrée sans thème et sans résumé (ancienne version) est relue une fois pour profiter du résumé.
-    if (entree === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS || (entree.themes.length === 0 && (entree.avecResume !== true || entree.avecWikidata !== true))) resultat.push(titre);
+    if (entree === undefined || entree.signaux === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS || (entree.themes.length === 0 && (entree.avecResume !== true || entree.avecWikidata !== true))) resultat.push(titre);
   }
   return resultat;
+}
+
+export function signauxParTitre(cache: CacheWikipedia): Map<string, SignauxPage> {
+  const m = new Map<string, SignauxPage>();
+  for (const [titre, e] of Object.entries(cache.entrees)) if (e.signaux) m.set(titre, e.signaux);
+  return m;
 }
 
 export function themesParTitre(cache: CacheWikipedia): Map<string, string[]> {

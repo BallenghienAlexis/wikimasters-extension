@@ -1,6 +1,6 @@
 // Exécuteur de la vérification Wikipédia : seul fichier de l'application qui appelle `fetch` vers Wikipédia.
 // GET en lecture seule vers fr.wikipedia.org (et www.wikidata.org si Wikipédia ne donne aucun thème), un titre de carte par requête, sans cookie ni en-tête ajouté.
-import { ajouterEntree, lireReponse, lireReponseWikidata, themesDepuisCategories, themesDepuisWikidata, titresAVerifier, urlRequete, urlRequeteWikidata, type CacheWikipedia } from '../lib/wikipedia';
+import { ajouterEntree, lireReponse, lireReponseWikidata, themesDepuisCategories, themesDepuisWikidata, signauxWikipedia, titresAVerifier, urlRequete, urlRequeteWikidata, type CacheWikipedia } from '../lib/wikipedia';
 
 export type Transport = (url: string, signal: AbortSignal) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
@@ -71,6 +71,7 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
     } else {
       echecs = 0;
       // Page absente ou ambiguë : on mémorise « aucun thème » pour ne pas la redemander avant 30 jours.
+      let signaux = lecture.type === 'ok' ? signauxWikipedia(lecture.categories, lecture.resume) : undefined;
       let themes = lecture.type === 'ok' ? themesDepuisCategories(lecture.categories, lecture.resume) : [];
       // Wikipédia n'a rien donné : courte description Wikidata (même cadence, titre seul), sinon l'entrée sera relue une fois.
       let wikidata = false;
@@ -91,6 +92,7 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
             const l2 = lireReponseWikidata(await r2.json(), titre);
             if (l2.type === 'ok') {
               themes = themesDepuisWikidata(l2.descriptions);
+              signaux = signauxWikipedia(lecture.type === 'ok' ? lecture.categories : [], lecture.type === 'ok' ? lecture.resume : '', l2.descriptions);
               wikidata = true;
               lu2 = true;
             }
@@ -106,7 +108,7 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
         }
         echecsWikidata = 0;
       }
-      cache = ajouterEntree(cache, titre, themes, maintenant(), wikidata);
+      cache = ajouterEntree(cache, titre, themes, maintenant(), wikidata, signaux);
       verifiees += 1;
       await surProgres(cache, verifiees);
     }
