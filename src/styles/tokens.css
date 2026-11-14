@@ -175,6 +175,30 @@ body {
   animation: wm-pulsation var(--d-bar) var(--ease-out) infinite;
 }
 
+/*
+ * Survol de tout cliquable (D-08, SC-025) : 1 px vers le haut, --d-fast et --ease-spring. Règle unique
+ * en couche `base` : un utilitaire Tailwind explicite l’emporte. `translate` (propriété séparée)
+ * n’entre pas en conflit avec `transform`. Un utilitaire Tailwind `transition-colors` ou `transition-shadow`
+ * remplace le `transition-property` de cette règle : accepté. Coupée par les règles de mouvement ci-dessus.
+ */
+@layer base {
+  button,
+  [role='button'],
+  [role='tab'],
+  summary {
+    transition-property: translate, color, background-color, border-color, box-shadow;
+    transition-duration: var(--d-fast);
+    transition-timing-function: var(--ease-spring);
+  }
+
+  button:not(:disabled):not([aria-disabled='true']):hover,
+  [role='button']:not([aria-disabled='true']):hover,
+  [role='tab']:hover,
+  summary:hover {
+    translate: 0 -1px;
+  }
+}
+
 /* Chevron qui pivote à l’ouverture d’une section. */
 .wm-chevron {
   display: inline-block;
