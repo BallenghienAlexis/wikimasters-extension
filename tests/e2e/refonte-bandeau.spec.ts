@@ -186,6 +186,17 @@ test.describe('SC-013, SC-002 : ligne repliée et dépliée', () => {
     await expect(l.getByRole('button', { name: 'Arrêter' })).toBeVisible();
   });
 
+  test('SC-013 : Arrêter écrit la demande d’arrêt de la synchro', async ({ pageCollection }) => {
+    const n = Date.now();
+    await ecrire(pageCollection, { statutSynchro: STATUT_EN_COURS(n), bailSynchro: n + 120_000 });
+    const l = ligne(pageCollection, 'synchro');
+    await l.getByRole('button', { name: /^Synchro/ }).click();
+    await l.getByRole('button', { name: 'Arrêter' }).click();
+    await expect
+      .poll(() => pageCollection.evaluate(async () => typeof (await chrome.storage.local.get('arretSynchro')).arretSynchro))
+      .toBe('number');
+  });
+
   test('SC-013 : l’en-tête se commande au clavier', async ({ pageCollection }) => {
     await ecrire(pageCollection, { execution: EXECUTION_EN_COURS });
     const entete = ligne(pageCollection, 'lots').getByRole('button', { name: /^Lots/ });
@@ -350,8 +361,11 @@ test.describe('SC-013 : captures', () => {
         expect(debordement).toBeLessThanOrEqual(0);
         await pageCollection.screenshot({ path: `test-results/captures/bandeau-replie-${theme}-${bp.name}.png`, fullPage: true });
         for (const genre of ['synchro', 'lots'] as const) {
-          await ligne(pageCollection, genre).getByRole('button', { name: genre === 'lots' ? /^Lots/ : /^Synchro/ }).click();
+          const entete = ligne(pageCollection, genre).getByRole('button', { name: genre === 'lots' ? /^Lots/ : /^Synchro/ });
+          await entete.click();
+          await expect(entete).toHaveAttribute('aria-expanded', 'true');
         }
+        await expect(bandeau(pageCollection).getByTestId('barre-detail')).toHaveCount(6);
         await pageCollection.screenshot({ path: `test-results/captures/bandeau-deplie-${theme}-${bp.name}.png`, fullPage: true });
         await vider(pageCollection, ['execution', 'statutSynchro', 'bailSynchro']);
       });
