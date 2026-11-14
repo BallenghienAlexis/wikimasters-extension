@@ -159,3 +159,15 @@ describe('mémorisation des étiquettes par carte (T-903)', () => {
   })
 
 })
+
+describe('amis et étiquettes du site (2026-11-14)', () => {
+  const amis = [{ nom: 'Zoé', themes: ['site:Mes coups de coeur'] }]
+  it('un ami qui suit une étiquette du site reçoit « #À échanger » sur une carte non favorite qui la porte', () => {
+    const c = carte('a', { ...CHIEN, etiquettesSite: ['Mes coups de coeur'] })
+    expect(attendues(c, config({ amis }))).toContain('#À échanger Zoé')
+  })
+  it('jamais sur un favori, ni sur une carte sans cette étiquette', () => {
+    expect(attendues(carte('a', { ...CHIEN, etiquettesSite: ['Mes coups de coeur'], favori: true }), config({ amis }))).not.toContain('#À échanger Zoé')
+    expect(attendues(carte('b', { ...CHIEN, etiquettesSite: ['Autre'] }), config({ amis }))).not.toContain('#À échanger Zoé')
+  })
+})

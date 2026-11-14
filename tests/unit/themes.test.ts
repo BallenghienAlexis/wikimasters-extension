@@ -1,7 +1,7 @@
 import { meilleureDuree } from './duree';
 import { describe, expect, it } from 'vitest';
 import type { Carte } from '../../src/lib/collection';
-import { compterThemes, LIBELLES_THEMES, themesDeCarte, themesPrincipaux } from '../../src/lib/themes';
+import { compterThemes, definirThemesWikipedia, LIBELLES_THEMES, themesDeCarte, themesPrincipaux } from '../../src/lib/themes';
 
 const themes = (description: string, titre = 'Titre fictif'): string[] => themesDeCarte({ titre, description });
 
@@ -388,5 +388,20 @@ describe('themesPrincipaux (fiabilité des étiquettes)', () => {
   it('le thème du titre passe avant une mention isolée en fin de description', () => {
     const t = themesPrincipaux({ titre: 'Tigre', description: 'grand félin. Il apparaît dans un film de cinéma.' });
     expect(t[0]).toBe('felin');
+  });
+});
+
+describe('themesPrincipaux avec le cache Wikipédia', () => {
+  it('les parents du cache ne sont pas posés', () => {
+    definirThemesWikipedia(new Map([['Rex', ['chien', 'animaux', 'nature']]]));
+    try {
+      expect(themesPrincipaux({ titre: 'Rex', description: 'chien célèbre' })).toEqual(['chien']);
+    } finally {
+      definirThemesWikipedia(new Map());
+    }
+  });
+
+  it('un article en majuscule ne fait pas un nom propre : « Le Chat botté »', () => {
+    expect(themesPrincipaux({ titre: 'Le Chat botté', description: 'conte' })).toContain('chat');
   });
 });

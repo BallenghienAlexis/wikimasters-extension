@@ -60,7 +60,7 @@ const CAS: Cas[] = [
     site: 'espèce de mammifères carnivores',
     resume: 'Le tigre est une espèce de mammifères carnivores de la famille des félidés.',
     categories: ['Espèce de félins', 'Faune d’Asie'],
-    attendus: ['animaux', 'felin'],
+    attendus: ['felin'], // « Animaux » est l’ancêtre de « Félin » : le thème précis suffit (#144)
     interdits: ['cinema', 'sport'],
   },
   {

@@ -100,7 +100,8 @@ test('liste les étiquettes prévues avec leurs nombres, sans requête ni lectur
     return (await ligne(page, nom).getByRole('cell').allInnerTexts()).map((t) => t.trim());
   };
   expect(await cellules('#Chien')).toEqual(['#Chien', '1', '2', 'nouvelle · non disponible']);
-  expect(await cellules('#Animaux')).toEqual(['#Animaux', '1', '2', 'nouvelle · non disponible']);
+  // Les thèmes parents ne sont plus posés (4 thèmes principaux au plus par carte, 2026-11-14).
+  await expect(ligne(page, '#Animaux')).toHaveCount(0);
   expect(await cellules('#À échanger Léa')).toEqual(['#À échanger Léa', '1', '2', 'nouvelle · non disponible']);
   expect(await cellules('#À échanger Hugo')).toEqual(['#À échanger Hugo', '2', '2', 'nouvelle · non disponible']);
   for (const nom of ['#Tibet', '#Ukraine', '#Barrage', '#Pont']) await expect(ligne(page, nom)).toHaveCount(1);

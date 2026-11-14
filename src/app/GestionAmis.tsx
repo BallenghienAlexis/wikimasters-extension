@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
+import { basculer, CLASSE_BOUTON } from './outilsReglages';
 import { IDS_THEMES, LIBELLES_THEMES } from '../lib/themes';
-import { cleEtiquetteSite } from '../lib/lot';
+import { cleEtiquetteSite, ETIQUETTE_A_CLASSER } from '../lib/lot';
 import type { EtiquetteSite } from '../lib/etiquettesPreexistantes';
 import type { Preferences } from '../lib/tri';
 
-const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded border border-line bg-ink-2 px-4';
 const CLASSE_CHAMP = 'min-h-11 rounded border border-line bg-ink px-3';
 
-const basculer = (liste: string[], valeur: string): string[] =>
-  liste.includes(valeur) ? liste.filter((v) => v !== valeur) : [...liste, valeur];
+/** Libellés posés par l'extension elle-même : ils ne sont pas des étiquettes du joueur. */
+const LIBELLES_EXTENSION = new Set(Object.values(LIBELLES_THEMES));
 
 interface Props {
   preferences: Preferences;
@@ -19,7 +19,7 @@ interface Props {
 
 /** Amis et thèmes qu’ils aiment : les cartes dont un thème correspond reçoivent « #À échanger <nom> » au prochain lot. */
 const GestionAmis: React.FC<Props> = ({ preferences, onChange, etiquettesSite }) => {
-  const etiquettes = (etiquettesSite ?? []).filter((e) => !e.nom.startsWith('#À échanger ')).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+  const etiquettes = (etiquettesSite ?? []).filter((e) => !e.nom.startsWith('#À échanger ') && e.nom !== ETIQUETTE_A_CLASSER && !LIBELLES_EXTENSION.has(e.nom)).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
   const [nomAmi, setNomAmi] = useState('');
 
   const ajouterAmi = (): void => {

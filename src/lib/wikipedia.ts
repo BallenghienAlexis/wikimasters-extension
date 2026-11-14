@@ -21,6 +21,8 @@ export interface EntreeWikipedia {
   avecWikidata?: true;
   /** Signaux lus par le sens (définition, catégories, nature du sujet) ; absents des entrées plus anciennes. */
   signaux?: SignauxPage;
+  /** Vrai quand les thèmes ont été calculés sans compter les noms propres composés (« Bee Train ») ; sinon relue une fois (2026-11-14). */
+  nomsPropres?: true;
 }
 
 export interface CacheWikipedia {
@@ -206,13 +208,14 @@ export function validerCache(brut: unknown): CacheWikipedia | null {
       ...(e.avecResume === true ? { avecResume: true as const } : {}),
       ...(e.avecWikidata === true ? { avecWikidata: true as const } : {}),
       ...(lireSignaux(e.signaux, connus) ? { signaux: lireSignaux(e.signaux, connus) as SignauxPage } : {}),
+      ...(e.nomsPropres === true ? { nomsPropres: true as const } : {}),
     };
   }
   return { version: 1, entrees: { ...entrees } };
 }
 
 export function ajouterEntree(cache: CacheWikipedia, titre: string, themes: string[], maintenant: number, wikidata = false, signaux?: SignauxPage): CacheWikipedia {
-  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, ...(wikidata ? { avecWikidata: true as const } : {}), ...(signaux ? { signaux } : {}) };
+  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, nomsPropres: true, ...(wikidata ? { avecWikidata: true as const } : {}), ...(signaux ? { signaux } : {}) };
   return { version: 1, entrees: { ...cache.entrees, [titre]: entree } };
 }
 
@@ -224,6 +227,8 @@ export function titresAVerifier(titres: string[], cache: CacheWikipedia, mainten
     if (vus.has(titre)) continue;
     vus.add(titre);
     const entree = Object.hasOwn(cache.entrees, titre) ? cache.entrees[titre] : undefined;
+    // Une entrée calculée avant le filtre des noms propres est relue une fois.
+    if (entree !== undefined && entree.nomsPropres !== true) { resultat.push(titre); continue }
     // Une entrée sans thème et sans résumé (ancienne version) est relue une fois pour profiter du résumé.
     if (entree === undefined || entree.signaux === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS || (entree.themes.length === 0 && (entree.avecResume !== true || entree.avecWikidata !== true))) resultat.push(titre);
   }

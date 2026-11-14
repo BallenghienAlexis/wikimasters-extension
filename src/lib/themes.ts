@@ -231,7 +231,9 @@ const MAJUSCULE = /\p{Lu}/u;
 function nomPropre(texte: string, debut: number): boolean {
   if (!MAJUSCULE.test(texte.charAt(debut))) return false;
   const avant = /(\p{L}[\p{L}'’-]*) +$/u.exec(texte.slice(0, debut));
-  return avant?.[1] !== undefined && MAJUSCULE.test(avant[1].charAt(0));
+  if (avant?.[1] === undefined || !MAJUSCULE.test(avant[1].charAt(0))) return false;
+  // « Le Chat botté », « La Tour » : un article en majuscule (titre en casse de titre) ne fait pas un nom propre.
+  return !/^(le|la|les|l'|un|une|du|des|de|d')$/i.test(avant[1]);
 }
 
 const PARENTS = new Map(DEFINITIONS_THEMES.map((t) => [t.id, t.parents ?? []] as const));
@@ -266,6 +268,16 @@ export function compterThemes(cartes: Carte[]): Record<string, number> {
     for (const theme of themesDeCarte(carte)) compte[theme] = (compte[theme] ?? 0) + 1;
   }
   return compte;
+}
+
+/** Tous les ancêtres (parents, parents des parents…) d'un thème. */
+function ancetres(id: string, vus: Set<string> = new Set()): Set<string> {
+  for (const p of PARENTS.get(id) ?? []) {
+    if (vus.has(p)) continue;
+    vus.add(p);
+    ancetres(p, vus);
+  }
+  return vus;
 }
 
 const NB_ANCETRES_THEME = (() => {
@@ -341,10 +353,18 @@ export function themesPrincipaux(carte: Pick<Carte, 'titre' | 'description'>): s
   faible(themesDirectsDeTexte(premiere), 1.5);
   faible(themesDirectsDeTexte(description.slice(premiere.length)), 0.5);
   if (page) faible(page.faibles, 2);
-  else faible(themesWikipedia.get(carte.titre) ?? [], 2);
+  else {
+    // Entrée de cache ancienne (sans signaux) : elle contient les parents et le résumé, les ancêtres n'y comptent pas.
+    const wiki = themesWikipedia.get(carte.titre) ?? [];
+    const ancetresWiki = new Set(wiki.flatMap((id) => [...ancetres(id)]));
+    faible(wiki.filter((id) => !ancetresWiki.has(id)), 2);
+  }
   const meilleur = Math.max(0, ...poids.values());
-  return [...poids.entries()]
-    .filter(([, p]) => p * 5 >= meilleur * 2)
+  const retenus = [...poids.entries()].filter(([, p]) => p * 5 >= meilleur * 2);
+  // Un thème qui est l'ancêtre d'un autre thème retenu est écarté : « #Chien » suffit, pas « #Animaux » en plus.
+  const ancetresRetenus = new Set(retenus.flatMap(([id]) => [...ancetres(id)]));
+  return retenus
+    .filter(([id]) => !ancetresRetenus.has(id))
     .sort(([a, pa], [b, pb]) => pb - pa || (NB_ANCETRES_THEME.get(b) ?? 0) - (NB_ANCETRES_THEME.get(a) ?? 0) || a.localeCompare(b))
     .slice(0, MAX_THEMES_PAR_CARTE)
     .map(([id]) => id);
