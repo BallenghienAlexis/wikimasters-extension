@@ -271,3 +271,14 @@ b. BandeauActivite.tsx:88 : message d'échec non effacé quand synchro devient n
 - `tests/e2e/refonte-lots.spec.ts` (test de l’encadré, `toBeLessThan(260)`) : mesurer la hauteur avant le clic, seuil serré ; vérifier `open` sur `details` après le clic.
 - PR #143 : captures de l’onglet Lots aux 3 largeurs et 2 thèmes non jointes.
 - `src/app/BandeauRisque.tsx:16` : la ligne parle d’enchère et de défausse alors que les lots n’en produisent plus ; texte gardé exprès pour le rappel de risque, à confirmer avec Alexis.
+
+## À reprendre : PR #145 (onglet Collection)
+- `src/app/AnalysesCollection.tsx:68-69` : le libellé de thème est coupé (`truncate`) sans `title`, et la colonne du nombre (`2rem`) déborde dès 4 chiffres (« 1 234 ») ; ajouter `title` et une colonne `minmax(2rem,auto)`.
+- `src/app/AnalysesCollection.tsx:71` : les barres de thèmes utilisent `bg-echanger`, couleur de statut, pour une donnée neutre ; passer à `bg-paper` ou `bg-muted`, ou le justifier dans `design.md`.
+- `src/app/GraphiqueEvolution.tsx:56` : piste `bg-ink` au lieu de `ink-2` (`design.md:218`, `tasks.md:323`) ; mettre à jour `design.md`.
+- `tests/e2e/refonte-collection.spec.ts:199-210, 269` : vérifier la proportionnalité (largeur de la première barre à 100 %) et une valeur exacte « de X à Y (+N) ».
+- PR #145 : captures aux 3 largeurs non jointes.
+
+## À reprendre : PR Réglages (suite de #142)
+- `src/app/SynchroAuto.tsx` : garde sa propre copie de lecture, écoute et bascule de `syncAuto` ; le remplacer par `useSyncAuto` (état initial `null` aussi).
+- Résumé des Étiquettes préexistantes (« N trouvées ») et validité de `specs/refonte-ihm/design.md` D-50, `spec.refined.md` SC-028 et `AGENTS.md` (sections de Réglages) : encore à mettre à jour.
