@@ -1,6 +1,6 @@
 // Content script : lit la page de collection ouverte par le joueur et y affiche ses décisions.
 // Il ne clique sur rien, n'envoie rien et ne change pas de page : le joueur reste aux commandes.
-import { LIBELLES_STATUT, type Carte, type Collection } from '../lib/collection';
+import type { Carte, Collection } from '../lib/collection';
 import { delaiRelecture, identifiantCarte, lireFenetreEnchere, lirePositionPage, regrouperCartes, trouverCartes } from '../lib/lecteur';
 import { chargerCollection, ecouterCollection, enregistrerPage, enregistrerValeur, fusionnerDansStockage } from '../lib/stockage';
 import { progression, texteProgression, type Synchro } from '../lib/synchro';
@@ -17,12 +17,9 @@ const DELAIS_RELECTURE_MS = [1000, 2500, 5000];
 let relectures = 0;
 let minuteur: ReturnType<typeof setTimeout> | undefined;
 
-const texteRepere = (carte: Carte): string | null => {
-  if (carte.statut === 'a-trier') return null;
-  const prix = carte.prixCible === null ? '' : ` · ${carte.prixCible}`;
-  const ami = carte.ami === null ? '' : ` · ${carte.ami}`;
-  return `${LIBELLES_STATUT[carte.statut]}${ami}${prix}`;
-};
+// Le statut (garder, échanger, vendre, en vente) et l’ami ne sont plus affichés sur le site : ils font doublon avec les
+// étiquettes posées par l’extension. Seul le prix cible saisi par le joueur reste visible.
+const texteRepere = (carte: Carte): string | null => (carte.prixCible === null ? null : `Prix cible · ${carte.prixCible}`);
 
 function afficherReperes(collection: Collection): void {
   const parId = new Map(collection.cartes.map((c) => [c.id, c]));

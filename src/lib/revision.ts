@@ -49,7 +49,10 @@ export function reverifierAction(
   // Suppression d’étiquette : hors carte, validée par la liste que le joueur a confirmée.
   if (action.type === 'lecture' || action.type === 'suppression-etiquette') return 'ok'
   const carte = collection.cartes.find((c) => c.id === action.idCarte)
-  if (!carte || carte.favori) return 'passee'
+  if (!carte) return 'passee'
+  // Un favori n’a jamais ni enchère, ni défausse ; il ne reçoit que des étiquettes de thème (jamais de retrait de Statut).
+  if (carte.favori && (action.type === 'enchere' || action.type === 'defausse')) return 'passee'
+  if (action.type === 'retrait-etiquette' && (carte.favori || carte.statut === 'a-trier')) return 'passee'
 
   switch (action.type) {
     case 'enchere':

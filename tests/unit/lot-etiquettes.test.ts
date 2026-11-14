@@ -41,10 +41,10 @@ const AMIS = [
 const attendues = (c: Carte, cfg: Config = config()): string[] => exemplairesAttendus(c, cfg)[0]?.etiquettes ?? []
 
 describe('étiquettes attendues (SC-008)', () => {
-  it('donne Statut puis les thèmes, du plus précis au plus général, sans #Autres', () => {
+  it('donne Statut puis les thèmes, du plus précis au plus général, sans #Autres, avec #À classer à défaut de thème', () => {
     expect(attendues(carte('a', CHIEN))).toEqual(['Statut · Garder', '#Chien', '#Animaux', '#Nature'])
     expect(attendues(carte('a', { titre: 'Carte', description: 'agrume' }))).toEqual(['Statut · Garder', '#Fruit', '#Gastronomie'])
-    expect(attendues(carte('a'))).toEqual(['Statut · Garder'])
+    expect(attendues(carte('a'))).toEqual(['Statut · Garder', '#À classer'])
   })
 
   it('ne dépend pas des préférences pour les thèmes', () => {
@@ -62,13 +62,31 @@ describe('étiquettes attendues (SC-008)', () => {
     expect(lot.actions.length).toBeGreaterThan(0)
   })
 
-  it('favori, à trier et à défausser : aucune étiquette ni action de thème ou d’échange', () => {
-    for (const extra of [{ favori: true }, { statut: 'a-trier' as const }, { statut: 'defausser' as const }]) {
+  it('favori et à trier : thèmes seulement, sans Statut ni échange ; à défausser : aucune étiquette', () => {
+    for (const extra of [{ favori: true }, { statut: 'a-trier' as const }]) {
       const c = carte('a', { ...CHIEN, ...extra })
-      expect(exemplairesAttendus(c, config({ amis: AMIS }))).toEqual([])
+      expect(attendues(c, config({ amis: AMIS }))).toEqual(['#Chien', '#Animaux', '#Nature'])
     }
+    expect(attendues(carte('a', { ...CHIEN, favori: true, statut: 'echanger' }), config({ amis: AMIS }))).toEqual(['#Chien', '#Animaux', '#Nature'])
+    expect(exemplairesAttendus(carte('a', { ...CHIEN, statut: 'defausser' }), config({ amis: AMIS }))).toEqual([])
     const lot = construireLot(coll(carte('a', { ...CHIEN, favori: true })), registre(), config({ amis: AMIS }), TOUS)
-    expect(lot.actions).toEqual([])
+    expect(nomsDe(lot.actions, 'pose-etiquette')).toEqual(['#Chien', '#Animaux', '#Nature'])
+  })
+
+  it('toute carte reliée, quel que soit son statut décidé, a au moins une étiquette de thème (hors défausse et vente)', () => {
+    for (const statut of ['garder', 'echanger', 'vendre', 'a-trier'] as const) {
+      for (const favori of [false, true]) {
+        for (const extra of [CHIEN, { titre: 'Zzz', description: '' }]) {
+          const noms = attendues(carte('a', { ...extra, statut, favori }), config({ amis: AMIS, limiteParExemplaire: 1 }))
+          expect(noms.some((n) => !n.startsWith('Statut · ') && !n.startsWith('#À échanger')), `${statut} ${favori}`).toBe(true)
+        }
+      }
+    }
+  })
+
+  it('un nom de thème écarté par la limite de noms du compte laisse la carte signalée « sans-etiquette-theme »', () => {
+    const lot = construireLot(coll(carte('a', CHIEN)), registre([], { 'Statut · Garder': 'e1', '#X': 'e2' }), config({ limiteNoms: 2 }), TOUS)
+    expect(lot.ecartees).toContainEqual({ idCarte: 'a', titre: 'Berger allemand', raison: 'sans-etiquette-theme' })
   })
 
   it('un exemplaire par identifiant relié, chacun avec les mêmes étiquettes', () => {
@@ -163,7 +181,7 @@ describe('homonymes et longueur (SC-009, SC-021)', () => {
   it('un nom d’ami trop long est écarté, jamais tronqué', () => {
     const c = carte('a', { statut: 'echanger', ami: 'x'.repeat(60) })
     const lot = construireLot(coll(c), registre(), config({ longueurMaxEtiquette: 32 }), TOUS)
-    expect(nomsDe(lot.actions, 'pose-etiquette')).toEqual(['Statut · Échanger'])
+    expect(nomsDe(lot.actions, 'pose-etiquette')).toEqual(['Statut · Échanger', '#À classer'])
     expect(lot.ecartees).toContainEqual({ idCarte: 'a', titre: 'Carte a', raison: 'nom-trop-long' })
     expect(lot.nonPosees.map((n) => n.raison)).toEqual(['nom-trop-long'])
   })
@@ -178,9 +196,10 @@ describe('limites du site (SC-010)', () => {
     expect(lot.nonPosees.filter((n) => n.raison === 'au-dela-limite').map((n) => n.nomEtiquette)).toEqual(['#Animaux', '#Nature'])
   })
 
-  it('une limite trop basse n’écarte jamais Statut ni les échanges au profit d’un thème', () => {
+  it('une limite trop basse garde toujours le thème le plus précis, Statut et échanges cèdent d’abord', () => {
     const c = carte('a', { ...CHIEN, statut: 'echanger' })
-    expect(attendues(c, config({ amis: AMIS, limiteParExemplaire: 1 }))).toEqual(['Statut · Échanger'])
+    expect(attendues(c, config({ amis: AMIS, limiteParExemplaire: 1 }))).toEqual(['#Chien'])
+    expect(attendues(c, config({ amis: AMIS, limiteParExemplaire: 2 }))).toEqual(['Statut · Échanger', '#Chien'])
   })
 
   it('limite par compte : les noms du registre passent d’abord, puis Statut et échanges, puis les thèmes les plus fréquents', () => {
@@ -217,8 +236,8 @@ describe('corrections de revue (SC-010, SC-021)', () => {
     expect(lot.nonPosees.every((n) => n.raison === 'au-dela-limite')).toBe(true)
   })
 
-  it('limite à 0 : « Statut · … » reste posé', () => {
-    expect(attendues(carte('a', CHIEN), config({ limiteParExemplaire: 0 }))).toEqual(['Statut · Garder'])
+  it('limite à 0 : au moins le thème le plus précis reste posé', () => {
+    expect(attendues(carte('a', CHIEN), config({ limiteParExemplaire: 0 }))).toEqual(['#Chien'])
   })
 
   it('les noms du registre plus attendus comptent dans la limite de noms', () => {
@@ -240,7 +259,7 @@ describe('corrections de revue (SC-010, SC-021)', () => {
   it('un nom de plus de 200 caractères est écarté même sans longueur connue', () => {
     const lot = construireLot(coll(carte('a', { statut: 'echanger', ami: 'x'.repeat(250) })), registre(), config({ longueurMaxEtiquette: null }), TOUS)
     expect(lot.nonPosees.some((n) => n.raison === 'nom-trop-long')).toBe(true)
-    expect(nomsDe(lot.actions, 'pose-etiquette')).toEqual(['Statut · Échanger'])
+    expect(nomsDe(lot.actions, 'pose-etiquette')).toEqual(['Statut · Échanger', '#À classer'])
   })
 
   it('performance avec limites connues : moins de 500 ms', () => {
@@ -301,7 +320,8 @@ describe('retraits (SC-011, SC-022)', () => {
     for (const extra of [{ favori: true }, { statut: 'a-trier' as const }]) {
       const lot = construireLot(coll(carte('a', { ...CHIEN, ...extra })), r(noms), config(), TOUS)
       expect(nomsDe(lot.actions, 'retrait-etiquette')).toEqual([])
-      expect(lot.obsoletes.map((o) => o.nomEtiquette)).toEqual(noms)
+      // #Chien reste attendu (thème) : seul l’ancien Statut est signalé.
+      expect(lot.obsoletes.map((o) => o.nomEtiquette)).toEqual(['Statut · Garder'])
     }
     const d = construireLot(coll(carte('a', { ...CHIEN, statut: 'defausser' })), r(noms), config(), TOUS)
     expect(nomsDe(d.actions, 'retrait-etiquette')).toEqual([])
@@ -328,7 +348,7 @@ describe('mémorisation des étiquettes par carte (T-903)', () => {
     const autres = etiquettesDeCarte(c, { amis: [{ nom: 'Hugo', themes: ['animaux'] }], limiteParExemplaire: null })
     expect(autres.retenues).toContain('#À échanger Hugo')
     expect(autres.retenues).not.toContain('#À échanger Léa')
-    expect(etiquettesDeCarte(c, { amis, limiteParExemplaire: 1 }).retenues).toEqual(['Statut · Échanger'])
+    expect(etiquettesDeCarte(c, { amis, limiteParExemplaire: 1 }).retenues).toEqual(['#Chien'])
   })
 
   it('une carte modifiée (nouvel objet) est recalculée', () => {

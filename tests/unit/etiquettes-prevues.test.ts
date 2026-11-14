@@ -86,7 +86,7 @@ describe('EtiquettesPrevues : lignes (AC1)', () => {
   })
 
   it('section absente sans étiquette attendue', () => {
-    const c = coll(carte('a', { favori: true }))
+    const c = coll(carte('a', { statut: 'en-vente' }))
     const html = rendre(c, regrouperEtiquettes(c, registre(), config()))
     expect(html).toBe('')
   })
@@ -157,7 +157,7 @@ describe('EtiquettesPrevues : avertissement de visibilité (AC3)', () => {
   })
 
   it('absent sans étiquette attendue', () => {
-    const c = coll(carte('a', { favori: true }))
+    const c = coll(carte('a', { statut: 'en-vente' }))
     expect(rendre(c, regrouperEtiquettes(c, registre(), config()))).not.toContain('Visibilité')
   })
 })

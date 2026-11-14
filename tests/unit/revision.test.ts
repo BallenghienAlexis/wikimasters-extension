@@ -150,7 +150,8 @@ describe('reverifierAction : thèmes et échanges (T-105, SC-012, H12)', () => {
 
   it('pose de thème écartée par la limite par exemplaire : passée', () => {
     const c = carte({ ...chien, statut: 'echanger' })
-    expect(reverifierAction(poseTheme, coll(c), reg(), { ...amisCfg, limiteParExemplaire: 2 })).toBe('passee')
+    expect(reverifierAction({ ...poseTheme, nomEtiquette: '#Animaux' }, coll(c), reg(), { ...amisCfg, limiteParExemplaire: 2 })).toBe('passee')
+    expect(reverifierAction(poseTheme, coll(c), reg(), { ...amisCfg, limiteParExemplaire: 2 })).toBe('ok')
   })
 
   it('retrait : passé si l’étiquette est de nouveau attendue ou si le couple a disparu', () => {

@@ -218,22 +218,21 @@ test.describe('relevé de la valeur marchande', () => {
 });
 
 test.describe('repères sur le site', () => {
-  test('affiche le statut et le prix, et se met à jour sans recharger', async ({ context, serviceWorker }) => {
+  test('n’affiche plus le statut, seulement le prix cible, et se met à jour sans recharger', async ({ context, serviceWorker }) => {
     await ecrireCollection(serviceWorker, [carte({ statut: 'vendre', prixCible: 120 })]);
     const { page } = await ouvrirSite(context);
     const repere = page.locator('.wm-repere');
-    await expect(repere).toHaveAttribute('data-wm-texte', 'Vendre · 120');
-    await expect(repere).toHaveClass(/wm-repere-vendre/);
+    await expect(repere).toHaveAttribute('data-wm-texte', 'Prix cible · 120');
 
     await ecrireCollection(serviceWorker, [carte({ statut: 'garder' })]);
-    await expect(repere).toHaveAttribute('data-wm-texte', 'Garder');
-
-    await ecrireCollection(serviceWorker, [carte({ statut: 'a-trier' })]);
     await expect(repere).toHaveCount(0);
+
+    await ecrireCollection(serviceWorker, [carte({ statut: 'vendre', prixCible: 80 })]);
+    await expect(repere).toHaveAttribute('data-wm-texte', 'Prix cible · 80');
   });
 
   test('un repère ne relance pas de lecture en boucle', async ({ context, serviceWorker }) => {
-    await ecrireCollection(serviceWorker, [carte({ statut: 'vendre' })]);
+    await ecrireCollection(serviceWorker, [carte({ statut: 'vendre', prixCible: 120 })]);
     const { page } = await ouvrirSite(context);
     await expect(page.locator('.wm-repere')).toHaveCount(1);
     // La première lecture écrit légitimement : on compte ce qui vient après.

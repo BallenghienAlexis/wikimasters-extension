@@ -87,6 +87,9 @@ const PREFIXE_STATUT = 'Statut · '
 
 const NB_ANCETRES: Record<string, number> = Object.fromEntries(DEFINITIONS_THEMES.map((t) => [t.id, t.parents?.length ?? 0]))
 
+/** Étiquette de repli d’une carte dont aucun thème n’est reconnu : toute carte reliée reçoit au moins une étiquette de thème. */
+export const ETIQUETTE_A_CLASSER = '#À classer'
+
 /** Thèmes de la carte, sauf `autres`, du plus précis au plus général puis par libellé (H5). */
 function themesOrdonnes(ids: readonly string[]): string[] {
   return ids
@@ -149,22 +152,28 @@ export function etiquettesDeCarte(carte: Carte, config?: Pick<Config, 'amis' | '
 }
 
 function calculerEtiquettes(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire'>): EtiquettesCarte {
-  if (carte.favori || !STATUTS_ETIQUETES.has(carte.statut) || !carte.idsSite) return { retenues: [], ecartees: [] }
+  // Une carte en vente ou à défausser n’est pas étiquetée (le site refuse, ou l’exemplaire va disparaître) ; les autres
+  // le sont toutes, favoris et cartes à trier compris : chacune reçoit au moins une étiquette de thème.
+  if (carte.statut === 'en-vente' || (carte.statut === 'defausser' && !carte.favori) || !carte.idsSite) return { retenues: [], ecartees: [] }
   const themes = themesDeCarte(carte)
-  const prioritaires = [`${PREFIXE_STATUT}${LIBELLES_STATUT[carte.statut]}`]
-  if (carte.statut === 'echanger') prioritaires.push(...etiquettesEchange(carte, themes, config?.amis ?? []))
-  const libellesThemes = themesOrdonnes(themes).map((id) => LIBELLES_THEMES[id] ?? id)
+  // Statut et échanges ne concernent que les cartes décidées (ni favori ni à trier).
+  const decidee = !carte.favori && STATUTS_ETIQUETES.has(carte.statut)
+  const prioritaires: string[] = []
+  if (decidee) {
+    prioritaires.push(`${PREFIXE_STATUT}${LIBELLES_STATUT[carte.statut]}`)
+    if (carte.statut === 'echanger') prioritaires.push(...etiquettesEchange(carte, themes, config?.amis ?? []))
+  }
+  const precis = themesOrdonnes(themes).map((id) => LIBELLES_THEMES[id] ?? id)
+  const libellesThemes = precis.length > 0 ? precis : [ETIQUETTE_A_CLASSER]
   const tous = [...prioritaires, ...libellesThemes]
   const limite = config?.limiteParExemplaire
-  if (limite === null || limite === undefined || !Number.isFinite(limite) || limite < prioritaires.length) {
-    // Pas de limite connue, ou limite plus basse que Statut et échanges : ceux-là restent, les thèmes sont écartés.
-    if (limite === null || limite === undefined || !Number.isFinite(limite)) return { retenues: tous, ecartees: [] }
-    // Limite à 0 : « Statut · … » reste posé malgré tout (au moins une étiquette par exemplaire).
-    const n = Math.max(1, Math.floor(limite))
-    return { retenues: prioritaires.slice(0, n), ecartees: [...prioritaires.slice(n), ...libellesThemes] }
-  }
-  const n = Math.floor(limite)
-  return { retenues: tous.slice(0, n), ecartees: tous.slice(n) }
+  if (limite === null || limite === undefined || !Number.isFinite(limite)) return { retenues: tous, ecartees: [] }
+  // Au moins une étiquette par exemplaire, et toujours le thème le plus précis : Statut et échanges cèdent la place d’abord.
+  const n = Math.max(1, Math.floor(limite))
+  if (tous.length <= n) return { retenues: tous, ecartees: [] }
+  const p = Math.min(prioritaires.length, n - 1)
+  const retenues = [...prioritaires.slice(0, p), ...libellesThemes.slice(0, n - p)]
+  return { retenues, ecartees: [...prioritaires.slice(p), ...libellesThemes.slice(n - p)] }
 }
 
 /**
@@ -322,14 +331,17 @@ export function construireLot(
       ecartees.push({ idCarte: c.id, titre: c.titre, raison })
     }
 
-    // Garde-fous : favori et « à trier » ne produisent jamais d’action (SC-003, SC-004).
-    if (c.favori || c.statut === 'a-trier') {
+    // Favori et « à trier » : étiquetés par thème seulement, sans Statut ni échange. Les étiquettes de l’extension
+    // déjà posées (statut d’avant) sont signalées sans être retirées (SC-003, SC-004).
+    const neutre = c.favori || c.statut === 'a-trier'
+    if (neutre) {
+      const gardees = new Set(parCarte.get(c.id)?.retenues ?? [])
       for (const id of c.idsSite ?? []) {
         for (const nom of couplesParExemplaire.get(id) ?? []) {
+          if (gardees.has(nom)) continue
           obsoletes.push({ idCarte: c.id, titre: c.titre, idExemplaire: id, nomEtiquette: nom })
         }
       }
-      continue
     }
 
     if (c.idsSite === null) {
@@ -341,7 +353,8 @@ export function construireLot(
       continue
     }
 
-    if (c.statut === 'defausser') {
+    // Un favori n’est jamais défaussé, quel que soit son statut stocké (SC-003).
+    if (c.statut === 'defausser' && !c.favori) {
       // Aucun retrait d’étiquette avant défausse (H19).
       const ids = c.idsSite.slice(0, Math.max(0, c.quantite))
       if (ids.length > 0 && !(c.valeurMarchande !== null && c.valeurMarchande <= plafondDefausse({ plafondDefausse: config.plafondDefausse }))) {
@@ -364,7 +377,7 @@ export function construireLot(
       continue
     }
 
-    if (c.statut === 'vendre') aVendre.push(c)
+    if (c.statut === 'vendre' && !c.favori) aVendre.push(c)
 
     // Étiquettes (SC-007, SC-008).
     let nonDispo = false
@@ -388,7 +401,7 @@ export function construireLot(
       const presents = couplesParExemplaire.get(idExemplaire) ?? []
 
       for (const nom of presents) {
-        if (attendu.has(nom)) continue
+        if (attendu.has(nom) || neutre) continue
         if (dispo('retrait-etiquette')) retraits.push({ type: 'retrait-etiquette', idCarte: c.id, idExemplaire, nomEtiquette: nom })
         else nonDispo = true
       }
@@ -421,6 +434,12 @@ export function construireLot(
       }
     }
 
+    // Contrôle : une carte reliée doit garder au moins une étiquette de thème (hors Statut et échange) ;
+    // sinon (nom trop long, homonyme, limite de noms du compte), elle est signalée dans l’aperçu.
+    const estTheme = (nom: string): boolean => !nom.startsWith(PREFIXE_STATUT) && !nom.startsWith(PREFIXE_ECHANGE)
+    if (c.idsSite.length > 0 && !retenues.some((nom) => estTheme(nom) && !exclus.has(nom) && nom.length <= limite && !(!Object.prototype.hasOwnProperty.call(registre.etiquettes, nom) && connus.has(nom)))) {
+      ecarter('sans-etiquette-theme')
+    }
     if (tropLong) ecarter('nom-trop-long')
     if (homonyme) ecarter('homonyme')
     if (nonDispo) ecarter('action-non-disponible')
