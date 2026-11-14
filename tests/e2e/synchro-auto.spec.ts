@@ -131,10 +131,10 @@ test.describe('synchronisation automatique sur site fictif', () => {
     });
 
     // Prix en dernier : la carte à décider est relevée une fois la collection lue.
-    await expect.poll(() => site.api.length, { timeout: 60_000, intervals: [500] }).toBeGreaterThanOrEqual(4);
+    await expect.poll(() => site.api.length, { timeout: 60_000, intervals: [500] }).toBeGreaterThanOrEqual(5);
     // Aucune page au-delà de la fin : la page 0 est courte, la lecture s'arrête là (le site refuse la page suivante en 403).
-    // Lecture complète, puis relecture des stats pour détecter un changement en cours de lecture, puis les prix.
-    expect(chemins(site.api).slice(0, 4)).toEqual([CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_STATS, CHEMIN_PRIX]);
+    // Lecture complète, puis relecture des stats et de la page 0 pour détecter un changement en cours de lecture, puis les prix.
+    expect(chemins(site.api).slice(0, 5)).toEqual([CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_PRIX]);
     expect(chemins(site.api)).not.toContain(CHEMIN_PAGE(1));
 
     await expect
@@ -210,9 +210,9 @@ test.describe('synchronisation automatique sur site fictif', () => {
     await expect.poll(() => site.api.length, { intervals: [250] }).toBeGreaterThanOrEqual(1);
     await site.page.waitForTimeout(PLUS_QU_UNE_CADENCE_MS);
     // Synchro terminée (lecture complète sans prix à relever), puis marketplace/mine, puis un seul GET vers le listing du marché.
-    await expect.poll(() => chemins(site.api), { timeout: 45_000, intervals: [250] }).toEqual([CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_STATS, CHEMIN_VENTES, CHEMIN_MARCHE]);
+    await expect.poll(() => chemins(site.api), { timeout: 45_000, intervals: [250] }).toEqual([CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_VENTES, CHEMIN_MARCHE]);
     await site.page.waitForTimeout(PLUS_QU_UNE_CADENCE_MS);
-    expect(chemins(site.api)).toEqual([CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_STATS, CHEMIN_VENTES, CHEMIN_MARCHE]);
+    expect(chemins(site.api)).toEqual([CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_STATS, CHEMIN_PAGE(0), CHEMIN_VENTES, CHEMIN_MARCHE]);
     verifierLectureSeule(site.api);
   });
 
