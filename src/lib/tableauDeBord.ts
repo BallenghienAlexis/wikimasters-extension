@@ -118,3 +118,33 @@ export function calculerTableauDeBord(
     },
   }
 }
+
+export interface LigneRarete {
+  rarete: string
+  titres: number
+  garder: number
+  echanger: number
+  vendre: number
+}
+
+const ORDRE_RARETES = ['C', 'R', 'SR', 'E', 'UR', 'L']
+
+/** Répartition par rareté (titres, puis cartes à garder, échanger, vendre) ; « Sans rareté » en dernier. */
+export function repartitionParRarete(cartes: readonly { rarete: string | null; statut: string }[]): LigneRarete[] {
+  const par = new Map<string, LigneRarete>()
+  for (const c of cartes) {
+    const k = c.rarete ?? 'Sans rareté'
+    const l = par.get(k) ?? { rarete: k, titres: 0, garder: 0, echanger: 0, vendre: 0 }
+    l.titres += 1
+    if (c.statut === 'garder') l.garder += 1
+    if (c.statut === 'echanger') l.echanger += 1
+    if (c.statut === 'vendre') l.vendre += 1
+    par.set(k, l)
+  }
+  const rang = (k: string): number => {
+    if (k === 'Sans rareté') return ORDRE_RARETES.length + 1
+    const i = ORDRE_RARETES.indexOf(k)
+    return i < 0 ? ORDRE_RARETES.length : i
+  }
+  return [...par.values()].sort((a, b) => rang(a.rarete) - rang(b.rarete) || a.rarete.localeCompare(b.rarete, 'fr'))
+}

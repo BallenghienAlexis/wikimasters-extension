@@ -11,7 +11,7 @@ const EnTete: React.FC = () => {
     <header className="flex flex-wrap items-baseline gap-3">
       <h1 className="text-2xl font-semibold">WM Collection</h1>
       <span className="text-sm text-muted" data-testid="entete-synchro">
-        {synchro.activee ? `Dernière synchro ${age}` : `Synchro : ${age}`}
+        {!synchro.activee ? 'Synchro automatique coupée' : age === 'jamais' ? 'Jamais synchronisée' : `Dernière synchro ${age}`}
       </span>
       <PastilleStatut etat={pastilleDe(synchro)} />
     </header>

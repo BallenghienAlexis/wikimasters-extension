@@ -1,4 +1,4 @@
-import { allerA, chargerCartes, expect, test } from './extension';
+import { allerA, chargerCartes, ecrireJeuRiche, expect, test } from './extension';
 import type { Page } from '@playwright/test';
 
 // T-305 : onglet Tableau de bord (SC-001, SC-022, SC-027, SC-009). Données uniquement fictives.
@@ -318,4 +318,16 @@ test.describe('SC-009 : colonnes KPI, débordement, deux thèmes, captures', () 
     await ouvrir(pageCollection, []);
     expect(await pageCollection.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   });
+
+test.describe('Alignement maquette : en-tête et rareté', () => {
+  test('en-tête sur une ligne et tableau par rareté (liste empilée sous 600 px)', async ({ pageCollection }) => {
+    await ecrireJeuRiche(pageCollection);
+    await expect(pageCollection.getByTestId('entete-synchro')).toBeVisible();
+    await pageCollection.setViewportSize({ width: 1280, height: 800 });
+    await expect(pageCollection.getByTestId('tableau-raretes').locator('table')).toBeVisible();
+    await pageCollection.setViewportSize({ width: 375, height: 812 });
+    await expect(pageCollection.getByTestId('tableau-raretes').locator('table')).toBeHidden();
+    await expect(pageCollection.getByTestId('tableau-raretes').getByRole('list')).toBeVisible();
+  });
+});
 });
