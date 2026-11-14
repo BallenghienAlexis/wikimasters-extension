@@ -79,14 +79,14 @@ const ProgressionSynchro: React.FC<Props> = ({ statut, actif }) => {
           fine
           enCours={actif}
         />
-        <ol data-testid="etapes-synchro" className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <ol data-testid="etapes-synchro" className="mt-3 grid grid-cols-1 gap-2">
           {p.etapes.map((e) => {
             let etat: EtatAffiche = e.etat;
             if (e.etat === 'en-cours' && statut.etat === 'arret') etat = 'arret';
             // Statut « en cours » périmé (bail expiré) : l’étape n’avance plus, elle n’est pas présentée comme active.
             else if (e.etat === 'en-cours' && !actif && statut.etat === 'en-cours') etat = 'attente';
             return (
-              <li key={e.etape} data-testid="etape-synchro" data-etape={e.etape} data-etat={etat} className="flex flex-col gap-2">
+              <li key={e.etape} data-testid="etape-synchro" data-etape={e.etape} data-etat={etat} className="flex flex-col gap-1 sm:grid sm:grid-cols-[110px_1fr] sm:items-center sm:gap-3">
                 <span className={`font-medium ${COULEURS[etat]}`}>
                   {`${SYMBOLES[etat]} ${LIBELLES_ETAPE[e.etape]}`}
                   {etat === 'arret' && <span className="ml-2 text-sm font-normal">(arrêtée)</span>}
