@@ -418,3 +418,46 @@ test.describe('SC-009 : captures et débordement', () => {
     }
   }
 });
+
+test.describe('Revue T-306 : couleur par état, bail expiré, pastille D-40', () => {
+  test('D-11 : couleur par état (garder = faite, echanger = en cours, muted = attente, defausser = arrêt)', async ({ pageCollection }) => {
+    await poser(pageCollection, {
+      bailSynchro: Date.now() + 120_000,
+      statutSynchro: statut({ etape: 'pages', page: 11, pages: 40 }),
+    });
+    await expect(etape(pageCollection, 'stats').locator('span').first()).toHaveClass(/text-garder/);
+    await expect(etape(pageCollection, 'pages').locator('span').first()).toHaveClass(/text-echanger/);
+    await expect(etape(pageCollection, 'prix').locator('span').first()).toHaveClass(/text-muted/);
+    await maj(pageCollection, {
+      bailSynchro: null,
+      derniereSynchro: Date.now() - 3_600_000,
+      statutSynchro: statut({ etat: 'arret', etape: 'prix', raison: 'code-http', codeHttp: 403, prixFaits: 5, prixPrevus: 20 }),
+    });
+    await expect(etape(pageCollection, 'prix').locator('span').first()).toHaveClass(/text-defausser/);
+  });
+
+  test('statut « en cours » périmé (bail expiré) : ni ▶ ni durée restante, pastille non « En cours »', async ({ pageCollection }) => {
+    await poser(pageCollection, {
+      bailSynchro: Date.now() - 5_000,
+      statutSynchro: statut({ etape: 'pages', page: 11, pages: 40 }),
+    });
+    await expect(etape(pageCollection, 'pages')).toBeVisible();
+    await expect(etape(pageCollection, 'pages')).not.toHaveAttribute('data-etat', 'en-cours');
+    await expect(pageCollection.getByTestId('etapes-synchro')).not.toContainText('▶');
+    await expect(pageCollection.getByTestId('duree-restante')).toHaveCount(0);
+    await expect(pageCollection.getByTestId('pastille-synchro')).not.toContainText('En cours');
+  });
+
+  test('D-40 : pastille de statut affichée (En cours pendant une synchro, Erreur après un 403)', async ({ pageCollection }) => {
+    await poser(pageCollection, {
+      bailSynchro: Date.now() + 120_000,
+      statutSynchro: statut({ etape: 'pages', page: 11, pages: 40 }),
+    });
+    await expect(pageCollection.getByTestId('pastille-synchro')).toContainText('En cours');
+    await maj(pageCollection, {
+      bailSynchro: null,
+      statutSynchro: statut({ etat: 'arret', etape: 'pages', raison: 'code-http', codeHttp: 403, page: 5, pages: 40 }),
+    });
+    await expect(pageCollection.getByTestId('pastille-synchro')).toContainText('Erreur');
+  });
+});
