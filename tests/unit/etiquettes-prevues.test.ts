@@ -101,7 +101,7 @@ describe('EtiquettesPrevues : total et non posées (AC2)', () => {
     const t = apercu.totaux
     const html = rendre(c, apercu)
     expect(html).toContain(`Total prévu${NB}: ${t.poses} poses dont ${t.themes} de thème et ${t.echanges} d’échange`)
-    expect(html).toContain(`${t.nomsNouveaux} noms nouveaux`)
+    expect(html).toContain(t.nomsNouveaux > 1 ? `${t.nomsNouveaux} noms nouveaux` : `${t.nomsNouveaux} nom nouveau`)
     expect(html).toContain(`durée estimée une fois disponible${NB}: `)
   })
 

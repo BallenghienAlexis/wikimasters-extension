@@ -182,22 +182,66 @@ const REGLES = DEFINITIONS_THEMES.map(({ id, motifs, parents = [] }) => ({
   id,
   parents,
   motif: new RegExp(`(^|[^a-z0-9])(${motifs.join('|')})`),
+  global: new RegExp(`(^|[^a-z0-9])(${motifs.join('|')})`, 'g'),
 }));
 
 const REGLES_CATEGORIES = DEFINITIONS_THEMES.map(({ id, motifs, motifsCategories = [], parents = [] }) => ({
   id,
   parents,
   motif: new RegExp(`(^|[^a-z0-9])(${[...motifs, ...motifsCategories].join('|')})`),
+  global: new RegExp(`(^|[^a-z0-9])(${[...motifs, ...motifsCategories].join('|')})`, 'g'),
 }));
+
+/** Nombre maximal d’étiquettes de thème posées par carte (demande d’Alexis, 2026-11-14). */
+export const MAX_THEMES_PAR_CARTE = 4;
+
+/**
+ * Occurrences de chaque thème trouvé directement (sans parents) dans un texte libre. Un mot-clé écrit avec une majuscule
+ * derrière un autre mot à majuscule (« studio Bee Train », « Kōichi Mashimo ») est un nom propre : il ne compte pas.
+ */
+function occurrencesDirectes(texte: string, categories = false): Map<string, number> {
+  const brut = texte.replaceAll('’', "'");
+  const normalise = `${normaliser(brut)} `;
+  // Les indices ne correspondent à l’original que si la normalisation conserve la longueur.
+  const memeLongueur = normalise.length === brut.length + 1;
+  const compte = new Map<string, number>();
+  for (const { id, motif, global } of categories ? REGLES_CATEGORIES : REGLES) {
+    if (!motif.test(normalise)) continue;
+    let n = 0;
+    global.lastIndex = 0;
+    for (const m of normalise.matchAll(global)) {
+      if (memeLongueur) {
+        const mot = (m[2] ?? '').trim();
+        const debut = (m.index ?? 0) + (m[1] ?? '').length;
+        // Seul un mot-clé d’un seul mot peut être le bout d’un nom propre (« Bee Train ») ; une expression comme « Rome antique » reste.
+        if (!/\s/.test(mot) && nomPropre(brut, debut)) continue;
+      }
+      n += 1;
+    }
+    if (n > 0) compte.set(id, n);
+  }
+  return compte;
+}
+
+const MAJUSCULE = /\p{Lu}/u;
+
+/** Vrai si le mot à `debut` est en majuscule et directement précédé d’un mot en majuscule (nom propre composé). */
+function nomPropre(texte: string, debut: number): boolean {
+  if (!MAJUSCULE.test(texte.charAt(debut))) return false;
+  const avant = /(\p{L}[\p{L}'’-]*) +$/u.exec(texte.slice(0, debut));
+  if (avant?.[1] === undefined || !MAJUSCULE.test(avant[1].charAt(0))) return false;
+  // « Le Chat botté », « La Tour » : un article en majuscule (titre en casse de titre) ne fait pas un nom propre.
+  return !/^(le|la|les|l'|un|une|du|des|de|d')$/i.test(avant[1]);
+}
+
+const PARENTS = new Map(DEFINITIONS_THEMES.map((t) => [t.id, t.parents ?? []] as const));
 
 /** Thèmes (parents compris) trouvés dans un texte libre ; liste vide s'il n'y en a aucun. */
 export function themesDeTexte(texte: string, categories = false): string[] {
-  const normalise = `${normaliser(texte)} `.replaceAll('’', "'");
   const themes = new Set<string>();
-  for (const { id, parents, motif } of categories ? REGLES_CATEGORIES : REGLES) {
-    if (!motif.test(normalise)) continue;
+  for (const id of occurrencesDirectes(texte, categories).keys()) {
     themes.add(id);
-    for (const parent of parents) themes.add(parent);
+    for (const parent of PARENTS.get(id) ?? []) themes.add(parent);
   }
   return [...themes];
 }
@@ -222,4 +266,62 @@ export function compterThemes(cartes: Carte[]): Record<string, number> {
     for (const theme of themesDeCarte(carte)) compte[theme] = (compte[theme] ?? 0) + 1;
   }
   return compte;
+}
+
+/** Tous les ancêtres (parents, parents des parents…) d'un thème. */
+function ancetres(id: string, vus: Set<string> = new Set()): Set<string> {
+  for (const p of PARENTS.get(id) ?? []) {
+    if (vus.has(p)) continue;
+    vus.add(p);
+    ancetres(p, vus);
+  }
+  return vus;
+}
+
+const NB_ANCETRES_THEME = (() => {
+  const profondeur = new Map<string, number>();
+  const calcul = (id: string, vus: Set<string> = new Set()): number => {
+    const connu = profondeur.get(id);
+    if (connu !== undefined) return connu;
+    if (vus.has(id)) return 0;
+    vus.add(id);
+    const p = PARENTS.get(id) ?? [];
+    const v = p.length === 0 ? 0 : 1 + Math.max(...p.map((x) => calcul(x, vus)));
+    profondeur.set(id, v);
+    return v;
+  };
+  for (const t of DEFINITIONS_THEMES) calcul(t.id);
+  return profondeur;
+})();
+
+/**
+ * Thèmes qui caractérisent le plus la carte (au plus `MAX_THEMES_PAR_CARTE`), du mieux établi au moins bien établi.
+ * Poids : titre ×3, première phrase de la description ×3, reste de la description ×1, thèmes vérifiés sur Wikipédia +2 (ancêtres exclus).
+ * Un thème dont le poids est inférieur au tiers du meilleur est écarté ; à poids égal, le plus précis passe avant.
+ * Les parents ne sont pas ajoutés : ils servent seulement à faire correspondre les amis (`themesDeCarte`).
+ */
+export function themesPrincipaux(carte: Pick<Carte, 'titre' | 'description'>): string[] {
+  const poids = new Map<string, number>();
+  const ajouter = (comptes: Map<string, number>, facteur: number): void => {
+    for (const [id, n] of comptes) poids.set(id, (poids.get(id) ?? 0) + Math.min(n, 2) * facteur);
+  };
+  const description = carte.description;
+  const finPhrase = description.search(/[.!?](\s|$)/);
+  const premiere = finPhrase === -1 ? description : description.slice(0, finPhrase + 1);
+  ajouter(occurrencesDirectes(carte.titre), 3);
+  ajouter(occurrencesDirectes(premiere), 3);
+  ajouter(occurrencesDirectes(description.slice(premiere.length)), 1);
+  // Le cache Wikipédia contient les parents et le résumé : les ancêtres n'y comptent pas, et le poids reste sous celui du titre.
+  const wiki = themesWikipedia.get(carte.titre) ?? [];
+  const ancetresWiki = new Set(wiki.flatMap((id) => [...ancetres(id)]));
+  for (const id of wiki) if (!ancetresWiki.has(id)) poids.set(id, (poids.get(id) ?? 0) + 2);
+  const meilleur = Math.max(0, ...poids.values());
+  const retenus = [...poids.entries()].filter(([, p]) => p * 3 >= meilleur);
+  // Un thème qui est l'ancêtre d'un autre thème retenu est écarté : « #Chien » suffit, pas « #Animaux » en plus.
+  const ancetresRetenus = new Set(retenus.flatMap(([id]) => [...ancetres(id)]));
+  return retenus
+    .filter(([id]) => !ancetresRetenus.has(id))
+    .sort(([a, pa], [b, pb]) => pb - pa || (NB_ANCETRES_THEME.get(b) ?? 0) - (NB_ANCETRES_THEME.get(a) ?? 0) || a.localeCompare(b))
+    .slice(0, MAX_THEMES_PAR_CARTE)
+    .map(([id]) => id);
 }
