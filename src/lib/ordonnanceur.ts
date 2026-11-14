@@ -23,6 +23,10 @@ export const PAUSE_APRES_ARRET_MS = 30 * 60_000;
 export const ancienneteMaxPrixMs = 30 * 86_400_000;
 /** Durée d’un bail ; renouvelé avant chaque requête. */
 export const DUREE_BAIL_MS = 2 * 60_000;
+/** Prix demandés d’affilée avant une pause : deux synchros ont reçu leur premier 403 juste après 30 prix (quota supposé de la route). */
+export const PRIX_PAR_LOT = 30;
+/** Pause entre deux lots de prix, pour laisser la fenêtre de quota supposée se vider. */
+export const PAUSE_ENTRE_LOTS_PRIX_MS = 60_000;
 /** Plafond de prix relevés par exécution (le reste attend la synchro suivante). */
 export const MAX_PRIX_PAR_EXECUTION = 100;
 /** Refus 403 d’affilée sur les prix qui arrêtent la synchro : en dessous, c’est une carte sans route de prix, pas la session. */
@@ -552,12 +556,22 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     const plafond = deps.maxPrix ?? MAX_PRIX_PAR_EXECUTION;
     const retenues = candidatsPrix().slice(0, Math.max(0, plafond));
     deps.annoncerPrix?.(retenues.length);
+    let demandes = 0;
+    let premiereDemande: number | null = null;
     for (const carte of retenues) {
       const cardId = etat.cardIds[carte.id];
       if (cardId === undefined) continue;
+      if (demandes > 0 && demandes % PRIX_PAR_LOT === 0) {
+        journal(`Pause de ${PAUSE_ENTRE_LOTS_PRIX_MS / 1000} s après ${demandes} prix demandés (limite de débit supposée).`);
+        await horloge.attendreJusqua(horloge.now() + PAUSE_ENTRE_LOTS_PRIX_MS);
+        if (deps.arretDemande?.()) throw new Interruption('manuel', null);
+      }
+      premiereDemande ??= horloge.now();
+      demandes += 1;
       const refusAvant = refusPrixTotal;
       const r = await requete(cheminPrix(cardId), false, carte.titre);
       if (r === null) {
+        if (refusPrixTotal > refusAvant) journal(`Diagnostic prix : refus pour « ${carte.titre} » (carte ${cardId}, rareté ${carte.rarete ?? '?'}) à la demande n° ${demandes}, ${Math.round((horloge.now() - (premiereDemande ?? 0)) / 1000)} s après la première.`);
         // Refus par carte : on ne la redemande pas avant la fin de l’ancienneté (30 jours), sans valeur inventée.
         if (refusPrixTotal > refusAvant) etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() };
         continue;
