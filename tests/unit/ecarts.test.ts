@@ -34,14 +34,14 @@ describe('calculerEcarts', () => {
   })
 
   it('signale une étiquette présente sur le site mais non attendue', () => {
-    const c = carte('b', { etiquettesSite: ['Statut · Garder', 'Statut · Vendre'] })
+    const c = carte('b', { etiquettesSite: ['Statut · Garder', '#À classer', 'Statut · Vendre'] })
     const e = calculerEcarts([c])[0]!
     expect(e.enTrop).toEqual(['Statut · Vendre'])
     expect(e.manquantes).toEqual([])
   })
 
   it('ne renvoie rien quand les étiquettes correspondent', () => {
-    const c = carte('c', { etiquettesSite: ['Statut · Garder'] })
+    const c = carte('c', { etiquettesSite: ['Statut · Garder', '#À classer'] })
     expect(calculerEcarts([c])).toEqual([])
   })
 

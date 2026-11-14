@@ -5,7 +5,7 @@ import type { Carte, Collection } from '../../src/lib/collection'
 import { STATUTS, collectionVide } from '../../src/lib/collection'
 import { CONFIG_PRIX } from '../../src/config/prix'
 import { preferencesParDefaut, prixDepart, proposerTri } from '../../src/lib/tri'
-import { construireLot, exemplairesAttendus, type Config } from '../../src/lib/lot'
+import { ETIQUETTE_A_CLASSER, construireLot, exemplairesAttendus, type Config } from '../../src/lib/lot'
 import type { Registre } from '../../src/lib/actions'
 import { registreVide } from '../../src/lib/registre'
 
@@ -44,29 +44,37 @@ const registre = (couples: Registre['couples'] = [], etiquettes: Registre['etiqu
 })
 const types = (...t: TypeAction[]): TypesDisponibles => new Set(t)
 const de = (a: Action[], type: TypeAction) => a.filter((x) => x.type === type)
+// Les cartes de ces tests n’ont aucun thème : elles reçoivent aussi l’étiquette de repli, vérifiée à part.
+const hors = (a: Action[]): Action[] => a.filter((x) => !('nomEtiquette' in x) || x.nomEtiquette !== ETIQUETTE_A_CLASSER)
+const sansRepli = (noms: string[]): string[] => noms.filter((n) => n !== ETIQUETTE_A_CLASSER)
 
 describe('garde-fous (SC-003, SC-004, SC-005)', () => {
-  it('un favori ne produit aucune action, même avec une étiquette obsolète (SC-003)', () => {
+  it('un favori reçoit seulement son étiquette de thème, jamais de défausse ni de Statut, et l’ancien Statut est signalé (SC-003)', () => {
     const c = carte('a', { favori: true, statut: 'defausser', valeurMarchande: 1 })
     const lot = construireLot(coll(c), registre([{ ex: 'ex-a', nom: 'Statut · Garder' }]), config(), TOUS)
-    expect(lot.actions).toEqual([])
+    expect(lot.actions).toEqual([
+      { type: 'creation-etiquette', idCarte: 'a', nomEtiquette: ETIQUETTE_A_CLASSER },
+      { type: 'pose-etiquette', idCarte: 'a', idExemplaire: 'ex-a', nomEtiquette: ETIQUETTE_A_CLASSER },
+    ])
     expect(lot.ecartees).toEqual([])
     expect(lot.obsoletes).toEqual([{ idCarte: 'a', titre: 'Carte a', idExemplaire: 'ex-a', nomEtiquette: 'Statut · Garder' }])
   })
 
-  it('une carte à trier ne produit aucune action et ses étiquettes obsolètes sont signalées (SC-004, H18)', () => {
+  it('une carte à trier reçoit seulement son étiquette de thème, sans retrait ; ses étiquettes obsolètes sont signalées (SC-004, H18)', () => {
     const c = carte('a', { statut: 'a-trier' })
     const lot = construireLot(coll(c), registre([{ ex: 'ex-a', nom: 'Statut · Garder' }]), config(), TOUS)
-    expect(lot.actions).toEqual([])
+    expect(de(lot.actions, 'retrait-etiquette')).toEqual([])
+    expect(lot.actions.map((a) => (a as { nomEtiquette: string }).nomEtiquette)).toEqual([ETIQUETTE_A_CLASSER, ETIQUETTE_A_CLASSER])
     expect(lot.obsoletes).toHaveLength(1)
   })
 
-  it('un favori ne produit aucune action pour aucun statut (SC-003)', () => {
+  it('un favori n’a ni enchère, ni défausse, ni retrait, ni Statut pour aucun statut (SC-003)', () => {
     for (const statut of STATUTS) {
       const c = carte('a', { favori: true, statut, valeurMarchande: 100, prixCible: 10, idsSite: ['x1', 'x2'], quantite: 2 })
       const r = registre([{ ex: 'x1', nom: 'Statut · Garder' }], { 'Statut · Garder': 'e1' })
       const lot = construireLot(coll(c), r, config(), TOUS)
-      expect(lot.actions, statut).toEqual([])
+      expect(lot.actions.filter((a) => ['enchere', 'defausse', 'retrait-etiquette'].includes(a.type)), statut).toEqual([])
+      expect(lot.actions.every((a) => (a as { nomEtiquette: string }).nomEtiquette === ETIQUETTE_A_CLASSER), statut).toBe(true)
       expect(lot.obsoletes, statut).toEqual([{ idCarte: 'a', titre: 'Carte a', idExemplaire: 'x1', nomEtiquette: 'Statut · Garder' }])
     }
   })
@@ -82,7 +90,7 @@ describe('garde-fous (SC-003, SC-004, SC-005)', () => {
     expect(prixDepart(100)).not.toBeNull()
 
     const lot = construireLot(coll(g, d), registre(), config(), TOUS)
-    expect(lot.actions).toEqual([
+    expect(hors(lot.actions)).toEqual([
       { type: 'creation-etiquette', idCarte: 'a', nomEtiquette: 'Statut · Garder' },
       { type: 'pose-etiquette', idCarte: 'a', idExemplaire: 'ex-a', nomEtiquette: 'Statut · Garder' },
     ])
@@ -100,6 +108,14 @@ describe('garde-fous (SC-003, SC-004, SC-005)', () => {
 })
 
 describe('cartes écartées (SC-024, H47)', () => {
+  it('un favori ou une carte à trier non reliée ne produit ni action ni écart', () => {
+    for (const extra of [{ favori: true }, { statut: 'a-trier' as const }]) {
+      const lot = construireLot(coll(carte('a', { ...extra, idsSite: null })), registre(), config(), TOUS)
+      expect(lot.actions).toEqual([])
+      expect(lot.ecartees).toEqual([])
+    }
+  })
+
   it('une carte non reliée est écartée sans action', () => {
     const lot = construireLot(coll(carte('a', { idsSite: null })), registre(), config(), TOUS)
     expect(lot.actions).toEqual([])
@@ -124,7 +140,7 @@ describe('cartes écartées (SC-024, H47)', () => {
 describe('étiquettes (SC-007 a à e, H16)', () => {
   it('(a) pose « Statut · <libellé> » sur chaque exemplaire relié, après une création', () => {
     const lot = construireLot(coll(carte('a', { idsSite: ['x1', 'x2'] })), registre(), config(), TOUS)
-    expect(lot.actions).toEqual([
+    expect(hors(lot.actions)).toEqual([
       { type: 'creation-etiquette', idCarte: 'a', nomEtiquette: 'Statut · Garder' },
       { type: 'pose-etiquette', idCarte: 'a', idExemplaire: 'x1', nomEtiquette: 'Statut · Garder' },
       { type: 'pose-etiquette', idCarte: 'a', idExemplaire: 'x2', nomEtiquette: 'Statut · Garder' },
@@ -133,13 +149,13 @@ describe('étiquettes (SC-007 a à e, H16)', () => {
 
   it('(a) une carte vendre en attente de place reçoit quand même son étiquette (H16)', () => {
     const lot = construireLot(coll(carte('a', { statut: 'vendre' })), registre(), config({ maxVentesSimultanees: 0 }), TOUS)
-    expect(de(lot.actions, 'pose-etiquette').map((a) => (a as { nomEtiquette: string }).nomEtiquette)).toEqual(['Statut · Vendre'])
+    expect(sansRepli(de(lot.actions, 'pose-etiquette').map((a) => (a as { nomEtiquette: string }).nomEtiquette))).toEqual(['Statut · Vendre'])
   })
 
   it('(b) échanger avec un ami reçoit aussi « #À échanger <nom> » (trim), pas si l’ami est vide', () => {
     const lot = construireLot(coll(carte('a', { statut: 'echanger', ami: '  Léa ' }), carte('b', { statut: 'echanger', ami: '   ' })), registre(), config(), TOUS)
     const noms = (id: string) =>
-      de(lot.actions, 'pose-etiquette').filter((a) => a.idCarte === id).map((a) => (a as { nomEtiquette: string }).nomEtiquette)
+      sansRepli(de(lot.actions, 'pose-etiquette').filter((a) => a.idCarte === id).map((a) => (a as { nomEtiquette: string }).nomEtiquette))
     expect(noms('a')).toEqual(['Statut · Échanger', '#À échanger Léa'])
     expect(noms('b')).toEqual(['Statut · Échanger'])
   })
@@ -165,7 +181,7 @@ describe('étiquettes (SC-007 a à e, H16)', () => {
 
   it('(d) un couple attendu déjà au registre ne produit aucune action', () => {
     const r = registre([{ ex: 'ex-a', nom: 'Statut · Garder' }], { 'Statut · Garder': 'e1' })
-    expect(construireLot(coll(carte('a')), r, config(), TOUS).actions).toEqual([])
+    expect(hors(construireLot(coll(carte('a')), r, config(), TOUS).actions)).toEqual([])
   })
 
   it('(e) aucun retrait pour un couple absent du registre', () => {
@@ -175,7 +191,7 @@ describe('étiquettes (SC-007 a à e, H16)', () => {
 
   it('(f) au plus une création par nom, avant la première pose, aucune si le nom est au registre', () => {
     const lot = construireLot(coll(carte('a'), carte('b'), carte('c', { statut: 'vendre' })), registre([], { 'Statut · Vendre': 'e2' }), config(), TOUS)
-    const crees = de(lot.actions, 'creation-etiquette').map((a) => (a as { nomEtiquette: string }).nomEtiquette)
+    const crees = sansRepli(de(lot.actions, 'creation-etiquette').map((a) => (a as { nomEtiquette: string }).nomEtiquette))
     expect(crees).toEqual(['Statut · Garder'])
     const iCreation = lot.actions.findIndex((a) => a.type === 'creation-etiquette')
     const iPose = lot.actions.findIndex((a) => a.type === 'pose-etiquette')
@@ -184,10 +200,10 @@ describe('étiquettes (SC-007 a à e, H16)', () => {
 
   it('exemplairesAttendus donne les étiquettes attendues par exemplaire', () => {
     expect(exemplairesAttendus(carte('a', { statut: 'echanger', ami: 'Léa', idsSite: ['x1', 'x2'] }))).toEqual([
-      { idExemplaire: 'x1', etiquettes: ['Statut · Échanger', '#À échanger Léa'] },
-      { idExemplaire: 'x2', etiquettes: ['Statut · Échanger', '#À échanger Léa'] },
+      { idExemplaire: 'x1', etiquettes: ['Statut · Échanger', '#À échanger Léa', ETIQUETTE_A_CLASSER] },
+      { idExemplaire: 'x2', etiquettes: ['Statut · Échanger', '#À échanger Léa', ETIQUETTE_A_CLASSER] },
     ])
-    expect(exemplairesAttendus(carte('a', { favori: true }))).toEqual([])
+    expect(exemplairesAttendus(carte('a', { favori: true }))).toEqual([{ idExemplaire: 'ex-a', etiquettes: [ETIQUETTE_A_CLASSER] }])
     expect(exemplairesAttendus(carte('a', { statut: 'defausser', valeurMarchande: 1 }))).toEqual([])
     expect(exemplairesAttendus(carte('a', { idsSite: null }))).toEqual([])
   })
@@ -197,25 +213,25 @@ describe('noms d’étiquette (AC8)', () => {
   it('un nom trop long ne produit aucune action et est signalé', () => {
     const lot = construireLot(coll(carte('a', { statut: 'echanger', ami: 'x'.repeat(60) })), registre(), config({ longueurMaxEtiquette: 20 }), TOUS)
     expect(lot.ecartees).toEqual([{ idCarte: 'a', titre: 'Carte a', raison: 'nom-trop-long' }])
-    expect(de(lot.actions, 'pose-etiquette').map((a) => (a as { nomEtiquette: string }).nomEtiquette)).toEqual(['Statut · Échanger'])
+    expect(sansRepli(de(lot.actions, 'pose-etiquette').map((a) => (a as { nomEtiquette: string }).nomEtiquette))).toEqual(['Statut · Échanger'])
   })
 
   it('longueur inconnue (null) : seul le plafond du registre, 200, s’applique', () => {
     const lot = construireLot(coll(carte('a', { statut: 'echanger', ami: 'x'.repeat(150) })), registre(), config({ longueurMaxEtiquette: null }), TOUS)
     expect(lot.ecartees).toEqual([])
-    expect(de(lot.actions, 'pose-etiquette')).toHaveLength(2)
+    expect(hors(de(lot.actions, 'pose-etiquette'))).toHaveLength(2)
   })
 
   it('un homonyme connu non créé par l’extension est signalé, sans action pour ce nom', () => {
     const lot = construireLot(coll(carte('a')), registre(), config({ nomsExistants: ['Statut · Garder'] }), TOUS)
-    expect(lot.actions).toEqual([])
+    expect(hors(lot.actions)).toEqual([])
     expect(lot.ecartees).toEqual([{ idCarte: 'a', titre: 'Carte a', raison: 'homonyme' }])
   })
 
   it('un nom déjà créé par l’extension n’est pas un homonyme', () => {
     const lot = construireLot(coll(carte('a')), registre([], { 'Statut · Garder': 'e1' }), config({ nomsExistants: ['Statut · Garder'] }), TOUS)
     expect(lot.ecartees).toEqual([])
-    expect(de(lot.actions, 'pose-etiquette')).toHaveLength(1)
+    expect(hors(de(lot.actions, 'pose-etiquette'))).toHaveLength(1)
   })
 })
 
@@ -283,8 +299,12 @@ describe('types non disponibles', () => {
   it('génère les types disponibles et signale les autres', () => {
     const r = registre([], { 'Statut · Garder': 'e1' })
     const lot = construireLot(coll(carte('a'), carte('b', { statut: 'defausser', valeurMarchande: 1 })), r, config(), types('pose-etiquette'))
-    expect(lot.actions.map((a) => a.type)).toEqual(['pose-etiquette'])
-    expect(lot.ecartees).toEqual([{ idCarte: 'b', titre: 'Carte b', raison: 'action-non-disponible' }])
+    expect(hors(lot.actions).map((a) => a.type)).toEqual(['pose-etiquette'])
+    // « #À classer » n’existe pas encore et sa création n’est pas disponible : la carte a est signalée aussi.
+    expect(lot.ecartees).toEqual([
+      { idCarte: 'a', titre: 'Carte a', raison: 'action-non-disponible' },
+      { idCarte: 'b', titre: 'Carte b', raison: 'action-non-disponible' },
+    ])
   })
 })
 
@@ -302,7 +322,7 @@ describe('ordre H9', () => {
       config(),
       TOUS,
     )
-    expect(lot.actions.map((a) => a.type)).toEqual([
+    expect(hors(lot.actions).map((a) => a.type)).toEqual([
       'creation-etiquette',
       'retrait-etiquette',
       'pose-etiquette',
@@ -312,7 +332,7 @@ describe('ordre H9', () => {
       'defausse',
       'defausse',
     ])
-    const poses = de(lot.actions, 'pose-etiquette').map((a) => (a as { idExemplaire: string }).idExemplaire)
+    const poses = de(hors(lot.actions), 'pose-etiquette').map((a) => (a as { idExemplaire: string }).idExemplaire)
     expect(poses).toEqual(['a2', 'a1', 'ex-b', 'ex-c'])
     expect(de(lot.actions, 'defausse').map((a) => (a as { idExemplaire: string }).idExemplaire)).toEqual(['d2', 'd1'])
   })

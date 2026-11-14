@@ -29,6 +29,8 @@ export const MAX_PRIX_PAR_EXECUTION = 100;
 export const MAX_REFUS_PRIX_CONSECUTIFS = 3;
 /** Plafond de refus de prix sur toute une exécution, qu’un succès intercalé ne remet jamais à zéro. */
 export const MAX_REFUS_PRIX_PAR_EXECUTION = 10;
+/** Échecs sautés au plus sur toute une exécution, même séparés par des lectures réussies. */
+export const MAX_ECHECS_PAR_EXECUTION = 10;
 const PREMIERE_PAGE = 0;
 const CARTES_PAR_PAGE = 50;
 /** Retrait automatique des cartes disparues : au plus ce nombre, ou 10 % de la collection si plus. */
@@ -205,7 +207,10 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     signalements: [],
   };
 
+  /** Échecs d’affilée (remis à zéro par une lecture réussie) : 3 de suite arrêtent la synchro. */
   let echecs = 0;
+  /** Échecs sautés sur toute l’exécution : la synchro n’est pas déclarée complète s’il y en a. */
+  let echecsTotal = 0;
   /** Refus 403 consécutifs sur la route des prix (par carte, tolérés un à un). */
   let refusPrix = 0;
   let refusPrixTotal = 0;
@@ -285,8 +290,9 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
 
   function echec(message: string): null {
     echecs += 1;
-    journal(`Échec ${echecs}/${MAX_ECHECS} : ${message}`);
-    if (echecs >= MAX_ECHECS) throw new Interruption('echecs', null);
+    echecsTotal += 1;
+    journal(`Échec ${echecs}/${MAX_ECHECS} d’affilée : ${message} Élément sauté, la synchronisation continue.`);
+    if (echecs >= MAX_ECHECS || echecsTotal >= MAX_ECHECS_PAR_EXECUTION) throw new Interruption('echecs', null);
     return null;
   }
 
@@ -317,7 +323,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       if (!inchange) {
         const lecture = await lirePages(stats?.total ?? null, gain);
         complet = lecture.ok && complet;
-        if (lecture.vus !== null && lecture.ok && echecs === 0 && resultat.ignorees === 0) retirerDisparues(lecture.vus);
+        if (lecture.vus !== null && lecture.ok && echecsTotal === 0 && resultat.ignorees === 0) retirerDisparues(lecture.vus);
       }
       if (complet && stats !== null) {
         etat.total = stats.total;
@@ -327,7 +333,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       } else if (!complet) {
         etat.derniereComplete = null;
       }
-      resultat.complete = complet && echecs === 0;
+      resultat.complete = complet && echecsTotal === 0;
       await deps.enregistrer(instantane(), etat);
       await relevePrix();
       await releveVentes();
@@ -428,6 +434,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         }
       }
       resultat.pagesLues += 1;
+      echecs = 0;
       exemplairesLus += lue.ignorees;
       if (lue.ignorees > 0) {
         resultat.ignorees += lue.ignorees;
@@ -519,6 +526,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         continue;
       }
       refusPrix = 0;
+      echecs = 0;
       const valeur = analyserPrix(r.json, carte.rarete as string);
       const courante = parId.get(carte.id) as Carte;
       const saisieMain = courante.valeurMarchande !== null && etat.prix[carte.id]?.valeur !== courante.valeurMarchande;

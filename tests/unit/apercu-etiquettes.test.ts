@@ -65,7 +65,7 @@ describe('regrouperEtiquettes : lignes (AC1)', () => {
   })
 
   it('aucune ligne ni total pour une collection sans étiquette attendue', () => {
-    const r = regrouperEtiquettes(coll(carte('a', { favori: true }), carte('b', { statut: 'a-trier' })), registre(), config())
+    const r = regrouperEtiquettes(coll(carte('a', { statut: 'en-vente' }), carte('b', { statut: 'defausser' })), registre(), config())
     expect(r.lignes).toEqual([])
     expect(r.restantes).toBe(0)
     expect(r.totaux.poses).toBe(0)
@@ -94,10 +94,10 @@ describe('regrouperEtiquettes : totaux et durée (AC2)', () => {
 
   it('un nom déjà posé par l’extension n’est pas une pose prévue', () => {
     const c = carte('a', { statut: 'garder' })
-    const r = regrouperEtiquettes(coll(c), registre([{ ex: 'ex-a', nom: 'Statut · Garder' }], { 'Statut · Garder': 'et-1' }), config())
+    const r = regrouperEtiquettes(coll(c), registre([{ ex: 'ex-a', nom: 'Statut · Garder' }, { ex: 'ex-a', nom: '#À classer' }], { 'Statut · Garder': 'et-1', '#À classer': 'et-2' }), config())
     expect(r.totaux.poses).toBe(0)
     expect(r.totaux.nomsNouveaux).toBe(0)
-    expect(r.lignes[0]).toMatchObject({ nom: 'Statut · Garder', nouvelle: false })
+    expect(r.lignes.find((l) => l.nom === 'Statut · Garder')).toMatchObject({ nouvelle: false })
   })
 
   it('durée : ⌈requêtes × 6 s / 60⌉, identique à la synchronisation', () => {
@@ -150,10 +150,11 @@ describe('regrouperEtiquettes : retraits (H11)', () => {
       registre([{ ex: 'ex-a', nom: 'Statut · Garder' }], { 'Statut · Garder': 'et-1' }),
       config(),
     )
+    // Statut · Vendre et l’étiquette de repli « #À classer » (carte sans thème) sont à créer et à poser.
     expect(r.totaux.retraits).toBe(1)
-    expect(r.totaux.poses).toBe(1)
-    expect(r.totaux.nomsNouveaux).toBe(1)
-    expect(r.totaux.requetes).toBe(3)
+    expect(r.totaux.poses).toBe(2)
+    expect(r.totaux.nomsNouveaux).toBe(2)
+    expect(r.totaux.requetes).toBe(5)
   })
 })
 

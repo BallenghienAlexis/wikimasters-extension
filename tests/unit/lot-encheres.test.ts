@@ -234,14 +234,14 @@ describe('enchères : cartes écartées (AC3)', () => {
 describe('enchères : étiquettes d’une carte à vendre (AC4, H16)', () => {
   it('la carte vendre garde ses étiquettes « Statut · … » en plus de l’enchère', () => {
     const l = lot(coll(carte('a')))
-    expect(l.actions.filter((a) => a.type === 'pose-etiquette')).toHaveLength(2)
+    expect(l.actions.filter((a) => a.type === 'pose-etiquette' && a.nomEtiquette.startsWith('Statut · '))).toHaveLength(2)
     expect(encheres(l.actions)).toHaveLength(1)
   })
 
   it('une carte en attente de place garde ses étiquettes', () => {
     const l = lot(coll(carte('a')), config({ maxVentesSimultanees: 0 }))
     expect(raisons(l, 'a')).toEqual(['en-attente-place'])
-    expect(l.actions.filter((a) => a.type === 'pose-etiquette')).toHaveLength(2)
+    expect(l.actions.filter((a) => a.type === 'pose-etiquette' && a.nomEtiquette.startsWith('Statut · '))).toHaveLength(2)
   })
 
   it('les enchères viennent après les poses et avant les défausses (H9)', () => {
