@@ -311,6 +311,8 @@ test.describe('H4 : fraîcheur des prix et durée restante', () => {
     await expect(bloc).toContainText('Prix relevés : 2');
     await expect(bloc).toContainText(/Le plus récent/);
     await expect(bloc).toContainText(/Le plus ancien/);
+    // Alignement maquette : barre de fraîcheur par tranche d’âge (aucun prix de plus de 7 jours ici).
+    await expect(bloc.getByTestId('fraicheur-barre')).toHaveAttribute('aria-label', /Moins de 7 jours\u00a0: 2\. 7 à 30 jours\u00a0: 0\. Plus de 30 jours\u00a0: 0/);
   });
 
   test('H4 : aucun prix relevé, « — » sans NaN', async ({ pageCollection }) => {
