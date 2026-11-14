@@ -112,7 +112,7 @@ async function amorcer(page: Page): Promise<void> {
 const ouvrirApercu = async (page: Page): Promise<void> => {
   await allerA(page, 'lots');
   await page.getByRole('button', { name: 'Voir l’aperçu du lot' }).click();
-  await expect(page.getByTestId('zone-execution').or(page.getByTestId('titre-apercu'))).toBeVisible();
+  await expect(page.getByTestId('panneau-erreur').or(page.getByTestId('titre-apercu'))).toBeVisible();
 };
 
 const toutLeStockage = (page: Page): Promise<string> =>
@@ -169,7 +169,8 @@ test('401 sur la création : arrêt immédiat, une seule requête, aucune autre 
   await ouvrirApercu(page);
   await page.getByRole('button', { name: /^Lancer/ }).click();
   await expect.poll(() => banc.rest.length, { timeout: 20_000 }).toBe(1);
-  await expect(page.getByTestId('zone-execution')).toContainText(/Lot arrêté.*réponse 401/, { timeout: 20_000 });
+  await allerA(page, 'synchro');
+  await expect(page.getByTestId('panneau-erreur')).toContainText(/Cause probable.*réponse 401/, { timeout: 20_000 });
   // Plus longtemps que le plus long écart possible (0,2 s + 0,1 s) : aucune seconde tentative.
   await page.waitForTimeout(11_000);
   expect(banc.rest).toHaveLength(1);
@@ -183,7 +184,8 @@ test('sans session : aucune requête, arrêt « jeton-absent »', async ({ conte
   const banc = await ouvrirSite(context, () => ({ status: 201 }), false);
   await ouvrirApercu(page);
   await page.getByRole('button', { name: /^Lancer/ }).click();
-  await expect(page.getByTestId('zone-execution')).toContainText(/Lot arrêté.*résultat hors contrat ou inconnu/, { timeout: 20_000 });
+  await allerA(page, 'synchro');
+  await expect(page.getByTestId('panneau-erreur')).toContainText(/Cause probable.*résultat hors contrat ou inconnu/, { timeout: 20_000 });
   expect(banc.rest).toHaveLength(0);
   expect(banc.externes).toEqual([]);
 });

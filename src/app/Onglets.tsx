@@ -1,4 +1,6 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { chargerExecution, chargerStatutSynchro, ecouterExecution, ecouterSynchroAuto } from '../lib/stockage';
+import { erreurAffichable } from './PanneauErreur';
 import { ONGLETS, idOnglet, idPanneau, type IdOnglet } from './onglets';
 import { useMouvement } from './useMouvement';
 
@@ -12,12 +14,33 @@ interface Indicateur {
   largeur: number;
 }
 
+/** Vrai tant qu’une erreur d’exécution ou un arrêt de synchro est à lire (pastille sur l’onglet Synchro, SC-008). */
+function useErreur(): boolean {
+  const [erreur, setErreur] = useState(false);
+  useEffect(() => {
+    let actif = true;
+    const lire = (): void => {
+      void Promise.all([chargerExecution().catch(() => null), chargerStatutSynchro().catch(() => null)]).then(([e, s]) => {
+        if (actif) setErreur(erreurAffichable(e, s) !== null);
+      });
+    };
+    lire();
+    const arrets = [ecouterExecution(lire), ecouterSynchroAuto(lire)];
+    return () => {
+      actif = false;
+      arrets.forEach((a) => a());
+    };
+  }, []);
+  return erreur;
+}
+
 /**
  * Barre d’onglets (D-12) : motif WAI-ARIA `tablist` / `tab`, `tabindex` itinérant, flèches, Origine et Fin.
  * Elle défile dans son propre conteneur à 375 px ; l’indicateur de 3 px glisse sous l’onglet actif.
  */
 const Onglets: React.FC<Props> = ({ actif, onChoisir }) => {
   const mouvement = useMouvement();
+  const erreur = useErreur();
   const conteneur = useRef<HTMLDivElement>(null);
   const refs = useRef<Map<IdOnglet, HTMLAnchorElement>>(new Map());
   const [indicateur, setIndicateur] = useState<Indicateur | null>(null);
@@ -73,6 +96,12 @@ const Onglets: React.FC<Props> = ({ actif, onChoisir }) => {
             className={`inline-flex min-h-11 shrink-0 items-center whitespace-nowrap px-4 no-underline focus-visible:shadow-(--halo-focus) ${selectionne ? 'text-paper font-semibold' : 'text-muted'}`}
           >
             {o.nom}
+            {o.id === 'synchro' && erreur && (
+              <>
+                <span aria-hidden="true" className="ml-2 text-defausser">✕</span>
+                <span className="sr-only"> erreur</span>
+              </>
+            )}
           </a>
         );
       })}

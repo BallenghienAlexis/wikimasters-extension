@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
 import type { EntreeJournal, Registre, TypeAction } from '../lib/actions';
-import { dernierePoseParCouple } from '../lib/journal';
+import { dernierePoseParCouple, libelleHistorique } from '../lib/journal';
 import DialogueVider from './DialogueVider';
+import FiltresHistorique, { CRITERES_VIDES, type CriteresHistorique } from './FiltresHistorique';
 
 /** Nombre d’entrées affichées d’abord, puis ajoutées à chaque « Afficher 50 de plus » (D-31). */
 export const PAS_AFFICHAGE = 50;
@@ -98,6 +99,44 @@ export function raisonRetrait(p: { retraitDisponible: boolean; ongletPret: boole
   return null;
 }
 
+const sansAccents = (t: string): string => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+/**
+ * Filtres de l’historique (SC-018) : ET de quatre critères, une valeur vide = pas de critère. L’ordre est conservé ;
+ * les entrées ne sont jamais modifiées (le libellé H5 est un affichage).
+ */
+export function filtrerEntrees(entrees: readonly EntreeJournal[], criteres: CriteresHistorique): EntreeJournal[] {
+  const carte = sansAccents(criteres.carte.trim());
+  return entrees.filter(
+    (e) =>
+      (criteres.type === '' || e.type === criteres.type) &&
+      (criteres.resultat === '' || libelleHistorique(e) === criteres.resultat) &&
+      (carte === '' || sansAccents(e.titre).includes(carte)) &&
+      (criteres.execution === '' || e.idLot === criteres.execution),
+  );
+}
+
+/** Libellés d’historique (H5) distincts présents, par ordre alphabétique français. */
+export const resultatsDisponibles = (entrees: readonly EntreeJournal[]): string[] =>
+  [...new Set(entrees.map(libelleHistorique))].sort((a, b) => a.localeCompare(b, 'fr'));
+
+/** Identifiants d’exécution distincts, le plus récent d’abord (dernière occurrence dans l’ordre chronologique). */
+export function executionsDisponibles(entrees: readonly EntreeJournal[]): string[] {
+  const sortie: string[] = [];
+  for (let i = entrees.length - 1; i >= 0; i--) {
+    const id = entrees[i]!.idLot;
+    if (!sortie.includes(id)) sortie.push(id);
+  }
+  return sortie;
+}
+
+const typesDisponibles = (entrees: readonly EntreeJournal[]): TypeAction[] =>
+  [...new Set(entrees.map((e) => e.type))].sort((a, b) => LIBELLES_TYPE[a].localeCompare(LIBELLES_TYPE[b], 'fr'));
+
+/** Passées (sautée, ignorée, indisponible) : symbole ↷ et texte `muted` ; les autres gardent la couleur de leur résultat. */
+const classeHistorique = (e: EntreeJournal, libelle: string): string =>
+  libelle.startsWith('Passée') ? 'text-muted' : CLASSES_RESULTAT[e.resultat];
+
 /** Les plus récentes d’abord, limitées à `nombre`. */
 export function entreesAffichees(entrees: EntreeJournal[], nombre: number): { visibles: EntreeJournal[]; restantes: number } {
   const recentes = [...entrees].reverse();
@@ -115,18 +154,23 @@ interface Props {
   ongletPret: boolean;
   /** Le journal stocké est illisible : il n’a pas été modifié. */
   illisible?: boolean;
-  onRetirer: (couple: CoupleRetrait) => void;
+  /** Absent : l’historique est en lecture seule (pas de « Retirer l’étiquette »). */
+  onRetirer?: (couple: CoupleRetrait) => void;
   onVider: () => void;
+  /** Repère de test de la section (`journal` par défaut, `historique` dans l’onglet Synchro). */
+  idTest?: string;
 }
 
-const Journal: React.FC<Props> = ({ entrees, registre, retraitDisponible, ongletPret, illisible = false, onRetirer, onVider }) => {
+const Journal: React.FC<Props> = ({ entrees, registre, retraitDisponible, ongletPret, illisible = false, onRetirer, onVider, idTest = 'journal' }) => {
   const [nombre, setNombre] = useState(PAS_AFFICHAGE);
+  const [criteres, setCriteres] = useState<CriteresHistorique>(CRITERES_VIDES);
   const [dialogue, setDialogue] = useState(false);
   const titre = useRef<HTMLHeadingElement>(null);
   const boutonVider = useRef<HTMLButtonElement>(null);
 
-  const { visibles, restantes } = entreesAffichees(entrees, nombre);
-  const retraits = entreesAvecRetrait(entrees, registre);
+  const filtrees = filtrerEntrees(entrees, criteres);
+  const { visibles, restantes } = entreesAffichees(filtrees, nombre);
+  const retraits = onRetirer ? entreesAvecRetrait(entrees, registre) : new Map<string, CoupleRetrait>();
   const raison = raisonRetrait({ retraitDisponible, ongletPret });
   const vide = entrees.length === 0;
   const viderDesactive = vide || illisible;
@@ -138,10 +182,10 @@ const Journal: React.FC<Props> = ({ entrees, registre, retraitDisponible, onglet
   };
 
   return (
-    <section aria-labelledby="titre-journal" className="mt-4 rounded border border-line bg-ink-2 p-4" data-testid="journal">
+    <section aria-labelledby="titre-journal" className="mt-4 rounded border border-line bg-ink-2 p-4" data-testid={idTest}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="titre-journal" ref={titre} tabIndex={-1} className="font-semibold">
-          Journal
+          {idTest === 'journal' ? 'Journal' : 'Historique'}
         </h2>
         <div className="flex flex-col items-end gap-1">
           <button
@@ -168,13 +212,26 @@ const Journal: React.FC<Props> = ({ entrees, registre, retraitDisponible, onglet
       {!illisible && vide && <p className="mt-3 text-muted">Le journal est vide. Les actions envoyées au site apparaîtront ici.</p>}
 
       {!illisible && !vide && (
+        <FiltresHistorique
+          criteres={criteres}
+          types={typesDisponibles(entrees)}
+          resultats={resultatsDisponibles(entrees)}
+          executions={executionsDisponibles(entrees)}
+          onChange={setCriteres}
+        />
+      )}
+
+      {!illisible && !vide && filtrees.length === 0 && <p className="mt-3 text-muted">Aucune action ne correspond</p>}
+
+      {!illisible && !vide && filtrees.length > 0 && (
         <ol className="mt-3">
           {visibles.map((e) => {
             const couple = retraits.get(e.id);
             const parametre = libelleParametre(e);
             const idRaison = `raison-retrait-${e.id}`;
+            const libelle = libelleHistorique(e);
             return (
-              <li key={e.id} className="flex flex-col gap-2 border-b border-line py-2 text-sm md:flex-row md:items-start md:justify-between">
+              <li key={e.id} data-testid="ligne-historique" className="flex flex-col gap-2 border-b border-line py-2 text-sm md:flex-row md:items-start md:justify-between">
                 <div className="min-w-0 break-words">
                   <time dateTime={e.horodatage} className="text-muted">
                     {formaterHorodatage(e.horodatage)}
@@ -186,7 +243,10 @@ const Journal: React.FC<Props> = ({ entrees, registre, retraitDisponible, onglet
                   <span className={`font-semibold ${CLASSES_TYPE[e.type]}`}>{libelleType(e.type)}</span>
                   {parametre !== null && <> {parametre}</>}
                   {' : '}
-                  <span className={`font-semibold ${CLASSES_RESULTAT[e.resultat]}`}>{libelleResultat(e.resultat)}</span>
+                  <span className={`font-semibold ${classeHistorique(e, libelle)}`}>
+                    {libelle.startsWith('Passée') && <span aria-hidden="true">↷ </span>}
+                    {libelle}
+                  </span>
                   {e.codeHttp !== null && <span className="text-muted"> · HTTP {e.codeHttp}</span>}
                   {mentionNonAnnulable(e) && <p className="text-sm text-muted">Non annulable par l’extension</p>}
                 </div>
@@ -200,7 +260,7 @@ const Journal: React.FC<Props> = ({ entrees, registre, retraitDisponible, onglet
                       className={`${raison !== null ? BOUTON_DESACTIVE : BOUTON_SECONDAIRE} w-full md:w-auto`}
                       onClick={() => {
                         if (raison !== null) return;
-                        onRetirer(couple);
+                        onRetirer?.(couple);
                         titre.current?.focus();
                       }}
                     >
