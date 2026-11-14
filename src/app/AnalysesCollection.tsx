@@ -65,10 +65,12 @@ const AnalysesCollection: React.FC<Props> = ({ cartes, cacheWiki }) => {
         </Bloc>
         <Bloc id="themes" titre="10 thèmes" vide="Aucun thème repéré.">
           {a.themes.map((t) => (
-            <li key={t.theme} className="grid grid-cols-[minmax(0,7rem)_1fr_2rem] items-center gap-3">
-              <span className="truncate">{LIBELLES_THEMES[t.theme] ?? t.theme}</span>
+            <li key={t.theme} className="grid grid-cols-[minmax(0,7rem)_1fr_minmax(2rem,auto)] items-center gap-3">
+              <span className="truncate" title={LIBELLES_THEMES[t.theme] ?? t.theme}>
+                {LIBELLES_THEMES[t.theme] ?? t.theme}
+              </span>
               <span aria-hidden="true" className="h-2 overflow-hidden rounded-full bg-line">
-                <span className="block h-2 rounded-full bg-echanger" style={{ width: `${Math.max(3, (t.nombre / maxTheme) * 100)}%` }} />
+                <span className="block h-2 rounded-full bg-paper" style={{ width: `${Math.max(3, (t.nombre / maxTheme) * 100)}%` }} />
               </span>
               <span className="text-right text-muted">
                 {nombre.format(t.nombre)}

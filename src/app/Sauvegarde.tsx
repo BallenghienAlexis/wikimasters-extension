@@ -85,7 +85,7 @@ const Sauvegarde: React.FC<Props> = ({ onImportee }) => {
   const a = lue?.apercu;
   return (
     <section aria-labelledby="titre-sauvegarde" className="py-2">
-      <h2 id="titre-sauvegarde" className="text-lg font-semibold">Sauvegarde complète</h2>
+      <h4 id="titre-sauvegarde" className="font-semibold">Sauvegarde complète</h4>
       <p className="mt-1 text-sm text-muted">
         Un seul fichier pour passer d’un PC à l’autre : statuts, prix cibles, notes, thèmes, amis et ventes. Les cartes et étiquettes du site se récupèrent par la synchronisation.
       </p>
