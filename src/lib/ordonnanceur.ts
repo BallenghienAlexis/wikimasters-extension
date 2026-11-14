@@ -217,10 +217,9 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   let echecs = 0;
   /** Échecs sautés sur toute l’exécution : la synchro n’est pas déclarée complète s’il y en a. */
   let echecsTotal = 0;
-  /** Refus 403 consécutifs sur la route des prix (par carte, tolérés un à un). */
   /** Cartes vues sur le site pendant la dernière passe de lecture de cette synchro (les prix ne sont demandés que pour elles). */
   let luesCetteSynchro = new Set<string>();
-
+  /** Refus 403 consécutifs sur la route des prix (par carte, tolérés un à un). */
   let refusPrix = 0;
   let refusPrixTotal = 0;
 

@@ -18,6 +18,8 @@ export interface EntreeWikipedia {
   avecResume?: true;
   /** Vrai quand Wikidata a été interrogé (page Wikipédia sans thème) ; sans lui, une entrée sans thème est relue une fois. */
   avecWikidata?: true;
+  /** Vrai quand les thèmes ont été calculés sans compter les noms propres composés (« Bee Train ») ; sinon relue une fois (2026-11-14). */
+  nomsPropres?: true;
 }
 
 export interface CacheWikipedia {
@@ -126,13 +128,14 @@ export function validerCache(brut: unknown): CacheWikipedia | null {
       verifieLe: e.verifieLe,
       ...(e.avecResume === true ? { avecResume: true as const } : {}),
       ...(e.avecWikidata === true ? { avecWikidata: true as const } : {}),
+      ...(e.nomsPropres === true ? { nomsPropres: true as const } : {}),
     };
   }
   return { version: 1, entrees: { ...entrees } };
 }
 
 export function ajouterEntree(cache: CacheWikipedia, titre: string, themes: string[], maintenant: number, wikidata = false): CacheWikipedia {
-  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, ...(wikidata ? { avecWikidata: true as const } : {}) };
+  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, nomsPropres: true, ...(wikidata ? { avecWikidata: true as const } : {}) };
   return { version: 1, entrees: { ...cache.entrees, [titre]: entree } };
 }
 
@@ -144,6 +147,8 @@ export function titresAVerifier(titres: string[], cache: CacheWikipedia, mainten
     if (vus.has(titre)) continue;
     vus.add(titre);
     const entree = Object.hasOwn(cache.entrees, titre) ? cache.entrees[titre] : undefined;
+    // Une entrée calculée avant le filtre des noms propres est relue une fois.
+    if (entree !== undefined && entree.nomsPropres !== true) { resultat.push(titre); continue }
     // Une entrée sans thème et sans résumé (ancienne version) est relue une fois pour profiter du résumé.
     if (entree === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS || (entree.themes.length === 0 && (entree.avecResume !== true || entree.avecWikidata !== true))) resultat.push(titre);
   }

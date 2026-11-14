@@ -1,18 +1,14 @@
 import React, { useMemo } from 'react';
+import { basculer, CLASSE_BOUTON } from './outilsReglages';
 import type { Carte } from '../lib/collection';
 import { IDS_THEMES, LIBELLES_THEMES, THEME_AUTRES, themesDeCarte } from '../lib/themes';
 import { themesAimesDesFavoris, type Preferences } from '../lib/tri';
-
-const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded border border-line bg-ink-2 px-4';
 
 interface Props {
   cartes: readonly Carte[];
   preferences: Preferences;
   onChange: (preferences: Preferences) => void;
 }
-
-const basculer = (liste: string[], valeur: string): string[] =>
-  liste.includes(valeur) ? liste.filter((v) => v !== valeur) : [...liste, valeur];
 
 /** Mes thèmes aimés : choix des thèmes qui vous intéressent, avec ceux déduits de vos favoris. */
 const MesThemes: React.FC<Props> = ({ cartes, preferences, onChange }) => {

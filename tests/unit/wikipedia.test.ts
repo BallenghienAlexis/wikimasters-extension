@@ -39,7 +39,8 @@ describe('résumé Wikipédia', () => {
   });
   it('relit une fois une entrée sans thème enregistrée avant le résumé', () => {
     const ancien = validerCache({ version: 1, entrees: { A: { themes: [], verifieLe: 1000 }, B: { themes: ['barrage'], verifieLe: 1000 } } })!;
-    expect(titresAVerifier(['A', 'B'], ancien, 2000)).toEqual(['A']);
+    // Toute entrée d'avant le filtre des noms propres est relue une fois (A sans thème, B calculée avant le filtre).
+    expect(titresAVerifier(['A', 'B'], ancien, 2000)).toEqual(['A', 'B']);
     expect(titresAVerifier(['A'], ajouterEntree(ancien, 'A', [], 2000, true), 3000)).toEqual([]);
   });
 });
@@ -302,5 +303,14 @@ describe('creerPlanificateur', () => {
       expect(departs.length).toBeGreaterThanOrEqual(2);
       for (let i = 1; i < departs.length; i++) expect(departs[i]! - departs[i - 1]!).toBeGreaterThanOrEqual(1000);
     });
+  });
+});
+
+describe('cache calculé avant le filtre des noms propres', () => {
+  it('une entrée ancienne est relue une fois', () => {
+    const ancien = { version: 1 as const, entrees: { Noir: { themes: ['train'], verifieLe: 1_000, avecResume: true as const } } };
+    expect(titresAVerifier(['Noir'], ancien, 2_000)).toEqual(['Noir']);
+    const neuf = ajouterEntree(cacheVide(), 'Noir', ['train'], 1_000);
+    expect(titresAVerifier(['Noir'], neuf, 2_000)).toEqual([]);
   });
 });
