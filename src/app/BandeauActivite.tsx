@@ -47,6 +47,7 @@ const LigneErreur: React.FC<{ exec: EtatExecutionV2 }> = ({ exec }) => (
  */
 const BandeauActivite: React.FC = () => {
   const { synchro, lots, erreur, enPause, autreOnglet, progSynchro, progLots } = useActiviteSynchro();
+  const [message, setMessage] = useState('');
   const cleSynchro = synchro ? `${synchro.debut ?? ''}|${synchro.etape ?? ''}` : '';
   const synchroCalculee = progSynchro;
   const lotsCalcules = progLots;
@@ -80,7 +81,15 @@ const BandeauActivite: React.FC = () => {
 
   const commandesSynchro: Commande[] | null = autreOnglet
     ? null
-    : [{ nom: 'Arrêter', onActiver: () => void enregistrerArretSynchro(Date.now()).catch(() => {}) }];
+    : [
+        {
+          nom: 'Arrêter',
+          onActiver: () => {
+            setMessage('');
+            enregistrerArretSynchro(Date.now()).catch(() => setMessage('La demande d’arrêt n’a pas pu être enregistrée.'));
+          },
+        },
+      ];
   const commandesLots: Commande[] | null = autreOnglet
     ? null
     : [enPause ? { nom: 'Reprendre', onActiver: reprendre } : { nom: 'Pause', onActiver: pause }, { nom: 'Arrêter', onActiver: arreterTout }];
@@ -126,9 +135,11 @@ const BandeauActivite: React.FC = () => {
             resume={resumeLots}
             details={detailsLots}
             commandes={commandesLots}
+            enPause={enPause}
           />
         )}
         {erreur && <LigneErreur exec={erreur} />}
+        {message !== '' && <p className="text-sm text-defausser">{message}</p>}
       </section>
     </>
   );
