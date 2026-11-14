@@ -4,7 +4,7 @@ Source : maquette « Refonte IHM · 3 variantes », variante 1, v15 (`Main.dc.ht
 
 | # | Zone | Écart | Statut |
 |---|---|---|---|
-| 1 | Coquille | En-tête sur une ligne (titre · dernière synchro · pastille), marge de 24 px, six onglets de largeur égale ; paragraphe d’avertissement déplacé en pied de page | PR 1 |
+| 1 | Coquille | En-tête sur une ligne (titre · dernière synchro · pastille), marge de 24 px, cinq onglets de largeur égale ; paragraphe d’avertissement déplacé en pied de page | PR 1 |
 | 2 | Tableau de bord | Unités à côté des chiffres clés (fait) ; barre de répartition par décision et tableau par rareté : **supprimés volontairement** (statuts locaux retirés, #140) | PR 1 |
 | 3 | Tableau de bord | Santé de la synchro : lignes Lecture / Étiquettes / Prix / Ignorées avec symbole et prochaine synchro | à faire |
 | 4 | Synchro | Étapes en lignes (nom, barre, compteur) ; Tâches et Ignorées + Journal côte à côte ; barre de fraîcheur des prix et activité récente ; interrupteur de synchro déplacé dans Réglages | à faire |
