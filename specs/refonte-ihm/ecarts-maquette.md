@@ -8,7 +8,7 @@ Source : maquette « Refonte IHM · 3 variantes », variante 1, v15 (`Main.dc.ht
 | 2 | Tableau de bord | Unités à côté des chiffres clés (fait) ; barre de répartition par décision et tableau par rareté : **supprimés volontairement** (statuts locaux retirés, #140) | PR 1 |
 | 3 | Tableau de bord | Santé de la synchro : lignes Lecture / Étiquettes / Prix / Ignorées avec symbole et prochaine synchro | à faire |
 | 4 | Synchro | Étapes en lignes (nom, barre, compteur), carte Tâches et barre de fraîcheur des prix : PR 2. Reste : Tâches et Ignorées + Journal côte à côte, activité récente ; interrupteur de synchro aussi dans Réglages (fait, décision d’Alexis du 2026-11-14 : aux deux endroits, même préférence `syncAuto`) | partiel |
-| 5 | Lots | Lots listés avec interrupteurs, état coloré, résumé et « Lancer les lots cochés » ; encadré d’avertissement compact ; « Écarts avec le site » | à faire |
+| 5 | Lots | Lots listés avec interrupteurs, état coloré, résumé et « Lancer les lots cochés » ; encadré d’avertissement compact (fait : une ligne + détail repliable des règles du site) ; « Écarts avec le site ». Écarts assumés : l’aperçu reste demandé par « Voir l’aperçu du lot » (lot figé, D-18) au lieu de s’afficher d’emblée, et le Journal reste sous l’aperçu | partiel |
 | 6 | Collection | Cartes de synthèse, évolution 30 jours en barres, 10 plus chères, thèmes en barres ; « valeur par décision » et décision colorée : **supprimés volontairement** | à faire |
 | 7 | Tableau de tri | **Supprimé volontairement** (#140) | sans objet |
 | 8 | Ventes | **Onglet supprimé volontairement** (#140) : places, file de vente, heures fortes | sans objet |
