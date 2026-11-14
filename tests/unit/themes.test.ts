@@ -140,8 +140,8 @@ const NOUVEAUX: Record<string, { libelle: string; parents: string[]; cartes: Arr
   fleur: { libelle: '#Fleur', parents: ['plantes', 'nature'], cartes: [['Rose', 'fleur parfumée'], ['Vanille', 'orchidée']] },
   champignon: { libelle: '#Champignon', parents: ['plantes', 'nature'], cartes: [['Cèpe', 'champignon comestible'], ['Amanite', 'champignon toxique']] },
   fromage: { libelle: '#Fromage', parents: ['gastronomie'], cartes: [['Comté', 'fromage jurassien'], ['Brie', 'fromage à pâte molle']] },
-  vin: { libelle: '#Vin', parents: ['gastronomie'], cartes: [['Bordeaux', 'vin rouge'], ['Pinot', 'cépage bourguignon']] },
-  biere: { libelle: '#Bière', parents: ['gastronomie'], cartes: [['Trappiste', 'bière belge'], ['Stout', 'bière brune']] },
+  vin: { libelle: '#Vin', parents: ['alcool', 'gastronomie'], cartes: [['Bordeaux', 'vin rouge'], ['Pinot', 'cépage bourguignon']] },
+  biere: { libelle: '#Bière', parents: ['alcool', 'gastronomie'], cartes: [['Trappiste', 'bière belge'], ['Stout', 'bière brune']] },
   fruit: { libelle: '#Fruit', parents: ['gastronomie'], cartes: [['Pomme', 'fruit du pommier'], ['Citron', 'agrume']] },
   dessert: { libelle: '#Dessert', parents: ['gastronomie'], cartes: [['Tarte', 'dessert aux fruits'], ['Éclair', 'pâtisserie']] },
   tennis: { libelle: '#Tennis', parents: ['sport'], cartes: [['Roland-Garros', 'tournoi de tennis'], ['Raquette', 'tennis de table']] },
@@ -265,7 +265,7 @@ describe('taxonomie précise (SC-001 à SC-003)', () => {
     expect(IDS_THEMES[IDS_THEMES.length - 1]).toBe('autres');
     const libelles = IDS_THEMES.slice(0, -1).map((id) => LIBELLES_THEMES[id] ?? id);
     expect(libelles).toEqual([...libelles].sort((a, b) => a.localeCompare(b, 'fr')));
-    expect(IDS_THEMES).toHaveLength(57 + 60 + 1);
+    expect(IDS_THEMES).toHaveLength(57 + 61 + 12 + 1);
   });
 
   it('fige les identifiants et libellés existants (SC-002)', () => {

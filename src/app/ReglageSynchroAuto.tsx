@@ -16,8 +16,8 @@ const ReglageSynchroAuto: React.FC<EtatSyncAuto> = ({ actif, erreur, basculer })
       <span>Synchronisation automatique</span>
     </label>
     <p className="mt-1 text-sm text-muted">
-      Lit votre collection sur WikiMasters pendant qu’un onglet du site est ouvert : une requête toutes les 0,2 à 0,3 s, arrêt immédiat si le site
-      refuse. Même réglage que l’interrupteur de l’onglet Synchro.
+      Lit votre collection sur WikiMasters pendant qu’un onglet du site est ouvert : une requête toutes les 0,2 à 0,3 s, arrêt si le site refuse l’accès ou limite
+      les requêtes. Même réglage que l’interrupteur de l’onglet Synchro.
     </p>
     {erreur !== null && (
       <p role="alert" className="mt-2 font-semibold text-defausser">

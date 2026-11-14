@@ -282,3 +282,6 @@ b. BandeauActivite.tsx:88 : message d'échec non effacé quand synchro devient n
 ## À reprendre : PR Réglages (suite de #142)
 - `src/app/SynchroAuto.tsx` : garde sa propre copie de lecture, écoute et bascule de `syncAuto` ; le remplacer par `useSyncAuto` (état initial `null` aussi).
 - Résumé des Étiquettes préexistantes (« N trouvées ») et validité de `specs/refonte-ihm/design.md` D-50, `spec.refined.md` SC-028 et `AGENTS.md` (sections de Réglages) : encore à mettre à jour.
+
+## Traité dans la PR de conformité (2026-11-14)
+Repris : mineurs de #145 (titre de thème, colonne du nombre, couleur des barres) et de #147 (phrase de cadence, résumé « Lecture impossible », `h4` des sous-sections de Réglages), D-50, SC-028 et AGENTS.md. Reste : `SynchroAuto.tsx` sur `useSyncAuto`, piste du graphique en `ink` (`design.md:218`), chevron du `<summary>` et `h2` en ligne de l’encadré de risque (#143), proportionnalité et valeur exacte dans les tests de la Collection, captures jointes aux PR, titres de PR en `T-xxx`.

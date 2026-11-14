@@ -17,9 +17,9 @@ const PlafondDefausse: React.FC<Props> = ({ plafond, onChange }) => {
   const valide = saisie.trim() !== '' && Number.isInteger(valeur) && valeur >= PLAFOND_DEFAUSSE_MIN && valeur <= PLAFOND_DEFAUSSE_MAX;
   return (
     <section aria-labelledby="titre-plafond" className="py-2" data-testid="plafond-defausse">
-      <h2 id="titre-plafond" className="font-semibold">
+      <h4 id="titre-plafond" className="font-semibold">
         Plafond de défausse
-      </h2>
+      </h4>
       <p className="mt-1 text-sm text-muted">
         Une carte dont la valeur marchande est inconnue ou supérieure à ce plafond n’est jamais défaussée, même décidée à la main.
         Valeur par défaut{NB}: {PLAFOND_VALEUR_DEFAUSSE}. Les cartes juste au-dessus du plafond sont proposées à la vente.

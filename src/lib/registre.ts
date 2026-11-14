@@ -40,11 +40,24 @@ export function enregistrerEtiquette(r: Registre, nom: string, idEtiquette: stri
   return { ...r, etiquettes, couples: r.couples }
 }
 
+const MAX_REFUS = 20_000
+
+/** Vrai si le joueur a retiré cette étiquette de cet exemplaire à la main : elle n’est plus reposée. */
+export const estRefuse = (r: Registre, idExemplaire: string, nom: string): boolean => (r.refus ?? []).some((x) => x.ex === idExemplaire && x.nom === nom)
+
+/** Mémorise un retrait voulu par le joueur : la synchro ne repose pas l’étiquette, même si elle reste attendue. */
+export function refuserCouple(r: Registre, idExemplaire: string, nom: string): Registre {
+  if (!identifiantValide(idExemplaire) || !identifiantValide(nom) || estRefuse(r, idExemplaire, nom)) return r
+  const refus = r.refus ?? []
+  if (refus.length >= MAX_REFUS) return r
+  return { ...r, refus: [...refus, { ex: idExemplaire, nom }] }
+}
+
 /** Oublie une étiquette supprimée du site : son nom et tous ses couples. */
 export function supprimerEtiquetteDuRegistre(r: Registre, nom: string): Registre {
   const etiquettes = tableVide()
   for (const [cle, id] of Object.entries(r.etiquettes)) if (cle !== nom) etiquettes[cle] = id
-  return { ...r, etiquettes, couples: r.couples.filter((c) => c.nom !== nom) }
+  return { ...r, etiquettes, couples: r.couples.filter((c) => c.nom !== nom), ...(r.refus ? { refus: r.refus.filter((x) => x.nom !== nom) } : {}) }
 }
 
 export function couplesDe(r: Registre, idExemplaire: string): Array<{ ex: string; nom: string }> {
@@ -68,12 +81,12 @@ export function retirerCouple(r: Registre, idExemplaire: string, nom: string): R
 }
 
 export function purgerExemplaire(r: Registre, idExemplaire: string): Registre {
-  return { ...r, couples: r.couples.filter((c) => c.ex !== idExemplaire) }
+  return { ...r, couples: r.couples.filter((c) => c.ex !== idExemplaire), ...(r.refus ? { refus: r.refus.filter((x) => x.ex !== idExemplaire) } : {}) }
 }
 
 export function purgerCarte(r: Registre, idsExemplaires: readonly string[]): Registre {
   const ids = new Set(idsExemplaires)
-  return { ...r, couples: r.couples.filter((c) => !ids.has(c.ex)) }
+  return { ...r, couples: r.couples.filter((c) => !ids.has(c.ex)), ...(r.refus ? { refus: r.refus.filter((x) => !ids.has(x.ex)) } : {}) }
 }
 
 /** Valide un registre lu du stockage ; `null` si la forme est inattendue. Ne modifie jamais l’entrée. */
@@ -107,7 +120,21 @@ export function validerRegistre(brut: unknown): Registre | null {
     compte.set(ex, n)
     couples.push({ ex, nom })
   }
-  return { version: VERSION_REGISTRE, etiquettes, couples }
+  // Retraits voulus par le joueur : champ facultatif, une entrée illisible est ignorée sans invalider le registre.
+  const refus: Array<{ ex: string; nom: string }> = []
+  if (Array.isArray(o.refus)) {
+    const deja = new Set<string>()
+    for (const c of o.refus.slice(0, MAX_REFUS) as unknown[]) {
+      if (typeof c !== 'object' || c === null || Array.isArray(c)) continue
+      const { ex, nom } = c as Record<string, unknown>
+      if (!identifiantValide(ex) || !identifiantValide(nom)) continue
+      const cle = JSON.stringify([ex, nom])
+      if (deja.has(cle)) continue
+      deja.add(cle)
+      refus.push({ ex, nom })
+    }
+  }
+  return { version: VERSION_REGISTRE, etiquettes, couples, ...(refus.length > 0 ? { refus } : {}) }
 }
 
 /**
