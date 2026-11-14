@@ -14,6 +14,7 @@ import {
   ecouterSynchroAuto,
 } from '../lib/stockage';
 import { progression, texteProgression } from '../lib/synchro';
+import PastilleStatut, { type EtatSynchro } from './PastilleStatut';
 import FraicheurPrix from './FraicheurPrix';
 import ListeTaches from './ListeTaches';
 import ProgressionSynchro from './ProgressionSynchro';
@@ -71,6 +72,11 @@ const OngletSynchro: React.FC<Props> = ({ donnees }) => {
   const { statut, bail, execution, journal, etat, maintenant } = useLecture();
   // Un statut « en cours » sans bail tenu est périmé (onglet WikiMasters fermé) : il n’est plus une activité.
   const synchroActive = statut?.etat === 'en-cours' && bail !== null && bail > maintenant;
+  // Pastille D-40 : « En cours » seulement si le bail est tenu.
+  let pastille: EtatSynchro = 'a-jour';
+  if (synchroActive) pastille = 'en-cours';
+  else if (statut?.etat === 'arret') pastille = statut.raison === 'manuel' ? 'arretee' : 'erreur';
+  else if ((etat?.arretJusqua ?? 0) > maintenant) pastille = 'arretee';
   const listes = useMemo(
     () => listesTaches({ statut: synchroActive ? statut : null, execution, journal }),
     [statut, synchroActive, execution, journal],
@@ -80,7 +86,10 @@ const OngletSynchro: React.FC<Props> = ({ donnees }) => {
     <>
       <h2 className="mt-4 text-xl font-semibold">Synchro</h2>
       {synchro && <p className="mt-2 font-medium" data-testid="synchro">{texteProgression(progression(synchro))}</p>}
-      {statut && <ProgressionSynchro statut={statut} />}
+      <div className="mt-4" data-testid="pastille-synchro">
+        <PastilleStatut etat={pastille} />
+      </div>
+      {statut && <ProgressionSynchro statut={statut} actif={synchroActive} />}
       {synchroActive && statut && (
         <p className="mt-2 text-sm text-muted">
           Durée restante estimée&nbsp;: <span data-testid="duree-restante">{dureeRestante(secondesSynchro(statut))}</span>
