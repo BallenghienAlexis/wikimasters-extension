@@ -154,6 +154,8 @@ export function creerPlanificateur(options: OptionsPlanificateur): Planificateur
   const ecouteurs = new Set<() => void>();
   let etat: EtatPlanificateur = { enCours: false, suspendue: null, faites: 0, total: 0 };
   let cache: CacheWikipedia | null = null;
+  // Annulé quand la vue liste est quittée : coupe la requête en vol et la suite (Wikidata) du titre en cours.
+  let controleur = new AbortController();
 
   const changer = (suite: Partial<EtatPlanificateur>): void => {
     etat = { ...etat, ...suite };
@@ -165,10 +167,10 @@ export function creerPlanificateur(options: OptionsPlanificateur): Planificateur
     let echecs = 0;
     try {
       cache ??= await chargerCache();
-      const signal = new AbortController().signal;
       while (file.length > 0) {
         const titre = file.shift() as string;
         if (titresAVerifier([titre], cache, maintenant()).length === 0) continue;
+        const signal = controleur.signal;
         const r = await verifierTitres({
           titres: [titre],
           cache,
@@ -181,6 +183,11 @@ export function creerPlanificateur(options: OptionsPlanificateur): Planificateur
             await surCache(nouveau);
           },
         });
+        if (signal.aborted && r.arret === 'manuel') {
+          // Vue quittée : ce titre sera redemandé au retour, rien n'est compté.
+          tentes.delete(titre);
+          continue;
+        }
         if (r.arret === 'code-http') return void changer({ suspendue: MESSAGE_CODE(r.codeHttp) });
         // Aucune page lue et aucun arrêt : réponse illisible ou erreur réseau.
         echecs = r.verifiees === 0 ? echecs + 1 : 0;
@@ -207,6 +214,8 @@ export function creerPlanificateur(options: OptionsPlanificateur): Planificateur
       else if (etat.enCours) changer({ total: etat.faites + file.length });
     },
     annuler() {
+      controleur.abort();
+      controleur = new AbortController();
       for (const titre of file) tentes.delete(titre);
       file.length = 0;
       if (etat.enCours) changer({ total: etat.faites });
