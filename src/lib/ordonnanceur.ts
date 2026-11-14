@@ -29,6 +29,8 @@ export const MAX_PRIX_PAR_EXECUTION = 100;
 export const MAX_REFUS_PRIX_CONSECUTIFS = 3;
 /** Plafond de refus de prix sur toute une exécution, qu’un succès intercalé ne remet jamais à zéro. */
 export const MAX_REFUS_PRIX_PAR_EXECUTION = 10;
+/** Échecs sautés au plus sur toute une exécution, même séparés par des lectures réussies. */
+export const MAX_ECHECS_PAR_EXECUTION = 10;
 const PREMIERE_PAGE = 0;
 const CARTES_PAR_PAGE = 50;
 /** Retrait automatique des cartes disparues : au plus ce nombre, ou 10 % de la collection si plus. */
@@ -290,7 +292,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     echecs += 1;
     echecsTotal += 1;
     journal(`Échec ${echecs}/${MAX_ECHECS} d’affilée : ${message} Élément sauté, la synchronisation continue.`);
-    if (echecs >= MAX_ECHECS) throw new Interruption('echecs', null);
+    if (echecs >= MAX_ECHECS || echecsTotal >= MAX_ECHECS_PAR_EXECUTION) throw new Interruption('echecs', null);
     return null;
   }
 

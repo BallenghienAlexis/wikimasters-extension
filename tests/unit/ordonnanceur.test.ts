@@ -665,6 +665,14 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.complete).toBe(false);
   })
 
+  it('plus de 10 échecs sautés sur une exécution arrêtent la synchro même séparés par des succès', async () => {
+    const site = siteFictif(40);
+    const b = banc((chemin, n) => (n >= 2 && n % 2 === 0 ? { statut: 500, json: null } : site(chemin)));
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.issue).toBe('arret');
+    expect(r.raison).toBe('echecs');
+  })
+
   it('s’arrête sur demande manuelle avant la requête suivante', async () => {
     const b = banc(siteFictif(10));
     const r = await synchroniser({ ...b.deps, maxPrix: 0, arretDemande: () => b.departs.length >= 2 });
