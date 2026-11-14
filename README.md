@@ -12,6 +12,7 @@ Extension Chrome (Manifest V3) pour préparer le tri, l’échange et la vente d
 - Prépare les étiquettes (statut, thème, « #À échanger <ami> ») avec un aperçu, puis les envoie au site si vous cliquez sur « Lancer ».
 - Liste les ventes à lancer selon vos places libres et conseille un délai selon les heures de forte affluence.
 - Se synchronise avec le site (collection, étiquettes, prix du marché) tant qu’un onglet WikiMasters est ouvert.
+- Organise la page de gestion en six onglets : Tableau de bord (chiffres, répartition, santé de la synchro), Synchro (progression), Lots (étiquettes, enchères et défausses à lancer par famille, avec panneau d’erreur et reprise), Collection (filtres, analyses, tableau de tri), Ventes (places d’enchères, heures fortes) et Réglages (sauvegarde, plafond, Wikipédia, thèmes, animations). Un bandeau d’activité reste visible pendant une synchro ou une exécution. L’onglet actif est mémorisé dans le fragment d’URL.
 - Permet d’éditer chaque carte (statut, prix cible, note), de filtrer, de repérer les doublons, et de sauvegarder / restaurer vos données d’un PC à l’autre (voir « Sauvegarde complète »).
 
 Les données sont stockées localement dans `chrome.storage.local`. Il n’y a ni serveur ni base de données.
@@ -45,7 +46,7 @@ npm run build
 
 1. Ouvrez `chrome://extensions` et activez le **mode développeur**.
 2. Cliquez sur « Charger l’extension non empaquetée » et choisissez le dossier `dist/`.
-3. Cliquez sur l’icône de l’extension : la page de gestion s’ouvre dans un onglet.
+3. Cliquez sur l’icône de l’extension : la page de gestion s’ouvre dans un onglet, sur le Tableau de bord.
 4. Ouvrez `https://www.wiki-masters.com/collection` connecté à votre compte pour que l’extension lise vos cartes.
 
 Après une modification du code, relancez `npm run build` (ou laissez tourner `npm run dev`, qui reconstruit `dist/` en continu) puis cliquez sur la flèche de rechargement de l’extension dans `chrome://extensions`.
@@ -76,7 +77,7 @@ La CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) lance lint, types
 | `public/manifest.json` | Manifeste. Permission `storage` seule ; `host_permissions` limité à `fr.wikipedia.org` ; content script limité à WikiMasters. |
 | `src/background.ts` | Service worker (éphémère, sans état) : le clic sur l’icône ouvre `collection.html`. |
 | `src/content/` | Content script, construit à part : lecture des cartes, repères, synchronisation automatique, exécution des ordres d’écriture. |
-| `collection.html` + `src/app/` | Page de gestion en React 19 : liste, assistant de tri, aperçu des étiquettes, synchronisation, journal. |
+| `collection.html` + `src/app/` | Page de gestion en React 19, en six onglets (`Onglets.tsx`, `definitionOnglets.ts`) : tableau de bord, synchro, lots, collection, ventes, réglages. |
 | `src/lib/` | Logique, pure autant que possible : modèle et filtres (`collection.ts`), thèmes, tri, étiquettes (`lot.ts`, `registre.ts`), synchro (`ordonnanceur.ts`, `lectureApi.ts`), file de requêtes, journal. `stockage.ts` est le seul module qui touche `chrome.storage`. |
 | `src/lib/contrat/` | Description des routes d’écriture du site (étiquettes, enchère, défausse). |
 | `src/config/` | Réglages : prix et seuils (`prix.ts`), amis (`amis.ts`), hôte et cadence de la synchro, affluence. |
@@ -106,6 +107,6 @@ Tout se trouve dans [src/config/prix.ts](src/config/prix.ts) : seuil de défauss
 
 ## Sauvegarde complète (changer de PC)
 
-La section « Sauvegarde complète » de la page de gestion écrit un seul fichier JSON (`wm-sauvegarde-AAAA-MM-JJ.json`) avec ce que vous avez saisi : statut, prix cible, note, ami, valeur marchande et favori de chaque carte, vos thèmes, vos amis, le plafond de défausse, le journal des ventes. **Jamais** de jeton, de cookie ni d’identifiant du site ; les caches (Wikipédia, marché) et les étiquettes du site se reconstruisent par la synchronisation. Les réglages de `src/config/prix.ts` suivent avec le dépôt.
+La section « Sauvegarde complète » de l’onglet Réglages écrit un seul fichier JSON (`wm-sauvegarde-AAAA-MM-JJ.json`) avec ce que vous avez saisi : statut, prix cible, note, ami, valeur marchande et favori de chaque carte, vos thèmes, vos amis, le plafond de défausse, le journal des ventes. **Jamais** de jeton, de cookie ni d’identifiant du site ; les caches (Wikipédia, marché) et les étiquettes du site se reconstruisent par la synchronisation. Les réglages de `src/config/prix.ts` suivent avec le dépôt.
 
 Sur l’autre PC : « Importer une sauvegarde », lisez l’aperçu (cartes nouvelles, complétées, identiques, en conflit), choisissez quoi faire en cas de conflit, puis « Appliquer ». Par défaut, ce que vous avez saisi sur ce PC est gardé ; une carte sans saisie reçoit celle de la sauvegarde ; les thèmes, amis et ventes sont réunis (le plafond de défausse réglé ici est gardé). Un fichier invalide, trop gros ou d’une version plus récente est refusé sans rien modifier.
