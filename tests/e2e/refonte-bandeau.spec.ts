@@ -197,6 +197,25 @@ test.describe('SC-013, SC-002 : ligne repliée et dépliée', () => {
       .toBe('number');
   });
 
+  test('retouche T-317 : demande d’arrêt refusée, message role alert, effacé quand la synchro disparaît', async ({ pageCollection }) => {
+    const n = Date.now();
+    await ecrire(pageCollection, { statutSynchro: STATUT_EN_COURS(n), bailSynchro: n + 120_000 });
+    await pageCollection.evaluate(() => {
+      const local = chrome.storage.local;
+      const reel = local.set.bind(local);
+      local.set = ((valeurs: Record<string, unknown>) =>
+        'arretSynchro' in valeurs ? Promise.reject(new Error('quota')) : reel(valeurs)) as typeof local.set;
+    });
+    const l = ligne(pageCollection, 'synchro');
+    await l.getByRole('button', { name: /^Synchro/ }).click();
+    await l.getByRole('button', { name: 'Arrêter' }).click();
+    const alerte = bandeau(pageCollection).getByRole('alert');
+    await expect(alerte).toContainText('La demande d’arrêt n’a pas pu être enregistrée.');
+    expect(await pageCollection.evaluate(async () => (await chrome.storage.local.get('arretSynchro')).arretSynchro)).toBeUndefined();
+    await vider(pageCollection, ['statutSynchro', 'bailSynchro']);
+    await expect(pageCollection.getByText('La demande d’arrêt n’a pas pu être enregistrée.')).toHaveCount(0);
+  });
+
   test('SC-013 : l’en-tête se commande au clavier', async ({ pageCollection }) => {
     await ecrire(pageCollection, { execution: EXECUTION_EN_COURS });
     const entete = ligne(pageCollection, 'lots').getByRole('button', { name: /^Lots/ });
@@ -228,7 +247,7 @@ test.describe('SC-013, SC-002 : ligne repliée et dépliée', () => {
     const l = ligne(pageCollection, 'lots');
     await expect(l.getByTestId('pourcentage-ligne')).toHaveText('30 %');
     await l.getByRole('button', { name: /^Lots/ }).click();
-    await expect(l).toContainText('3 / 6 · 50 %');
+    await expect(l).toContainText('3 / 6 actions · 50 %');
     const b = l.getByTestId('barre-detail').first();
     await expect(b).toHaveAttribute('aria-valuemax', '6');
     await expect(b).toHaveAttribute('aria-valuenow', '3');

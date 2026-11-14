@@ -193,3 +193,20 @@ describe('T-303 sauvegarde', () => {
     for (const mot of ['ignorees', 'historique', 'affichage', 'execution']) expect(src).not.toMatch(new RegExp(`\\b${mot}\\b`));
   });
 });
+
+describe('retouche T-308 : historique illisible jamais écrasé', () => {
+  it.each([['version inconnue', { version: 9, points: [{ jour: '2026-11-13', exemplaires: 7 }] }], ['texte', 'x']])(
+    'enregistrerHistorique refuse d’écrire par-dessus une clé illisible (%s)',
+    async (_n, brut) => {
+      faux.donnees.set('historique', brut);
+      await expect(enregistrerHistorique([{ jour: '2026-11-14', exemplaires: 3 }])).rejects.toThrow(/illisible/i);
+      expect(faux.set).not.toHaveBeenCalled();
+      expect(faux.donnees.get('historique')).toEqual(brut);
+    },
+  );
+
+  it('une clé absente reste écrivable', async () => {
+    await enregistrerHistorique([{ jour: '2026-11-14', exemplaires: 3 }]);
+    expect(faux.donnees.get('historique')).toEqual({ version: 1, points: [{ jour: '2026-11-14', exemplaires: 3 }] });
+  });
+});

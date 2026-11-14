@@ -348,7 +348,10 @@ export async function chargerHistorique(): Promise<PointHistorique[]> {
   return validerHistorique(contenu[CLE_HISTORIQUE]) ?? [];
 }
 
+/** Refuse d’écrire par-dessus une clé présente mais illisible (version inconnue) : elle n’est jamais écrasée (retouche T-308). */
 export async function enregistrerHistorique(points: PointHistorique[]): Promise<void> {
+  const present = (await chrome.storage.local.get(CLE_HISTORIQUE))[CLE_HISTORIQUE];
+  if (present !== undefined && validerHistorique(present) === null) throw illisible('L’historique est illisible : il n’est pas modifié.');
   const valides = validerHistorique({ version: 1, points });
   if (valides === null) throw new Error('Historique invalide.');
   await chrome.storage.local.set({ [CLE_HISTORIQUE]: { version: 1, points: valides } });

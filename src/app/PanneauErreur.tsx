@@ -212,7 +212,7 @@ const PanneauErreur: React.FC<Props> = ({ execution, statut, journal, maintenant
         </Ligne>
         <Ligne intitule="Autres échecs en vol">{plurielAutres(erreur.autresEchecsEnVol)}</Ligne>
         <Ligne intitule="Reprise possible">
-          {enPause && pauseJusqua !== null ? `à ${heureReprise(pauseJusqua)}` : repriseImpossible ? rechargee ? 'non, la page a été rechargée' : 'non, plus aucune action à reprendre' : 'oui, maintenant'}
+          {repriseImpossible && rechargee ? 'non, la page a été rechargée' : enPause && pauseJusqua !== null ? `à ${heureReprise(pauseJusqua)}` : repriseImpossible ? 'non, plus aucune action à reprendre' : 'oui, maintenant'}
         </Ligne>
       </dl>
       {repriseImpossible && (

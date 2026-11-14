@@ -432,6 +432,26 @@ describe('AC4 : ignorer (SC-006)', () => {
     expect(banc.appels).toHaveLength(2);
   });
 
+  it('retouche T-307 : un refus d’écriture de `execution` à l’arrêt est signalé, pas avalé', async () => {
+    const api = await frais();
+    const messages: string[] = [];
+    api.abonnerEchecEcriture((m) => messages.push(m));
+    banc.refus.add('execution');
+    await lotArreteSur(api, quatreDefausses(), 2, echec(429));
+    await api.contexteExecution().ecritures;
+    expect(messages.length).toBeGreaterThan(0);
+    expect(messages[0]).toMatch(/état d’exécution/i);
+  });
+
+  it('retouche T-307 : un lot dont l’écriture réussit ne signale rien', async () => {
+    const api = await frais();
+    const messages: string[] = [];
+    api.abonnerEchecEcriture((m) => messages.push(m));
+    await lotArreteSur(api, quatreDefausses(), 2, echec(429));
+    await api.contexteExecution().ecritures;
+    expect(messages).toEqual([]);
+  });
+
   it('retouche T-303 : une clé `ignorees` illisible (version inconnue) n’est jamais écrasée ; rien d’ignoré', async () => {
     const api = await frais();
     await lotArreteSur(api, quatreDefausses(), 2, echec(409));

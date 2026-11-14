@@ -101,6 +101,34 @@ test.describe('SC-027 : chiffres animés', () => {
   });
 });
 
+test.describe('retouche T-315 : compteur après réactivation des animations', () => {
+  test('le compteur ne repart pas d’une ancienne valeur', async ({ pageCollection }) => {
+    await pageCollection.emulateMedia({ reducedMotion: 'no-preference' });
+    await ouvrir(pageCollection);
+    const exemplaires = kpis(pageCollection).filter({ hasText: /Exemplaires/ });
+    const visible = exemplaires.locator('[aria-hidden="true"]').first();
+    await expect(visible).toHaveText('62');
+    await pageCollection.evaluate(() => chrome.storage.local.set({ affichage: { version: 1, animations: false } }));
+    await expect(pageCollection.locator('html')).toHaveAttribute('data-animations', 'off');
+    await pageCollection.evaluate(async () => {
+      const { collection } = (await chrome.storage.local.get('collection')) as { collection: { cartes: Array<{ id: string; quantite: number }> } };
+      for (const c of collection.cartes) if (c.id === 'td-1') c.quantite = 200;
+      await chrome.storage.local.set({ collection });
+    });
+    await expect(visible).toHaveText('222');
+    await visible.evaluate((el) => {
+      const w = window as unknown as { __vus: string[] };
+      w.__vus = [];
+      new MutationObserver(() => w.__vus.push(el.textContent ?? '')).observe(el, { childList: true, characterData: true, subtree: true });
+    });
+    await pageCollection.evaluate(() => chrome.storage.local.set({ affichage: { version: 1, animations: true } }));
+    await expect(pageCollection.locator('html')).not.toHaveAttribute('data-animations', 'off');
+    await pageCollection.waitForTimeout(600);
+    const vus = await pageCollection.evaluate(() => (window as unknown as { __vus: string[] }).__vus);
+    expect(vus.filter((t) => t !== '222')).toEqual([]);
+  });
+});
+
 test.describe('SC-022 : barre de répartition', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
@@ -226,6 +254,14 @@ test.describe('SC-001 : santé de la synchro', () => {
     await expect(sante).toBeVisible();
     await expect(sante).toContainText(/À jour|En cours|Arrêtée|Erreur/);
     await expect(sante).toContainText('jamais');
+  });
+
+  test('retouche T-305 : synchro coupée, pastille « Arrêtée » et jamais « À jour »', async ({ pageCollection }) => {
+    await pageCollection.evaluate(() => chrome.storage.local.set({ syncAuto: false }));
+    await ouvrir(pageCollection);
+    const sante = pageCollection.getByTestId('sante-synchro');
+    await expect(sante).toContainText('Arrêtée');
+    await expect(sante).not.toContainText('À jour');
   });
 
   test('SC-001 : synchro arrêtée, lien vers #synchro', async ({ pageCollection }) => {

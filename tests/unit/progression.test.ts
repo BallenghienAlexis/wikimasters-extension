@@ -74,6 +74,22 @@ describe('T-302 progression de la synchro (SC-002)', () => {
     expect(p.etapes.map((e) => e.etat)).toEqual(['faite', 'faite', 'en-cours', 'attente']);
   });
 
+  it('retouche T-302 : la barre d’étape reste monotone avec `precedent` quand `pages` augmente', () => {
+    const avant = progressionSynchro(statut({ etape: 'pages', page: 5, pages: 6 }));
+    const pagesAvant = avant.etapes.find((e) => e.etape === 'pages')!.barre;
+    expect(pagesAvant.pourcent).toBe(66);
+    const apres = progressionSynchro(statut({ etape: 'pages', page: 5, pages: 12 }), avant);
+    const pagesApres = apres.etapes.find((e) => e.etape === 'pages')!.barre;
+    expect(pagesApres.pourcent).toBe(66);
+    expect(apres.pourcent).toBeGreaterThanOrEqual(avant.pourcent!);
+  });
+
+  it('retouche T-302 : la barre d’étape reste monotone quand `prixPrevus` augmente', () => {
+    const avant = progressionSynchro(statut({ etape: 'prix', prixFaits: 6, prixPrevus: 8 }));
+    const apres = progressionSynchro(statut({ etape: 'prix', prixFaits: 6, prixPrevus: 20 }), avant);
+    expect(apres.etapes.find((e) => e.etape === 'prix')!.barre.pourcent).toBe(75);
+  });
+
   it('SC-002 : prixPrevus null, barre d’étape indéterminée « N lus » sans erreur', () => {
     const p = progressionSynchro(statut({ etape: 'prix', prixFaits: 0, prixPrevus: null }));
     const prix = p.etapes.find((e) => e.etape === 'prix')!;
@@ -108,7 +124,7 @@ describe('T-302 progression de la synchro (SC-002)', () => {
 
 describe('T-302 progression de lot et d’exécution (SC-002)', () => {
   it('SC-002 : lot « N / M · P % », les sautées comptent comme avancées', () => {
-    expect(progressionLot(lot({ total: 10, traitees: 3, sautees: 1 })).texte).toBe('4 / 10 · 40 %');
+    expect(progressionLot(lot({ total: 10, traitees: 3, sautees: 1 })).texte).toBe('4 / 10 actions · 40 %');
   });
 
   it('SC-002 : lot terminé, 100 %', () => {
@@ -123,7 +139,7 @@ describe('T-302 progression de lot et d’exécution (SC-002)', () => {
 
   it('SC-002 : exécution globale « N / M · P % »', () => {
     const b = progressionExecution(exec({ total: 20, traitees: 5, lots: [lot({ total: 20, traitees: 5 })] }));
-    expect(b.texte).toBe('5 / 20 · 25 %');
+    expect(b.texte).toBe('5 / 20 actions · 25 %');
     expect(b.indeterminee).toBe(false);
   });
 });
@@ -195,7 +211,7 @@ describe('T-302 listes de tâches (SC-003)', () => {
   });
 
   it('SC-003 : Terminées limitées à 20, la plus récente en haut', () => {
-    const journal = Array.from({ length: 25 }, (_, i) => entree(i + 1)).reverse().reverse();
+    const journal = Array.from({ length: 25 }, (_, i) => entree(i + 1)).reverse();
     const l = listesTaches({ statut: null, execution: null, journal });
     expect(l.terminees).toHaveLength(20);
     expect(l.terminees[0]!.id).toBe('e25');

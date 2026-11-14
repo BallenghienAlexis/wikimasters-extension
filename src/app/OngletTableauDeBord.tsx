@@ -36,7 +36,8 @@ const LECTURE_INITIALE: LectureSynchro = { activee: true, statut: null, bail: nu
 
 /** Pastille D-40 déduite du statut, du bail et de la pause. Une lecture illisible n’empêche pas l’affichage. */
 function pastilleDe(l: LectureSynchro): PastilleSynchro {
-  const { statut, bail, etat, maintenant } = l;
+  const { activee, statut, bail, etat, maintenant } = l;
+  if (!activee) return 'arretee';
   if (statut?.etat === 'en-cours' && bail !== null && bail > maintenant) return 'en-cours';
   if (statut?.etat === 'arret' && statut.raison !== 'manuel') return 'erreur';
   if (statut?.etat === 'arret' || (etat?.arretJusqua ?? 0) > maintenant) return 'arretee';

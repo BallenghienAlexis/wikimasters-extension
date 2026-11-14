@@ -29,14 +29,15 @@ const GraphiqueEvolution: React.FC = () => {
   }, []);
 
   const serie = useMemo(() => serie30Jours(points, new Date()), [points]);
-  const maximum = Math.max(1, ...points.map((p) => p.exemplaires));
+  const dansFenetre = serie.filter((j): j is { jour: string; exemplaires: number } => j.exemplaires !== null);
+  const maximum = Math.max(1, ...dansFenetre.map((j) => j.exemplaires));
   const survol = serie.find((j) => j.jour === actif && j.exemplaires !== null);
 
   return (
     <section data-testid="evolution" aria-labelledby="titre-evolution" className="mt-8">
       <h2 id="titre-evolution" className="text-xl font-semibold">Évolution sur 30 jours</h2>
-      {points.length < 2 ? (
-        <p className="mt-2 text-muted">Historique en cours de constitution ({points.length} jour)</p>
+      {dansFenetre.length < 2 ? (
+        <p className="mt-2 text-muted">Historique en cours de constitution ({dansFenetre.length} jour)</p>
       ) : (
         <>
           <p data-testid="evolution-valeur" className="mt-2 min-h-6" aria-live="off">
@@ -74,7 +75,7 @@ const GraphiqueEvolution: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {points.map((p) => (
+              {dansFenetre.map((p) => (
                 <tr key={p.jour}>
                   <th scope="row">{p.jour}</th>
                   <td>{p.exemplaires}</td>
