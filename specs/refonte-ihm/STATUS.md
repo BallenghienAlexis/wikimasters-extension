@@ -1,6 +1,6 @@
 # STATUS — refonte-ihm
-- **Étape courante** : 2.4-publication des artefacts (PR #109) puis 3-exécution par vagues. 2.1 refine (33 corrections, H1 à H18), 2.2 design et plan, 2.3 tâches (19 tâches T-301 à T-319, 6 vagues) faits ; « Ok implémente tout » (Alexis, 2026-11-13, 16:45)
-- **Mis à jour** : 2026-11-13
+- **Étape courante** : TERMINÉ — 19 tâches (T-301 à T-319), retouches T-901 et T-902 fusionnées sur main ; vérification (`verification.md`) 28 SC sur 28 ✅ ; reste des retouches mineures dans `retouches.md`
+- **Mis à jour** : 2026-11-14
 
 ## Gate design
 - [x] Variante choisie par Alexis : **variante 1** (onglets + tableau de bord), 2026-11-13

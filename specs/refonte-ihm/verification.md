@@ -44,7 +44,7 @@ Tests : `U` = `tests/unit/`, `E` = `tests/e2e/` (liste exécutée dans la vérif
 | SC-022 | T-301, T-305, T-315 | U `contrastes.test.ts`, `tableauDeBord.test.ts` ; E `refonte-tableau-de-bord` | 6 tests e2e ✓ ; contrastes calculés depuis `tokens.css` ✓ | ✅ |
 | SC-023 | T-312 | U `colonnes-tri.test.ts` ; E `refonte-tableau-tri.spec.ts` | 19 tests ✓. Réserves consignées (retouches T-312 : `ami` non effacé, carte rognée au glisser) | ✅ (réserve mineure) |
 | SC-024 | T-308, T-311, T-318 | U `ordre-tableau.test.ts` ; E `refonte-collection`, `refonte-lots`, `refonte-ventes` | 23 tests e2e ✓ (`aria-sort`, ordre) | ✅ |
-| SC-025 | T-315 | U `mouvement-tokens.test.ts` (valeurs des tokens, aucun `cubic-bezier(`, aucune durée littérale, aucune couleur littérale) | unitaire ✓. **Aucun e2e** « durée calculée d'un bouton = 0,2 s » : `grep "SC-025" tests/e2e` vide ; sonde ad hoc sur Réglages : tous les `button` ont `transitionDuration` `0s` (`--d-fast` = `.2s` présent) | ❌ |
+| SC-025 | T-315, T-902 | U `mouvement-tokens.test.ts` ; E `refonte-mouvement.spec.ts` (6 tests : tokens résolus, boutons à 0,2 s, survol 1 px actif / aria-disabled sans survol, chevron et panneau 0,4 s, barre 0,9 s) | ✓ après T-902 (#136) | ✅ |
 | SC-026 | T-309, T-312, T-310 | E `refonte-reglages` (3), `refonte-tableau-tri` (1), `refonte-transverse` (9) | 13 tests ✓. Réserve : FLIP non observé (`getAnimations`) dans le tableau de tri | ✅ (réserve mineure) |
 | SC-027 | T-305, T-315 | E `refonte-tableau-de-bord.spec.ts` (3), U `primitives.test.ts` | ✓ | ✅ |
 | SC-028 | T-309, T-306 | E `refonte-reglages` (11), `refonte-synchro` (4) | ✓ | ✅ |
@@ -52,7 +52,7 @@ Tests : `U` = `tests/unit/`, `E` = `tests/e2e/` (liste exécutée dans la vérif
 ## Écarts
 | SC | Constat | Tâche à rouvrir |
 |---|---|---|
-| SC-025 | Le volet e2e du SC (durée calculée d'un bouton = 0,2 s) n'existe pas ; les boutons génériques mesurés ont une transition de 0 s, donc le critère littéral n'est pas démontrable. Le volet unitaire (tokens, absence de littéraux) est ✅. À trancher : ajouter l'e2e sur un contrôle qui porte `--d-fast` (ex. colonne du tableau de tri ou onglet), ou amender le SC. | T-315 (primitives) / T-310 (tests transverses), via une retouche T-9xx |
+| SC-025 | Corrigé par T-902 (#136) : règle de survol des cliquables en `--d-fast`, e2e ajouté. Reste : renommer `duree()` en `styleCalcule` dans `refonte-mouvement.spec.ts` (mineur). | résolu |
 
 ## Points consignés non bloquants (`retouches.md`, inchangés)
 Barres d'étape Synchro non monotones, alerte d'écriture d'`execution` non effacée, rappel de l'heure de fin de pause après rechargement, perf 5 000 cartes intermittente en suite complète, plus les listes détaillées par PR.
