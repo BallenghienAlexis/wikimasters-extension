@@ -118,11 +118,10 @@ b. BandeauActivite.tsx:88 : message d'échec non effacé quand synchro devient n
 - refonte-transverse.spec.ts:242,256 : preparerLot recharge la page avant les interceptions de ouvrirSiteSimule (fenêtre sans piège) → poser pieger(context) avant (facultatif).
 - Défaut hors tâche trouvé en route : collision de casse onglets.ts / Onglets.tsx (corrigé en #129).
 - T-310 (reviewer) : refonte-transverse.spec.ts:261-264 « Ignorer puis Reprendre » sans assertion sur la clé ignorees ; :603 et 150-164 dépliage du bandeau conditionnel, phase `sans-liste` des 5 000 cartes non vérifiée à zéro requête.
-- T-319 (sécurité) : README.md:77 « host_permissions limité à fr.wikipedia.org » omet www.wikidata.org (ligne préexistante) → corriger.
 
 ## Décisions
 
 - 2026-11-13 : le composant d’aperçu de T-316 s’appelle `PanneauApercuLot.tsx` (et non `ApercuLot.tsx`) pour éviter une collision de casse avec `apercuLot.ts` sous Windows.
-- 2026-11-14 : collision de casse `onglets.ts` / `Onglets.tsx` (build cassé sous Windows) corrigée par le renommage en `definitionOnglets.ts` (#129) et le test `tests/unit/casse-fichiers.test.ts`.
+- 2026-11-14 : collision de casse `onglets.ts` / `Onglets.tsx` (build cassé sous Windows) corrigée par le renommage en `definitionOnglets.ts` (#129) et le test `tests/unit/casse-fichiers.test.ts` (à confirmer sous Windows par Alexis : son `git pull` du 2026-11-14 précédait la fusion de #129).
 - 2026-11-14 : `src/lib/collection.ts` accepte `quantite` 0 si `idsSite` est nul (bug réel : un 403 par carte sur une carte éditée rendait la collection illisible), déclaré en T-307.
 - 2026-11-14 : `src/app/verifierWikipedia.ts` : `annuler()` du planificateur coupe aussi le titre en cours, cadence d’1 s tenue après annulation (T-312, revu par security-reviewer).
