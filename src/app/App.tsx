@@ -133,9 +133,9 @@ const App: React.FC = () => {
 
         <MessageStockage message={message} />
 
-        <BandeauActivite />
-
         <Onglets actif={actif} onChoisir={aller} />
+
+        <BandeauActivite />
 
         <div role="tabpanel" id={idPanneau(actif)} aria-labelledby={idOnglet(actif)} tabIndex={0}>
           {panneau}
