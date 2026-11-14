@@ -1,6 +1,8 @@
 import { CONFIG_PRIX } from '../config/prix';
-import type { Action, CarteEcartee, RaisonEcart, Registre, TypeAction, TypesDisponibles } from '../lib/actions';
+import type { Action, CarteEcartee, FamilleLot, RaisonEcart, Registre, TypeAction, TypesDisponibles } from '../lib/actions';
 import type { Carte, Collection } from '../lib/collection';
+import { familleDe } from '../lib/familles';
+import { raisonPause } from '../lib/reprise';
 import { CODES_ARRET, CODE_CONFLIT, type EtatFile, type RaisonArret } from '../lib/file';
 import { construireLot, type Config, type EtiquetteObsolete, type LotConstruit } from '../lib/lot';
 import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
@@ -109,17 +111,45 @@ export interface ConditionsLancement {
   executionIllisible: boolean;
   executionEnCours: boolean;
   nbDisponibles: number;
+  /** Fin de la pause de 30 min (heure murale), si elle est connue. */
+  pauseJusqua?: number | null;
+  /** Heure murale courante (par défaut : maintenant), pour juger la pause. */
+  maintenant?: number;
+  /** Nombre de lots cochés ; absent : la sélection n’entre pas en compte. */
+  nbLotsCoches?: number;
 }
 
-/** Raison pour laquelle « Lancer » est désactivé, ou `null` s’il peut l’être (D-18). */
+export const RAISON_AUCUN_LOT = 'Aucun lot n’est coché.';
+
+/** Raison pour laquelle « Lancer » est désactivé, ou `null` s’il peut l’être (D-18, D-09). */
 export function raisonDesactivation(c: ConditionsLancement): string | null {
   if (c.executionIllisible) return `L’état de l’exécution est illisible${NB}: Lancer est impossible.`;
   if (c.executionEnCours) return 'Une exécution est déjà en cours.';
+  const pause = raisonPause(c.pauseJusqua ?? null, c.maintenant ?? Date.now());
+  if (pause !== null) return pause;
+  if (c.nbLotsCoches === 0) return RAISON_AUCUN_LOT;
   if (c.nbOnglets === 0) return 'Aucun onglet WikiMasters ouvert.';
   if (c.nbOnglets > 1) return `Plusieurs onglets WikiMasters sont ouverts${NB}: gardez-en un seul.`;
   if (c.nbDisponibles === 0) return 'Aucune action n’est disponible pour le moment.';
   return null;
 }
+
+/** Actions des seules familles cochées, dans l’ordre du lot. */
+export const actionsDesLotsCoches = (actions: readonly Action[], cochees: ReadonlySet<FamilleLot>): Action[] =>
+  actions.filter((a) => cochees.has(familleDe(a)));
+
+export const texteDureeLots = (nbRequetes: number): string => `Durée estimée${NB}: environ ${dureeMinutes(nbRequetes)} min`;
+
+export const texteActionsEcartees = (n: number): string => `${n} ${n > 1 ? 'actions écartées' : 'action écartée'}`;
+
+const LIBELLES_FAMILLE: Record<FamilleLot, string> = {
+  etiquettes: 'Étiquettes',
+  encheres: 'Enchères',
+  defausses: 'Défausses',
+  suppressions: 'Suppressions',
+  lectures: 'Lectures',
+};
+export const libelleFamille = (f: FamilleLot): string => LIBELLES_FAMILLE[f];
 
 export function pageActions<T>(actions: readonly T[], max: number = LIGNES_MAX): { visibles: T[]; restantes: number } {
   return { visibles: actions.slice(0, max), restantes: Math.max(0, actions.length - max) };
