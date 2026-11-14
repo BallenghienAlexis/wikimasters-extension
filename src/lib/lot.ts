@@ -332,7 +332,7 @@ export function construireLot(
     }
 
     // Favori et « à trier » : étiquetés par thème seulement, sans Statut ni échange. Les étiquettes de l’extension
-    // déjà posées (statut d’avant) sont signalées sans être retirées (SC-003, SC-004).
+    // déjà posées (statut d’avant) sont signalées sans être retirées (SC-003, SC-004, amendés le 2026-11-14).
     const neutre = c.favori || c.statut === 'a-trier'
     if (neutre) {
       const gardees = new Set(parCarte.get(c.id)?.retenues ?? [])
@@ -344,6 +344,8 @@ export function construireLot(
       }
     }
 
+    // Favori ou « à trier » non relié : rien à étiqueter, et rien à signaler (cas courant après une simple lecture).
+    if (c.idsSite === null && neutre) continue
     if (c.idsSite === null) {
       ecarter('non-reliee')
       continue

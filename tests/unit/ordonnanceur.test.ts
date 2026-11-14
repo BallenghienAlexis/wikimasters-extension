@@ -667,8 +667,8 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
 
   it('plus de 10 échecs sautés sur une exécution arrêtent la synchro même séparés par des succès', async () => {
     const site = siteFictif(40);
-    const b = banc((chemin, n) => (n >= 2 && n % 2 === 0 ? { statut: 500, json: null } : site(chemin)));
-    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    const b = banc((chemin) => (/card-(\d+)\/sales/.test(chemin) && Number(/card-(\d+)\//.exec(chemin)![1]) % 2 === 0 ? { statut: 500, json: null } : site(chemin)));
+    const r = await synchroniser(b.deps);
     expect(r.issue).toBe('arret');
     expect(r.raison).toBe('echecs');
   })
