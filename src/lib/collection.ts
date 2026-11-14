@@ -92,7 +92,9 @@ function analyserCarte(brut: unknown, rang: number): CarteLue | string {
   if (typeof titre !== 'string' || titre.trim() === '') return `${position} : titre manquant.`;
   if (titre.length > MAX_TITRE) return `${position} : titre trop long.`;
   if (rarete !== undefined && rarete !== null && typeof rarete !== 'string') return `${position} : rareté invalide.`;
-  if (quantite !== undefined && (!Number.isSafeInteger(quantite) || (quantite as number) < 1)) {
+  // Une quantité nulle n'existe que pour une carte éditée dont le dernier exemplaire a disparu du site (`idsSite` nul).
+  const minimum = idsSite === null ? 0 : 1;
+  if (quantite !== undefined && (!Number.isSafeInteger(quantite) || (quantite as number) < minimum)) {
     return `${position} : quantité invalide.`;
   }
   if (url !== undefined && url !== null && !(typeof url === 'string' && URL.canParse(url) && new URL(url).protocol === 'https:')) {

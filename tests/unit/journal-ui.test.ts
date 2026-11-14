@@ -15,6 +15,7 @@ import Journal, {
   rareteDe,
   raisonRetrait,
 } from '../../src/app/Journal';
+import * as JournalModule from '../../src/app/Journal';
 import DialogueVider from '../../src/app/DialogueVider';
 
 const entree = (surcharge: Partial<EntreeJournal> = {}): EntreeJournal => ({
@@ -223,5 +224,84 @@ describe('boutons désactivés (rendu)', () => {
     const bouton = html.match(/<button[^>]*>Vider<\/button>/)?.[0] ?? '';
     expect(bouton).toContain('cursor-not-allowed');
     expect(bouton).not.toContain('cursor-pointer');
+  });
+});
+
+// T-307 (SC-018, D-20, H5) : filtres de l'historique. Contrat d'export de `src/app/Journal.tsx` pour dev-ui :
+//  - `filtrerEntrees(entrees, { type, resultat, carte, execution })` : ET de quatre critères ; une valeur vide (`''`) = pas de critère ;
+//    `type` = TypeAction ; `resultat` = libellé d'historique (`libelleHistorique`, H5) ; `carte` = texte contenu dans le titre
+//    (sans tenir compte de la casse ni des accents) ; `execution` = `idLot`. L'ordre des entrées est conservé.
+//  - `resultatsDisponibles(entrees)` : libellés d'historique distincts présents, dans l'ordre alphabétique français.
+//  - `executionsDisponibles(entrees)` : `idLot` distincts, le plus récent d'abord.
+describe('filtres de l’historique (SC-018)', () => {
+  const { filtrerEntrees, resultatsDisponibles, executionsDisponibles } = JournalModule as unknown as {
+    filtrerEntrees: (e: EntreeJournal[], f: { type: string; resultat: string; carte: string; execution: string }) => EntreeJournal[];
+    resultatsDisponibles: (e: EntreeJournal[]) => string[];
+    executionsDisponibles: (e: EntreeJournal[]) => string[];
+  };
+  const vide = { type: '', resultat: '', carte: '', execution: '' };
+  const jeu: EntreeJournal[] = [
+    entree({ id: 'a', titre: 'Écureuil fictif', type: 'pose-etiquette', resultat: 'reussie', idLot: 'lot-1', horodatage: '2026-11-07T10:00:00.000Z' }),
+    entree({ id: 'b', titre: 'Écureuil fictif', type: 'enchere', parametre: '50', resultat: 'echouee', codeHttp: 403, idLot: 'lot-2', horodatage: '2026-11-08T10:00:00.000Z' }),
+    entree({ id: 'c', titre: 'Renard fictif', type: 'pose-etiquette', resultat: 'passee', cause: 'sautee', idLot: 'lot-2', horodatage: '2026-11-08T11:00:00.000Z' }),
+    entree({ id: 'd', titre: 'Renard fictif', type: 'defausse', parametre: null, resultat: 'passee', cause: 'ignoree', idLot: 'lot-2', horodatage: '2026-11-08T12:00:00.000Z' }),
+  ];
+  const ids = (l: EntreeJournal[]): string[] => l.map((e) => e.id);
+
+  it('SC-018 : sans critère, tout est conservé dans l’ordre', () => {
+    expect(ids(filtrerEntrees(jeu, vide))).toEqual(['a', 'b', 'c', 'd']);
+  });
+  it('SC-018 : filtre par type', () => {
+    expect(ids(filtrerEntrees(jeu, { ...vide, type: 'pose-etiquette' }))).toEqual(['a', 'c']);
+  });
+  it('SC-018 : filtre par résultat sur le libellé H5', () => {
+    expect(ids(filtrerEntrees(jeu, { ...vide, resultat: 'Passée : sautée' }))).toEqual(['c']);
+    expect(ids(filtrerEntrees(jeu, { ...vide, resultat: 'Passée : ignorée jusqu’à la prochaine synchro' }))).toEqual(['d']);
+    expect(ids(filtrerEntrees(jeu, { ...vide, resultat: 'Passée : exemplaire indisponible' }))).toEqual(['b']);
+  });
+  it('SC-018 : filtre carte par texte, sans casse ni accents', () => {
+    expect(ids(filtrerEntrees(jeu, { ...vide, carte: 'ecureuil' }))).toEqual(['a', 'b']);
+    expect(ids(filtrerEntrees(jeu, { ...vide, carte: 'RENARD' }))).toEqual(['c', 'd']);
+  });
+  it('SC-018 : filtre par exécution', () => {
+    expect(ids(filtrerEntrees(jeu, { ...vide, execution: 'lot-1' }))).toEqual(['a']);
+  });
+  it('SC-018 : critères combinés en ET, résultat vide possible', () => {
+    expect(ids(filtrerEntrees(jeu, { type: 'pose-etiquette', resultat: '', carte: 'renard', execution: 'lot-2' }))).toEqual(['c']);
+    expect(filtrerEntrees(jeu, { ...vide, type: 'enchere', carte: 'renard' })).toEqual([]);
+  });
+  it('SC-018 : libellés de résultat disponibles (H5) et exécutions, la plus récente d’abord', () => {
+    expect(resultatsDisponibles(jeu)).toEqual(
+      expect.arrayContaining(['Réussie', 'Passée : exemplaire indisponible', 'Passée : sautée', 'Passée : ignorée jusqu’à la prochaine synchro']),
+    );
+    expect(new Set(resultatsDisponibles(jeu)).size).toBe(resultatsDisponibles(jeu).length);
+    expect(executionsDisponibles(jeu)).toEqual(['lot-2', 'lot-1']);
+  });
+  it('SC-007 : le filtrage ne modifie pas les entrées stockées (libellé H5 par affichage seulement)', () => {
+    const avant = JSON.stringify(jeu);
+    filtrerEntrees(jeu, { ...vide, resultat: 'Passée : exemplaire indisponible' });
+    expect(JSON.stringify(jeu)).toBe(avant);
+    expect(jeu[1]!.resultat).toBe('echouee');
+  });
+});
+
+// T-307 (revue) : prop `titre` distincte de `idTest`, journal illisible signalé dans l'historique.
+describe('Journal : titre et journal illisible (revue T-307)', () => {
+  const registreVide: Registre = { version: 2, etiquettes: {}, couples: [] };
+  const rendre = (props: Record<string, unknown>): string =>
+    renderToStaticMarkup(
+      React.createElement(Journal, { entrees: [], registre: registreVide, retraitDisponible: false, ongletPret: false, onVider: () => {}, ...props }),
+    );
+  it('le titre est indépendant du repère de test', () => {
+    const html = rendre({ idTest: 'historique', titre: 'Historique' });
+    expect(html).toContain('data-testid="historique"');
+    expect(html).toContain('>Historique<');
+    expect(rendre({ idTest: 'journal' })).toContain('>Journal<');
+    expect(rendre({ idTest: 'autre', titre: 'Journal' })).toContain('>Journal<');
+  });
+  it('journal illisible : message, aucun filtre', () => {
+    const html = rendre({ idTest: 'historique', titre: 'Historique', illisible: true });
+    expect(html).toContain('Le journal est illisible et n’a pas été modifié.');
+    expect(html).not.toContain('Filtres de l’historique');
   });
 });

@@ -74,6 +74,13 @@ describe('analyserStockage : validation des cartes', () => {
     expect(erreurDe([{ id: 'a', titre: 'A', prixCible: -1 }])).toContain('prix');
   });
 
+  it('relit une carte gardée mais déliée du site (quantité 0, idsSite nul) écrite après un refus par carte', () => {
+    const r = analyserStockage({ version: 3, cartes: [{ id: 'a', titre: 'A', quantite: 0, idsSite: null, etiquettesSite: [], note: 'x' }] });
+    expect(r.ok).toBe(true);
+    // Sans le lien nul avec le site, une quantité nulle reste invalide.
+    expect(erreurDe([{ id: 'a', titre: 'A', quantite: 0, idsSite: ['ex-1'] }])).toContain('quantité');
+  });
+
   it.each(['javascript:alert(1)', 'http://exemple.test/a', 'pas une url'])('refuse le lien %s', (url) => {
     expect(erreurDe([{ id: 'a', titre: 'A', url }])).toContain('https://');
   });

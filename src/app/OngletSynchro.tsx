@@ -12,12 +12,16 @@ import {
   ecouterExecution,
   ecouterJournal,
   ecouterSynchroAuto,
+  enregistrerJournal,
 } from '../lib/stockage';
 import { progression, texteProgression } from '../lib/synchro';
 import PastilleStatut, { type EtatSynchro } from './PastilleStatut';
 import FraicheurPrix from './FraicheurPrix';
 import ListeTaches from './ListeTaches';
+import Journal from './Journal';
+import PanneauErreur from './PanneauErreur';
 import ProgressionSynchro from './ProgressionSynchro';
+import TableIgnorees from './TableIgnorees';
 import SynchroAuto from './SynchroAuto';
 import type { DonneesPage } from './useDonneesPage';
 
@@ -32,26 +36,38 @@ interface Lecture {
   statut: StatutSynchroV2 | null;
   bail: number | null;
   execution: EtatExecutionV2 | null;
+  /** L’état d’exécution stocké existe mais n’est pas lisible : rien n’est lançable ni sautable (SC-019). */
+  executionIllisible: boolean;
   journal: EntreeJournal[];
+  /** Le journal stocké existe mais n’est pas lisible. */
+  journalIllisible: boolean;
   etat: EtatOrdonnanceur | null;
   maintenant: number;
 }
 
-const LECTURE_INITIALE: Lecture = { statut: null, bail: null, execution: null, journal: [], etat: null, maintenant: 0 };
+const LECTURE_INITIALE: Lecture = { statut: null, bail: null, execution: null, executionIllisible: false, journal: [], journalIllisible: false, etat: null, maintenant: 0 };
 
 /** Lecture du stockage de l’onglet : un échec de lecture donne une valeur vide, jamais une erreur. */
 function useLecture(): Lecture {
   const [lecture, setLecture] = useState<Lecture>(LECTURE_INITIALE);
   const relire = useCallback(async (): Promise<void> => {
     const sans = <T,>(p: Promise<T>, defaut: T): Promise<T> => p.catch(() => defaut);
+    let executionIllisible = false;
+    let journalIllisible = false;
     const [statut, bail, execution, journal, etat] = await Promise.all([
       sans(chargerStatutSynchro(), null),
       sans(chargerBailSynchro(), null),
-      sans(chargerExecution(), null),
-      sans(chargerJournal(), [] as EntreeJournal[]),
+      chargerExecution().catch(() => {
+        executionIllisible = true;
+        return null;
+      }),
+      chargerJournal().catch(() => {
+        journalIllisible = true;
+        return [] as EntreeJournal[];
+      }),
       sans(chargerEtatSynchro(), null),
     ]);
-    setLecture({ statut, bail, execution, journal, etat, maintenant: Date.now() });
+    setLecture({ statut, bail, execution, executionIllisible, journal, journalIllisible, etat, maintenant: Date.now() });
   }, []);
   useEffect(() => {
     const premiere = setTimeout(() => void relire(), 0);
@@ -68,8 +84,8 @@ function useLecture(): Lecture {
 
 /** Onglet Synchro : progression, tâches, fraîcheur des prix, puis synchronisation automatique (inchangée). */
 const OngletSynchro: React.FC<Props> = ({ donnees }) => {
-  const { synchro, collection, preferences, cacheWiki } = donnees;
-  const { statut, bail, execution, journal, etat, maintenant } = useLecture();
+  const { synchro, collection, registre, preferences, cacheWiki } = donnees;
+  const { statut, bail, execution, executionIllisible, journal, journalIllisible, etat, maintenant } = useLecture();
   // Un statut « en cours » sans bail tenu est périmé (onglet WikiMasters fermé) : il n’est plus une activité.
   const synchroActive = statut?.etat === 'en-cours' && bail !== null && bail > maintenant;
   // Pastille D-40 : « En cours » seulement si le bail est tenu.
@@ -100,8 +116,33 @@ const OngletSynchro: React.FC<Props> = ({ donnees }) => {
       <ListeTaches listes={listes} />
       <FraicheurPrix releves={releves} maintenant={maintenant} />
       <SynchroAuto collection={collection} preferences={preferences} cacheWiki={cacheWiki} />
-      {/* Emplacement réservé à T-307 (panneau d’erreur, ignorées, historique filtrable). */}
-      <div id="historique" tabIndex={-1} />
+      {executionIllisible && (
+        <p role="alert" data-testid="etat-execution-illisible" className="mt-4 break-words rounded border border-line border-l-[6px] border-l-defausser bg-ink-2 p-4 font-semibold">
+          L’état de l’exécution est illisible. Aucun lot ne peut être lancé ni sauté tant qu’il n’est pas rétabli ; il n’a pas été modifié.
+        </p>
+      )}
+      <PanneauErreur
+        execution={executionIllisible ? null : execution}
+        statut={synchroActive ? null : statut}
+        journal={journal}
+        maintenant={maintenant}
+        onPreparer={() => {
+          window.location.hash = 'lots';
+        }}
+      />
+      <TableIgnorees collection={collection} />
+      <div id="historique" tabIndex={-1} className="focus-visible:shadow-(--halo-focus)">
+        <Journal
+          idTest="historique"
+          titre="Historique"
+          illisible={journalIllisible}
+          entrees={journal}
+          registre={registre}
+          retraitDisponible={false}
+          ongletPret={false}
+          onVider={() => void enregistrerJournal([]).catch(() => undefined)}
+        />
+      </div>
     </>
   );
 };

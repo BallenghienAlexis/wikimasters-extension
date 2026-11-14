@@ -13,7 +13,6 @@ import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/
 import EtiquettesPrevues from './EtiquettesPrevues';
 import Journal, { type CoupleRetrait } from './Journal';
 import BandeauRisque from './BandeauRisque';
-import ZoneExecution from './ZoneExecution';
 import ListeActionsLot from './ListeActionsLot';
 import CartesNonIncluses from './CartesNonIncluses';
 import ListeEcarts from './ListeEcarts';
@@ -27,6 +26,8 @@ import {
   CLASSE_BOUTON,
   CLASSE_INACTIF,
   NB,
+  SUITE_INTERROMPU,
+  TITRE_INTERROMPU,
   actionsDesLotsCoches,
   configDuLot,
   contientAmi,
@@ -34,6 +35,10 @@ import {
   carteTexte,
   libelleType,
   libelleErreurLancement,
+  phraseProgression,
+  pourcentage,
+  texteEnCours,
+  texteFin,
   lignesNonIncluses,
   pageActions,
   preparerLot,
@@ -143,6 +148,8 @@ const PanneauApercuLot: React.FC<Props> = ({
   const [ignorees, setIgnorees] = useState<Ignoree[]>([]);
   const [decochees, setDecochees] = useState<ReadonlySet<FamilleLot>>(new Set());
   const [pauseJusqua, setPauseJusqua] = useState<number | null>(null);
+  // Une erreur détaillée est stockée : le panneau d’erreur de l’onglet Synchro existe (sinon pas de lien).
+  const [erreurStockee, setErreurStockee] = useState(false);
   const [maintenant, setMaintenant] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setMaintenant(Date.now()), 15_000);
@@ -153,7 +160,9 @@ const PanneauApercuLot: React.FC<Props> = ({
     const lire = (): void => {
       chargerExecution()
         .then((e) => {
-          if (actif) setPauseJusqua(e?.pauseJusqua ?? null);
+          if (!actif) return;
+          setPauseJusqua(e?.pauseJusqua ?? null);
+          setErreurStockee(e?.erreur != null);
         })
         .catch(() => undefined);
     };
@@ -284,6 +293,7 @@ const PanneauApercuLot: React.FC<Props> = ({
       .catch(() => setJournalIllisible(true));
   };
 
+  const enCoursExec = exec?.etat.etat === 'en-cours';
   const zoneVisible = (exec !== null || interrompu) && !fermee;
   const fermerZone = (): void => {
     setFermee(true);
@@ -298,14 +308,81 @@ const PanneauApercuLot: React.FC<Props> = ({
       <BandeauRisque avertirAmis={lot !== null && contientAmi(actionsCochees)} />
 
       {zoneVisible && (
-        <ZoneExecution
-          exec={exec}
-          interrompu={interrompu}
-          titreRef={titreExecRef}
-          arreterRef={arreterRef}
-          onArreter={arreter}
-          onFermer={fermerZone}
-        />
+        <section
+          data-testid="zone-execution"
+          aria-labelledby="titre-execution"
+          className="mt-4 rounded border border-line border-l-4 border-l-paper bg-ink-2 p-4"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' && enCoursExec) {
+              e.preventDefault();
+              arreter();
+            }
+          }}
+        >
+          <h2 id="titre-execution" ref={titreExecRef} tabIndex={-1} className="font-semibold">
+            Exécution du lot
+          </h2>
+          {enCoursExec && exec && (
+            <>
+              <p className="mt-2 font-semibold">{texteEnCours(exec.etat.traitees, exec.etat.total, exec.bilan.erreurs)}</p>
+              <div className="mt-2 h-2 rounded bg-line">
+                <div
+                  role="progressbar"
+                  aria-label="Progression du lot"
+                  aria-valuemin={0}
+                  aria-valuemax={exec.etat.total}
+                  aria-valuenow={exec.etat.traitees}
+                  className="h-2 rounded bg-paper"
+                  style={{ width: `${pourcentage(exec.etat.traitees, exec.etat.total)}%` }}
+                />
+              </div>
+              <button ref={arreterRef} type="button" className={`${CLASSE_BOUTON} ${CLASSE_ACTIF} mt-3 border-muted font-semibold`} onClick={arreter}>
+                Arrêter
+              </button>
+              <p className="mt-2 text-sm text-muted">Échap{NB}: arrêter le lot</p>
+            </>
+          )}
+          <div role="status" aria-live="polite" aria-atomic="true" className="mt-2">
+            {enCoursExec && exec && <p className="text-sm text-muted">{phraseProgression(exec.etat.traitees, exec.etat.total, exec.bilan.erreurs)}</p>}
+            {exec && exec.etat.etat === 'terminee' && (
+              <p>
+                <span aria-hidden="true">✓ </span>
+                <span className="font-semibold text-garder">{texteFin(exec.etat, exec.bilan, exec.deconnecte).titre}</span>
+                {NB}: {texteFin(exec.etat, exec.bilan, exec.deconnecte).detail}
+              </p>
+            )}
+            {exec && exec.etat.etat === 'arretee' && (
+              <>
+                <p className="font-semibold text-defausser">
+                  <span aria-hidden="true">✕ </span>
+                  {texteFin(exec.etat, exec.bilan, exec.deconnecte).titre}
+                </p>
+                <p className="mt-1">{texteFin(exec.etat, exec.bilan, exec.deconnecte).detail}</p>
+                {exec.bilan.dernierInconnu && <p className="mt-1 font-semibold text-vendre">Résultat inconnu, à vérifier sur le site.</p>}
+                {erreurStockee && (
+                  <p className="mt-1">
+                    Le détail de l’erreur et les choix sont dans l’onglet{' '}
+                    <a href="#synchro" className="underline focus-visible:shadow-(--halo-focus)">
+                      Synchro
+                    </a>
+                    .
+                  </p>
+                )}
+              </>
+            )}
+            {!exec && interrompu && (
+              <p>
+                <span className="font-semibold text-defausser">{TITRE_INTERROMPU}</span>
+                {SUITE_INTERROMPU}
+              </p>
+            )}
+          </div>
+          {!enCoursExec && (
+            <button type="button" className={`${CLASSE_BOUTON} ${CLASSE_ACTIF} mt-3 border-muted`} onClick={fermerZone}>
+              Fermer
+            </button>
+          )}
+        </section>
       )}
 
       <section aria-labelledby="titre-synchro" hidden={zoneVisible} className="mt-4 rounded border border-line bg-ink-2 p-4">

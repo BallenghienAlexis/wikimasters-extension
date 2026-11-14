@@ -255,7 +255,10 @@ test.describe('SC-016 : « Lancer » (AC3)', () => {
     // L’heure est locale au navigateur de test : même fuseau que ce processus.
     await expect(page.locator(`#${id}`)).toContainText(`${hh}:`);
     await bouton.click({ force: true });
-    await expect(page.getByTestId('zone-execution')).toBeHidden();
+    // Aucune exécution n'a démarré : la section « Exécution du lot » reste absente et l'état stocké est inchangé.
+    await expect(page.getByTestId('zone-execution')).toHaveCount(0);
+    const stocke = await page.evaluate(async () => (await chrome.storage.local.get('execution')).execution as { idLot: string; etat: string });
+    expect(stocke).toMatchObject({ idLot: 'lot-fictif', etat: 'arretee' });
   });
 
   test('SC-016 : conditions existantes inchangées (aucun onglet WikiMasters ouvert)', async ({ pageCollection: page }) => {
