@@ -263,3 +263,11 @@ b. BandeauActivite.tsx:88 : message d'échec non effacé quand synchro devient n
 - `src/app/ReglageSynchroAuto.tsx:9-33` et `src/app/SynchroAuto.tsx:244-279` : dupliquent lecture, abonnement et bascule ; extraire un hook `useSyncAuto()`.
 - `src/app/ReglageSynchroAuto.tsx:38-45` : case native, alors que Synchro a un bouton-interrupteur stylé ; réutiliser le même rendu.
 - `src/app/ReglageSynchroAuto.tsx:6` (et `SynchroAuto.tsx:237`) : état initial `false` alors que la valeur par défaut est « activée » ; partir de `null`, case désactivée tant que non lue ; reprendre aussi la phrase de cadence (0,2 à 0,3 s, arrêt si refus) dans le texte d’aide.
+
+## À reprendre : PR #143 (encadré de risque compact)
+- `src/app/BandeauRisque.tsx:19` : `inline-flex` sur `<summary>` retire le triangle natif ; ajouter un chevron `aria-hidden` qui pivote avec `[open]`.
+- `src/app/BandeauRisque.tsx:13-15` : le titre « Action sur le site à votre place » est devenu un `<strong>` ; garder un `h2` affiché en ligne pour la navigation par titres.
+- `specs/synchro-complete/design.md:49` et `:74` (D-09, D-13) : décrivent encore « ! », `h2` `text-defausser`, `border-l-defausser`, corps entièrement visible ; renvoyer vers refonte-ihm D-09 et `ecarts-maquette.md` n° 5.
+- `tests/e2e/refonte-lots.spec.ts` (test de l’encadré, `toBeLessThan(260)`) : mesurer la hauteur avant le clic, seuil serré ; vérifier `open` sur `details` après le clic.
+- PR #143 : captures de l’onglet Lots aux 3 largeurs et 2 thèmes non jointes.
+- `src/app/BandeauRisque.tsx:16` : la ligne parle d’enchère et de défausse alors que les lots n’en produisent plus ; texte gardé exprès pour le rappel de risque, à confirmer avec Alexis.

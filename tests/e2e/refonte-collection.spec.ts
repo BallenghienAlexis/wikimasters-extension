@@ -196,6 +196,19 @@ test.describe('SC-021 : analyses', () => {
     }
   });
 
+  test('thèmes affichés en barres proportionnelles, nombre lisible par les lecteurs d’écran', async ({ pageCollection }) => {
+    await chargerCartes(pageCollection, [
+      { id: 'a', titre: 'Planète fictive', quantite: 2, },
+      { id: 'b', titre: 'Volcan fictif', quantite: 1, },
+    ]);
+    await allerA(pageCollection, 'collection');
+    const lignesThemes = pageCollection.getByTestId('analyse-themes').locator('li');
+    const n = await lignesThemes.count();
+    expect(n).toBeGreaterThan(0);
+    await expect(lignesThemes.first().locator('[aria-hidden="true"]')).toHaveCount(1);
+    await expect(lignesThemes.first()).toContainText(/\d+\s*cartes/);
+  });
+
   test('SC-021 : 10 plus chères et 10 thèmes au plus', async ({ pageCollection }) => {
     const cartes = Array.from({ length: 15 }, (_, i) => ({
       id: `p${i}`,
@@ -252,6 +265,8 @@ test.describe('SC-020 : évolution sur 30 jours', () => {
     await expect(evo.getByTestId('evolution-valeur')).toContainText('4');
     await evo.getByTestId('evolution-colonne').nth(1).focus();
     await expect(evo.getByTestId('evolution-valeur')).toContainText('6');
+    await expect(evo).toContainText('Évolution de la collection (30 jours)');
+    await expect(evo).toContainText(/Exemplaires à la fin de chaque jour · de \d+ à \d+ \([+−]\d+\)/);
     const alt = evo.locator('table');
     await expect(alt).toHaveClass(/sr-only/);
     await expect(alt.locator('tbody tr')).not.toHaveCount(0);
