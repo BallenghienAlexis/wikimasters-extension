@@ -12,3 +12,4 @@
 - `src/lib/themes.ts` (motif `informatique`, mot-clé « programm ») : « Programme Apollo » donne #Informatique (Neil Armstrong) ; resserrer le motif (hors périmètre, motif existant).
 - `src/app/SynchroAuto.tsx:268` et `src/lib/tableauDeBord.ts:67` : passer `registre` à `calculerEcarts` pour que les étiquettes refusées ne comptent pas non plus comme écarts (déjà fait dans `PanneauApercuLot.tsx`).
 - `src/app/pilotageLots.ts` (`retraitsManuels`) : la marque d’un retrait voulu par le joueur vit en mémoire ; perdue si la page est rechargée avant le résultat. Porter l’origine sur l’action (champ facultatif) demande de toucher `messages.ts`.
+- `src/lib/themes.ts:124-136` (nouveaux thèmes Pornographie, Sexualité, Drogue, Armes) : ces étiquettes seront posées et visibles des autres joueurs après « Lancer » (l’aperçu les montre). Décision d’Alexis à prendre : les garder, ou les exclure des étiquettes posées sur le site.
