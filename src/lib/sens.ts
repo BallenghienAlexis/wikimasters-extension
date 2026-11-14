@@ -28,7 +28,7 @@ export function definition(texte: string): string {
 const GENRES: [Genre, RegExp][] = [
   ['oeuvre', /(^|[^a-z])(film|serie|anime|manga|roman|album|chanson|single|jeu video|jeu de|bande dessinee|telefilm|dessin anime|oeuvre|piece de theatre|opera|emission|comedie|documentaire|feuilleton|nouvelle|poeme|tableau|sculpture|episode|saga|recueil)/],
   ['organisation', /(^|[^a-z])(equipe|club|entreprise|societe|groupe|parti|association|franchise|ligue|marque|constructeur|label|studio|federation|syndicat|organisation|institution|ecole|universite|journal|magazine|chaine|banque|armee|gouvernement|ministere)/],
-  ['espece', /(^|[^a-z])(espece|genre de|famille de|sous-espece|race de|ordre de|plante|animal|mammifere|oiseau|insecte|poisson|reptile|champignon|arbre)/],
+  ['espece', /(^|[^a-z])(espece|taxon|genre de|famille de|sous-espece|race de|ordre de|plante|animal|mammifere|oiseau|insecte|poisson|reptile|champignon|arbre)/],
   ['lieu', /(^|[^a-z])(ville|commune|village|localite|region|departement|province|pays|etat|fleuve|riviere|montagne|volcan|ile|lac|desert|ocean|mer|quartier|capitale|monument|batiment|pont|barrage|tour|chateau|cathedrale|parc|site|territoire|canton|comte)/],
 ];
 

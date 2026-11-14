@@ -109,3 +109,23 @@ describe('sens des phrases', () => {
     expect(genreDe('équipe canadienne de hockey')).toBe('organisation');
   });
 });
+
+// Classes Wikidata relevées le 2026-11-14 (instance de, occupation, genre, sport) : sans résumé ni catégorie, elles suffisent.
+describe('classes Wikidata seules', () => {
+  const CLASSES: [string, string, string[], boolean, string[], string[]][] = [
+    ['Mookie', 'film de Hervé Palud, sorti en 1998', ['film', 'comédie'], false, ['cinema'], ['singe', 'animaux', 'nature']],
+    ['Lions de Trois-Rivières', 'équipe canadienne de la East Coast Hockey League basée au Québec', ['équipe de hockey sur glace', 'hockey sur glace'], false, ['hockey'], ['felin', 'fleuve']],
+    ['Ebrahim Raïssi', 'religieux chiite et homme d’État iranien', ['personnalité politique', 'cadi', 'faqîh', 'clerc', 'juriste'], true, ['politique'], ['avion', 'vehicule']],
+    ['Noir (anime)', 'anime japonais', ['série d’animation japonaise', 'néo-noir', 'manga et anime d’action', 'anime et manga à mystère'], false, ['bd'], ['train', 'vehicule']],
+    ['Tigre', 'espèce de mammifères carnivores', ['taxon'], false, ['animaux'], ['cinema']],
+    ['Pont du Gard', 'pont romain en France', ['pont en arc', 'aqueduc romain', 'pont romain'], false, ['pont'], ['felin']],
+    ['Daft Punk', 'duo français de musique électronique', ['duo de musique électronique', 'groupe de musique', 'house', 'musique électronique', 'French touch'], false, ['techno'], ['vehicule']],
+  ];
+  it.each(CLASSES)('%s', (titre, site, classes, humain, attendus, interdits) => {
+    definirSignauxWikipedia(new Map([[titre, signauxWikipedia([], '', [], classes, humain)]]));
+    const themes = themesPrincipaux({ titre, description: site });
+    expect(themes.length).toBeLessThanOrEqual(MAX_THEMES_PAR_CARTE);
+    for (const t of attendus) expect(themes, themes.join(', ')).toContain(t);
+    for (const t of interdits) expect(themes, themes.join(', ')).not.toContain(t);
+  });
+});

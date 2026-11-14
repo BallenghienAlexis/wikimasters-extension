@@ -3,7 +3,7 @@ import type { SignauxPage } from '../../src/lib/themes';
 import { verifierTitres, type Transport } from '../../src/app/verifierWikipedia';
 import { themesDeCarte, definirThemesWikipedia } from '../../src/lib/themes';
 import { creerPlanificateur } from '../../src/app/verifierWikipedia';
-import { cacheVide, lireReponse, lireReponseWikidata, themesDepuisWikidata, urlRequeteWikidata, themesDepuisCategories, titresAVerifier, urlRequete, validerCache, ajouterEntree, DUREE_CACHE_MS } from '../../src/lib/wikipedia';
+import { cacheVide, lireEntiteWikidata, lireLibellesWikidata, signauxWikipedia, urlEntiteWikidata, lireReponse, lireReponseWikidata, themesDepuisWikidata, urlRequeteWikidata, themesDepuisCategories, titresAVerifier, urlRequete, validerCache, ajouterEntree, DUREE_CACHE_MS } from '../../src/lib/wikipedia';
 
 const page = (extra: object) => ({ query: { pages: [{ title: 'X', ...extra }] } });
 
@@ -309,5 +309,45 @@ describe('creerPlanificateur', () => {
       expect(departs.length).toBeGreaterThanOrEqual(2);
       for (let i = 1; i < departs.length; i++) expect(departs[i]! - departs[i - 1]!).toBeGreaterThanOrEqual(1000);
     });
+  });
+});
+
+describe('type et métier d’après Wikidata', () => {
+  const sansPause = async (): Promise<void> => undefined;
+  // Réponses reconstituées sur la forme relevée le 2026-11-14 (public, aucune donnée du compte).
+  const pageAvecQid = { query: { pages: [{ title: 'Lions', pageprops: { wikibase_item: 'Q105334176' }, categories: [{ title: 'Catégorie:Club de hockey sur glace au Québec' }] }] } };
+  const entite = { entities: { Q105334176: { claims: { P31: [{ mainsnak: { datavalue: { value: { id: 'Q1' } } } }], P641: [{ mainsnak: { datavalue: { value: { id: 'Q2' } } } }] } } } };
+  const libelles = { entities: { Q1: { labels: { fr: { value: 'équipe de hockey sur glace' } } }, Q2: { labels: { fr: { value: 'hockey sur glace' } } } } };
+
+  it('lit l’identifiant, les classes (liste blanche de propriétés) et le caractère humain', () => {
+    expect(lireReponse(pageAvecQid)).toMatchObject({ type: 'ok', qid: 'Q105334176' });
+    expect(lireEntiteWikidata(entite, 'Q105334176')).toEqual({ humain: false, classes: ['Q1', 'Q2'] });
+    const humain = { entities: { Q9: { claims: { P31: [{ mainsnak: { datavalue: { value: { id: 'Q5' } } } }], P999: [{ mainsnak: { datavalue: { value: { id: 'Q7' } } } }] } } } };
+    expect(lireEntiteWikidata(humain, 'Q9')).toEqual({ humain: true, classes: [] });
+    expect(lireEntiteWikidata({ entities: {} }, 'Q9')).toBeNull();
+    expect(lireLibellesWikidata(libelles)).toEqual(['équipe de hockey sur glace', 'hockey sur glace']);
+    expect(urlEntiteWikidata('Q1')).toBe('https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&props=claims&ids=Q1');
+  });
+  it('lit les classes en 2 GET, les met dans les signaux, et le caractère humain fixe la nature', async () => {
+    const urls: string[] = [];
+    const transport: Transport = async (url) => {
+      urls.push(url);
+      return { status: 200, json: async () => (url.includes('fr.wikipedia') ? pageAvecQid : url.includes('props=claims') ? entite : libelles) };
+    };
+    let dernier = cacheVide();
+    const r = await verifierTitres({ titres: ['Lions'], cache: cacheVide(), signal: new AbortController().signal, surProgres: (c) => { dernier = c; }, attendre: sansPause, transport });
+    expect(r).toEqual({ verifiees: 1, arret: null, codeHttp: null });
+    expect(urls).toHaveLength(3);
+    expect(dernier.entrees.Lions?.signaux?.fortes).toContain('hockey');
+    expect(dernier.entrees.Lions?.signaux?.genre).toBe('organisation');
+    expect(signauxWikipedia([], '', [], [], true).genre).toBe('personne');
+  });
+  it('un échec de Wikidata ne bloque pas la carte, un 429 arrête', async () => {
+    const panne: Transport = async (url) => (url.includes('fr.wikipedia') ? { status: 200, json: async () => pageAvecQid } : { status: 500, json: async () => ({}) });
+    const r = await verifierTitres({ titres: ['Lions'], cache: cacheVide(), signal: new AbortController().signal, surProgres: () => undefined, attendre: sansPause, transport: panne });
+    expect(r.verifiees).toBe(1);
+    const limite: Transport = async (url) => (url.includes('fr.wikipedia') ? { status: 200, json: async () => pageAvecQid } : { status: 429, json: async () => ({}) });
+    const r2 = await verifierTitres({ titres: ['Lions', 'B'], cache: cacheVide(), signal: new AbortController().signal, surProgres: () => undefined, attendre: sansPause, transport: limite });
+    expect(r2).toEqual({ verifiees: 0, arret: 'code-http', codeHttp: 429 });
   });
 });

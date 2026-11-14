@@ -30,7 +30,7 @@ export interface CacheWikipedia {
 }
 
 export type LectureWikipedia =
-  | { type: 'ok'; categories: string[]; resume: string }
+  | { type: 'ok'; categories: string[]; resume: string; qid?: string }
   | { type: 'introuvable' }
   | { type: 'ambigue' }
   | { type: 'invalide' };
@@ -48,7 +48,7 @@ export function urlRequete(titre: string): string {
     exintro: '1',
     explaintext: '1',
     exsentences: '2',
-    ppprop: 'disambiguation',
+    ppprop: 'disambiguation|wikibase_item',
     cllimit: 'max',
     clshow: '!hidden',
     titles: titre,
@@ -60,6 +60,59 @@ export function urlRequete(titre: string): string {
 export function urlRequeteWikidata(titre: string): string {
   const params = new URLSearchParams({ action: 'wbsearchentities', format: 'json', language: 'fr', uselang: 'fr', type: 'item', limit: '5', search: titre });
   return `${HOTE_WIKIDATA}/w/api.php?${params.toString()}`;
+}
+
+// Propriétés Wikidata qui disent ce qu'est la carte : instance de, occupation, genre, sport.
+const PROPRIETES = ['P31', 'P106', 'P136', 'P641'] as const;
+const PAR_PROPRIETE = 5;
+const MAX_CLASSES = 20;
+
+/** GET en lecture seule : les déclarations d'une entité (l'identifiant vient de la page Wikipédia, jamais d'une donnée du compte). */
+export function urlEntiteWikidata(qid: string): string {
+  return `${HOTE_WIKIDATA}/w/api.php?${new URLSearchParams({ action: 'wbgetentities', format: 'json', props: 'claims', ids: qid }).toString()}`;
+}
+
+export interface EntiteWikidata {
+  /** Instance de « être humain » (Q5). */
+  humain: boolean;
+  /** Identifiants des classes, métiers, genres et sports (liste blanche de propriétés, bornée). */
+  classes: string[];
+}
+
+export function lireEntiteWikidata(brut: unknown, qid: string): EntiteWikidata | null {
+  if (!estObjet(brut) || !estObjet(brut.entities)) return null;
+  const entite = brut.entities[qid];
+  if (!estObjet(entite)) return null;
+  const claims = estObjet(entite.claims) ? entite.claims : {};
+  const classes: string[] = [];
+  let humain = false;
+  for (const prop of PROPRIETES) {
+    const liste = claims[prop];
+    if (!Array.isArray(liste)) continue;
+    for (const c of liste.slice(0, PAR_PROPRIETE)) {
+      const id: unknown = estObjet(c) && estObjet(c.mainsnak) && estObjet(c.mainsnak.datavalue) && estObjet(c.mainsnak.datavalue.value) ? c.mainsnak.datavalue.value.id : undefined;
+      if (typeof id !== 'string' || !/^Q\d{1,12}$/.test(id)) continue;
+      if (prop === 'P31' && id === 'Q5') humain = true;
+      else if (classes.length < MAX_CLASSES && !classes.includes(id)) classes.push(id);
+    }
+  }
+  return { humain, classes };
+}
+
+/** GET en lecture seule : libellés français des classes (au plus 20 identifiants). */
+export function urlLibellesWikidata(ids: string[]): string {
+  return `${HOTE_WIKIDATA}/w/api.php?${new URLSearchParams({ action: 'wbgetentities', format: 'json', props: 'labels', languages: 'fr', ids: ids.slice(0, MAX_CLASSES).join('|') }).toString()}`;
+}
+
+export function lireLibellesWikidata(brut: unknown): string[] | null {
+  if (!estObjet(brut) || !estObjet(brut.entities)) return null;
+  const libelles: string[] = [];
+  for (const e of Object.values(brut.entities)) {
+    if (!estObjet(e) || !estObjet(e.labels) || !estObjet(e.labels.fr)) continue;
+    const v = e.labels.fr.value;
+    if (typeof v === 'string' && v.length <= 200) libelles.push(v);
+  }
+  return libelles;
 }
 
 export type LectureWikidata = { type: 'ok'; descriptions: string[] } | { type: 'invalide' };
@@ -92,14 +145,15 @@ export function lireReponse(brut: unknown): LectureWikipedia {
   if (estObjet(page.pageprops) && 'disambiguation' in page.pageprops) return { type: 'ambigue' };
   // Résumé : introduction de la page en texte brut, bornée ; utile quand les catégories ne disent rien.
   const resume = typeof page.extract === 'string' ? page.extract.slice(0, MAX_RESUME) : '';
-  if (page.categories === undefined) return { type: 'ok', categories: [], resume };
+  const qid = estObjet(page.pageprops) && typeof page.pageprops.wikibase_item === 'string' && /^Q\d{1,12}$/.test(page.pageprops.wikibase_item) ? page.pageprops.wikibase_item : undefined;
+  if (page.categories === undefined) return { type: 'ok', categories: [], resume, ...(qid ? { qid } : {}) };
   if (!Array.isArray(page.categories) || page.categories.length > MAX_CATEGORIES) return { type: 'invalide' };
   const categories: string[] = [];
   for (const c of page.categories) {
     if (!estObjet(c) || typeof c.title !== 'string' || c.title.length > 300) return { type: 'invalide' };
     categories.push(c.title.replace(/^[^:]+:/, ''));
   }
-  return { type: 'ok', categories, resume };
+  return { type: 'ok', categories, resume, ...(qid ? { qid } : {}) };
 }
 
 // Catégories de maintenance ou d'organisation du site : aucune information sur le sujet.
@@ -123,13 +177,16 @@ function lireSignaux(brut: unknown, connus: Set<string>): SignauxPage | null {
 const GENRES: readonly Genre[] = ['personne', 'oeuvre', 'organisation', 'lieu', 'espece', 'autre'];
 
 /** Signaux par le sens : thèmes de la définition (fiables) et des catégories (à recouper), nature du sujet. */
-export function signauxWikipedia(categories: string[], resume: string, descriptionsWikidata: string[] = []): SignauxPage {
+export function signauxWikipedia(categories: string[], resume: string, descriptionsWikidata: string[] = [], classes: string[] = [], humain = false): SignauxPage {
   const utiles = categories.filter((c) => !CATEGORIE_TECHNIQUE.test(c.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()));
   const def = definition(resume);
   const fortes = new Set(themesDirectsDeTexte(def));
   // Une courte description Wikidata (« film américain de 2005 ») est une classification : elle compte comme une définition.
-  for (const d of descriptionsWikidata) for (const id of themesDirectsDeTexte(d)) fortes.add(id);
-  const genre = genreDe(resume, def) !== 'autre' ? genreDe(resume, def) : (descriptionsWikidata.map((d) => genreDe(d)).find((g) => g !== 'autre') ?? 'autre');
+  // Classes Wikidata (« film », « équipe de hockey sur glace », « personnalité politique ») : libellés courts et classificatoires.
+  const textes = [...descriptionsWikidata, ...classes];
+  for (const d of textes) for (const id of themesDirectsDeTexte(d)) fortes.add(id);
+  const depuisResume = genreDe(resume, def);
+  const genre: Genre = humain ? 'personne' : (classes.map((d) => genreDe(d)).find((g) => g !== 'autre') ?? (depuisResume !== 'autre' ? depuisResume : (descriptionsWikidata.map((d) => genreDe(d)).find((g) => g !== 'autre') ?? 'autre')));
   return { fortes: [...fortes], faibles: themesDirectsDeTexte(utiles.join(' . '), true), genre };
 }
 
