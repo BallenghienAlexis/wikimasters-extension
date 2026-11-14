@@ -135,6 +135,7 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
           type="button"
           role="switch"
           aria-checked={actif}
+          aria-label="Synchronisation automatique"
           aria-labelledby="titre-synchro-auto"
           aria-describedby="etat-synchro-auto"
           className="inline-flex min-h-11 cursor-pointer items-center gap-3 rounded border border-line bg-ink px-4"
