@@ -3,7 +3,6 @@ import { VERSION_SCHEMA, type Carte, type Collection } from '../../src/lib/colle
 import type { Horloge } from '../../src/lib/file';
 import { etatInitial, type EtatOrdonnanceur, type ReponseApi } from '../../src/lib/ordonnanceur';
 import type { StatutSynchro } from '../../src/lib/stockage';
-import { preferencesParDefaut } from '../../src/lib/tri';
 import { fusionner } from '../../src/content/synchroAuto';
 import {
   DELAI_SYNCHRO_MS,
@@ -62,12 +61,10 @@ const carteLocale = (n: number, surcharge: Partial<Carte> = {}): Carte => ({
   favori: false,
   idsSite: [`ex-${n}`],
   etiquettesSite: [],
-  statut: 'garder',
   prixCible: null,
   note: '',
   ami: null,
   valeurMarchande: null,
-  decidePar: null,
   ...surcharge,
 });
 
@@ -118,7 +115,6 @@ function banc(options: { actif?: boolean; derniere?: number | null; cartes?: Car
         stockage.bail = v;
       },
     },
-    chargerPreferences: async () => preferencesParDefaut(),
     noterStatut: async (statut) => {
       statuts.push(structuredClone(statut));
     },
@@ -207,23 +203,21 @@ describe('T-205 AC1 : déclenchement', () => {
 
 describe('T-205 : édition locale préservée', () => {
   it('une modification faite pendant la synchro n’est pas écrasée', async () => {
-    const b = banc({ cartes: [carteLocale(1, { statut: 'garder' })] });
+    const b = banc({ cartes: [carteLocale(1, { })] });
     const enregistrer = b.deps.enregistrerCollection;
-    // Le joueur passe la carte 1 en « vendre » pendant que la synchro tourne.
+    // Le joueur écrit une note sur la carte 1 pendant que la synchro tourne.
     let modifie = false;
     b.deps.transport = ((transport) => async (chemin: string) => {
       if (!modifie && chemin.includes('page=0')) {
         modifie = true;
-        b.stockage.collection = { version: VERSION_SCHEMA, cartes: [carteLocale(1, { statut: 'vendre', note: 'ma note', decidePar: 'moi' })] };
+        b.stockage.collection = { version: VERSION_SCHEMA, cartes: [carteLocale(1, { note: 'ma note', })] };
       }
       return transport(chemin);
     })(b.deps.transport);
     b.deps.enregistrerCollection = enregistrer;
     await creerSynchroAuto(b.deps).declencher();
     const carte = b.stockage.collection.cartes.find((c) => c.id === 'R|Carte 1');
-    expect(carte?.statut).toBe('vendre');
     expect(carte?.note).toBe('ma note');
-    expect(carte?.decidePar).toBe('moi');
     expect(carte?.valeurMarchande).toBe(120);
   });
 
@@ -780,12 +774,10 @@ describe('fusionner : cartes retirées par la synchro', () => {
     favori: false,
     idsSite: [`ex-${id}`],
     etiquettesSite: [],
-    statut: 'a-trier',
     prixCible: null,
     note: '',
     ami: null,
     valeurMarchande: null,
-    decidePar: null,
     ...surcharge,
   });
   const col = (cartes: Carte[]): Collection => ({ version: VERSION_SCHEMA, cartes });
@@ -795,16 +787,15 @@ describe('fusionner : cartes retirées par la synchro', () => {
     const b = carte('R|b');
     const ajoutee = carte('R|ajoutee');
     const depart = new Map([[a.id, a], [b.id, b]]);
-    const r = fusionner(col([a, b, ajoutee]), col([a]), depart, null);
+    const r = fusionner(col([a, b, ajoutee]), col([a]), depart);
     expect(r.cartes.map((c) => c.id)).toEqual(['R|a', 'R|ajoutee']);
   });
 
-  it('garde une carte retirée que le joueur a éditée pendant la synchro, et une carte en vente', () => {
+  it('garde une carte retirée que le joueur a éditée pendant la synchro', () => {
     const b = carte('R|b');
-    const v = carte('R|v', { statut: 'en-vente' });
-    const depart = new Map([[b.id, b], [v.id, v]]);
+    const depart = new Map([[b.id, b]]);
     const editee = { ...b, note: 'à voir' };
-    const r = fusionner(col([editee, v]), col([]), depart, null);
-    expect(r.cartes.map((c) => c.id)).toEqual(['R|b', 'R|v']);
+    const r = fusionner(col([editee]), col([]), depart);
+    expect(r.cartes.map((c) => c.id)).toEqual(['R|b']);
   });
 });

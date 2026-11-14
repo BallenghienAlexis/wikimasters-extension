@@ -17,7 +17,7 @@ const BREAKPOINTS = [
 ];
 
 // Les cartes de cette fixture sont des propositions de l'assistant.
-const carteComplete = (c: Record<string, unknown>): object => carteCompleteDefaut({ decidePar: 'assistant', ...c });
+const carteComplete = (c: Record<string, unknown>): object => carteCompleteDefaut({ ...c });
 
 async function amorcer(page: Page, cartes: object[], preferences: object): Promise<void> {
   const ecrire = (): Promise<void> =>
@@ -99,7 +99,6 @@ test('liste les étiquettes prévues avec leurs nombres, sans requête ni lectur
     await expect(ligne(page, nom)).toHaveCount(1); // allInnerTexts n'attend pas : on attend la ligne d'abord
     return (await ligne(page, nom).getByRole('cell').allInnerTexts()).map((t) => t.trim());
   };
-  expect(await cellules('Statut · Échanger')).toEqual(['Statut · Échanger', '5', '6', 'nouvelle · non disponible']);
   expect(await cellules('#Chien')).toEqual(['#Chien', '1', '2', 'nouvelle · non disponible']);
   expect(await cellules('#Animaux')).toEqual(['#Animaux', '1', '2', 'nouvelle · non disponible']);
   expect(await cellules('#À échanger Léa')).toEqual(['#À échanger Léa', '1', '2', 'nouvelle · non disponible']);
@@ -116,13 +115,13 @@ test('liste les étiquettes prévues avec leurs nombres, sans requête ni lectur
   expect(await page.evaluate(() => (window as unknown as { __cookies: number }).__cookies)).toBe(0);
 });
 
-test('l’avertissement de visibilité précède « Lancer » quand une étiquette est attendue, et manque sinon', async ({ pageCollection: page }) => {
+test('l’avertissement de visibilité précède « Lancer » quand une étiquette est attendue', async ({ pageCollection: page }) => {
   await amorcerFixture(page);
   await ouvrirApercu(page);
 
   const avertissement = page.getByTestId('avertissement-visibilite');
   await expect(avertissement).toContainText(
-    `Visibilité non vérifiée${NB}: les étiquettes de thème, de statut et d’échange, dont les prénoms de vos amis, sont peut-être visibles par les autres joueurs.`,
+    `Visibilité non vérifiée${NB}: les étiquettes de thème et d’échange, dont les prénoms de vos amis, sont peut-être visibles par les autres joueurs.`,
   );
   const lancer = page.getByRole('button', { name: /^Lancer/ });
   await expect(lancer).toBeVisible();
@@ -133,17 +132,6 @@ test('l’avertissement de visibilité précède « Lancer » quand une étiquet
   expect(avant).toBe(true);
   // Rien n’est envoyé : le bouton est inactif sans onglet WikiMasters.
   await expect(lancer).toHaveAttribute('aria-disabled', 'true');
-
-  // Aucune étiquette attendue (cartes à trier) : ni section ni avertissement.
-  await amorcer(
-    page,
-    FIXTURE.cartes.map((c) => carteComplete({ ...c, statut: 'a-trier' })),
-    { ...FIXTURE.preferences },
-  );
-  await page.getByRole('button', { name: 'Voir l’aperçu du lot' }).click();
-  await expect(page.getByTestId('titre-apercu')).toBeVisible();
-  await expect(page.getByTestId('avertissement-visibilite')).toHaveCount(0);
-  await expect(page.getByTestId('etiquettes-prevues')).toHaveCount(0);
 });
 
 test('« Étiquettes non posées » se déplie au clavier ; un nom de 300 caractères ne déborde pas à 375 px', async ({ pageCollection: page }) => {

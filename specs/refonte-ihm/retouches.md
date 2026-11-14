@@ -239,10 +239,14 @@ b. BandeauActivite.tsx:88 : message d'échec non effacé quand synchro devient n
 - T-310 (reviewer) : refonte-transverse.spec.ts:261-264 « Ignorer puis Reprendre » sans assertion sur la clé ignorees ; :603 et 150-164 dépliage du bandeau conditionnel, phase `sans-liste` des 5 000 cartes non vérifiée à zéro requête.
 - T-319 (sécurité) : README.md:77 « host_permissions limité à fr.wikipedia.org » omet www.wikidata.org (ligne préexistante) → corriger.
 
-## À reprendre : PR #139 (alignement maquette, coquille et tableau de bord)
-- `src/app/TableauRaretes.tsx` : bascule tableau/liste en `sm:` (640 px) au lieu de 600 px ; utiliser `min-[600px]:` comme `TableauLots.tsx`.
-- `tests/unit/raretes.test.ts` : déplacer dans `tests/unit/tableauDeBord.test.ts` (convention un fichier par module).
-- `tests/e2e/refonte-tableau-de-bord.spec.ts:322-333` : le bloc « Alignement maquette » est imbriqué dans SC-009 ; le sortir au niveau supérieur.
-- `src/app/TableauRaretes.tsx` (liste mobile) : accorder « 1 titre ».
-- `src/app/EnTete.tsx` : « Jamais synchronisée » s’affiche brièvement avant la première lecture du stockage.
-- `src/app/EnTete.tsx` et `OngletTableauDeBord.tsx` : `useLectureSynchro` monté deux fois ; lire une fois dans `App.tsx`.
+## Suppression des statuts (Alexis, 2026-11-14) — code en réserve à reprendre
+
+À reprendre (détail, jamais produit ni affiché depuis la suppression des statuts) :
+- `src/lib/lot.ts` : `placesEncheres` et les champs de `Config` `maxVentesSimultanees`, `plafondDefausse`, `lienCardId`, `ventesSite` ne servent plus qu’à l’aperçu et aux tests.
+- `src/lib/actions.ts`, `src/lib/file.ts`, `src/lib/contrat/enchere.ts`, `src/lib/contrat/defausse.ts`, `src/lib/revision.ts` (`reverifierAction` rend toujours « passée » pour une enchère ou une défausse) : machinerie d’enchère et de défausse conservée mais jamais produite par un lot.
+- `src/lib/affluence.ts`, `src/config/affluence.ts`, `src/config/prix.ts` (matrice, limite d’enchères), `src/app/PlafondDefausse.tsx`, `src/app/PlacesEncheres.tsx`, clé `ventes` du stockage : plus de consommateur d’interface (onglet Ventes supprimé).
+- `src/app/apercuLot.ts` : type `EtiquetteObsolete` et raison `etiquette-obsolete` conservés pour les tests de regroupement.
+- Spécs `specs/*` qui décrivent les statuts, l’assistant de tri ou l’onglet Ventes : à marquer « remplacé le 2026-11-14 » à la prochaine passe de documentation.
+
+- `src/lib/ordonnanceur.ts` (`lirePages`) : `gain` vaut toujours `null` ; `exemplairesGagnes`, `cartesGagnees`, `toutIdentique`, `ordreConfirme` et le retour anticipé sont du code mort à retirer. `etat.total`, `etat.totalUnique` et `etat.signatureEtiquettes` sont écrits mais plus lus pour décider.
+- `tests/unit/ordonnanceur.test.ts` : ajouter un test du contrôle de tête en échec (seconde lecture de `page=0` en 500) : une seule passe, `complete` faux, aucun retrait local.

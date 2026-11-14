@@ -99,6 +99,7 @@ export type RaisonEcart =
   | 'exemplaires-non-relies'
   | 'valeur-defausse-elevee'
   | 'en-vente-sur-site'
+  | 'sans-etiquette-theme'
 
 export interface CarteEcartee {
   idCarte: string

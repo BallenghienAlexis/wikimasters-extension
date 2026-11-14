@@ -14,7 +14,6 @@ import {
   ecouterSynchroAuto,
   enregistrerJournal,
 } from '../lib/stockage';
-import { progression, texteProgression } from '../lib/synchro';
 import PastilleStatut, { type EtatSynchro } from './PastilleStatut';
 import FraicheurPrix from './FraicheurPrix';
 import ListeTaches from './ListeTaches';
@@ -84,7 +83,7 @@ function useLecture(): Lecture {
 
 /** Onglet Synchro : progression, tâches, fraîcheur des prix, puis synchronisation automatique (inchangée). */
 const OngletSynchro: React.FC<Props> = ({ donnees }) => {
-  const { synchro, collection, registre, preferences, cacheWiki } = donnees;
+  const { collection, registre, preferences, cacheWiki } = donnees;
   const { statut, bail, execution, executionIllisible, journal, journalIllisible, etat, maintenant } = useLecture();
   // Un statut « en cours » sans bail tenu est périmé (onglet WikiMasters fermé) : il n’est plus une activité.
   const synchroActive = statut?.etat === 'en-cours' && bail !== null && bail > maintenant;
@@ -103,7 +102,6 @@ const OngletSynchro: React.FC<Props> = ({ donnees }) => {
   return (
     <>
       <h2 className="mt-4 text-xl font-semibold">Synchro</h2>
-      {synchro && <p className="mt-2 font-medium" data-testid="synchro">{texteProgression(progression(synchro))}</p>}
       <div className="mt-4" data-testid="pastille-synchro">
         <PastilleStatut etat={pastille} />
       </div>

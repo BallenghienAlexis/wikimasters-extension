@@ -228,18 +228,11 @@ const PanneauApercuLot: React.FC<Props> = ({
       titre: cartes.get(a.idCarte)?.titre ?? a.idCarte,
       raison: 'action-non-disponible',
     }));
-    return lignesNonIncluses([...lot.ecartees, ...indispo], lot.obsoletes);
+    return lignesNonIncluses([...lot.ecartees, ...indispo], []);
   }, [lot, separes, cartes]);
   const groupees = useMemo(() => regrouperEcartees(lignes), [lignes]);
-  // Places d’enchère : exemplaires déjà en vente + enchères de ce lot, sur le maximum (D-17).
-  const places = useMemo<Places>(
-    () => ({
-      occupees:
-        collection.cartes.filter((c) => c.statut === 'en-vente').length + (filtre?.actions.filter((a) => a.type === 'enchere').length ?? 0),
-      max: CONFIG_PRIX.maxVentesSimultanees,
-    }),
-    [collection.cartes, filtre],
-  );
+  // Plus d’enchères dans les lots : le compte de places ne sert qu’à la raison « en attente d’une place libre ».
+  const places = useMemo<Places>(() => ({ occupees: 0, max: CONFIG_PRIX.maxVentesSimultanees }), []);
 
   const n = separes?.disponibles.length ?? 0;
   const avecIndisponibles = lignes.some((l) => l.raison === 'action-non-disponible');

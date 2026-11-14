@@ -15,19 +15,16 @@ import {
   chargerPreferences,
   chargerRegistre,
   chargerStatutSynchro,
-  chargerSynchro,
   chargerVentes,
   ecouterCollection,
   ecouterEtiquettesSite,
   ecouterIgnorees,
-  ecouterSynchro,
   ecouterSynchroAuto,
   enregistrerCollection,
   enregistrerIgnorees,
   enregistrerPreferences,
   noterEvenementVente,
 } from '../lib/stockage';
-import type { Synchro } from '../lib/synchro';
 import { definirThemesWikipedia } from '../lib/themes';
 import { preferencesParDefaut, type Preferences } from '../lib/tri';
 import { cacheVide, themesParTitre, type CacheWikipedia } from '../lib/wikipedia';
@@ -52,7 +49,6 @@ export function useDonneesPage() {
   const [ventesJoueur, setVentes] = useState<EvenementVente[]>([]);
   const [releveSite, setReleveSite] = useState<EvenementVente[]>([]);
   const ventes = useMemo(() => [...ventesJoueur, ...releveSite], [ventesJoueur, releveSite]);
-  const [synchro, setSynchro] = useState<Synchro | null>(null);
   const [etiquettesSite, setEtiquettesSite] = useState<EtiquetteSite[] | null>(null);
   const [registre, setRegistre] = useState<Registre>(registreVide);
   const [executionEnCours, setExecutionEnCours] = useState(false);
@@ -106,15 +102,12 @@ export function useDonneesPage() {
       .then(setVentes)
       .catch(() => setMessage('Le journal des ventes n’a pas pu être lu (stockage indisponible).'));
     void chargerAffluenceSite().then(setReleveSite).catch(() => undefined);
-    void chargerSynchro().then(setSynchro);
     void lireStockageSynchro().then(appliquerStockageSynchro);
     const relireEtiquettes = (): void => void chargerEtiquettesSite().then(setEtiquettesSite).catch(() => setEtiquettesSite(null));
     relireEtiquettes();
     const arreterEtiquettes = ecouterEtiquettesSite(relireEtiquettes);
-    const arreterSynchro = ecouterSynchro(setSynchro);
     return () => {
       arreterEtiquettes();
-      arreterSynchro();
     };
   }, []);
 
@@ -181,7 +174,7 @@ export function useDonneesPage() {
   return {
     collection, setCollection, chargee, setChargee, blocage, setBlocage, message, setMessage,
     cacheWiki, appliquerCacheWiki, preferences, setPreferences, preferencesLues, enregistrerLesPreferences,
-    ventes, setVentes, synchro, etiquettesSite, registre, executionEnCours, registreIllisible, executionIllisible,
+    ventes, setVentes, etiquettesSite, registre, executionEnCours, registreIllisible, executionIllisible,
     stockageSynchroLu, relireStockageSynchro, noterVente, appliquer, editer,
   };
 }

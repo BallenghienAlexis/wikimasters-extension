@@ -1,12 +1,10 @@
 import React, { useMemo } from 'react';
-import { LIBELLES_STATUT, type Carte } from '../lib/collection';
-import { aTrier, defaussables, doublons, plusCheres, themesFrequents, valeurParDecision } from '../lib/analyses';
+import type { Carte } from '../lib/collection';
+import { doublons, plusCheres, themesFrequents } from '../lib/analyses';
 import { LIBELLES_THEMES } from '../lib/themes';
 
 interface Props {
   cartes: readonly Carte[];
-  /** Plafond de défausse réglé (`plafondDefausse(preferences)`). */
-  plafond: number;
   /** Change quand la surcouche Wikipédia modifie les thèmes lus. */
   cacheWiki: unknown;
 }
@@ -37,19 +35,16 @@ const Reste: React.FC<{ total: number }> = ({ total }) => (
 );
 
 /** Analyses de l’onglet Collection (SC-021) : calculs de `analyses.ts`, titres rendus en texte. */
-const AnalysesCollection: React.FC<Props> = ({ cartes, plafond, cacheWiki }) => {
+const AnalysesCollection: React.FC<Props> = ({ cartes, cacheWiki }) => {
   const a = useMemo(
     () => ({
       doublons: doublons(cartes),
-      aTrier: aTrier(cartes),
-      defaussables: defaussables(cartes, plafond),
-      parDecision: valeurParDecision(cartes),
       cheres: plusCheres(cartes),
       themes: themesFrequents(cartes),
     }),
     // `cacheWiki` change les thèmes déduits (surcouche Wikipédia).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cartes, plafond, cacheWiki],
+    [cartes, cacheWiki],
   );
   const liste = (cs: Carte[], suffixe?: (c: Carte) => string): React.ReactNode[] => [
     ...cs.slice(0, AFFICHEES).map((c) => <Ligne key={c.id} carte={c} suffixe={suffixe?.(c)} />),
@@ -61,22 +56,6 @@ const AnalysesCollection: React.FC<Props> = ({ cartes, plafond, cacheWiki }) => 
       <div className="mt-4 grid gap-4 min-[600px]:grid-cols-2 min-[1000px]:grid-cols-3">
         <Bloc id="doublons" titre={`Doublons (${a.doublons.length})`} vide="Aucun doublon.">
           {liste(a.doublons, (c) => `${c.quantite} exemplaires`)}
-        </Bloc>
-        <Bloc id="a-trier" titre={`À trier (${a.aTrier.length})`} vide="Aucune carte à trier.">
-          {liste(a.aTrier)}
-        </Bloc>
-        <Bloc id="defaussables" titre={`Défaussables (${a.defaussables.length})`} vide={`Aucune carte à défausser sous le plafond de ${plafond}.`}>
-          {liste(a.defaussables, (c) => `valeur ${c.valeurMarchande ?? 0}`)}
-        </Bloc>
-        <Bloc id="valeur-par-decision" titre="Valeur par décision" vide="Aucune décision à afficher.">
-          {a.parDecision.map((l) => (
-            <li key={l.statut}>
-              {LIBELLES_STATUT[l.statut]}
-              <span className="text-muted">
-                {' '}: {nombre.format(l.exemplaires)} exemplaires, valeur {l.valeur === null ? 'inconnue' : nombre.format(l.valeur)}
-              </span>
-            </li>
-          ))}
         </Bloc>
         <Bloc id="plus-cheres" titre="10 plus chères" vide="Aucune carte avec une valeur connue.">
           {a.cheres.map((c) => (

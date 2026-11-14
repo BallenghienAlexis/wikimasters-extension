@@ -4,7 +4,7 @@ import type { Carte, Collection } from '../lib/collection';
 import { familleDe } from '../lib/familles';
 import { raisonPause } from '../lib/reprise';
 import { CODES_ARRET, CODE_CONFLIT, type EtatFile, type RaisonArret } from '../lib/file';
-import { construireLot, type Config, type EtiquetteObsolete, type LotConstruit } from '../lib/lot';
+import { construireLot, type Config, type LotConstruit } from '../lib/lot';
 import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
 
 /** Secondes par action en moyenne : 0,2 s minimale plus un supplément de 0 à 0,1 s (moyenne 0,05 s). */
@@ -30,6 +30,7 @@ const RAISONS: Record<RaisonEcart, string> = {
   'nom-trop-long': 'nom d’étiquette trop long',
   homonyme: 'une étiquette du même nom existe déjà sur le site',
   'exemplaires-non-relies': 'exemplaires non reliés au site',
+  'sans-etiquette-theme': 'aucune étiquette de thème ne peut être posée (nom trop long, homonyme ou limite du compte)',
   'en-vente-sur-site': 'en vente sur le site : l’exemplaire n’est plus dans la collection, aucune étiquette n’est envoyée',
   'valeur-defausse-elevee': `valeur marchande inconnue ou supérieure au plafond de défausse réglé`,
 };
@@ -156,6 +157,13 @@ export function pageActions<T>(actions: readonly T[], max: number = LIGNES_MAX):
 }
 
 export type RaisonLigne = RaisonEcart | 'etiquette-obsolete';
+
+/** Étiquette obsolète conservée (historique : plus produite par le lot depuis la suppression des statuts). */
+export interface EtiquetteObsolete {
+  idCarte: string;
+  titre: string;
+  nomEtiquette: string;
+}
 
 /** Ligne de la liste « Cartes non incluses » : écartée ou étiquette obsolète conservée. */
 export interface LigneNonIncluse {

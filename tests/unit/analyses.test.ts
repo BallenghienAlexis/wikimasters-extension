@@ -1,12 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { Carte, Statut } from '../../src/lib/collection'
+import type { Carte } from '../../src/lib/collection'
 import {
-  aTrier,
-  defaussables,
   doublons,
   plusCheres,
   themesFrequents,
-  valeurParDecision,
 } from '../../src/lib/analyses'
 import { compterThemes, themesDeCarte } from '../../src/lib/themes'
 
@@ -21,12 +18,10 @@ const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
   favori: false,
   idsSite: null,
   etiquettesSite: [],
-  statut: 'a-trier',
   prixCible: null,
   note: '',
   ami: null,
   valeurMarchande: null,
-  decidePar: null,
   ...extra,
 })
 const ids = (cartes: readonly Carte[]): string[] => cartes.map((c) => c.id)
@@ -39,56 +34,6 @@ describe('doublons', () => {
   it('SC-021 : liste vide exploitable', () => {
     expect(doublons([])).toEqual([])
     expect(doublons([carte('a')])).toEqual([])
-  })
-})
-
-describe('aTrier', () => {
-  it('SC-021 : cartes au statut a-trier seulement', () => {
-    expect(ids(aTrier([carte('a'), carte('b', { statut: 'garder' }), carte('c')]))).toEqual(['a', 'c'])
-  })
-  it('SC-021 : liste vide exploitable', () => {
-    expect(aTrier([])).toEqual([])
-  })
-})
-
-describe('defaussables', () => {
-  const cartes = [
-    carte('a', { statut: 'defausser', valeurMarchande: 3 }),
-    carte('b', { statut: 'defausser', valeurMarchande: 5 }),
-    carte('c', { statut: 'defausser', valeurMarchande: 6 }),
-    carte('d', { statut: 'defausser', valeurMarchande: null }),
-    carte('e', { statut: 'vendre', valeurMarchande: 1 }),
-    carte('f', { statut: 'defausser', valeurMarchande: 0 }),
-  ]
-  it('SC-021 : statut defausser, valeur connue ≤ plafond (borne incluse)', () => {
-    expect(ids(defaussables(cartes, 5))).toEqual(['a', 'b', 'f'])
-  })
-  it('SC-021 : le plafond réglé est celui du paramètre', () => {
-    expect(ids(defaussables(cartes, 6))).toEqual(['a', 'b', 'c', 'f'])
-    expect(ids(defaussables(cartes, 2))).toEqual(['f'])
-  })
-  it('SC-021 : valeur inconnue jamais défaussable ; liste vide exploitable', () => {
-    expect(ids(defaussables(cartes, 20))).not.toContain('d')
-    expect(defaussables([], 5)).toEqual([])
-  })
-})
-
-describe('valeurParDecision', () => {
-  it('SC-021 : exemplaires et valeur par statut, ordre des statuts, statut absent omis', () => {
-    const r = valeurParDecision([
-      carte('a', { statut: 'vendre', quantite: 2, valeurMarchande: 10 }),
-      carte('b', { statut: 'garder', quantite: 1, valeurMarchande: 4 }),
-      carte('c', { statut: 'vendre', quantite: 1, valeurMarchande: null }),
-      carte('d', { statut: 'a-trier', quantite: 3, valeurMarchande: null }),
-    ])
-    expect(r).toEqual([
-      { statut: 'a-trier', exemplaires: 3, valeur: null },
-      { statut: 'garder', exemplaires: 1, valeur: 4 },
-      { statut: 'vendre', exemplaires: 3, valeur: 20 },
-    ] satisfies { statut: Statut; exemplaires: number; valeur: number | null }[])
-  })
-  it('SC-021 : liste vide exploitable', () => {
-    expect(valeurParDecision([])).toEqual([])
   })
 })
 

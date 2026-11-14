@@ -6,7 +6,6 @@ import {
   allerA,
   cartesFictivesRepartie,
   chargerCartes,
-  contraste,
   ecrireJeuRiche,
   expect,
   fixerHorloge,
@@ -27,33 +26,15 @@ import {
 const SITE = fs.readFileSync(path.resolve('tests/e2e/fixtures/site-vide.html'), 'utf8');
 
 const CARTES = [
-  { id: 'a', titre: 'Zèbre fictif', rarete: 'Rare', quantite: 1, statut: 'garder', valeurMarchande: 10 },
-  { id: 'b', titre: 'Élan fictif', rarete: 'Commune', quantite: 3, statut: 'a-trier' },
-  { id: 'c', titre: 'Abeille fictive', rarete: 'Rare', quantite: 2, statut: 'a-trier', valeurMarchande: 4 },
-  { id: 'd', titre: 'Mouette fictive', rarete: 'Commune', quantite: 2, statut: 'vendre', valeurMarchande: 25 },
-  { id: 'e', titre: 'Loutre fictive', rarete: 'Rare', quantite: 1, statut: 'en-vente', valeurMarchande: 60 },
-  { id: 'f', titre: 'Renard fictif', rarete: 'Commune', quantite: 1, statut: 'defausser', valeurMarchande: 2 },
+  { id: 'a', titre: 'Zèbre fictif', rarete: 'Rare', quantite: 1, valeurMarchande: 10 },
+  { id: 'b', titre: 'Élan fictif', rarete: 'Commune', quantite: 3, },
+  { id: 'c', titre: 'Abeille fictive', rarete: 'Rare', quantite: 2, valeurMarchande: 4 },
+  { id: 'd', titre: 'Mouette fictive', rarete: 'Commune', quantite: 2, valeurMarchande: 25 },
+  { id: 'e', titre: 'Loutre fictive', rarete: 'Rare', quantite: 1, valeurMarchande: 60 },
+  { id: 'f', titre: 'Renard fictif', rarete: 'Commune', quantite: 1, valeurMarchande: 2 },
 ];
 
-const colonne = (page: Page, statut: string): Locator => page.getByTestId(`colonne-tri-${statut}`);
-const carteTri = (page: Page, titre: string): Locator => page.getByTestId('carte-tri').filter({ hasText: titre });
 const stockage = (p: Page, cle: string): Promise<unknown> => p.evaluate(async (c) => (await chrome.storage.local.get(c))[c], cle);
-
-async function ouvrirTableauDeTri(page: Page): Promise<void> {
-  await allerA(page, 'collection');
-  await page.getByRole('button', { name: 'Tableau de tri' }).click();
-  await expect(page.getByTestId('tableau-tri')).toBeVisible();
-}
-
-async function glisser(page: Page, source: Locator, cible: Locator): Promise<void> {
-  const s = (await source.boundingBox())!;
-  const c = (await cible.boundingBox())!;
-  await page.mouse.move(s.x + s.width / 2, s.y + 8);
-  await page.mouse.down();
-  await page.mouse.move(s.x + s.width / 2 + 10, s.y + 20, { steps: 3 });
-  await page.mouse.move(c.x + c.width / 2, c.y + c.height / 2, { steps: 8 });
-  await page.mouse.up();
-}
 
 // ───────────────────────────── SC-011 : aucune requête ─────────────────────────────
 
@@ -77,7 +58,7 @@ test.describe('SC-011 : aucune requête hors extension', () => {
     return banc;
   };
 
-  test('SC-011 : six onglets hors Collection, bandeau déplié, ignorées puis reprendre : aucune requête', async ({ context, pageCollection: page }) => {
+  test('SC-011 : cinq onglets hors Collection, bandeau déplié, ignorées puis reprendre : aucune requête', async ({ context, pageCollection: page }) => {
     const banc = await preparer(context, page);
     banc.phase.nom = 'hors-collection';
     for (const o of ONGLETS.filter((x) => x.id !== 'collection')) {
@@ -128,50 +109,6 @@ test.describe('SC-011 : aucune requête hors extension', () => {
     for (const v of banc.vues) expect(v.url).toMatch(/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\/w\/api\.php\?/);
   });
 
-  test('SC-011 : tableau de tri (flèche, glisser, recherche) : aucune vérification', async ({ context, pageCollection: page }) => {
-    const banc = await preparer(context, page);
-    banc.phase.nom = 'bascule';
-    await allerA(page, 'collection');
-    await page.getByRole('button', { name: 'Tableau de tri' }).click();
-    await expect(page.getByTestId('tableau-tri')).toBeVisible();
-    // On laisse finir une requête éventuellement en vol depuis la vue liste, puis plus rien ne doit partir.
-    await page.waitForTimeout(1500);
-    banc.phase.nom = 'tri';
-    await page.getByRole('button', { name: 'Déplacer « Zèbre fictif » vers Échanger' }).click();
-    await expect(colonne(page, 'echanger').getByTestId('carte-tri')).toHaveCount(1);
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await glisser(page, carteTri(page, 'Mouette fictive'), colonne(page, 'garder'));
-    await expect(colonne(page, 'garder').getByTestId('carte-tri').filter({ hasText: 'Mouette fictive' })).toHaveCount(1);
-    await page.getByLabel('Rechercher une carte').fill('élan');
-    await expect(page.getByTestId('carte-tri')).toHaveCount(1);
-    await page.waitForTimeout(1200);
-    expect(banc.vues.filter((v) => v.phase === 'tri')).toEqual([]);
-    expect(banc.vues.filter((v) => !/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\/w\/api\.php\?/.test(v.url))).toEqual([]);
-  });
-
-  test('SC-011 : 5 000 cartes, le tableau de tri et le tableau de bord ne déclenchent aucune vérification', async ({ context, pageCollection: page }) => {
-    await fixerHorloge(context);
-    const banc = await pieger(context);
-    await chargerCartes(page, cartesFictivesRepartie(5000));
-    banc.phase.nom = 'sans-liste';
-    await allerA(page, 'tableau-de-bord');
-    await page.waitForTimeout(1000);
-    expect(banc.vues.filter((v) => v.phase === 'sans-liste'), 'tableau de bord').toEqual([]);
-    // La bascule passe un instant par la vue liste : requêtes éventuelles comptées à part.
-    banc.phase.nom = 'bascule';
-    await page.evaluate(() => {
-      window.location.hash = 'collection';
-    });
-    await page.getByRole('button', { name: 'Tableau de tri' }).click();
-    await expect(page.getByTestId('tableau-tri')).toBeVisible();
-    await page.waitForTimeout(1500);
-    banc.phase.nom = 'tri-seul';
-    await colonne(page, 'a-trier').getByRole('button', { name: 'Afficher plus' }).click();
-    await expect(colonne(page, 'a-trier').getByTestId('carte-tri')).toHaveCount(100);
-    await page.waitForTimeout(1500);
-    expect(banc.vues.filter((v) => v.phase === 'tri-seul'), 'tableau de tri').toEqual([]);
-    expect(banc.vues.filter((v) => !/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\/w\/api\.php\?/.test(v.url))).toEqual([]);
-  });
 });
 
 // ───────────── SC-011 : sauter, ignorer, reprendre sur un site simulé (exécution réelle) ─────────────
@@ -218,7 +155,7 @@ async function ouvrirSiteSimule(context: BrowserContext, status: number): Promis
 async function preparerLot(page: Page): Promise<void> {
   const cartes = [1, 2].map((n) => ({
     id: `UR|Loutre fictive ${n}`, titre: `Loutre fictive ${n}`, rarete: 'UR', quantite: 1,
-    idsSite: [`bbbbbbbb-bbbb-4bbb-8bbb-00000000000${n}`], statut: 'garder', decidePar: 'moi',
+    idsSite: [`bbbbbbbb-bbbb-4bbb-8bbb-00000000000${n}`],
   }));
   await page.evaluate(async (c) => {
     await chrome.storage.local.set({
@@ -279,7 +216,7 @@ test.describe('SC-011 : sauter, ignorer, reprendre sont locaux (exécution simul
   });
 });
 
-// ───────────────────────────── SC-008 : clavier sur les six onglets ─────────────────────────────
+// ───────────────────────────── SC-008 : clavier sur les cinq onglets ─────────────────────────────
 
 interface BilanClavier { atteints: number; total: number; nonAtteints: string[]; sansHalo: string[] }
 
@@ -334,7 +271,7 @@ async function tabuler(page: Page): Promise<BilanClavier> {
   return { atteints: vus.size, total, nonAtteints, sansHalo };
 }
 
-test.describe('SC-008 : clavier réel (Tab) sur les six onglets', () => {
+test.describe('SC-008 : clavier réel (Tab) sur les cinq onglets', () => {
   test.setTimeout(180_000);
 
   for (const o of ONGLETS) {
@@ -355,37 +292,6 @@ test.describe('SC-008 : clavier réel (Tab) sur les six onglets', () => {
     });
   }
 
-  test('SC-008 : Tab réel dans le tableau de tri, Entrée sur une flèche déplace la carte, le focus la suit', async ({ context, pageCollection: page }) => {
-    await fixerHorloge(context);
-    await pieger(context);
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await chargerCartes(page, CARTES);
-    await ouvrirTableauDeTri(page);
-    await page.getByRole('button', { name: 'Tableau de tri' }).focus();
-    const cible = page.getByRole('button', { name: 'Déplacer « Zèbre fictif » vers Échanger' });
-    let trouve = false;
-    for (let i = 0; i < 60 && !trouve; i++) {
-      await page.keyboard.press('Tab');
-      trouve = await cible.evaluate((el) => el === document.activeElement);
-    }
-    expect(trouve, 'la flèche de « Zèbre fictif » est atteinte par Tab').toBe(true);
-    const contour = await cible.evaluate((el) => {
-      const cs = getComputedStyle(el);
-      return cs.outlineStyle !== 'none' || cs.boxShadow !== 'none';
-    });
-    expect(contour).toBe(true);
-    await page.keyboard.press('Enter');
-    await expect(colonne(page, 'echanger').getByTestId('carte-tri').filter({ hasText: 'Zèbre fictif' })).toHaveCount(1);
-    await expect(page.getByTestId('tri-annonce')).toHaveText('« Zèbre fictif » déplacée vers Échanger');
-    await expect
-      .poll(() => page.evaluate(() => document.activeElement?.closest('[data-testid="colonne-tri-echanger"]') !== null))
-      .toBe(true);
-    // La tabulation continue dans la carte déplacée puis vers les suivantes, sans piège.
-    const avant = await page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? '');
-    await page.keyboard.press('Tab');
-    const apres = await page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? '');
-    expect(apres).not.toBe(avant);
-  });
 });
 
 // ───────────────────────────── SC-009 : pas de défilement horizontal ─────────────────────────────
@@ -393,7 +299,7 @@ test.describe('SC-008 : clavier réel (Tab) sur les six onglets', () => {
 test.describe('SC-009 : scrollWidth ≤ clientWidth', () => {
   test.setTimeout(240_000);
 
-  test('SC-009 : six onglets × 3 largeurs × 2 thèmes, jeu de données complet', async ({ context, pageCollection: page }) => {
+  test('SC-009 : cinq onglets × 3 largeurs × 2 thèmes, jeu de données complet', async ({ context, pageCollection: page }) => {
     await fixerHorloge(context);
     await pieger(context);
     await ecrireJeuRiche(page);
@@ -413,47 +319,24 @@ test.describe('SC-009 : scrollWidth ≤ clientWidth', () => {
     }
   });
 
-  test('SC-009 : 5 000 cartes, liste et tableau de tri, 3 largeurs × 2 thèmes', async ({ context, pageCollection: page }) => {
+  test('SC-009 : 5 000 cartes, liste, 3 largeurs × 2 thèmes', async ({ context, pageCollection: page }) => {
     await fixerHorloge(context);
     await pieger(context);
-    await chargerCartes(page, cartesFictivesRepartie(5000, 20));
+    await chargerCartes(page, cartesFictivesRepartie(5000));
     for (const theme of THEMES) {
       await page.emulateMedia({ colorScheme: theme });
       for (const bp of POINTS_DE_RUPTURE) {
         await page.setViewportSize({ width: bp.width, height: bp.height });
         await allerA(page, 'collection');
-        await page.getByRole('button', { name: 'Liste', exact: true }).click();
         await expect(page.getByTestId('tableau-cartes').locator('tbody tr')).toHaveCount(200);
-        for (const vue of ['Liste', 'Tableau de tri']) {
-          await page.getByRole('button', { name: vue, exact: true }).click();
-          const { sw, cw } = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
-          expect(sw, `${vue} ${theme} ${bp.width}`).toBeLessThanOrEqual(cw);
-        }
+        const { sw, cw } = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
+        expect(sw, `liste ${theme} ${bp.width}`).toBeLessThanOrEqual(cw);
       }
     }
   });
 });
 
 // ───────────────────────────── 5 000 cartes : bornes d'affichage ─────────────────────────────
-
-test.describe('5 000 cartes fictives : 200 lignes, 50 par colonne', () => {
-  test('SC-011 : liste à 200 lignes, tableau de tri à 50 cartes par colonne, puis « Afficher plus »', async ({ context, pageCollection: page }) => {
-    await fixerHorloge(context);
-    await pieger(context);
-    await chargerCartes(page, cartesFictivesRepartie(5000));
-    await allerA(page, 'collection');
-    await expect(page.getByTestId('tableau-cartes').locator('tbody tr')).toHaveCount(200);
-    await page.getByRole('button', { name: 'Tableau de tri' }).click();
-    for (const s of ['garder', 'echanger', 'vendre', 'defausser', 'a-trier']) {
-      await expect(colonne(page, s).getByTestId('carte-tri'), s).toHaveCount(50);
-      const nom = { garder: 'Garder', echanger: 'Échanger', vendre: 'Vendre', defausser: 'Défausser', 'a-trier': 'À trier' }[s];
-      await expect(page.getByRole('group', { name: `${nom} 1000` })).toBeVisible();
-    }
-    await colonne(page, 'vendre').getByRole('button', { name: 'Afficher plus' }).click();
-    await expect(colonne(page, 'vendre').getByTestId('carte-tri')).toHaveCount(100);
-    await expect(colonne(page, 'garder').getByTestId('carte-tri')).toHaveCount(50);
-  });
-});
 
 // ───────────────────────────── SC-026 : mouvement coupé ─────────────────────────────
 
@@ -503,7 +386,7 @@ for (const mode of ['reduce', 'reglage'] as const) {
       }
     });
 
-    test(`SC-026 : aucune durée de transition ni d'animation sur les six onglets`, async ({ pageCollection: page }) => {
+    test(`SC-026 : aucune durée de transition ni d'animation sur les cinq onglets`, async ({ pageCollection: page }) => {
       for (const o of ONGLETS) {
         await allerA(page, o.id);
         await page.waitForTimeout(300);
@@ -516,24 +399,12 @@ for (const mode of ['reduce', 'reglage'] as const) {
       await page.reload();
       await allerA(page, 'tableau-de-bord');
       const kpis = page.getByTestId('kpi');
-      await expect(kpis).toHaveCount(4);
+      await expect(kpis).toHaveCount(3);
       const lire = (): Promise<string[]> => kpis.evaluateAll((els) => els.map((e) => (e.textContent ?? '').replace(/\s+/g, ' ').trim()));
       const premier = await lire();
       await page.waitForTimeout(1200);
       expect(await lire()).toEqual(premier);
-      expect(premier.find((t) => /Exemplaires/.test(t))).toContain('12');
-    });
-
-    test('SC-026 : le tri (flèche et glisser) pose la carte sans trajet, getAnimations() reste vide', async ({ pageCollection: page }) => {
-      await ouvrirTableauDeTri(page);
-      await page.getByRole('button', { name: 'Déplacer « Renard fictif » vers Vendre' }).click();
-      await expect(colonne(page, 'vendre').getByTestId('carte-tri').filter({ hasText: 'Renard fictif' })).toHaveCount(1);
-      expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
-      await glisser(page, carteTri(page, 'Élan fictif'), colonne(page, 'garder'));
-      await expect(colonne(page, 'garder').getByTestId('carte-tri').filter({ hasText: 'Élan fictif' })).toHaveCount(1);
-      expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
-      expect(await dureesNonNulles(page)).toEqual([]);
-      await expect.poll(async () => ((await stockage(page, 'collection')) as { cartes: { titre: string; statut: string }[] }).cartes.find((c) => c.titre === 'Élan fictif')?.statut).toBe('garder');
+      expect(premier.find((t) => /Exemplaires/.test(t))).toContain('13');
     });
 
     test('SC-026 : toutes les fonctions restent utilisables (changement d’onglet, dépliage, bandeau)', async ({ pageCollection: page }) => {
@@ -554,7 +425,7 @@ for (const mode of ['reduce', 'reglage'] as const) {
 test.describe('SC-007 : stockage piégé, rien de sensible dans le DOM', () => {
   test.setTimeout(120_000);
 
-  test('SC-007 : ni jeton, ni cookie, ni clé, ni identifiant d’exemplaire, ni corps de réponse sur les six onglets', async ({ context, pageCollection: page }) => {
+  test('SC-007 : ni jeton, ni cookie, ni clé, ni identifiant d’exemplaire, ni corps de réponse sur les cinq onglets', async ({ context, pageCollection: page }) => {
     await fixerHorloge(context);
     await pieger(context);
     await page.setViewportSize({ width: 1280, height: 800 });
@@ -608,10 +479,6 @@ test.describe('SC-007 : stockage piégé, rien de sensible dans le DOM', () => {
         }),
       );
     }
-    // Vue Tableau de tri (cartes, attributs data-id).
-    await allerA(page, 'collection');
-    await page.getByRole('button', { name: 'Tableau de tri' }).click();
-    instantanes.push(await page.content());
     // Bandeau déplié.
     await page.evaluate(
       ({ n, secret }) =>
@@ -643,45 +510,3 @@ test.describe('SC-007 : stockage piégé, rien de sensible dans le DOM', () => {
 });
 
 // ───────────────────────────── Tableau de tri en thème sombre ─────────────────────────────
-
-test.describe('Tableau de tri en thème sombre (trous consignés de T-312)', () => {
-  for (const bp of POINTS_DE_RUPTURE) {
-    test(`SC-009 + D-18 : tableau de tri sombre à ${bp.width} px : disposition, fond sombre, contraste AA, pas de débordement`, async ({ context, pageCollection: page }) => {
-      await fixerHorloge(context);
-      await pieger(context);
-      await page.emulateMedia({ colorScheme: 'dark' });
-      await page.setViewportSize({ width: bp.width, height: bp.height });
-      await chargerCartes(page, CARTES);
-      await ouvrirTableauDeTri(page);
-      // Thème sombre effectivement appliqué : le fond de la page est plus sombre que le texte.
-      const fond = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-      const texte = await page.evaluate(() => getComputedStyle(document.body).color);
-      const clair = (c: string): number => (c.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number).reduce((a, b) => a + b, 0);
-      expect(clair(fond), 'fond sombre').toBeLessThan(clair(texte));
-      // Disposition (mêmes règles qu'en thème clair).
-      const lefts = new Set<number>();
-      const tops = new Set<number>();
-      for (const s of ['garder', 'echanger', 'vendre', 'defausser', 'a-trier']) {
-        const b = (await colonne(page, s).boundingBox())!;
-        lefts.add(Math.round(b.x));
-        tops.add(Math.round(b.y));
-      }
-      if (bp.width === 375) expect([lefts.size, tops.size]).toEqual([1, 5]);
-      else if (bp.width === 768) expect([lefts.size, tops.size]).toEqual([2, 3]);
-      else expect([lefts.size, tops.size]).toEqual([5, 1]);
-      // Contraste AA (≥ 4,5) du texte des cartes, des titres de colonne, des flèches et de la mention « en vente ».
-      const cibles: [string, Locator][] = [
-        ['titre de carte', carteTri(page, 'Élan fictif')],
-        ['flèche', page.getByRole('button', { name: 'Déplacer « Élan fictif » vers Défausser' })],
-        ['mention en vente', page.getByTestId('tri-en-vente')],
-        ['titre de colonne', page.getByRole('group', { name: 'À trier 2' })],
-      ];
-      for (const [nom, loc] of cibles) {
-        expect(await contraste(loc.first()), `contraste ${nom}`).toBeGreaterThanOrEqual(4.5);
-      }
-      const { sw, cw } = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
-      expect(sw).toBeLessThanOrEqual(cw);
-      await page.screenshot({ path: `test-results/captures/transverse-tableau-de-tri-dark-${bp.name}.png`, fullPage: true });
-    });
-  }
-});

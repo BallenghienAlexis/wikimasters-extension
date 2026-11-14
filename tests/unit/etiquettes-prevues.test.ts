@@ -21,12 +21,10 @@ const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
   favori: false,
   idsSite: [`ex-${id}`],
   etiquettesSite: [],
-  statut: 'garder',
   prixCible: null,
   note: '',
   ami: null,
   valeurMarchande: null,
-  decidePar: null,
   ...extra,
 })
 const coll = (...cartes: Carte[]): Collection => ({ ...collectionVide(), cartes })
@@ -42,8 +40,8 @@ const rendre = (collection: Collection, apercu: ApercuEtiquettes): string =>
   )
 
 const cas = (): { c: Collection; apercu: ApercuEtiquettes } => {
-  const c = coll(carte('a', { ...CHIEN, statut: 'echanger', idsSite: ['e1', 'e2'], quantite: 2 }))
-  return { c, apercu: regrouperEtiquettes(c, registre({ 'Statut · Échanger': 'et-1' }), config({ amis: AMIS })) }
+  const c = coll(carte('a', { ...CHIEN, idsSite: ['e1', 'e2'], quantite: 2 }))
+  return { c, apercu: regrouperEtiquettes(c, registre({ '#Chien': 'et-1' }), config({ amis: AMIS })) }
 }
 
 describe('EtiquettesPrevues : lignes (AC1)', () => {
@@ -51,7 +49,7 @@ describe('EtiquettesPrevues : lignes (AC1)', () => {
     const { c, apercu } = cas()
     const html = rendre(c, apercu)
     expect(html).toContain('Étiquettes prévues (envoi pas encore possible)')
-    expect(html).toContain('Statut · Échanger')
+    expect(html).toContain('#Chien')
     expect(html).toContain('#À échanger Léa')
     expect(html).toContain('nouvelle · non disponible')
     expect(html).toContain('>non disponible<')
@@ -78,15 +76,14 @@ describe('EtiquettesPrevues : lignes (AC1)', () => {
     expect(html).toContain(`État${NB}: `)
   })
 
-  it('ordre : Statut, échanges, puis thèmes', () => {
+  it('ordre : échanges, puis thèmes', () => {
     const { c, apercu } = cas()
     const html = rendre(c, apercu)
-    expect(html.indexOf('Statut · Échanger')).toBeLessThan(html.indexOf('#À échanger Léa'))
     expect(html.indexOf('#À échanger Léa')).toBeLessThan(html.indexOf('#Chien'))
   })
 
   it('section absente sans étiquette attendue', () => {
-    const c = coll(carte('a', { favori: true }))
+    const c = coll()
     const html = rendre(c, regrouperEtiquettes(c, registre(), config()))
     expect(html).toBe('')
   })
@@ -135,7 +132,7 @@ describe('EtiquettesPrevues : total et non posées (AC2)', () => {
 })
 
 describe('EtiquettesPrevues : avertissement de visibilité (AC3)', () => {
-  const TEXTE = `Visibilité non vérifiée${NB}: les étiquettes de thème, de statut et d’échange, dont les prénoms de vos amis, sont peut-être visibles par les autres joueurs.`
+  const TEXTE = `Visibilité non vérifiée${NB}: les étiquettes de thème et d’échange, dont les prénoms de vos amis, sont peut-être visibles par les autres joueurs.`
 
   it('présent avec le texte exact dès qu’une étiquette est attendue', () => {
     const { c, apercu } = cas()
@@ -157,7 +154,7 @@ describe('EtiquettesPrevues : avertissement de visibilité (AC3)', () => {
   })
 
   it('absent sans étiquette attendue', () => {
-    const c = coll(carte('a', { favori: true }))
+    const c = coll()
     expect(rendre(c, regrouperEtiquettes(c, registre(), config()))).not.toContain('Visibilité')
   })
 })
@@ -165,7 +162,7 @@ describe('EtiquettesPrevues : avertissement de visibilité (AC3)', () => {
 describe('EtiquettesPrevues : rendu sûr et responsive (AC6)', () => {
   it('nom d’ami de 300 caractères rendu en texte, avec retour à la ligne', () => {
     const nom = 'Z'.repeat(300)
-    const c = coll(carte('a', { ...CHIEN, statut: 'echanger' }))
+    const c = coll(carte('a', { ...CHIEN, }))
     const apercu = regrouperEtiquettes(c, registre(), config({ amis: [{ nom: `${nom}<img src=x>`, themes: ['animaux'] }], longueurMaxEtiquette: null }))
     const html = rendre(c, apercu)
     expect(html).toContain(nom)
