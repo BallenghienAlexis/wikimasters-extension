@@ -39,6 +39,10 @@ const banc = vi.hoisted(() => {
     verrou: false,
     demarrages: 0,
     appels: [] as Action[],
+    lectures: 0,
+    ventes: undefined as { enCours: number; max: number } | undefined,
+    lectureResultat: undefined as ResultatAction | undefined,
+    lecture: (): ResultatAction => { banc.lectures++; if (banc.lectureResultat) return banc.lectureResultat; return { classe: 'reussie', codeHttp: 200, cause: 'action réussie', ...(banc.ventes ? { ventes: banc.ventes } : {}) }; },
     reponse: ((): unknown => null) as (a: Action, n: number) => unknown,
     t: 1_000_000,
     attentes: [] as Array<{ echeance: number; resoudre: () => void }>,
@@ -74,6 +78,8 @@ const banc = vi.hoisted(() => {
     abonner: () => () => undefined,
     cloreInterrompues: async () => undefined,
     transport: async (ordre: Action) => {
+      // La lecture des enchères en cours (avant un lot d'enchères) n'est pas une action du lot.
+      if (ordre.type === 'lecture') return b.lecture();
       b.appels.push(ordre);
       return b.reponse(ordre, b.appels.length);
     },
@@ -150,6 +156,9 @@ beforeEach(() => {
   banc.verrou = false;
   banc.demarrages = 0;
   banc.appels = [];
+  banc.lectures = 0;
+  banc.ventes = undefined;
+  banc.lectureResultat = undefined;
   banc.attentes = [];
   banc.t = 1_000_000;
   banc.reponse = reponses({});
@@ -375,6 +384,72 @@ describe('AC4 : sauterAction (SC-005)', () => {
     const api = await frais();
     await api.lancerLot([defausse(1)], 'lot-1');
     await expect(api.sauterAction()).rejects.toThrow();
+  });
+});
+
+describe('Lecture des enchères en cours avant un lot d’enchères (Alexis, 2026-11-15)', () => {
+  it('sans enchère : aucune lecture', async () => {
+    const api = await frais();
+    banc.ventes = { enCours: 5, max: 5 };
+    await api.lancerLot([defausse(1)], 'lot-1');
+    expect(banc.lectures).toBe(0);
+    expect(banc.appels).toEqual([defausse(1)]);
+  });
+
+  it('ne garde que les places libres, les plus chères d’abord', async () => {
+    const api = await frais();
+    banc.ventes = { enCours: 3, max: 5 };
+    await api.lancerLot([defausse(1), enchere(2), enchere(3), enchere(4)], 'lot-1');
+    expect(banc.lectures).toBe(1);
+    expect(banc.appels).toEqual([defausse(1), enchere(2), enchere(3)]);
+  });
+
+  it('lecture sans résultat exploitable : le lot part tel quel', async () => {
+    const api = await frais();
+    banc.ventes = undefined;
+    await api.lancerLot([enchere(1), enchere(2)], 'lot-1');
+    expect(banc.appels).toEqual([enchere(1), enchere(2)]);
+  });
+
+  it('la première enchère part au moins 0,2 s après la lecture', async () => {
+    const api = await frais();
+    banc.ventes = { enCours: 0, max: 5 };
+    const avant = banc.t;
+    await api.lancerLot([enchere(1)], 'lot-1');
+    expect(banc.t - avant).toBeGreaterThanOrEqual(200);
+  });
+
+  it('403 anti-bot sur la lecture : lancement refusé avec le libellé dédié, rien d’envoyé', async () => {
+    const api = await frais();
+    banc.lectureResultat = { classe: 'echec', codeHttp: 403, cause: 'vérification anti-bot requise' };
+    await expect(api.lancerLot([enchere(1)], 'lot-1')).rejects.toThrow('Vérification anti-bot du site requise');
+    expect(banc.appels).toEqual([]);
+  });
+
+  it('403 ordinaire sur la lecture : lancement refusé, sans pause', async () => {
+    const api = await frais();
+    banc.lectureResultat = { classe: 'echec', codeHttp: 403, cause: 'action non disponible' };
+    await expect(api.lancerLot([enchere(1)], 'lot-1')).rejects.toThrow('Le site a refusé la lecture');
+    banc.lectureResultat = undefined;
+    banc.ventes = { enCours: 0, max: 5 };
+    await api.lancerLot([enchere(1)], 'lot-2');
+    expect(banc.appels).toEqual([enchere(1)]);
+  });
+
+  it.each([401, 429])('%i sur la lecture : lancement refusé et pause de 30 min', async (code) => {
+    const api = await frais();
+    banc.lectureResultat = { classe: 'echec', codeHttp: code, cause: 'action non disponible' };
+    await expect(api.lancerLot([enchere(1)], 'lot-1')).rejects.toThrow('Le site a refusé la lecture');
+    banc.lectureResultat = undefined;
+    await expect(api.lancerLot([defausse(2)], 'lot-2')).rejects.toThrow(/Reprise possible à/);
+    expect(banc.appels).toEqual([]);
+  });
+
+  it('aucune place libre : lancement refusé avec un libellé fixe, rien d’envoyé', async () => {
+    const api = await frais();
+    banc.ventes = { enCours: 5, max: 5 };
+    await expect(api.lancerLot([enchere(1), enchere(2)], 'lot-1')).rejects.toThrow('Limite de 5 enchères actives atteinte');
+    expect(banc.appels).toEqual([]);
   });
 });
 

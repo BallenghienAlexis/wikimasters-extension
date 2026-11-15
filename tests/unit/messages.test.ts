@@ -89,6 +89,15 @@ describe('validerOrdre', () => {
 })
 
 describe('validerResultat', () => {
+  it('accepte la cause de la vérification anti-bot et des ventes bien formées, refuse le reste', () => {
+    const r = (resultat: Record<string, unknown>) => validerResultat({ message: 'resultat', resultat: { classe: 'echec', codeHttp: 403, cause: 'vérification anti-bot requise', ...resultat } })
+    expect(r({})).not.toBeNull()
+    expect(r({ classe: 'reussie', codeHttp: 200, cause: 'action réussie', ventes: { enCours: 2, max: 5 } })).toMatchObject({ ventes: { enCours: 2, max: 5 } })
+    for (const ventes of [{ enCours: -1, max: 5 }, { enCours: 'a', max: 5 }, { enCours: 1 }, { enCours: 1, max: 5, x: 1 }, null, 3]) {
+      expect(r({ ventes })).toBeNull()
+    }
+  })
+
   it('accepte un résultat valide', () => {
     expect(validerResultat(resultatOk)).toEqual(resultatOk.resultat)
     const sansCode = { message: 'resultat', resultat: { classe: 'inconnu', codeHttp: null, cause: 'action non disponible' } }

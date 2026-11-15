@@ -25,8 +25,8 @@ const entreeFictive: EntreeContrat = {
 
 describe('table du contrat', () => {
   it('ne rend disponibles que les types relevés : étiquettes, enchère et défausse (SC-020)', () => {
-    expect([...typesDisponibles()].sort()).toEqual(['creation-etiquette', 'defausse', 'enchere', 'favori', 'pose-etiquette', 'retrait-etiquette', 'suppression-etiquette'])
-    expect(Object.keys(ENTREES_LECTURE)).toHaveLength(0)
+    expect([...typesDisponibles()].sort()).toEqual(['creation-etiquette', 'defausse', 'enchere', 'favori', 'lecture', 'pose-etiquette', 'retrait-etiquette', 'suppression-etiquette'])
+    expect(Object.keys(ENTREES_LECTURE)).toEqual(['lecture'])
     expect(Object.keys(ENTREES_ENCHERE)).toEqual(['enchere'])
     expect(Object.keys(ENTREES_DEFAUSSE)).toEqual(['defausse'])
     expect(Object.keys(ENTREES_ETIQUETTES)).toHaveLength(4)
@@ -62,7 +62,7 @@ describe('table du contrat', () => {
     expect(sources.length).toBeGreaterThan(1)
     for (const [i, source] of sources.entries()) {
       // Seuls les chemins relatifs du site (enchère, défausse) contiennent « /api/ ».
-      const interdits = ['contrat/enchere.ts', 'contrat/defausse.ts'].includes(fichiers[i]!) ? ['https://', 'http://', 'authorization', 'apikey'] : ['/api/', 'https://', 'http://', 'authorization', 'apikey']
+      const interdits = ['contrat/enchere.ts', 'contrat/defausse.ts', 'contrat/lecture.ts'].includes(fichiers[i]!) ? ['https://', 'http://', 'authorization', 'apikey'] : ['/api/', 'https://', 'http://', 'authorization', 'apikey']
       for (const interdit of interdits) {
         expect(source.toLowerCase(), interdit).not.toContain(interdit)
       }

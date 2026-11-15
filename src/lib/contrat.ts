@@ -31,6 +31,8 @@ export interface EntreeContrat {
   entetes?: Readonly<Record<string, string>>
   /** Identifiant d’étiquette lu dans une réponse de création déjà jugée conforme. */
   lireIdEtiquette?: (json: unknown) => string | null
+  /** Enchères en cours et maximum lus dans une réponse conforme (lecture de `marketplace/mine`). */
+  lireVentes?: (json: unknown) => { enCours: number; max: number } | null
   /** `{ entete: 'session' }` si la requête exige le jeton de session (ajouté par `reseau.ts`), sinon `null`. */
   auth: { entete: string } | null
   /**

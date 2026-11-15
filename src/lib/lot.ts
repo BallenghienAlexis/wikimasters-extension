@@ -241,6 +241,28 @@ export function placesEncheres(
 }
 
 /**
+ * Limite les enchères d'un lot aux places libres relues juste avant l'envoi (Alexis, 2026-11-15) : maximum = min(config,
+ * site), places libres = maximum - enchères en cours. Les premières enchères (les plus chères, l'aperçu les trie ainsi)
+ * sont gardées, les autres écartées ; les actions qui ne sont pas des enchères sont conservées dans leur ordre.
+ */
+export function limiterEncheres(
+  actions: readonly Action[],
+  ventes: { enCours: number; max: number },
+  maxConfig: number,
+): { actions: Action[]; ecartees: number } {
+  const libres = Math.max(0, Math.min(maxConfig, ventes.max) - ventes.enCours)
+  let gardees = 0
+  let ecartees = 0
+  const sortie: Action[] = []
+  for (const a of actions) {
+    if (a.type !== 'enchere') sortie.push(a)
+    else if (gardees < libres) { gardees++; sortie.push(a) }
+    else ecartees++
+  }
+  return { actions: sortie, ecartees }
+}
+
+/**
  * Enchères du lot : `candidates` = cartes à vendre choisies par le joueur, reliées, sans conflit. Une enchère par
  * carte, sur le premier exemplaire de `idsSite`, les plus chères d’abord, dans la limite des places libres.
  * Une enchère est définitive côté site.

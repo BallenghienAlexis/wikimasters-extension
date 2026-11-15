@@ -3,7 +3,7 @@ import type { Action, TypeAction, TypesDisponibles } from '../../src/lib/actions
 import { TYPES_ACTION } from '../../src/lib/actions'
 import type { Carte, Collection } from '../../src/lib/collection'
 import { collectionVide } from '../../src/lib/collection'
-import { ETIQUETTE_A_CLASSER, construireLot, type Config } from '../../src/lib/lot'
+import { ETIQUETTE_A_CLASSER, construireLot, limiterEncheres, type Config } from '../../src/lib/lot'
 import type { Registre } from '../../src/lib/actions'
 import { registreVide } from '../../src/lib/registre'
 
@@ -168,5 +168,19 @@ describe('carte sans thème fiable avec un ami désigné (écartée de l’écha
     const poses = de(lot.actions, 'pose-etiquette')
     expect(poses.map((p) => ('nomEtiquette' in p ? p.nomEtiquette : ''))).toEqual([])
     expect(lot.ecartees).toContainEqual({ idCarte: 'a', titre: 'Carte a', raison: 'sans-theme-fiable' })
+  })
+})
+
+describe('limiterEncheres (Alexis, 2026-11-15)', () => {
+  const enchere = (n: number): Action => ({ type: 'enchere', idCarte: `c${n}`, idExemplaire: `e${n}`, prix: 10 })
+  const defausse: Action = { type: 'defausse', idCarte: 'd', idExemplaire: 'ed' }
+  it('garde les premières enchères dans les places libres et les autres actions', () => {
+    const r = limiterEncheres([enchere(1), defausse, enchere(2), enchere(3)], { enCours: 4, max: 5 }, 5)
+    expect(r.actions).toEqual([enchere(1), defausse])
+    expect(r.ecartees).toBe(2)
+  })
+  it('le plus petit des deux maxima compte ; jamais de nombre négatif', () => {
+    expect(limiterEncheres([enchere(1), enchere(2), enchere(3)], { enCours: 0, max: 10 }, 2).actions).toHaveLength(2)
+    expect(limiterEncheres([enchere(1)], { enCours: 7, max: 5 }, 5)).toEqual({ actions: [], ecartees: 1 })
   })
 })
