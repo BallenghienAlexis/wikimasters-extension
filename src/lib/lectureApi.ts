@@ -5,8 +5,8 @@ import { RARETES, identifiantCarte } from './lecteur';
 const MAX_TEXTE = 300;
 const MAX_ID = 200;
 const MAX_ETIQUETTES = 200;
-/** Étiquettes d’un compte (`tagOptions`) : large, un compte peut en porter des centaines. */
-const MAX_ETIQUETTES_COMPTE = 2000;
+/** Étiquettes d’un compte (`tagOptions`) : aligné sur la limite de stockage (`MAX_ETIQUETTES_SITE`). */
+const MAX_ETIQUETTES_COMPTE = 500;
 
 export interface EtiquetteStats {
   id: string;

@@ -127,6 +127,8 @@ export interface ResultatSynchro {
   codeHttp: number | null;
   /** Vrai si la collection a été lue en entier (ou jugée inchangée) sans échec. */
   complete: boolean;
+  /** Éléments (pages, prix…) sautés sur erreur pendant l’exécution. */
+  sautes: number;
   collection: Collection;
   etat: EtatOrdonnanceur;
   requetes: number;
@@ -208,6 +210,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     raison: null,
     codeHttp: null,
     complete: false,
+    sautes: 0,
     collection: deps.collection,
     etat,
     requetes: 0,
@@ -367,6 +370,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         etat.derniereComplete = null;
       }
       resultat.complete = complet && echecsTotal === 0;
+      resultat.sautes = echecsTotal;
       if (!resultat.complete) journal(`Synchro incomplète : ${echecsTotal} élément(s) sauté(s) sur erreur.`);
       await deps.enregistrer(instantane(), etat);
       // Prix seulement après une lecture des pages menée à terme : sinon rien ne garantit que les cartes sont encore présentes.
