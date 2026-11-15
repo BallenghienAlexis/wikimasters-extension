@@ -367,6 +367,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         etat.derniereComplete = null;
       }
       resultat.complete = complet && echecsTotal === 0;
+      if (!resultat.complete) journal(`Synchro incomplète : ${echecsTotal} élément(s) sauté(s) sur erreur.`);
       await deps.enregistrer(instantane(), etat);
       // Prix seulement après une lecture des pages menée à terme : sinon rien ne garantit que les cartes sont encore présentes.
       if (lecture.ok) await relevePrix();
@@ -545,9 +546,15 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   /** Enchères en cours sur le site : une requête, sans effet sur le compteur d'échecs. */
   async function releveVentes(): Promise<void> {
     const r = await requete(cheminVentes(), true);
-    if (r === null) return;
+    if (r === null) {
+      journal('Ventes : lecture ignorée (réponse non exploitable), la synchro continue.');
+      return;
+    }
     const lues = analyserVentes(r.json);
-    if (lues === null) return;
+    if (lues === null) {
+      journal('Ventes : forme de réponse inattendue, ignorée, la synchro continue.');
+      return;
+    }
     etat.ventesSite = { ...lues, releveLe: horloge.now() };
     await deps.enregistrer(instantane(), etat);
   }
