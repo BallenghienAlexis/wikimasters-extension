@@ -23,11 +23,15 @@ export const PAUSE_APRES_ARRET_MS = 30 * 60_000;
 export const ancienneteMaxPrixMs = 30 * 86_400_000;
 /** Durée d’un bail ; renouvelé avant chaque requête. */
 export const DUREE_BAIL_MS = 2 * 60_000;
+/** Prix demandés d’affilée avant une pause : deux synchros ont reçu leur premier 403 juste après 30 prix (quota supposé de la route). */
+export const PRIX_PAR_LOT = 30;
+/** Pause entre deux lots de prix, pour laisser la fenêtre de quota supposée se vider. */
+export const PAUSE_ENTRE_LOTS_PRIX_MS = 60_000;
 /** Plafond de prix relevés par exécution (le reste attend la synchro suivante). */
 export const MAX_PRIX_PAR_EXECUTION = 100;
 /** Refus 403 d’affilée sur les prix qui arrêtent la synchro : en dessous, c’est une carte sans route de prix, pas la session. */
 export const MAX_REFUS_PRIX_CONSECUTIFS = 3;
-/** Plafond de refus de prix sur toute une exécution, qu’un succès intercalé ne remet jamais à zéro. */
+/** Plafond de refus de prix sur toute une exécution, qu’un succès ou un contrôle réussi ne remet jamais à zéro. */
 export const MAX_REFUS_PRIX_PAR_EXECUTION = 10;
 /** Échecs sautés au plus sur toute une exécution, même séparés par des lectures réussies. */
 export const MAX_ECHECS_PAR_EXECUTION = 10;
@@ -260,7 +264,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     return Number.isFinite(g) ? Math.max(0, g) : 0;
   }
 
-  async function requete(chemin: string, tolerant = false, prix = false): Promise<ReponseApi | null> {
+  async function requete(chemin: string, tolerant = false, prix: false | string = false): Promise<ReponseApi | null> {
     if (deps.arretDemande?.()) throw new Interruption('manuel', null);
     // Cadence : 0,2 s depuis la dernière requête (budget commun), sans plafond par minute.
     const t = horloge.now();
@@ -279,13 +283,23 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     } catch {
       return tolerant ? null : echec('Requête impossible (réseau).');
     }
-    if (prix && (reponse.statut === 403 || reponse.statut === 404)) {
-      // Prix d’une seule carte refusé : carte vendue, défaussée ou sans marché. On l’ignore ; la session n’est en
-      // cause que si les refus s’enchaînent (401 et 429 arrêtent toujours tout de suite).
+    if (prix !== false && (reponse.statut === 403 || reponse.statut === 404)) {
+      // Prix d’une seule carte refusé : carte vendue, défaussée ou sans marché. On l’ignore et on journalise son titre.
+      // Après 3 refus d’affilée, un contrôle (stats) départage « session refusée »
+      // (arrêt, pause de 30 min) et « cartes sans marché » (la synchro continue). 401 et 429 arrêtent toujours.
       refusPrix += 1;
       refusPrixTotal += 1;
-      journal(`Prix indisponible (réponse ${reponse.statut}) : carte ignorée (${refusPrix}/${MAX_REFUS_PRIX_CONSECUTIFS} refus d’affilée).`);
-      if (refusPrix >= MAX_REFUS_PRIX_CONSECUTIFS || refusPrixTotal >= MAX_REFUS_PRIX_PAR_EXECUTION) throw new Interruption('code-http', reponse.statut);
+      journal(`Prix indisponible (réponse ${reponse.statut}) pour « ${prix} » : carte ignorée (${refusPrix}/${MAX_REFUS_PRIX_CONSECUTIFS} refus d’affilée).`);
+      if (refusPrixTotal >= MAX_REFUS_PRIX_PAR_EXECUTION) throw new Interruption('code-http', reponse.statut);
+      if (refusPrix >= MAX_REFUS_PRIX_CONSECUTIFS) {
+        const controle = await requete(cheminStats(), true);
+        if (controle === null) {
+          journal('Contrôle de session en échec : la synchro s’arrête.');
+          throw new Interruption('code-http', reponse.statut);
+        }
+        journal('Contrôle de session réussi : les refus viennent de ces cartes (sans marché), la synchro continue.');
+        refusPrix = 0;
+      }
       return null;
     }
     if (CODES_ARRET.includes(reponse.statut)) {
@@ -542,14 +556,29 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     const plafond = deps.maxPrix ?? MAX_PRIX_PAR_EXECUTION;
     const retenues = candidatsPrix().slice(0, Math.max(0, plafond));
     deps.annoncerPrix?.(retenues.length);
+    let demandes = 0;
+    let premiereDemande = 0;
     for (const carte of retenues) {
       const cardId = etat.cardIds[carte.id];
       if (cardId === undefined) continue;
-      const refusAvant = refusPrix;
-      const r = await requete(cheminPrix(cardId), false, true);
+      if (demandes > 0 && demandes % PRIX_PAR_LOT === 0) {
+        journal(`Pause de ${PAUSE_ENTRE_LOTS_PRIX_MS / 1000} s après ${demandes} prix demandés (limite de débit supposée).`);
+        // Attente par tranches d’une seconde : un arrêt manuel n’attend pas la fin de la pause.
+        const fin = horloge.now() + PAUSE_ENTRE_LOTS_PRIX_MS;
+        while (horloge.now() < fin) {
+          if (deps.arretDemande?.()) throw new Interruption('manuel', null);
+          await horloge.attendreJusqua(Math.min(fin, horloge.now() + 1000));
+        }
+        if (deps.arretDemande?.()) throw new Interruption('manuel', null);
+      }
+      if (demandes === 0) premiereDemande = horloge.now();
+      demandes += 1;
+      const refusAvant = refusPrixTotal;
+      const r = await requete(cheminPrix(cardId), false, carte.titre);
       if (r === null) {
+        if (refusPrixTotal > refusAvant) journal(`Diagnostic prix : refus pour « ${carte.titre} » (rareté ${carte.rarete ?? '?'}) à la demande n° ${demandes}, ${Math.round((horloge.now() - (premiereDemande)) / 1000)} s après la première.`);
         // Refus par carte : on ne la redemande pas avant la fin de l’ancienneté (30 jours), sans valeur inventée.
-        if (refusPrix > refusAvant) etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() };
+        if (refusPrixTotal > refusAvant) etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() };
         continue;
       }
       refusPrix = 0;
