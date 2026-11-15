@@ -139,3 +139,9 @@ Un amendement daté est en tête de `spec.md`, `spec.refined.md`, `design.md` et
 - `src/lib/lot.ts` (`calculerEtiquettes` et sélection de vente) : une carte gardée choisie à la main pour la vente perd ses étiquettes d’échange sans recevoir de favori ; sans effet pratique, à aligner ou documenter.
 - `tests/unit/file.test.ts` : ajouter `refusParCarte({ type: 'favori', … }, 403) === true`.
 - Captures aux 3 points de rupture et e2e de l’avertissement « favori » et du libellé « Favoris » (DoD, point 3), à joindre avec les autres captures de la sélection de lot.
+
+## À reprendre (revue de la PR #154, ventes tolérantes, 2026-11-15)
+- `src/content/synchroAuto.ts:299` : `etapeFautive` ne retient que les réponses non 200 ; une réponse 200 de forme inattendue (stats ou page) ou une erreur réseau retombe sur la dernière étape vue. À reprendre : faire remonter l’étape en cause depuis l’ordonnanceur, au moment de `echec()` (par exemple dans `ResultatSynchro`).
+- `tests/unit/synchro-auto.test.ts:611` : le test vérifie seulement que l’étape n’est pas `ventes` ; ajouter `etape: 'pages'` et un cas « stats non 200 donne `stats` ».
+- `src/content/synchroAuto.ts:424` : les messages « Ventes : … », « Échec … » et « Synchro incomplète … » partent sous le titre « Synchronisation automatique : prix ». À reprendre : choisir le titre selon le message et renommer `estDiagnosticPrix` en `estDiagnostic`.
+- `src/lib/lectureApi.ts:131` : compteur de ventes absent ou nul = 0, non relevé sur le site (le plafond de places des enchères manuelles s’appuie dessus ; un 409 arrête le lot en cas d’erreur). À confirmer au prochain relevé avec un compte qui n’a rien en vente (`releves-a-faire.md`).
