@@ -49,7 +49,7 @@ const carteLocale = (surcharge: object = {}): object => ({
   id: ID_CARTE,
   titre: 'Loutre fictive',
   rarete: 'UR',
-  description: '',
+  description: 'race de chien',
   quantite: 1,
   url: null,
   favori: false,
