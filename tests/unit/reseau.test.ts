@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { Action } from '../../src/lib/actions'
+import { CAUSE_VERIFICATION_HUMAINE, estVerificationHumaine, type Action } from '../../src/lib/actions'
 import { TABLE_CONTRAT } from '../../src/lib/contrat'
 import { classerConflit, creerEmetteur } from '../../src/lib/reseau'
 import { avecIdEtiquette, registreVide, enregistrerEtiquette } from '../../src/lib/registre'
@@ -204,5 +204,23 @@ describe('reseau : conflit 409 de l’enchère', () => {
   })
   it('classerConflit tolère toute forme de corps', () => {
     for (const j of [null, undefined, 3, 'x', [], {}, { message: 4 }]) expect(classerConflit(j)).toBe('conflit signalé par le site')
+  })
+})
+
+describe('reseau : vérification anti-bot du site (Alexis, 2026-11-15)', () => {
+  const enchere: Action = { type: 'enchere', idCarte: 'commune|Chat', idExemplaire: '11111111-1111-4111-8111-111111111111', prix: 50 }
+  const appel = async (corps: string) => {
+    const f = vi.fn(async () => new Response(corps, { status: 403, headers: { 'content-type': 'application/json' } }))
+    return creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: 'https://www.wiki-masters.com', fetchImpl: f as unknown as typeof fetch })(enchere)
+  }
+  it('403 + human_verification_required : cause dédiée, diagnostic conservé', async () => {
+    const r = await appel(JSON.stringify({ error: 'Vérification anti-bot requise.', code: 'human_verification_required' }))
+    expect(r).toMatchObject({ classe: 'echec', codeHttp: 403, cause: CAUSE_VERIFICATION_HUMAINE })
+    expect(estVerificationHumaine(r.diagnostic)).toBe(true)
+  })
+  it('403 ordinaire : cause inchangée', async () => {
+    const r = await appel(JSON.stringify({ error: 'Interdit' }))
+    expect(r.cause).toBe('action non disponible')
+    expect(estVerificationHumaine(r.diagnostic)).toBe(false)
   })
 })

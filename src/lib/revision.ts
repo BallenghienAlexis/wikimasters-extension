@@ -65,8 +65,11 @@ export function reverifierAction(
       return attendu?.etiquettes.includes(action.nomEtiquette) ? 'ok' : 'passee'
     }
     case 'retrait-etiquette': {
+      // Carte sans thème fiable : aucune étiquette attendue, donc `#À classer` posée avant doit être retirée
+      // (Alexis, 2026-11-15) ; seule une étiquette encore attendue, ou un exemplaire inconnu, passe l’action.
+      if (!carte.idsSite?.includes(action.idExemplaire)) return 'passee'
       const attendu = exemplairesAttendus(carte, config).find((e) => e.idExemplaire === action.idExemplaire)
-      if (!attendu || attendu.etiquettes.includes(action.nomEtiquette)) return 'passee'
+      if (attendu?.etiquettes.includes(action.nomEtiquette)) return 'passee'
       const pose = registre.couples.some((c) => c.ex === action.idExemplaire && c.nom === action.nomEtiquette)
       return pose ? 'ok' : 'passee'
     }

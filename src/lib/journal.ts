@@ -8,7 +8,7 @@
  */
 
 import {
-  CAUSES_JOURNAL, FAMILLES_LOT, TYPES_ACTION,
+  CAUSES_JOURNAL, FAMILLES_LOT, estLimiteEncheres, estVerificationHumaine, TYPES_ACTION,
   type CauseJournal, type EntreeJournal, type FamilleLot, type ResultatAction, type TypeAction,
 } from './actions'
 
@@ -277,9 +277,18 @@ const LIBELLE_RESULTAT: Readonly<Record<Resultat, string>> = {
   'en-cours': 'En cours',
 }
 
+/** Libellé d’un refus par vérification anti-bot (Alexis, 2026-11-15). */
+export const LIBELLE_VERIFICATION_HUMAINE =
+  'Vérification anti-bot du site requise : mets une carte aux enchères à la main sur wiki-masters.com, résous la vérification, puis relance'
+
+/** Libellé d’un 409 « limite d’enchères actives » (Alexis, 2026-11-15). */
+export const LIBELLE_LIMITE_ENCHERES = 'Limite de 5 enchères actives atteinte : réessaie quand une vente se termine'
+
 export function libelleHistorique(e: EntreeJournal): string {
   if (e.cause === 'sautee') return 'Passée : sautée'
   if (e.cause === 'ignoree') return 'Passée : ignorée jusqu’à la prochaine synchro'
+  if (e.resultat === 'echouee' && e.codeHttp === 403 && estVerificationHumaine(e.diagnostic)) return LIBELLE_VERIFICATION_HUMAINE
+  if (e.resultat === 'echouee' && e.codeHttp === 409 && e.type === 'enchere' && estLimiteEncheres(e.diagnostic)) return LIBELLE_LIMITE_ENCHERES
   if (
     e.resultat === 'echouee' &&
     (e.codeHttp === 403 || e.codeHttp === 404) &&

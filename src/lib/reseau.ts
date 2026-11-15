@@ -6,7 +6,7 @@
  * seuls une classe, un code HTTP, un libellé fixe et, pour une création, l’identifiant validé.
  * Aucun aléatoire ici : le délai variable est tiré par l’appelant (`Synchronisation.tsx`).
  */
-import type { Action, ResultatAction } from './actions'
+import { CAUSE_VERIFICATION_HUMAINE, CODE_VERIFICATION_HUMAINE, type Action, type ResultatAction } from './actions'
 import type { EntreeContrat, TableContrat } from './contrat'
 import { enteteAuthentification, sessionCourante, type SessionLue } from './jeton'
 import { COULEUR_ETIQUETTE, CLE_PUBLIQUE, DELAI_REQUETE_MS, ORIGINE_REST, ORIGINE_SITE } from '../config/synchro'
@@ -47,6 +47,15 @@ export function classerConflit(json: unknown): string {
           .slice(0, 300)
       : ''
   return /actives?|simultan|concurrent|maximum|limite|limit/i.test(message) ? 'limite d’enchères atteinte' : 'conflit signalé par le site'
+}
+
+/** Le site demande une vérification humaine : champ `code` de la réponse JSON, à défaut le texte brut. */
+export function verificationHumaine(json: unknown, texte: string): boolean {
+  if (typeof json === 'object' && json !== null && !Array.isArray(json)) {
+    const c = (json as Record<string, unknown>).code
+    if (typeof c === 'string') return c === CODE_VERIFICATION_HUMAINE
+  }
+  return texte.includes(CODE_VERIFICATION_HUMAINE)
 }
 
 /** Types dont le corps (identifiants d’exemplaire raccourcis, prix, durée) peut figurer dans le diagnostic d’un refus. */
@@ -137,6 +146,11 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
       })
       const { json, texte } = await lireCorps(reponse)
       const diagnostic = reponse.status < 200 || reponse.status > 299 ? diagnosticDeRefus(entree.methode, chemin, ordre.type, corps, reponse.status, json, texte, session?.jeton ?? '') : null
+      // Vérification anti-bot du site (Alexis, 2026-11-15) : 403 + code `human_verification_required`. Ni exemplaire
+      // indisponible ni quota : on le signale tel quel, sans tenter de la franchir.
+      if (reponse.status === 403 && verificationHumaine(json, texte)) {
+        return { classe: 'echec', codeHttp: 403, cause: CAUSE_VERIFICATION_HUMAINE, ...(diagnostic ? { diagnostic } : {}) }
+      }
       if (CODES_ARRET.includes(reponse.status)) {
         return { classe: 'echec', codeHttp: reponse.status, cause: 'action non disponible', ...(diagnostic ? { diagnostic } : {}) }
       }
