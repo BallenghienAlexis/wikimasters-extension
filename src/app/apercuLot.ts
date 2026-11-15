@@ -380,6 +380,11 @@ export const texteInterrompu = (): string => `${TITRE_INTERROMPU}${SUITE_INTERRO
 
 export const SYNCHRO_EN_COURS = 'Une synchronisation ou un autre lot est en cours : réessaie quand il est terminé.';
 
+/** Libellés fixes d'un lancement refusé avant un lot d'enchères (relecture de `marketplace/mine`). */
+export const ECHEC_LECTURE_ENCHERES = 'Le site a refusé la lecture de tes enchères en cours';
+export const AUCUNE_PLACE_ENCHERE = 'Limite de 5 enchères actives atteinte : réessaie quand une vente se termine.';
+const MESSAGES_LANCEMENT_SUPPLEMENTAIRES: readonly string[] = [AUCUNE_PLACE_ENCHERE, ECHEC_LECTURE_ENCHERES, LIBELLE_VERIFICATION_HUMAINE];
+
 /** Message affiché au lancement : libellé fixe de l’extension, jamais un texte venu d’ailleurs (D-41). */
 const ERREURS_LANCEMENT = new Set([
   'Une exécution est déjà en cours.',
@@ -387,11 +392,10 @@ const ERREURS_LANCEMENT = new Set([
   'Un seul onglet WikiMasters est requis.',
   'Onglet WikiMasters déconnecté.',
   SYNCHRO_EN_COURS,
-  'Limite de 5 enchères actives atteinte : réessaie quand une vente se termine.',
 ]);
 
 export function libelleErreurLancement(e: unknown): string {
-  return e instanceof Error && ERREURS_LANCEMENT.has(e.message) ? e.message : 'le lot n’a pas pu être lancé.';
+  return e instanceof Error && (ERREURS_LANCEMENT.has(e.message) || MESSAGES_LANCEMENT_SUPPLEMENTAIRES.some((m) => e.message.startsWith(m))) ? e.message : 'le lot n’a pas pu être lancé.';
 }
 
 export function texteFin(etat: EtatFile, bilan: Bilan, deconnecte: boolean): { titre: string; detail: string | null } {

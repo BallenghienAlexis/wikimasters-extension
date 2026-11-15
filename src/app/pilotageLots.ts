@@ -1,16 +1,16 @@
 import { trierEtiquettesSite } from '../lib/etiquettesPreexistantes';
 import { CONFIG_PRIX } from '../config/prix';
-import { ID_CARTE_ETIQUETTES } from '../lib/actions';
+import { CAUSE_VERIFICATION_HUMAINE, ID_CARTE_ETIQUETTES } from '../lib/actions';
 import { limiterEncheres } from '../lib/lot';
 import type { Action, CauseJournal, EtatExecutionV2, ErreurExecution, FamilleLot, Registre, ResultatAction } from '../lib/actions';
 import type { Collection } from '../lib/collection';
 import type { Journal } from '../lib/journal';
 import { DUREE_BAIL_MS } from '../lib/ordonnanceur';
-import { INTERVALLE_MS, SUPPLEMENT_MAX_MS, creerFile, type ContexteErreur, type ContexteJournal, type File as FileLot, type SuiteExecution } from '../lib/file';
+import { CODES_ARRET, INTERVALLE_MS, SUPPLEMENT_MAX_MS, creerFile, type ContexteErreur, type ContexteJournal, type File as FileLot, type SuiteExecution } from '../lib/file';
 import { familleDe } from '../lib/familles';
 import { ajouterIgnoree } from '../lib/ignorees';
-import { completerEntree, ouvrirEntree, passerEntree } from '../lib/journal';
-import { RAISON_RESULTAT_INCONNU, calculerPauseJusqua, raisonPause, resultatInconnu } from '../lib/reprise';
+import { LIBELLE_VERIFICATION_HUMAINE, completerEntree, ouvrirEntree, passerEntree } from '../lib/journal';
+import { PAUSE_LOTS_MS, RAISON_RESULTAT_INCONNU, calculerPauseJusqua, raisonPause, resultatInconnu } from '../lib/reprise';
 import { appliquerResultat, reverifierAction } from '../lib/revision';
 import {
   chargerCollection,
@@ -32,7 +32,7 @@ import {
 import { avecIdEtiquette, refuserCouple } from '../lib/registre';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
 import type { CoupleRetrait } from './Journal';
-import { SYNCHRO_EN_COURS, bilanVide, configDuLot, type Bilan } from './apercuLot';
+import { AUCUNE_PLACE_ENCHERE, ECHEC_LECTURE_ENCHERES, SYNCHRO_EN_COURS, bilanVide, configDuLot, type Bilan } from './apercuLot';
 
 // ───────────────────────── Exécution (câblage de la file, T-017) ─────────────────────────
 
@@ -210,9 +210,12 @@ async function lireEtatStocke(): Promise<EtatExecutionV2 | null> {
 
 async function verifierPause(): Promise<void> {
   const stocke = await lireEtatStocke();
-  const raison = raisonPause(stocke?.pauseJusqua ?? null, Date.now());
+  const raison = raisonPause(Math.max(stocke?.pauseJusqua ?? 0, pauseLecture) || null, Date.now());
   if (raison !== null) throw new Error(raison);
 }
+
+/** Fin de la pause de 30 min posée par un 401 ou un 429 sur la relecture des enchères (mémoire de la page seulement). */
+let pauseLecture = 0;
 
 interface Lancement {
   actions: readonly Action[];
@@ -247,9 +250,6 @@ export async function lancerLot(actions: readonly Action[], idLot: string): Prom
   return lancerAvec(async () => ({ actions: await limiterAuxPlacesLibres(actions), idLot }));
 }
 
-/** Message de lancement quand aucune place d'enchère n'est libre (libellé fixe de l'extension). */
-export const AUCUNE_PLACE_ENCHERE = 'Limite de 5 enchères actives atteinte : réessaie quand une vente se termine.';
-
 /**
  * Avant un lot qui contient des enchères : relit `GET /api/marketplace/mine` (lecture déjà autorisée, une seule requête,
  * Alexis, 2026-11-15) et ne garde que les enchères qui tiennent dans les places libres. Lecture impossible : le lot part
@@ -261,7 +261,13 @@ async function limiterAuxPlacesLibres(actions: readonly Action[]): Promise<reado
   try {
     const r = await contexteExecution().execution.transport({ type: 'lecture', idCarte: ID_CARTE_ETIQUETTES });
     if (r.classe === 'reussie') ventes = r.ventes;
-  } catch {
+    else if (r.codeHttp !== null && CODES_ARRET.includes(r.codeHttp)) {
+      // Même arrêt que pour une enchère : le lot ne part pas (401 et 429 : pause de 30 min ; 403 : vérification anti-bot ou refus).
+      if (calculerPauseJusqua({ raison: 'code-http', codeHttp: r.codeHttp }, Date.now()) !== null) pauseLecture = Date.now() + PAUSE_LOTS_MS;
+      throw new Error(r.cause === CAUSE_VERIFICATION_HUMAINE ? LIBELLE_VERIFICATION_HUMAINE : `${ECHEC_LECTURE_ENCHERES} (réponse ${r.codeHttp}).`);
+    }
+  } catch (e) {
+    if (e instanceof Error && (e.message === LIBELLE_VERIFICATION_HUMAINE || e.message.startsWith(ECHEC_LECTURE_ENCHERES))) throw e;
     return actions;
   }
   // Même cadence que la file : 0,2 s au minimum plus la gigue entre cette lecture et la première requête du lot.

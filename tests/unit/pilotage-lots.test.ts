@@ -41,7 +41,8 @@ const banc = vi.hoisted(() => {
     appels: [] as Action[],
     lectures: 0,
     ventes: undefined as { enCours: number; max: number } | undefined,
-    lecture: (): ResultatAction => { banc.lectures++; return { classe: 'reussie', codeHttp: 200, cause: 'action réussie', ...(banc.ventes ? { ventes: banc.ventes } : {}) }; },
+    lectureResultat: undefined as ResultatAction | undefined,
+    lecture: (): ResultatAction => { banc.lectures++; if (banc.lectureResultat) return banc.lectureResultat; return { classe: 'reussie', codeHttp: 200, cause: 'action réussie', ...(banc.ventes ? { ventes: banc.ventes } : {}) }; },
     reponse: ((): unknown => null) as (a: Action, n: number) => unknown,
     t: 1_000_000,
     attentes: [] as Array<{ echeance: number; resoudre: () => void }>,
@@ -157,6 +158,7 @@ beforeEach(() => {
   banc.appels = [];
   banc.lectures = 0;
   banc.ventes = undefined;
+  banc.lectureResultat = undefined;
   banc.attentes = [];
   banc.t = 1_000_000;
   banc.reponse = reponses({});
@@ -407,6 +409,40 @@ describe('Lecture des enchères en cours avant un lot d’enchères (Alexis, 202
     banc.ventes = undefined;
     await api.lancerLot([enchere(1), enchere(2)], 'lot-1');
     expect(banc.appels).toEqual([enchere(1), enchere(2)]);
+  });
+
+  it('la première enchère part au moins 0,2 s après la lecture', async () => {
+    const api = await frais();
+    banc.ventes = { enCours: 0, max: 5 };
+    const avant = banc.t;
+    await api.lancerLot([enchere(1)], 'lot-1');
+    expect(banc.t - avant).toBeGreaterThanOrEqual(200);
+  });
+
+  it('403 anti-bot sur la lecture : lancement refusé avec le libellé dédié, rien d’envoyé', async () => {
+    const api = await frais();
+    banc.lectureResultat = { classe: 'echec', codeHttp: 403, cause: 'vérification anti-bot requise' };
+    await expect(api.lancerLot([enchere(1)], 'lot-1')).rejects.toThrow('Vérification anti-bot du site requise');
+    expect(banc.appels).toEqual([]);
+  });
+
+  it('403 ordinaire sur la lecture : lancement refusé, sans pause', async () => {
+    const api = await frais();
+    banc.lectureResultat = { classe: 'echec', codeHttp: 403, cause: 'action non disponible' };
+    await expect(api.lancerLot([enchere(1)], 'lot-1')).rejects.toThrow('Le site a refusé la lecture');
+    banc.lectureResultat = undefined;
+    banc.ventes = { enCours: 0, max: 5 };
+    await api.lancerLot([enchere(1)], 'lot-2');
+    expect(banc.appels).toEqual([enchere(1)]);
+  });
+
+  it.each([401, 429])('%i sur la lecture : lancement refusé et pause de 30 min', async (code) => {
+    const api = await frais();
+    banc.lectureResultat = { classe: 'echec', codeHttp: code, cause: 'action non disponible' };
+    await expect(api.lancerLot([enchere(1)], 'lot-1')).rejects.toThrow('Le site a refusé la lecture');
+    banc.lectureResultat = undefined;
+    await expect(api.lancerLot([defausse(2)], 'lot-2')).rejects.toThrow(/Reprise possible à/);
+    expect(banc.appels).toEqual([]);
   });
 
   it('aucune place libre : lancement refusé avec un libellé fixe, rien d’envoyé', async () => {
