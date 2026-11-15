@@ -159,3 +159,6 @@ Un amendement daté est en tête de `spec.md`, `spec.refined.md`, `design.md` et
 - `src/lib/lectureApi.ts` (`analyserStats`) : les étiquettes ignorées ne sont pas comptées ni journalisées ; ajouter « N étiquette(s) illisible(s) ignorée(s) ».
 - `src/lib/ordonnanceur.ts` (prix) : sans les lots, les 403 observés vers le 31e prix peuvent revenir et faire mémoriser des cartes « sans marché » 30 jours à tort ; ne pas mémoriser une série de refus qui suit au moins 30 succès d’affilée (à décider au prochain journal d’Alexis).
 - PR #161 hors format SDD (branche `claude/…`, pas de tâche T-xxx) : exception assumée pour un correctif demandé par Alexis.
+- `src/lib/ordonnanceur.ts:27,297` : commentaires « double à chaque 429 d’affilée » → « de l’exécution » (le compteur n’est jamais remis à zéro).
+- `tests/unit/ordonnanceur.test.ts` : ajouter un test alternant 429 et 200 (arrêt au 6e 429) ; renommer « 5 réponses 429 d’affilée » en « 5 pauses puis arrêt au 6e 429 » ; durcir le seuil du test de bail (au moins 25 écritures pendant la pause de 30 s).
+- Anti-bot : afficher dans l’onglet Synchro « résous la vérification à la main sur wiki-masters.com » à côté de « Relancer la synchro ».
