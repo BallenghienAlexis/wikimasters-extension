@@ -147,3 +147,9 @@ Un amendement daté est en tête de `spec.md`, `spec.refined.md`, `design.md` et
 - `tests/unit/synchro-auto.test.ts:611` : le test vérifie seulement que l’étape n’est pas `ventes` ; ajouter `etape: 'pages'` et un cas « stats non 200 donne `stats` ».
 - `src/content/synchroAuto.ts:424` : les messages « Ventes : … », « Échec … » et « Synchro incomplète … » partent sous le titre « Synchronisation automatique : prix ». À reprendre : choisir le titre selon le message et renommer `estDiagnosticPrix` en `estDiagnostic`.
 - `src/lib/lectureApi.ts:131` : compteur de ventes absent ou nul = 0, non relevé sur le site (le plafond de places des enchères manuelles s’appuie dessus ; un 409 arrête le lot en cas d’erreur). À confirmer au prochain relevé avec un compte qui n’a rien en vente (`releves-a-faire.md`).
+
+## À reprendre (revue de la PR #159, anti-bot et limite d’enchères, 2026-11-15)
+- `tests/unit/file.test.ts:736` : seul `refusParCarte` est testé ; ajouter un test de `creerFile` (plusieurs enchères, la première répond `CAUSE_VERIFICATION_HUMAINE`) vérifiant l’arrêt `code-http` sans pause, les cartes suivantes non envoyées et `appliquer` non appelé.
+- `src/lib/actions.ts:137` : `estLimiteEncheres` (regex sur le texte français) double `classerConflit` (`reseau.ts:49`) ; garder une seule règle.
+- `src/lib/journal.ts:285` : `LIBELLE_LIMITE_ENCHERES` écrit « 5 » en dur alors que le maximum vient de `marketplace/mine`.
+- `src/app/PanneauErreur.tsx:144` : le diagnostic est retrouvé par recherche dans le journal (même lot, carte et type) ; porter la cause dans `erreur` et ajouter un test du libellé du panneau.
