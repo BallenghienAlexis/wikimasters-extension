@@ -12,11 +12,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Le job `ci` à la fin est le contrôle exigé par la protection de `main` : il n'est vert que si tous les autres le sont.
 jobs:
-  ci:
-    name: ci
+  statique:
+    name: statique
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -32,17 +33,45 @@ jobs:
         run: npm test
       - name: Garde-fous
         run: node .claude/hooks/garde-fous.test.mjs
+
+  e2e:
+    name: e2e (tranche ${{ matrix.tranche }}/4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        tranche: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Cache du navigateur Playwright
+        id: navigateur
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: Navigateur Playwright
+        if: steps.navigateur.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
-      - name: Build et tests e2e
-        run: npm run test:e2e
+      - name: Bibliothèques système du navigateur
+        if: steps.navigateur.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: Build
+        run: npm run build
+      - name: Tests e2e (tranche ${{ matrix.tranche }}/4)
+        run: npx playwright test --project=principal --shard=${{ matrix.tranche }}/4 --trace off
         env:
           CI: true
       - name: Captures responsive
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: captures
+          name: captures-${{ matrix.tranche }}
           path: test-results/captures/
           if-no-files-found: ignore
           retention-days: 7
@@ -50,7 +79,58 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.tranche }}
           path: playwright-report/
           if-no-files-found: ignore
           retention-days: 7
+
+  # Mesure de durée (5 000 cartes) : seule sur son exécuteur, sans concurrence d'autres tests.
+  perf:
+    name: e2e (durée)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Cache du navigateur Playwright
+        id: navigateur
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Navigateur Playwright
+        if: steps.navigateur.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Bibliothèques système du navigateur
+        if: steps.navigateur.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - run: npm run build
+      - name: Test de durée
+        run: npx playwright test --project=perf --no-deps --trace off
+        env:
+          CI: true
+      - name: Rapport Playwright
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-perf
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  ci:
+    name: ci
+    if: always()
+    needs: [statique, e2e, perf]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Tous les jobs sont verts
+        run: |
+          test "${{ needs.statique.result }}" = success \
+            && test "${{ needs.e2e.result }}" = success \
+            && test "${{ needs.perf.result }}" = success

@@ -198,7 +198,7 @@ test.describe('captures et mouvement réduit', () => {
   });
 });
 
-test('5 000 cartes : l’aperçu s’affiche en moins de 500 ms', async ({ pageCollection: page }) => {
+test('5 000 cartes : l’aperçu s’affiche en moins de 500 ms @perf', async ({ pageCollection: page }) => {
   const modeles = FIXTURE.cartes;
   const cartes = Array.from({ length: 5000 }, (_, i) => {
     const m = modeles[i % modeles.length]!;
