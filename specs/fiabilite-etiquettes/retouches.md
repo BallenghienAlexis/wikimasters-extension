@@ -14,3 +14,9 @@
 - `src/app/pilotageLots.ts` (`retraitsManuels`) : la marque d’un retrait voulu par le joueur vit en mémoire ; perdue si la page est rechargée avant le résultat. Porter l’origine sur l’action (champ facultatif) demande de toucher `messages.ts`.
 - `src/lib/themes.ts:124-136` (nouveaux thèmes Pornographie, Sexualité, Drogue, Armes) : ces étiquettes seront posées et visibles des autres joueurs après « Lancer » (l’aperçu les montre). Décision d’Alexis à prendre : les garder, ou les exclure des étiquettes posées sur le site.
 - `src/lib/themes.ts` (motif `cafe`, `(?! de )`) : « un café de Colombie » ne donne plus #Boissons ; compromis voulu pour écarter « Café de Flore ». À réévaluer si des cartes de café sont mal classées.
+
+## À reprendre (PR « jamais À classer »)
+
+- Cause probable des cartes sans thème : la vérification Wikipédia/Wikidata ne couvre que les cartes affichées dans la liste (AGENTS.md § Vérification Wikipédia). Étendre à toutes les cartes en arrière-plan attend la décision d’Alexis (carte de décision dans le fil).
+- « Attendue, absente du site » pour les « #À échanger <ami> » : ce sont des poses jamais lancées (le lot compare au registre), pas une erreur de calcul ; à confirmer sur le PC d’Alexis (limite de noms du compte, lot non lancé).
+- Faux positifs à mesurer avec Wikipédia (Hitler #Littérature, Marcel Rufo #Éducation/#Littérature, Millet #Langue, David Cobb #Écologie) : le réseau du cloud n’atteint pas Wikipédia.

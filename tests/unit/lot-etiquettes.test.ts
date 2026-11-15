@@ -40,12 +40,12 @@ const attendues = (c: Carte, cfg: Config = config()): string[] => exemplairesAtt
 
 describe('étiquettes attendues (SC-008)', () => {
 
-  it('toute carte reliée, favori ou non, avec ou sans thème reconnu, a au moins une étiquette de thème', () => {
+  it('toute carte reliée avec un thème reconnu, favori ou non, a une étiquette de thème ; sans thème, aucune', () => {
     for (const favori of [false, true]) {
-      for (const extra of [CHIEN, { titre: 'Zzz', description: '' }]) {
-        const noms = attendues(carte('a', { ...extra, favori }), config({ amis: AMIS, limiteParExemplaire: 1 }))
-        expect(noms.some((n) => !n.startsWith('#À échanger')), `${favori}`).toBe(true)
-      }
+      const noms = attendues(carte('a', { ...CHIEN, favori }), config({ amis: AMIS, limiteParExemplaire: 1 }))
+      expect(noms.some((n) => !n.startsWith('#À échanger')), `${favori}`).toBe(true)
+      const vide = attendues(carte('a', { titre: 'Zzz', description: '', favori }), config({ amis: AMIS, limiteParExemplaire: 1 }))
+      expect(vide.some((n) => n === '#À classer')).toBe(false)
     }
   })
 

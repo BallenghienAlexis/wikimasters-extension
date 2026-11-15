@@ -37,8 +37,8 @@ const ok: ResultatAction = { classe: 'reussie', codeHttp: 200, cause: 'ok' }
 const enchere: Action = { type: 'enchere', idCarte: 'commune|Chat', idExemplaire: 'ex-1', prix: 30 }
 const defausse: Action = { type: 'defausse', idCarte: 'commune|Chat', idExemplaire: 'ex-1' }
 
-// Carte sans thème reconnu : elle reçoit l’étiquette de repli « #À classer ».
-const ZZZ = { titre: 'Zzz', description: '' }
+// Carte au thème reconnu (#Chien).
+const ZZZ = { titre: 'Zzz', description: 'race de chien' }
 
 describe('reverifierAction (AC1)', () => {
   it('enchère et défausse : toujours passées (plus de statut, aucun lot n’en produit)', () => {
@@ -47,8 +47,8 @@ describe('reverifierAction (AC1)', () => {
     expect(reverifierAction(enchere, coll(), reg(), config)).toBe('passee')
   })
 
-  it('pose : étiquette de repli et étiquette d’échange', () => {
-    const pose: Action = { type: 'pose-etiquette', idCarte: 'commune|Chat', idExemplaire: 'ex-1', nomEtiquette: '#À classer' }
+  it('pose : étiquette de thème et étiquette d’échange', () => {
+    const pose: Action = { type: 'pose-etiquette', idCarte: 'commune|Chat', idExemplaire: 'ex-1', nomEtiquette: '#Chien' }
     expect(reverifierAction(pose, coll(carte(ZZZ)), reg(), config)).toBe('ok')
     expect(reverifierAction(pose, coll(carte({ ...ZZZ, favori: true })), reg(), config)).toBe('ok')
     expect(reverifierAction(pose, coll(carte({ ...ZZZ, idsSite: ['ex-2'] })), reg(), config)).toBe('passee')
@@ -60,7 +60,7 @@ describe('reverifierAction (AC1)', () => {
   })
 
   it('création : l’étiquette est-elle toujours nécessaire ?', () => {
-    const cr: Action = { type: 'creation-etiquette', idCarte: 'commune|Chat', nomEtiquette: '#À classer' }
+    const cr: Action = { type: 'creation-etiquette', idCarte: 'commune|Chat', nomEtiquette: '#Chien' }
     expect(reverifierAction(cr, coll(carte(ZZZ)), reg(), config)).toBe('ok')
     expect(reverifierAction({ ...cr, nomEtiquette: 'Statut · Vendre' }, coll(carte(ZZZ)), reg(), config)).toBe('passee')
     expect(reverifierAction(cr, coll(), reg(), config)).toBe('passee')

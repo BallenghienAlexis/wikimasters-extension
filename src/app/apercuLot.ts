@@ -31,6 +31,7 @@ const RAISONS: Record<RaisonEcart, string> = {
   homonyme: 'une étiquette du même nom existe déjà sur le site',
   'exemplaires-non-relies': 'exemplaires non reliés au site',
   'sans-etiquette-theme': 'aucune étiquette de thème ne peut être posée (nom trop long, homonyme ou limite du compte)',
+  'sans-theme-fiable': 'aucun thème fiable pour l’instant : la carte n’est pas étiquetée (jamais « À classer »)',
   'en-vente-sur-site': 'en vente sur le site : l’exemplaire n’est plus dans la collection, aucune étiquette n’est envoyée',
   'valeur-defausse-elevee': `valeur marchande inconnue ou supérieure au plafond de défausse réglé`,
 };

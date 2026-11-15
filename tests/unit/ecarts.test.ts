@@ -32,14 +32,14 @@ describe('calculerEcarts', () => {
   })
 
   it('signale une étiquette présente sur le site mais non attendue', () => {
-    const c = carte('b', { etiquettesSite: ['#À classer', 'Statut · Vendre'] })
+    const c = carte('b', { ...CHIEN, etiquettesSite: ['#Chien', 'Statut · Vendre'] })
     const e = calculerEcarts([c])[0]!
     expect(e.enTrop).toEqual(['Statut · Vendre'])
     expect(e.manquantes).toEqual([])
   })
 
   it('ne renvoie rien quand les étiquettes correspondent', () => {
-    const c = carte('c', { etiquettesSite: ['#À classer'] })
+    const c = carte('c', { ...CHIEN, etiquettesSite: ['#Chien'] })
     expect(calculerEcarts([c])).toEqual([])
   })
 
@@ -57,9 +57,9 @@ describe('calculerEcarts', () => {
   })
 
   it('un favori n’attend que ses thèmes : une ancienne étiquette de statut ou d’échange est en trop', () => {
-    const c = carte('f', { favori: true, etiquettesSite: ['Statut · Garder', '#À échanger Léa'] })
+    const c = carte('f', { ...CHIEN, favori: true, etiquettesSite: ['Statut · Garder', '#À échanger Léa'] })
     const e = calculerEcarts([c], { amis: [{ nom: 'Léa', themes: ['animaux'] }] })[0]!
     expect(e.enTrop).toEqual(['Statut · Garder', '#À échanger Léa'])
-    expect(e.manquantes).toEqual(['#À classer'])
+    expect(e.manquantes).toEqual(['#Chien'])
   })
 })

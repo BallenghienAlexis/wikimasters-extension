@@ -70,6 +70,7 @@ describe('actions : types partagés', () => {
       | 'valeur-defausse-elevee'
       | 'en-vente-sur-site'
       | 'sans-etiquette-theme'
+      | 'sans-theme-fiable'
     >()
     expectTypeOf<TypesDisponibles>().toEqualTypeOf<ReadonlySet<TypeAction>>()
     expectTypeOf<EtatExecution>().toBeObject()

@@ -13,7 +13,7 @@ const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
   id,
   titre: `Carte ${id}`,
   rarete: 'commune',
-  description: '',
+  description: 'race de chien',
   quantite: 1,
   url: null,
   favori: false,
@@ -43,15 +43,18 @@ const de = (a: Action[], type: TypeAction) => a.filter((x) => x.type === type)
 // Les cartes de ces tests n’ont aucun thème : elles reçoivent aussi l’étiquette de repli, vérifiée à part.
 
 describe('garde-fous (étiquettes du site = vérité, 2026-11-14)', () => {
-  it('une carte sans thème reconnu reçoit « #À classer » sur chaque exemplaire relié, favori compris', () => {
+  it('une carte sans thème reconnu n’a aucune étiquette (jamais « À classer ») et est signalée, favori compris', () => {
     for (const favori of [false, true]) {
-      const lot = construireLot(coll(carte('a', { favori, idsSite: ['x1', 'x2'], quantite: 2 })), registre(), config(), TOUS)
-      expect(lot.actions).toEqual([
-        { type: 'creation-etiquette', idCarte: 'a', nomEtiquette: ETIQUETTE_A_CLASSER },
-        { type: 'pose-etiquette', idCarte: 'a', idExemplaire: 'x1', nomEtiquette: ETIQUETTE_A_CLASSER },
-        { type: 'pose-etiquette', idCarte: 'a', idExemplaire: 'x2', nomEtiquette: ETIQUETTE_A_CLASSER },
-      ])
+      const lot = construireLot(coll(carte('a', { favori, description: '', idsSite: ['x1', 'x2'], quantite: 2 })), registre(), config(), TOUS)
+      expect(lot.actions).toEqual([])
+      expect(lot.ecartees).toEqual([{ idCarte: 'a', titre: 'Carte a', raison: 'sans-theme-fiable' }])
     }
+  })
+
+  it('l’ancienne étiquette « À classer » déjà posée est retirée', () => {
+    const r = registre([{ ex: 'x1', nom: ETIQUETTE_A_CLASSER }], { [ETIQUETTE_A_CLASSER]: 'e1' })
+    const lot = construireLot(coll(carte('a', { description: '', idsSite: ['x1'] })), r, config(), TOUS)
+    expect(lot.actions).toEqual([{ type: 'retrait-etiquette', idCarte: 'a', idExemplaire: 'x1', nomEtiquette: ETIQUETTE_A_CLASSER }])
   })
 
   it('le lot ne contient jamais d’enchère ni de défausse, quelle que soit la valeur', () => {

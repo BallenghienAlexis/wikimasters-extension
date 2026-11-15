@@ -76,7 +76,7 @@ const PREFIXE_ECHANGE = '#À échanger '
 /** Un ami peut aussi suivre une étiquette du site (Alexis, 2026-11-14) : sa clé est `site:<nom>`. */
 export const cleEtiquetteSite = (nom: string): string => `site:${nom}`
 
-/** Étiquette de repli d’une carte dont aucun thème n’est reconnu : toute carte reliée reçoit au moins une étiquette de thème. */
+/** Ancienne étiquette de repli : elle n’est plus posée (Alexis, 2026-11-15 : jamais « À classer »), mais celles déjà posées sont retirées. */
 export const ETIQUETTE_A_CLASSER = '#À classer'
 
 /** Clés de comparaison des noms d’amis, mémorisées : la même liste revient pour chaque carte. */
@@ -140,14 +140,15 @@ function calculerEtiquettes(carte: Carte, config?: Pick<Config, 'amis' | 'limite
   const prioritaires = carte.favori ? [] : etiquettesEchange(carte, themes, config?.amis ?? [])
   // Les 4 thèmes les mieux établis seulement (Alexis, 2026-11-14) ; les parents ne servent qu’à désigner les amis.
   const precis = themesPrincipaux(carte).map((id) => LIBELLES_THEMES[id] ?? id)
-  const libellesThemes = precis.length > 0 ? precis : [ETIQUETTE_A_CLASSER]
+  // Aucun thème fiable : aucune étiquette de thème (jamais « À classer »), la carte est signalée dans l’aperçu.
+  const libellesThemes = precis
   const tous = [...prioritaires, ...libellesThemes]
   const limite = config?.limiteParExemplaire
   if (limite === null || limite === undefined || !Number.isFinite(limite)) return { retenues: tous, ecartees: [] }
   // Au moins une étiquette par exemplaire, et toujours le thème le plus précis : les échanges cèdent la place d’abord.
   const n = Math.max(1, Math.floor(limite))
   if (tous.length <= n) return { retenues: tous, ecartees: [] }
-  const p = Math.min(prioritaires.length, n - 1)
+  const p = Math.min(prioritaires.length, libellesThemes.length === 0 ? n : n - 1)
   const retenues = [...prioritaires.slice(0, p), ...libellesThemes.slice(0, n - p)]
   return { retenues, ecartees: [...prioritaires.slice(p), ...libellesThemes.slice(n - p)] }
 }
@@ -259,7 +260,7 @@ export function construireLot(
     let tropLong = false
     let homonyme = false
     const { retenues, ecartees: ecarteesCarte } = parCarte.get(c.id) ?? { retenues: [], ecartees: [] }
-    const attendus: Array<{ idExemplaire: string; etiquettes: readonly string[] }> = retenues.length === 0 ? [] : c.idsSite.map((idExemplaire) => ({ idExemplaire, etiquettes: retenues }))
+    const attendus: Array<{ idExemplaire: string; etiquettes: readonly string[] }> = c.idsSite.map((idExemplaire) => ({ idExemplaire, etiquettes: retenues }))
     const dejaSignalees = new Set<string>()
     const nonPoseeCarte = (nomEtiquette: string, raison: RaisonNonPosee): void => {
       const cle = `${nomEtiquette}\u0000${raison}`
@@ -316,7 +317,9 @@ export function construireLot(
     // Contrôle : une carte reliée doit garder au moins une étiquette de thème (hors échange) ;
     // sinon (nom trop long, homonyme, limite de noms du compte), elle est signalée dans l’aperçu.
     const estTheme = (nom: string): boolean => !nom.startsWith(PREFIXE_ECHANGE)
-    if (c.idsSite.length > 0 && !retenues.some((nom) => estTheme(nom) && !exclus.has(nom) && nom.length <= limite && !(!Object.prototype.hasOwnProperty.call(registre.etiquettes, nom) && connus.has(nom)))) {
+    if (c.idsSite.length > 0 && !retenues.some((nom) => estTheme(nom))) {
+      ecarter('sans-theme-fiable')
+    } else if (c.idsSite.length > 0 && !retenues.some((nom) => estTheme(nom) && !exclus.has(nom) && nom.length <= limite && !(!Object.prototype.hasOwnProperty.call(registre.etiquettes, nom) && connus.has(nom)))) {
       ecarter('sans-etiquette-theme')
     }
     if (tropLong) ecarter('nom-trop-long')

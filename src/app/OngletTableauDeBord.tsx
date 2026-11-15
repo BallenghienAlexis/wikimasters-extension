@@ -68,6 +68,11 @@ const OngletTableauDeBord: React.FC = () => {
           valeur={v(tableau.ecarts)}
           detail={tableau.ecarts === 0 ? 'Étiquettes conformes au plan' : 'Cartes dont les étiquettes diffèrent du plan'}
         />
+        <CarteKpi
+          libelle="Sans thème fiable"
+          valeur={v(tableau.sansTheme)}
+          detail={tableau.sansTheme === 0 ? 'Toutes les cartes ont un thème' : 'Cartes reliées sans étiquette de thème pour l’instant'}
+        />
       </div>
 
       {vide && <p className="mt-4 rounded border border-line bg-ink-2 p-4">Aucune carte</p>}
