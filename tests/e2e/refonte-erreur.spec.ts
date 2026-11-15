@@ -82,7 +82,7 @@ const CARTE = (n: number): Record<string, unknown> => ({
   titre: `Loutre fictive ${n}`,
   rarete: 'UR',
   quantite: 1,
-  idsSite: [`bbbbbbbb-bbbb-4bbb-8bbb-00000000000${n}`],
+  idsSite: [`bbbbbbbb-bbbb-4bbb-8bbb-${String(n).padStart(12, '0')}`],
 });
 
 const poser = async (page: Page, valeurs: Record<string, unknown>, onglet: 'synchro' | 'lots' = 'synchro'): Promise<void> => {
