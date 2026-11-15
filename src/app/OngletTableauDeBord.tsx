@@ -70,6 +70,12 @@ const OngletTableauDeBord: React.FC = () => {
         />
       </div>
 
+      <p className="mt-3 text-sm text-muted" data-testid="sans-theme">
+        {tableau.sansTheme === 0
+          ? 'Toutes les cartes reliées ont un thème fiable.'
+          : `${accorder(tableau.sansTheme, 'carte reliée sans thème fiable', 'cartes reliées sans thème fiable')} : aucune étiquette de thème posée pour l’instant.`}
+      </p>
+
       {vide && <p className="mt-4 rounded border border-line bg-ink-2 p-4">Aucune carte</p>}
 
       <SanteSynchro

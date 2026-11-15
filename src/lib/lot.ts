@@ -18,7 +18,7 @@ import type {
 import { normaliser, type Carte, type Collection } from './collection'
 import { estRefuse, LONGUEUR_MAX_ID } from './registre'
 import { amisConcernes, plafondDefausse, prixDepart, type Ami } from './tri'
-import { LIBELLES_THEMES, themesDeCarte, themesPrincipaux } from './themes'
+import { LIBELLES_THEMES, themesDeCarte, themesPrincipaux, versionThemes } from './themes'
 
 /** Choix manuels du joueur pour le lot : un favori n’est jamais retenu, une carte ne peut être qu’à vendre ou à défausser. */
 export interface SelectionLot {
@@ -89,7 +89,7 @@ const PREFIXE_ECHANGE = '#À échanger '
 /** Un ami peut aussi suivre une étiquette du site (Alexis, 2026-11-14) : sa clé est `site:<nom>`. */
 export const cleEtiquetteSite = (nom: string): string => `site:${nom}`
 
-/** Étiquette de repli d’une carte dont aucun thème n’est reconnu : toute carte reliée reçoit au moins une étiquette de thème. */
+/** Ancienne étiquette de repli : elle n’est plus posée (Alexis, 2026-11-15 : jamais « À classer »), mais celles déjà posées sont retirées. */
 export const ETIQUETTE_A_CLASSER = '#À classer'
 
 /** Clés de comparaison des noms d’amis, mémorisées : la même liste revient pour chaque carte. */
@@ -122,7 +122,7 @@ function etiquettesEchange(carte: Carte, themes: readonly string[], amis: readon
 }
 
 /**
- * Carte « à classer » (Alexis, 2026-11-15) : aucun thème posable (elle reçoit « #À classer »), ou l’étiquette est déjà sur le site.
+ * Carte « à classer » (Alexis, 2026-11-15) : aucun thème fiable, ou l’ancienne étiquette « #À classer » est encore sur le site (elle est alors retirée).
  * Elle est écartée de toute vente, défausse et échange tant qu’elle n’est pas classée.
  */
 export function estACLasser(carte: Carte): boolean {
@@ -144,7 +144,7 @@ interface EtiquettesCarte {
   ecartees: readonly string[]
 }
 
-const MEMO_ETIQUETTES = new WeakMap<Carte, { amis: readonly Ami[] | undefined; gardes: readonly string[] | undefined; limite: number | null | undefined; resultat: EtiquettesCarte }>()
+const MEMO_ETIQUETTES = new WeakMap<Carte, { amis: readonly Ami[] | undefined; gardes: readonly string[] | undefined; limite: number | null | undefined; version: number; resultat: EtiquettesCarte }>()
 
 /**
  * Étiquettes d’une carte pour chaque exemplaire relié, dans l’ordre de priorité de H5 :
@@ -157,15 +157,16 @@ export function etiquettesDeCarte(carte: Carte, config?: Pick<Config, 'amis' | '
   const amis = config?.amis
   const limite = config?.limiteParExemplaire
   const gardes = config?.mesThemes
+  const version = versionThemes()
   const memo = MEMO_ETIQUETTES.get(carte)
-  if (memo && memo.amis === amis && memo.gardes === gardes && memo.limite === limite) return memo.resultat
+  if (memo && memo.amis === amis && memo.gardes === gardes && memo.limite === limite && memo.version === version) return memo.resultat
   const resultat = calculerEtiquettes(carte, config)
-  MEMO_ETIQUETTES.set(carte, { amis, gardes, limite, resultat })
+  MEMO_ETIQUETTES.set(carte, { amis, gardes, limite, version, resultat })
   return resultat
 }
 
 function calculerEtiquettes(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire' | 'mesThemes'>): EtiquettesCarte {
-  // Toute carte reliée reçoit au moins une étiquette de thème, favoris compris (« #À classer » à défaut de thème).
+  // Toute carte reliée dont un thème fiable est connu reçoit 1 à 4 étiquettes de thème, favoris compris ; sans thème fiable, aucune (jamais « #À classer »).
   if (!carte.idsSite) return { retenues: [], ecartees: [] }
   const themes = themesDeCarte(carte)
   // Étiquettes d’échange : jamais pour un favori (le site le verrouille, et c’est une carte aimée), ni pour une carte
@@ -173,14 +174,15 @@ function calculerEtiquettes(carte: Carte, config?: Pick<Config, 'amis' | 'limite
   const prioritaires = carte.favori || estACLasser(carte) || estAGarder(carte, config?.mesThemes) ? [] : etiquettesEchange(carte, themes, config?.amis ?? [])
   // Les 4 thèmes les mieux établis seulement (Alexis, 2026-11-14) ; les parents ne servent qu’à désigner les amis.
   const precis = themesPrincipaux(carte).map((id) => LIBELLES_THEMES[id] ?? id)
-  const libellesThemes = precis.length > 0 ? precis : [ETIQUETTE_A_CLASSER]
+  // Aucun thème fiable : aucune étiquette de thème (jamais « À classer »), la carte est signalée dans l’aperçu.
+  const libellesThemes = precis
   const tous = [...prioritaires, ...libellesThemes]
   const limite = config?.limiteParExemplaire
   if (limite === null || limite === undefined || !Number.isFinite(limite)) return { retenues: tous, ecartees: [] }
   // Au moins une étiquette par exemplaire, et toujours le thème le plus précis : les échanges cèdent la place d’abord.
   const n = Math.max(1, Math.floor(limite))
   if (tous.length <= n) return { retenues: tous, ecartees: [] }
-  const p = Math.min(prioritaires.length, n - 1)
+  const p = Math.min(prioritaires.length, libellesThemes.length === 0 ? n : n - 1)
   const retenues = [...prioritaires.slice(0, p), ...libellesThemes.slice(0, n - p)]
   return { retenues, ecartees: [...prioritaires.slice(p), ...libellesThemes.slice(n - p)] }
 }
@@ -386,7 +388,7 @@ export function construireLot(
     let tropLong = false
     let homonyme = false
     const { retenues, ecartees: ecarteesCarte } = parCarte.get(c.id) ?? { retenues: [], ecartees: [] }
-    const attendus: Array<{ idExemplaire: string; etiquettes: readonly string[] }> = retenues.length === 0 ? [] : c.idsSite.map((idExemplaire) => ({ idExemplaire, etiquettes: retenues }))
+    const attendus: Array<{ idExemplaire: string; etiquettes: readonly string[] }> = c.idsSite.map((idExemplaire) => ({ idExemplaire, etiquettes: retenues }))
     const dejaSignalees = new Set<string>()
     const nonPoseeCarte = (nomEtiquette: string, raison: RaisonNonPosee): void => {
       const cle = `${nomEtiquette}\u0000${raison}`
@@ -443,7 +445,9 @@ export function construireLot(
     // Contrôle : une carte reliée doit garder au moins une étiquette de thème (hors échange) ;
     // sinon (nom trop long, homonyme, limite de noms du compte), elle est signalée dans l’aperçu.
     const estTheme = (nom: string): boolean => !nom.startsWith(PREFIXE_ECHANGE)
-    if (c.idsSite.length > 0 && !retenues.some((nom) => estTheme(nom) && !exclus.has(nom) && nom.length <= limite && !(!Object.prototype.hasOwnProperty.call(registre.etiquettes, nom) && connus.has(nom)))) {
+    if (c.idsSite.length > 0 && !retenues.some((nom) => estTheme(nom))) {
+      ecarter('sans-theme-fiable')
+    } else if (c.idsSite.length > 0 && !retenues.some((nom) => estTheme(nom) && !exclus.has(nom) && nom.length <= limite && !(!Object.prototype.hasOwnProperty.call(registre.etiquettes, nom) && connus.has(nom)))) {
       ecarter('sans-etiquette-theme')
     }
     if (tropLong) ecarter('nom-trop-long')

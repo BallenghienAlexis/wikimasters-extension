@@ -224,7 +224,7 @@ async function amorcerLot(page: Page, nbCartes: number): Promise<void> {
   const cartes = Array.from({ length: nbCartes }, (_, i) => CARTE(i + 1));
   await page.evaluate(async (c) => {
     await chrome.storage.local.set({
-      collection: { version: 3, cartes: c.map((x) => ({ rarete: null, description: '', url: null, favori: false, etiquettesSite: [], prixCible: null, note: '', ami: null, valeurMarchande: null, ...x })) },
+      collection: { version: 3, cartes: c.map((x) => ({ rarete: null, description: 'race de chien', url: null, favori: false, etiquettesSite: [], prixCible: null, note: '', ami: null, valeurMarchande: null, ...x })) },
       preferences: { version: 2, mesThemes: [], amis: [] },
       amisInitiaux: 999,
       syncAuto: false,

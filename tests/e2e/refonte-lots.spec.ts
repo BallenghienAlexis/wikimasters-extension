@@ -37,9 +37,9 @@ const EX_GARDE = 'aaaaaaaa-0000-4000-8000-000000000001';
 const EX_DEFAUSSE = 'aaaaaaaa-0000-4000-8000-000000000002';
 const EX_VENTE = 'aaaaaaaa-0000-4000-8000-000000000003';
 
-const GARDE = { id: 'SR|Zorglub fictif', titre: 'Zorglub fictif', rarete: 'SR', idsSite: [EX_GARDE], valeurMarchande: 40 };
-const DEFAUSSE = { id: 'C|Brimborion fictif', titre: 'Brimborion fictif', rarete: 'C', idsSite: [EX_DEFAUSSE], valeurMarchande: 3 };
-const VENTE = { id: 'R|Tromblon fictif', titre: 'Tromblon fictif', rarete: 'R', idsSite: [EX_VENTE], valeurMarchande: 100, prixCible: 50 };
+const GARDE = { id: 'SR|Zorglub fictif', titre: 'Zorglub fictif', rarete: 'SR', description: 'race de chien', idsSite: [EX_GARDE], valeurMarchande: 40 };
+const DEFAUSSE = { id: 'C|Brimborion fictif', titre: 'Brimborion fictif', rarete: 'C', description: 'race de chien', idsSite: [EX_DEFAUSSE], valeurMarchande: 3 };
+const VENTE = { id: 'R|Tromblon fictif', titre: 'Tromblon fictif', rarete: 'R', description: 'race de chien', idsSite: [EX_VENTE], valeurMarchande: 100, prixCible: 50 };
 const TOUTES = [GARDE, DEFAUSSE, VENTE];
 
 async function amorcer(page: Page, cartes: Record<string, unknown>[], extra: Record<string, unknown> = {}): Promise<void> {
@@ -195,19 +195,19 @@ test.describe('SC-015 : durée, avertissements et écarts (AC2)', () => {
     const ecarts = page.getByTestId('ecarts-lots');
     await expect(ecarts).toContainText('Zorglub fictif');
     await expect(ecarts).toContainText(/Attendue, absente du site\s*:/);
-    await expect(ecarts).toContainText('#À classer');
+    await expect(ecarts).toContainText('#Chien');
   });
 });
 
 test.describe('SC-006 : ignorées filtrées de l’aperçu (AC4)', () => {
   test('SC-006 : une création ignorée écarte les poses, raison « création ignorée »', async ({ pageCollection: page }) => {
     await amorcer(page, [GARDE], {
-      ignorees: { version: 1, entrees: [{ type: 'creation-etiquette', idCarte: 'etiquettes', parametre: '#À classer', portee: 'synchro', date: Date.now() }] },
+      ignorees: { version: 1, entrees: [{ type: 'creation-etiquette', idCarte: 'etiquettes', parametre: '#Chien', portee: 'synchro', date: Date.now() }] },
     });
     await ouvrirApercu(page);
     await expect(page.getByTestId('resume-lots')).toContainText(/[1-9] actions? écartées?/);
     await expect(page.getByTestId('actions-ecartees')).toContainText('création ignorée');
-    await expect(page.getByTestId('actions-ecartees')).toContainText('#À classer');
+    await expect(page.getByTestId('actions-ecartees')).toContainText('#Chien');
   });
 
   test('SC-006 : sans ignorée, aucun compteur d’actions écartées', async ({ pageCollection: page }) => {
@@ -267,7 +267,7 @@ test.describe('SC-024 : largeurs, thèmes et captures de l’onglet Lots', () =>
         await page.emulateMedia({ colorScheme });
         await page.setViewportSize({ width, height });
         await amorcer(page, TOUTES, {
-          ignorees: { version: 1, entrees: [{ type: 'pose-etiquette', idCarte: GARDE.id, parametre: '#À classer', portee: 'synchro', date: Date.now() }] },
+          ignorees: { version: 1, entrees: [{ type: 'pose-etiquette', idCarte: GARDE.id, parametre: '#Chien', portee: 'synchro', date: Date.now() }] },
         });
         await ouvrirApercu(page);
         await expect(page.getByTestId('duree-lots')).toBeVisible();

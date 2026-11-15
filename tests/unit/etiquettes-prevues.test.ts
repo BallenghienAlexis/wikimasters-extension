@@ -196,7 +196,7 @@ describe('aperçu et lecture des préférences (revue T-108)', () => {
     // T-304 : le chargement passe dans OngletLots, la lecture des préférences dans useDonneesPage (chemins seulement).
     const src = readFileSync('src/app/OngletLots.tsx', 'utf8')
     const lecture = readFileSync('src/app/useDonneesPage.ts', 'utf8')
-    expect(src).toContain('chargement={!stockageSynchroLu || !preferencesLues}')
+    expect(src).toContain('chargement={!stockageSynchroLu || !preferencesLues || !cacheIALu}')
     expect(lecture).toMatch(/chargerPreferences\(\)\s*\.then\(setPreferences\)\s*\.finally\(\(\) => setPreferencesLues\(true\)\)/)
   })
 })
