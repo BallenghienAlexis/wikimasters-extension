@@ -131,6 +131,11 @@ export interface ResultatAction {
   cause: string
   /** Identifiant de l’étiquette créée (réponse d’une création), validé avant d’aller au registre. */
   idEtiquette?: string
+  /**
+   * Ligne de diagnostic d’un refus (méthode, chemin, corps envoyé sans secret, code et message du site tronqués),
+   * construite par `reseau.ts` ; jamais de jeton, de cookie ni d’en-tête (Alexis, 2026-11-15).
+   */
+  diagnostic?: string
 }
 
 /**
@@ -157,6 +162,8 @@ export interface EntreeJournal {
   lot?: FamilleLot | null
   /** Cause d’une action passée ou interrompue, en liste fermée ; `null` sinon. */
   cause?: CauseJournal | null
+  /** Diagnostic d’un refus (voir `ResultatAction.diagnostic`) ; absent sinon. */
+  diagnostic?: string | null
 }
 
 /** Familles de lots d’une exécution (v2). */

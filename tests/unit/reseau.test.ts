@@ -68,7 +68,7 @@ describe('reseau : émetteur des étiquettes', () => {
       const r = await emetteur((async () => reponse(code, 'secret-du-serveur')) as unknown as typeof fetch)(pose)
       expect(r.classe).toBe('echec')
       expect(r.codeHttp).toBe(code)
-      expect(JSON.stringify(r)).not.toContain('secret-du-serveur')
+      expect(r.cause).not.toContain('secret-du-serveur')
     }
   })
 
@@ -164,21 +164,43 @@ describe('reseau : enchère et défausse sur l’origine du site', () => {
     for (const ordre of [enchere, defausse]) {
       const f = vi.fn(async () => reponse(code))
       const r = await emetteur(f as unknown as typeof fetch)(ordre)
-      expect(r).toEqual({ classe: 'echec', codeHttp: code, cause: 'action non disponible' })
+      expect(r).toMatchObject({ classe: 'echec', codeHttp: code, cause: 'action non disponible' })
+      expect(r.diagnostic).toContain(`→ ${code}`)
       expect(f).toHaveBeenCalledTimes(1)
     }
+  })
+
+  it('diagnostic d’un refus d’enchère : méthode, chemin, corps (identifiant raccourci), code et message du site', async () => {
+    const f = vi.fn(async () => reponse(403, JSON.stringify({ message: 'Carte non disponible', error: 'forbidden' })))
+    const r = await emetteur(f as unknown as typeof fetch)(enchere)
+    expect(r.diagnostic).toBe('POST /api/marketplace corps {"card_id":"11111111…","base_amount":25,"duration_minutes":60} → 403 Carte non disponible · forbidden')
+    // Corps non JSON (page d’erreur) : début du texte, balises retirées.
+    const g = vi.fn(async () => reponse(403, '<html><body>Accès refusé</body></html>'))
+    expect((await emetteur(g as unknown as typeof fetch)(enchere)).diagnostic).toContain('→ 403 Accès refusé')
+  })
+
+  it('le diagnostic ne contient jamais le jeton de session, même renvoyé par le serveur, ni d’en-tête', async () => {
+    const f = vi.fn(async () => reponse(403, `refus ${SESSION.jeton}`))
+    const r = await emetteur(f as unknown as typeof fetch)(pose)
+    expect(r.diagnostic).not.toContain(SESSION.jeton)
+    expect(r.diagnostic).toContain('[jeton masqué]')
+    expect(r.diagnostic).not.toMatch(/authorization|apikey|bearer/i)
   })
 })
 
 describe('reseau : conflit 409 de l’enchère', () => {
   const enchere: Action = { type: 'enchere', idCarte: 'R|T', idExemplaire: EX, prix: 25 }
-  it('classe le conflit en libellé fixe, sans recopier le corps', async () => {
+  it('classe le conflit en libellé fixe ; le corps n’est recopié que dans le diagnostic, champs listés seulement', async () => {
     const limite = vi.fn(async () => reponse(409, JSON.stringify({ message: 'Maximum de 5 enchères actives atteint', secret: 'zzz' })))
     const r1 = await creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: ORIGINE, fetchImpl: limite as unknown as typeof fetch })(enchere)
-    expect(r1).toEqual({ classe: 'echec', codeHttp: 409, cause: 'limite d’enchères atteinte' })
+    expect(r1.cause).toBe('limite d’enchères atteinte')
+    expect(r1.cause).not.toContain('Maximum')
+    expect(r1.diagnostic).toContain('Maximum de 5 enchères actives atteint')
+    expect(r1.diagnostic).not.toContain('zzz')
+    expect(JSON.stringify(r1)).not.toContain('"secret"')
     const autre = vi.fn(async () => reponse(409, 'oups'))
     const r2 = await creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: ORIGINE, fetchImpl: autre as unknown as typeof fetch })(enchere)
-    expect(r2).toEqual({ classe: 'echec', codeHttp: 409, cause: 'conflit signalé par le site' })
+    expect(r2).toMatchObject({ classe: 'echec', codeHttp: 409, cause: 'conflit signalé par le site' })
   })
   it('classerConflit tolère toute forme de corps', () => {
     for (const j of [null, undefined, 3, 'x', [], {}, { message: 4 }]) expect(classerConflit(j)).toBe('conflit signalé par le site')

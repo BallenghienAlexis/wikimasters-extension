@@ -112,3 +112,18 @@ describe('T-303 libellés d’historique (H5)', () => {
     expect(e.resultat).toBe('echouee');
   });
 });
+
+describe('diagnostic de refus (Alexis, 2026-11-15)', () => {
+  it('une entrée complétée par un refus garde la ligne de diagnostic, tronquée ; elle survit à la validation', async () => {
+    const { ouvrirEntree, completerEntree, validerJournal } = await import('../../src/lib/journal')
+    const { journal, id } = ouvrirEntree([], { idCarte: 'R|T', titre: 'Titre', type: 'enchere', parametre: '5', idLot: 'lot-1' }, () => new Date('2026-11-15T10:00:00.000Z'))
+    const fini = completerEntree(journal, id, { classe: 'echec', codeHttp: 403, cause: 'action non disponible', diagnostic: 'POST /api/marketplace → 403 refus' })
+    expect(fini[0]!.diagnostic).toBe('POST /api/marketplace → 403 refus')
+    expect(validerJournal(JSON.parse(JSON.stringify(fini)))).toEqual(fini)
+    const long = completerEntree(journal, id, { classe: 'echec', codeHttp: 403, cause: 'x', diagnostic: 'a'.repeat(900) })
+    expect(Array.from(long[0]!.diagnostic ?? '').length).toBe(500)
+    // Une entrée sans diagnostic reste valide et sans champ supplémentaire.
+    expect('diagnostic' in journal[0]!).toBe(false)
+    expect(validerJournal(JSON.parse(JSON.stringify(journal)))).toEqual(journal)
+  })
+})

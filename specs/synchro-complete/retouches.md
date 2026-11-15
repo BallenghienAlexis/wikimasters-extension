@@ -139,6 +139,8 @@ Un amendement daté est en tête de `spec.md`, `spec.refined.md`, `design.md` et
 - `src/lib/lot.ts` (`calculerEtiquettes` et sélection de vente) : une carte gardée choisie à la main pour la vente perd ses étiquettes d’échange sans recevoir de favori ; sans effet pratique, à aligner ou documenter.
 - `tests/unit/file.test.ts` : ajouter `refusParCarte({ type: 'favori', … }, 403) === true`.
 - Captures aux 3 points de rupture et e2e de l’avertissement « favori » et du libellé « Favoris » (DoD, point 3), à joindre avec les autres captures de la sélection de lot.
+- (PR #153) `src/app/Journal.tsx` : la ligne « Diagnostic » n’a ni test de rendu, ni capture, ni e2e (DoD point 3) ; à joindre avec les captures du lot Favoris.
+
 
 ## À reprendre (revue de la PR #154, ventes tolérantes, 2026-11-15)
 - `src/content/synchroAuto.ts:299` : `etapeFautive` ne retient que les réponses non 200 ; une réponse 200 de forme inattendue (stats ou page) ou une erreur réseau retombe sur la dernière étape vue. À reprendre : faire remonter l’étape en cause depuis l’ordonnanceur, au moment de `echec()` (par exemple dans `ResultatSynchro`).

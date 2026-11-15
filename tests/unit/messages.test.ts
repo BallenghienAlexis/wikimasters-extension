@@ -224,3 +224,13 @@ describe('identifiant de corrélation', () => {
     expect(validerOrdre({ message: 'ordre', ordre, id: 1, extra: 1 })).toBeNull()
   })
 })
+
+describe('résultat avec diagnostic de refus', () => {
+  const enveloppe = (resultat: unknown) => ({ message: 'resultat', resultat })
+  it('accepte une ligne de diagnostic courte, refuse un type ou une longueur invalide', () => {
+    const base = { classe: 'echec', codeHttp: 403, cause: 'action non disponible' }
+    expect(validerResultat(enveloppe({ ...base, diagnostic: 'POST /api/marketplace → 403' }))).toEqual({ ...base, diagnostic: 'POST /api/marketplace → 403' })
+    expect(validerResultat(enveloppe({ ...base, diagnostic: 3 }))).toBeNull()
+    expect(validerResultat(enveloppe({ ...base, diagnostic: 'a'.repeat(601) }))).toBeNull()
+  })
+})

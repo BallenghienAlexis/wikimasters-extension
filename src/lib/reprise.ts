@@ -15,17 +15,18 @@ import type { RaisonArret } from './file'
 /** Pause imposée aux lots après un refus du site : 30 minutes. */
 export const PAUSE_LOTS_MS = 30 * 60_000
 
-/** Codes qui arrêtent la file et déclenchent la pause : session refusée, trop de requêtes, refus hors exemplaire ou seuil de refus par carte. */
-const CODES_PAUSE: readonly number[] = [401, 403, 429]
+/** Codes qui déclenchent encore la pause de 30 min : session expirée (401) et trop de requêtes (429). Le 403 n’en déclenche plus (Alexis, 2026-11-15). */
+const CODES_PAUSE: readonly number[] = [401, 429]
 
 /**
  * Heure de fin de pause (ms, murale) selon la cause de l’arrêt, ou `null` s’il n’y en a pas.
- * Pause après 401, 429, 403 (refus hors exemplaire, ou seuil de refus par carte atteint : décision 3) et 3 échecs.
+ * Pause après 401 et 429 seulement (Alexis, 2026-11-15) ; plus après un 403, le seuil de refus par carte ni 3 échecs.
  * Aucune pause pour 409, résultat inattendu, transport, écriture, vérification, arrêt manuel : « Réessayer » reste immédiat.
  */
 export function calculerPauseJusqua(arret: { raison: RaisonArret; codeHttp: number | null; seuilRefus?: boolean }, maintenant: number): number | null {
-  if (arret.seuilRefus === true) return maintenant + PAUSE_LOTS_MS
-  if (arret.raison === 'echecs') return maintenant + PAUSE_LOTS_MS
+  // Alexis, 2026-11-15 : plus de pause de 30 min après le seuil de refus par carte ni après 3 échecs (« ça fait perdre
+  // plus de temps que ça n’en fait gagner ») ; « Réessayer » reste immédiat. Le seuil de refus arrête toujours le lot.
+  if (arret.seuilRefus === true || arret.raison === 'echecs') return null
   if (arret.raison === 'code-http' && arret.codeHttp !== null && CODES_PAUSE.includes(arret.codeHttp)) return maintenant + PAUSE_LOTS_MS
   return null
 }

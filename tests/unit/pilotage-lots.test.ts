@@ -476,8 +476,8 @@ describe('AC5 : sauter ou ignorer une création d’étiquette (décision 4)', (
 
   async function creationRefusee(): Promise<Api> {
     const api = await frais();
-    // 403 sur une création d’étiquette = refus hors exemplaire : pause de 30 min, nous sautons en local.
-    await lotArreteSur(api, lotCreation(), 1, echec(403));
+    // 429 sur une création d’étiquette : pause de 30 min (le 403 n'en déclenche plus, Alexis 2026-11-15), nous sautons en local.
+    await lotArreteSur(api, lotCreation(), 1, echec(429));
     return api;
   }
 
@@ -669,8 +669,6 @@ describe('AC7 : aucun chemin ne contourne la pause de 30 min (SC-016)', () => {
   it.each([
     ['401', quatreDefausses(), { 1: echec(401) }],
     ['429', quatreDefausses(), { 1: echec(429) }],
-    ['3 échecs', quatreDefausses(), { 1: echec(500), 2: echec(500), 3: echec(500) }],
-    ['refus hors exemplaire (403 sur une création d’étiquette)', [creation('A', '#X'), defausse(2)], { 1: echec(403) }],
   ] as Array<[string, Action[], Record<number, ResultatAction>]>)('%s : la pause de 30 min est stockée', async (_nom, actions, sur) => {
     const api = await frais();
     banc.reponse = reponses(sur);
@@ -678,19 +676,25 @@ describe('AC7 : aucun chemin ne contourne la pause de 30 min (SC-016)', () => {
     expect((await api.chargerExecution())?.pauseJusqua).toBe(Date.now() + 30 * 60_000);
   });
 
-  it('décision 3 : le seuil de refus par carte atteint (3 refus 403 d’affilée) pause aussi 30 min', async () => {
+  it.each([
+    ['3 échecs', quatreDefausses(), { 1: echec(500), 2: echec(500), 3: echec(500) }],
+    ['refus hors exemplaire (403 sur une création d’étiquette)', [creation('A', '#X'), defausse(2)], { 1: echec(403) }],
+  ] as Array<[string, Action[], Record<number, ResultatAction>]>)('Alexis 2026-11-15 : %s -> aucune pause, Réessayer immédiat', async (_nom, actions, sur) => {
+    const api = await frais();
+    banc.reponse = reponses(sur);
+    await api.lancerLot(actions, 'lot-1');
+    expect((await api.chargerExecution())?.etat).toBe('arretee');
+    expect((await api.chargerExecution())?.pauseJusqua).toBeNull();
+  });
+
+  it('refus par carte (403 sur des défausses) : le lot continue, sans arrêt ni pause en dessous du seuil', async () => {
     const api = await frais();
     banc.reponse = reponses({ 1: echec(403), 2: echec(403), 3: echec(403) });
     await api.lancerLot(quatreDefausses(), 'lot-1');
-    expect((await api.chargerExecution())?.etat).toBe('arretee');
-    expect((await api.chargerExecution())?.pauseJusqua).toBe(Date.now() + 30 * 60_000);
-  });
-
-  it('décision 3 : seuil de refus par carte avec un 404 en dernier : pause de 30 min aussi', async () => {
-    const api = await frais();
-    banc.reponse = reponses({ 1: echec(403), 2: echec(403), 3: echec(404) });
-    await api.lancerLot(quatreDefausses(), 'lot-1');
-    expect((await api.chargerExecution())?.pauseJusqua).toBe(Date.now() + 30 * 60_000);
+    const etat = await api.chargerExecution();
+    expect(etat?.etat).toBe('terminee');
+    expect(etat?.pauseJusqua).toBeNull();
+    expect(banc.appels).toHaveLength(4);
   });
 
   it('à l’heure dite (30 min), Lancer et Réessayer repartent', async () => {

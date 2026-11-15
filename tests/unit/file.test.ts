@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Action, ResultatAction } from '../../src/lib/actions';
-import { creerFile, type DependancesFile, type Horloge } from '../../src/lib/file';
+import { creerFile, MAX_REFUS_CARTE_CONSECUTIFS, MAX_REFUS_CARTE_PAR_LOT, type DependancesFile, type Horloge } from '../../src/lib/file';
 
 const OK: ResultatAction = { classe: 'reussie', codeHttp: 200, cause: 'ok' };
 const echec = (codeHttp = 500): ResultatAction => ({ classe: 'echec', codeHttp, cause: 'échec' });
@@ -291,27 +291,28 @@ describe('arrêts (AC4)', () => {
     }
   });
 
-  it('3 refus 403 d’affilée (session ou jeton refusés) arrêtent le lot ; un succès remet le compte à zéro', async () => {
-    const b = banc({}, (n) => (n >= 2 && n <= 4 ? echec(403) : OK));
-    const etat = await creerFile(b.deps).demarrer([1, 2, 3, 4, 5, 6].map(pose), 'lot-3');
+  it('refus 403 d’affilée (session ou jeton refusés) : le lot continue jusqu’au seuil, un succès remet le compte à zéro', async () => {
+    const seuil = MAX_REFUS_CARTE_CONSECUTIFS;
+    const b = banc({}, (n) => (n >= 2 && n <= 1 + seuil ? echec(403) : OK));
+    const etat = await creerFile(b.deps).demarrer(Array.from({ length: seuil + 5 }, (_, i) => pose(i + 1)), 'lot-3');
     expect(etat.etat).toBe('arretee');
     expect(etat.raison).toBe('code-http');
-    expect(b.requetes).toHaveLength(4);
+    expect(etat.erreur?.seuilRefus).toBe(true);
+    expect(b.requetes).toHaveLength(1 + seuil);
 
-    // Refus séparés par des succès : jamais 3 d’affilée, mais le plafond de 5 par lot arrête.
+    // Refus séparés par des succès : jamais le seuil d’affilée, mais le plafond par lot arrête.
     const b2 = banc({}, (n) => (n % 3 === 0 ? OK : echec(403)));
-    const etat2 = await creerFile(b2.deps).demarrer(Array.from({ length: 20 }, (_, i) => pose(i + 1)), 'lot-alterne');
+    const etat2 = await creerFile(b2.deps).demarrer(Array.from({ length: 200 }, (_, i) => pose(i + 1)), 'lot-alterne');
     expect(etat2.etat).toBe('arretee');
     expect(etat2.raison).toBe('code-http');
-    expect(b2.requetes.filter((_, i) => (i + 1) % 3 !== 0)).toHaveLength(5);
+    expect(b2.requetes.filter((_, i) => (i + 1) % 3 !== 0)).toHaveLength(MAX_REFUS_CARTE_PAR_LOT);
   });
 
-  it('en parallèle : 3 refus 403 en vol arrêtent le lot, au plus 3 exemplaires appliqués', async () => {
+  it('en parallèle : les refus 403 en vol arrêtent le lot au seuil', async () => {
     const b = banc({ concurrence: 3 }, () => echec(403));
-    const etat = await creerFile(b.deps).demarrer([1, 2, 3, 4, 5, 6].map(pose), 'lot-par');
+    const etat = await creerFile(b.deps).demarrer(Array.from({ length: 30 }, (_, i) => pose(i + 1)), 'lot-par');
     expect(etat.etat).toBe('arretee');
-    expect(b.requetes.length).toBeLessThanOrEqual(3);
-    expect(b.appliquees.length).toBeLessThanOrEqual(2);
+    expect(b.requetes.length).toBeLessThanOrEqual(MAX_REFUS_CARTE_CONSECUTIFS + 2);
   });
 
   it('409 : arrête le lot pour une enchère ou une défausse, pas pour une étiquette', async () => {
