@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CONFIG_PRIX } from '../config/prix';
+import type { EvenementVente } from '../lib/affluence';
 import type { Action, CarteEcartee, FamilleLot, Registre, TypesDisponibles } from '../lib/actions';
 import type { Collection } from '../lib/collection';
 import { typesDisponibles } from '../lib/contrat';
@@ -11,7 +12,7 @@ import { chargerExecution, chargerIgnorees, ecouterExecution, enregistrerJournal
 import { PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
 import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
 import SelectionVenteDefausse from './SelectionVenteDefausse';
-import { choixInitial, versSelection, type Choix, type ChoixCarte } from '../lib/selectionLot';
+import { choixInitial, precocher, versSelection, type Choix, type ChoixCarte } from '../lib/selectionLot';
 import EtiquettesPrevues from './EtiquettesPrevues';
 import Journal, { type CoupleRetrait } from './Journal';
 import BandeauRisque from './BandeauRisque';
@@ -69,6 +70,8 @@ interface Props {
   /** Nombre d’onglets WikiMasters ouverts (comptés par la page d’exécution, T-017). */
   nbOnglets: number;
   executionEnCours: boolean;
+  /** Évènements de vente pour les heures de plus forte influence. */
+  ventes?: readonly EvenementVente[];
   /** Types d’action dont l’entrée existe dans la table du contrat. */
   disponibles?: TypesDisponibles;
   /** Relit vraiment le stockage ; renvoie le registre, ou `null` s’il reste illisible. */
@@ -94,6 +97,7 @@ const PanneauApercuLot: React.FC<Props> = ({
   nbOnglets,
   executionEnCours,
   disponibles,
+  ventes = [],
   onReessayer,
   onLancer,
 }) => {
@@ -394,7 +398,15 @@ const PanneauApercuLot: React.FC<Props> = ({
       )}
 
       {!zoneVisible && !ouvert && !chargement && (
-        <SelectionVenteDefausse cartes={collection.cartes} choix={choix} plafond={plafond} onChoisir={choisir} />
+        <SelectionVenteDefausse
+          cartes={collection.cartes}
+          choix={choix}
+          plafond={plafond}
+          onChoisir={choisir}
+          onPrecocher={() => setChoixManuels(precocher(collection.cartes, preferences, choix))}
+          onVider={() => setChoixManuels(new Map())}
+          ventes={ventes}
+        />
       )}
 
       <section aria-labelledby="titre-synchro" hidden={zoneVisible} className="mt-4 rounded border border-line bg-ink-2 p-4">

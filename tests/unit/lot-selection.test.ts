@@ -4,8 +4,9 @@ import { TYPES_ACTION } from '../../src/lib/actions'
 import type { Carte } from '../../src/lib/collection'
 import { collectionVide } from '../../src/lib/collection'
 import { construireLot, type Config, type SelectionLot } from '../../src/lib/lot'
+import { preferencesParDefaut } from '../../src/lib/tri'
 import { registreVide } from '../../src/lib/registre'
-import { choixInitial, estEtiquetteAVendre, versSelection } from '../../src/lib/selectionLot'
+import { choixInitial, conseilLancement, estEtiquetteAVendre, precocher, versSelection } from '../../src/lib/selectionLot'
 
 const TOUS: TypesDisponibles = new Set<TypeAction>(TYPES_ACTION)
 const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
@@ -93,5 +94,42 @@ describe('sélection : choix de départ d’après les étiquettes du site', () 
     const choix = choixInitial(cartes)
     expect([...choix.keys()]).toEqual(['a'])
     expect(versSelection(cartes, choix)).toEqual({ vendre: ['a'], defausser: {} })
+  })
+})
+
+describe('pré-coche selon mes thèmes, mes amis et le plafond', () => {
+  const prefs = preferencesParDefaut()
+  const zzz = { titre: 'Zzz', description: '' }
+
+  it('valeur au plafond ou en dessous : défausse ; au-dessus : mise aux enchères ; inconnue : rien', () => {
+    const cartes = [carte('a', { ...zzz, valeurMarchande: 5 }), carte('b', { ...zzz, valeurMarchande: 6 }), carte('c', { ...zzz, valeurMarchande: null })]
+    const choix = precocher(cartes, prefs, new Map())
+    expect(choix.get('a')?.choix).toBe('defausser')
+    expect(choix.get('b')?.choix).toBe('vendre')
+    expect(choix.has('c')).toBe(false)
+  })
+
+  it('ni favori, ni carte d’un ami, ni thème gardé', () => {
+    const cartes = [carte('f', { ...zzz, favori: true, valeurMarchande: 1 }), carte('g', { ...zzz, ami: 'Zoé', valeurMarchande: 1 }), carte('h', { ...zzz, valeurMarchande: 1 })]
+    expect([...precocher(cartes, prefs, new Map()).keys()]).toEqual(['h'])
+    expect(precocher(cartes, { ...prefs, mesThemes: ['autres'] }, new Map()).size).toBe(0)
+  })
+
+  it('ne remplace jamais une coche existante', () => {
+    const cartes = [carte('a', { ...zzz, valeurMarchande: 1 })]
+    const choix = precocher(cartes, prefs, new Map([['a', { choix: 'vendre' as const, exemplaires: 1 }]]))
+    expect(choix.get('a')?.choix).toBe('vendre')
+  })
+})
+
+describe('conseil de lancement', () => {
+  const heureForte = new Date(2026, 10, 16, 20).getTime() // lundi 20 h : créneau par défaut
+  const heureLibre = new Date(2026, 10, 16, 15).getTime()
+  it('chères en heure forte, moins chères en temps libre', () => {
+    expect(conseilLancement(300, heureForte, [])).toBe('heure forte : bon moment')
+    expect(conseilLancement(300, heureLibre, [])).toBe('carte chère : attendre une heure forte')
+    expect(conseilLancement(50, heureLibre, [])).toBe('temps libre : bon moment')
+    expect(conseilLancement(50, heureForte, [])).toContain('réserver')
+    expect(conseilLancement(null, heureForte, [])).toBe('valeur inconnue')
   })
 })
