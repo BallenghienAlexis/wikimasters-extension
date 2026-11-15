@@ -1,0 +1,165 @@
+// Classement des cartes sans thème fiable par l’API Claude (décision d’Alexis, 2026-11-15) : logique pure.
+// Prompt générique et fixe, réponse JSON validée strictement (1 à 4 thèmes du catalogue), cache persistant par titre.
+// Aucun appel réseau ici : l’exécuteur est `src/app/classerIA.ts`. Aucune clé n’est lue ni stockée dans ce module.
+import type { Carte } from './collection';
+import { DEFINITIONS_THEMES, MAX_THEMES_PAR_CARTE } from './themes';
+
+/** Modèle utilisé : le plus économique de la famille, suffisant pour classer un titre dans un catalogue fermé. */
+export const MODELE_IA = 'claude-haiku-5-5';
+export const URL_API_IA = 'https://api.anthropic.com/v1/messages';
+export const VERSION_API_IA = '2023-06-01';
+/** Cartes par requête : assez pour amortir le prompt, assez peu pour garder une réponse courte et vérifiable. */
+export const TAILLE_LOT_IA = 40;
+const MAX_DESCRIPTION = 200;
+const MAX_SORTIE_PAR_CARTE = 40;
+
+/** Estimation de tarif (dollars par million de jetons), à vérifier sur la console Anthropic : elle ne sert qu’à annoncer un ordre de grandeur. */
+export const PRIX_ENTREE_MTOK = 1;
+export const PRIX_SORTIE_MTOK = 5;
+
+/** Thèmes que l’IA peut attribuer : tout le catalogue, sauf « autres ». */
+export const IDS_CATALOGUE_IA: readonly string[] = DEFINITIONS_THEMES.map((t) => t.id);
+const ENSEMBLE_IDS = new Set(IDS_CATALOGUE_IA);
+
+/** Prompt système : fixe et générique, donc identique d’un lot à l’autre (résultats reproductibles). */
+export const PROMPT_SYSTEME = [
+  'Tu classes des cartes d’un jeu de collection dont chaque carte porte le titre d’un article de Wikipédia (personne, œuvre, lieu, objet, notion, animal…).',
+  `Pour chaque carte, choisis de 1 à ${MAX_THEMES_PAR_CARTE} thèmes parmi le catalogue ci-dessous, du plus caractéristique au moins caractéristique.`,
+  'Règles : réponds d’après le sens du sujet (ce qu’il est, ce qu’il fait), pas d’après les mots du titre ; choisis le thème le plus précis qui existe (« Moto » plutôt que « Véhicule ») ;',
+  'n’ajoute pas un thème parent en plus de son thème précis ; n’invente aucun identifiant ; si tu ne reconnais pas le sujet, réponds une liste vide pour cette carte.',
+  'Format de réponse : uniquement un objet JSON, sans texte autour, dont les clés sont les numéros des cartes et les valeurs des listes d’identifiants. Exemple : {"1":["moto"],"2":["litterature","histoire"],"3":[]}',
+  `Catalogue (identifiant : libellé) :\n${DEFINITIONS_THEMES.map((t) => `${t.id} : ${t.libelle.replace(/^#/, '')}`).join('\n')}`,
+].join('\n');
+
+export interface CarteAClasser {
+  titre: string;
+  description: string;
+}
+
+/** Cache : un résultat par titre de carte, gardé tant que le catalogue ne change pas de version. */
+export interface CacheIA {
+  version: 1;
+  modele: string;
+  /** titre → thèmes ; une liste vide veut dire « l’IA n’a pas reconnu le sujet » (jamais redemandé tout seul). */
+  entrees: Record<string, string[]>;
+}
+
+export const cacheIAVide = (): CacheIA => ({ version: 1, modele: MODELE_IA, entrees: {} });
+
+export function validerCacheIA(brut: unknown): CacheIA | null {
+  if (typeof brut !== 'object' || brut === null) return null;
+  const o = brut as Record<string, unknown>;
+  if (o['version'] !== 1 || typeof o['modele'] !== 'string') return null;
+  const entrees = o['entrees'];
+  if (typeof entrees !== 'object' || entrees === null || Array.isArray(entrees)) return null;
+  const propres: Record<string, string[]> = {};
+  for (const [titre, ids] of Object.entries(entrees)) {
+    if (!Array.isArray(ids) || ids.length > MAX_THEMES_PAR_CARTE || !ids.every((id) => typeof id === 'string' && ENSEMBLE_IDS.has(id))) return null;
+    propres[titre] = [...new Set(ids as string[])];
+  }
+  return { version: 1, modele: o['modele'], entrees: propres };
+}
+
+/** Titre → thèmes, pour la surcouche de `themes.ts` (les listes vides sont ignorées). */
+export function themesIAParTitre(cache: CacheIA): ReadonlyMap<string, readonly string[]> {
+  return new Map(Object.entries(cache.entrees).filter(([, ids]) => ids.length > 0));
+}
+
+/**
+ * Cartes à envoyer : reliées au site, sans thème fiable avec les seuls moyens locaux, absentes du cache, une fois par titre.
+ * `sansTheme` est injecté (c’est `themesPrincipaux(carte).length === 0` sans la surcouche IA) pour garder ce module sans état.
+ */
+export function cartesAClasser(cartes: readonly Carte[], cache: CacheIA, sansTheme: (c: Carte) => boolean): CarteAClasser[] {
+  const vus = new Set<string>();
+  const liste: CarteAClasser[] = [];
+  for (const c of cartes) {
+    if (c.idsSite === null || vus.has(c.titre) || c.titre in cache.entrees || !sansTheme(c)) continue;
+    vus.add(c.titre);
+    liste.push({ titre: c.titre, description: c.description });
+  }
+  return liste;
+}
+
+export const decouperEnLotsIA = (cartes: readonly CarteAClasser[]): CarteAClasser[][] => {
+  const lots: CarteAClasser[][] = [];
+  for (let i = 0; i < cartes.length; i += TAILLE_LOT_IA) lots.push(cartes.slice(i, i + TAILLE_LOT_IA));
+  return lots;
+};
+
+const nettoyer = (s: string, max: number): string => s.replace(/\s+/g, ' ').trim().slice(0, max);
+
+/** Corps de la requête pour un lot : seuls le titre et la description publique de chaque carte sont envoyés. */
+export function corpsRequete(lot: readonly CarteAClasser[]): { model: string; max_tokens: number; temperature: number; system: string; messages: { role: 'user'; content: string }[] } {
+  const lignes = lot.map((c, i) => `${i + 1}. ${nettoyer(c.titre, 120)}${c.description.trim() === '' ? '' : ` — ${nettoyer(c.description, MAX_DESCRIPTION)}`}`);
+  return {
+    model: MODELE_IA,
+    max_tokens: 200 + lot.length * MAX_SORTIE_PAR_CARTE,
+    temperature: 0,
+    system: PROMPT_SYSTEME,
+    messages: [{ role: 'user', content: `Cartes à classer :\n${lignes.join('\n')}` }],
+  };
+}
+
+/**
+ * Lit la réponse de l’API : texte JSON `{"1":["moto"],…}`. Chaque entrée est validée (identifiants du catalogue, 4 au plus,
+ * sans doublon) ; une entrée invalide ou absente est ignorée, jamais devinée. Renvoie titre → thèmes pour les entrées lues.
+ */
+export function lireReponseIA(reponse: unknown, lot: readonly CarteAClasser[]): Map<string, string[]> {
+  const resultat = new Map<string, string[]>();
+  if (typeof reponse !== 'object' || reponse === null) return resultat;
+  const contenu = (reponse as Record<string, unknown>)['content'];
+  if (!Array.isArray(contenu)) return resultat;
+  const texte = contenu
+    .map((b) => (typeof b === 'object' && b !== null && (b as Record<string, unknown>)['type'] === 'text' ? (b as Record<string, unknown>)['text'] : ''))
+    .filter((t): t is string => typeof t === 'string')
+    .join('');
+  const debut = texte.indexOf('{');
+  const fin = texte.lastIndexOf('}');
+  if (debut === -1 || fin <= debut) return resultat;
+  let json: unknown;
+  try {
+    json = JSON.parse(texte.slice(debut, fin + 1));
+  } catch {
+    return resultat;
+  }
+  if (typeof json !== 'object' || json === null || Array.isArray(json)) return resultat;
+  for (const [cle, ids] of Object.entries(json)) {
+    const rang = Number(cle);
+    const carte = Number.isInteger(rang) ? lot[rang - 1] : undefined;
+    if (!carte || !Array.isArray(ids)) continue;
+    const propres = [...new Set(ids)].filter((id): id is string => typeof id === 'string' && ENSEMBLE_IDS.has(id));
+    // Un identifiant inconnu rend l’entrée douteuse : on l’ignore plutôt que de garder une part de réponse.
+    if (propres.length !== new Set(ids).size || propres.length > MAX_THEMES_PAR_CARTE) continue;
+    resultat.set(carte.titre, propres);
+  }
+  return resultat;
+}
+
+export function ajouterAuCache(cache: CacheIA, resultats: ReadonlyMap<string, readonly string[]>): CacheIA {
+  const entrees = { ...cache.entrees };
+  for (const [titre, ids] of resultats) entrees[titre] = [...ids];
+  return { ...cache, entrees };
+}
+
+export interface EstimationIA {
+  cartes: number;
+  requetes: number;
+  jetonsEntree: number;
+  jetonsSortie: number;
+  /** Coût en dollars (ordre de grandeur). */
+  cout: number;
+}
+
+/** Ordre de grandeur du coût avant lancement (3 caractères par jeton en français, réponse d’environ 15 jetons par carte). */
+export function estimerCout(cartes: readonly CarteAClasser[]): EstimationIA {
+  const lots = decouperEnLotsIA(cartes);
+  let jetonsEntree = 0;
+  let jetonsSortie = 0;
+  for (const lot of lots) {
+    const corps = corpsRequete(lot);
+    jetonsEntree += Math.ceil((corps.system.length + (corps.messages[0]?.content.length ?? 0)) / 3);
+    jetonsSortie += lot.length * 15 + 10;
+  }
+  const cout = (jetonsEntree * PRIX_ENTREE_MTOK + jetonsSortie * PRIX_SORTIE_MTOK) / 1_000_000;
+  return { cartes: cartes.length, requetes: lots.length, jetonsEntree, jetonsSortie, cout };
+}

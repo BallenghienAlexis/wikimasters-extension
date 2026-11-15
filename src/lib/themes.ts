@@ -281,14 +281,23 @@ export function themesDeTexte(texte: string, categories = false): string[] {
 // Thèmes vérifiés sur Wikipédia (titre de carte → identifiants de thèmes), chargés depuis le cache local.
 // Surcouche en mémoire : elle s'ajoute aux mots-clés, ne remplace rien et n'est jamais écrite ici.
 let themesWikipedia: ReadonlyMap<string, readonly string[]> = new Map();
+let versionSurcouches = 0;
+
+/** Change à chaque remplacement d’une surcouche (Wikipédia, signaux, IA) : les résultats mémorisés par carte s’en servent pour expirer. */
+export const versionThemes = (): number => versionSurcouches;
 
 export function definirThemesWikipedia(themes: ReadonlyMap<string, readonly string[]>): void {
   themesWikipedia = themes;
+  versionSurcouches++;
 }
 
 export function themesDeCarte(carte: Pick<Carte, 'titre' | 'description'>): string[] {
   const themes = new Set(themesDeTexte(`${carte.titre} ${carte.description}`));
   for (const id of themesWikipedia.get(carte.titre) ?? []) themes.add(id);
+  for (const id of themesIA.get(carte.titre) ?? []) {
+    themes.add(id);
+    for (const parent of PARENTS.get(id) ?? []) themes.add(parent);
+  }
   return themes.size > 0 ? [...themes] : [THEME_AUTRES];
 }
 
@@ -342,6 +351,21 @@ let signauxWikipedia: ReadonlyMap<string, SignauxPage> = new Map();
 
 export function definirSignauxWikipedia(signaux: ReadonlyMap<string, SignauxPage>): void {
   signauxWikipedia = signaux;
+  versionSurcouches++;
+}
+
+// Thèmes attribués par l’API Claude aux cartes que les moyens locaux ne savent pas classer (titre → identifiants, cache persistant).
+// Dernier recours : ils ne servent que si aucun thème local n’est retenu, donc un résultat local n’est jamais écrasé.
+let themesIA: ReadonlyMap<string, readonly string[]> = new Map();
+
+export function definirThemesIA(themes: ReadonlyMap<string, readonly string[]>): void {
+  themesIA = themes;
+  versionSurcouches++;
+}
+
+/** La carte n’a aucun thème par les moyens locaux (mots-clés, Wikipédia, Wikidata), sans la surcouche IA. */
+export function sansThemeLocal(carte: Pick<Carte, 'titre' | 'description'>): boolean {
+  return themesPrincipauxLocaux(carte).length === 0;
 }
 
 // Thèmes « physiques » (animal, véhicule, astre, lieu naturel, science) : une personne, une œuvre ou une organisation ne les reçoit
@@ -363,6 +387,11 @@ const GENRES_HUMAINS: ReadonlySet<Genre> = new Set(['personne', 'oeuvre', 'organ
  * meilleur est écarté ; à poids égal, le plus précis passe avant. Les parents ne sont pas ajoutés (`themesDeCarte` les donne aux amis).
  */
 export function themesPrincipaux(carte: Pick<Carte, 'titre' | 'description'>): string[] {
+  const locaux = themesPrincipauxLocaux(carte);
+  return locaux.length > 0 ? locaux : (themesIA.get(carte.titre) ?? []).slice(0, MAX_THEMES_PAR_CARTE);
+}
+
+function themesPrincipauxLocaux(carte: Pick<Carte, 'titre' | 'description'>): string[] {
   const poids = new Map<string, number>();
   const ajouter = (ids: Iterable<string>, valeur: number): void => {
     for (const id of ids) poids.set(id, (poids.get(id) ?? 0) + valeur);

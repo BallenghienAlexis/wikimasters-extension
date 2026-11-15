@@ -7,6 +7,7 @@ import { purger } from '../lib/ignorees';
 import { registreVide } from '../lib/registre';
 import {
   chargerAffluenceSite,
+  chargerCacheIA,
   chargerCacheWikipedia,
   chargerCollection,
   chargerEtiquettesSite,
@@ -25,7 +26,8 @@ import {
   enregistrerPreferences,
   noterEvenementVente,
 } from '../lib/stockage';
-import { definirSignauxWikipedia, definirThemesWikipedia } from '../lib/themes';
+import { definirSignauxWikipedia, definirThemesIA, definirThemesWikipedia } from '../lib/themes';
+import { cacheIAVide, themesIAParTitre, type CacheIA } from '../lib/classificationIA';
 import { preferencesParDefaut, type Preferences } from '../lib/tri';
 import { cacheVide, signauxParTitre, themesParTitre, type CacheWikipedia } from '../lib/wikipedia';
 
@@ -45,6 +47,7 @@ export function useDonneesPage() {
   const [blocage, setBlocage] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [cacheWiki, setCacheWiki] = useState<CacheWikipedia>(cacheVide);
+  const [cacheIA, setCacheIA] = useState<CacheIA>(cacheIAVide);
   const [preferences, setPreferences] = useState<Preferences>(preferencesParDefaut);
   const [ventesJoueur, setVentes] = useState<EvenementVente[]>([]);
   const [releveSite, setReleveSite] = useState<EvenementVente[]>([]);
@@ -118,6 +121,18 @@ export function useDonneesPage() {
     setCacheWiki(cache);
   }, []);
 
+  // Même principe pour les thèmes attribués par l’API Claude : posés avant l’état.
+  const appliquerCacheIA = useCallback((cache: CacheIA): void => {
+    definirThemesIA(themesIAParTitre(cache));
+    setCacheIA(cache);
+    // Les rendus qui dépendent de `cacheWiki` pour relire les thèmes (collection, synchro) doivent aussi se refaire.
+    setCacheWiki((c) => ({ ...c }));
+  }, []);
+
+  useEffect(() => {
+    void chargerCacheIA().then(appliquerCacheIA);
+  }, [appliquerCacheIA]);
+
   useEffect(() => {
     void chargerCacheWikipedia().then((c) => {
       definirThemesWikipedia(themesParTitre(c));
@@ -175,7 +190,7 @@ export function useDonneesPage() {
 
   return {
     collection, setCollection, chargee, setChargee, blocage, setBlocage, message, setMessage,
-    cacheWiki, appliquerCacheWiki, preferences, setPreferences, preferencesLues, enregistrerLesPreferences,
+    cacheWiki, appliquerCacheWiki, cacheIA, appliquerCacheIA, preferences, setPreferences, preferencesLues, enregistrerLesPreferences,
     ventes, setVentes, etiquettesSite, registre, executionEnCours, registreIllisible, executionIllisible,
     stockageSynchroLu, relireStockageSynchro, noterVente, appliquer, editer,
   };

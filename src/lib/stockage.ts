@@ -8,6 +8,7 @@ import { validerIgnorees, type Ignoree } from './ignorees';
 import { validerHistorique, type PointHistorique } from './historique';
 import { AFFICHAGE_DEFAUT, validerAffichage, type Affichage } from './affichage';
 import { cacheVide, validerCache, type CacheWikipedia } from './wikipedia';
+import { cacheIAVide, validerCacheIA, type CacheIA } from './classificationIA';
 import { registreVide, validerRegistre } from './registre';
 import { validerEtiquettesSite, type EtiquetteSite } from './etiquettesPreexistantes';
 import type { EtatOrdonnanceur } from './ordonnanceur';
@@ -31,6 +32,7 @@ const CLE_RELANCE_SYNCHRO = 'relanceSynchro';
 const CLE_DERNIERE_RELANCE = 'derniereRelance';
 const CLE_STATUT_SYNCHRO = 'statutSynchro';
 const CLE_WIKIPEDIA = 'wikipedia';
+const CLE_CLASSEMENT_IA = 'classementIA';
 const CLE_VENTES = 'ventes';
 const CLE_AFFLUENCE_SITE = 'affluenceSite';
 const MAX_RELEVES_SITE = 2000;
@@ -63,6 +65,7 @@ export const CLES_STOCKAGE = {
   derniereRelance: CLE_DERNIERE_RELANCE,
   statutSynchro: CLE_STATUT_SYNCHRO,
   wikipedia: CLE_WIKIPEDIA,
+  classementIA: CLE_CLASSEMENT_IA,
   ventes: CLE_VENTES,
   affluenceSite: CLE_AFFLUENCE_SITE,
   releveMarche: CLE_RELEVE_MARCHE,
@@ -104,6 +107,17 @@ export async function chargerCacheWikipedia(): Promise<CacheWikipedia> {
 export async function enregistrerCacheWikipedia(cache: CacheWikipedia): Promise<void> {
   if (validerCache(cache) === null) throw new Error('Cache Wikipédia invalide.');
   await chrome.storage.local.set({ [CLE_WIKIPEDIA]: cache });
+}
+
+/** Cache du classement par l’API Claude (titre → thèmes) : illisible vaut « vide » (il se refait, au prix d’un nouveau classement). */
+export async function chargerCacheIA(): Promise<CacheIA> {
+  const contenu = await chrome.storage.local.get(CLE_CLASSEMENT_IA);
+  return validerCacheIA(contenu[CLE_CLASSEMENT_IA]) ?? cacheIAVide();
+}
+
+export async function enregistrerCacheIA(cache: CacheIA): Promise<void> {
+  if (validerCacheIA(cache) === null) throw new Error('Cache du classement invalide.');
+  await chrome.storage.local.set({ [CLE_CLASSEMENT_IA]: cache });
 }
 
 export async function chargerRegistre(): Promise<Registre> {

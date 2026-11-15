@@ -291,3 +291,11 @@ describe('T-205 : fetch autorisé dans src/content/synchroAuto.ts et seulement l
     interdit("import { lireJeton } from '../lib/jeton';\nexport const j = lireJeton;", SYNCHRO_AUTO));
   it('les cookies restent interdits dans synchroAuto.ts', () => interdit('export const c = document.cookie;', SYNCHRO_AUTO));
 });
+
+describe('Classement IA : fetch autorisé dans src/app/classerIA.ts et seulement là (avec verifierWikipedia.ts)', () => {
+  const appel = "export const r = fetch('https://api.anthropic.com/v1/messages', { method: 'POST' });";
+  it('fetch est permis dans classerIA.ts', () => permis(appel, 'src/app/classerIA.ts'));
+  it('fetch reste interdit dans les autres fichiers de src/app et src/lib', () =>
+    Promise.all(['src/app/ClassementIA.tsx', 'src/app/autre.ts', 'src/lib/classificationIA.ts'].map((f) => interdit(appel, f))));
+  it('les autres API réseau restent interdites dans classerIA.ts', () => interdit("export const w = new WebSocket('wss://x.test/');", 'src/app/classerIA.ts'));
+});

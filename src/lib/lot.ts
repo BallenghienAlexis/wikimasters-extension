@@ -18,7 +18,7 @@ import type {
 import { normaliser, type Carte, type Collection } from './collection'
 import { estRefuse, LONGUEUR_MAX_ID } from './registre'
 import { amisConcernes, plafondDefausse, prixDepart, type Ami } from './tri'
-import { LIBELLES_THEMES, themesDeCarte, themesPrincipaux } from './themes'
+import { LIBELLES_THEMES, themesDeCarte, themesPrincipaux, versionThemes } from './themes'
 
 /** Choix manuels du joueur pour le lot : un favori n’est jamais retenu, une carte ne peut être qu’à vendre ou à défausser. */
 export interface SelectionLot {
@@ -144,7 +144,7 @@ interface EtiquettesCarte {
   ecartees: readonly string[]
 }
 
-const MEMO_ETIQUETTES = new WeakMap<Carte, { amis: readonly Ami[] | undefined; gardes: readonly string[] | undefined; limite: number | null | undefined; resultat: EtiquettesCarte }>()
+const MEMO_ETIQUETTES = new WeakMap<Carte, { amis: readonly Ami[] | undefined; gardes: readonly string[] | undefined; limite: number | null | undefined; version: number; resultat: EtiquettesCarte }>()
 
 /**
  * Étiquettes d’une carte pour chaque exemplaire relié, dans l’ordre de priorité de H5 :
@@ -157,10 +157,11 @@ export function etiquettesDeCarte(carte: Carte, config?: Pick<Config, 'amis' | '
   const amis = config?.amis
   const limite = config?.limiteParExemplaire
   const gardes = config?.mesThemes
+  const version = versionThemes()
   const memo = MEMO_ETIQUETTES.get(carte)
-  if (memo && memo.amis === amis && memo.gardes === gardes && memo.limite === limite) return memo.resultat
+  if (memo && memo.amis === amis && memo.gardes === gardes && memo.limite === limite && memo.version === version) return memo.resultat
   const resultat = calculerEtiquettes(carte, config)
-  MEMO_ETIQUETTES.set(carte, { amis, gardes, limite, resultat })
+  MEMO_ETIQUETTES.set(carte, { amis, gardes, limite, version, resultat })
   return resultat
 }
 
