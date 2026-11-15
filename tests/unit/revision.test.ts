@@ -41,10 +41,24 @@ const defausse: Action = { type: 'defausse', idCarte: 'commune|Chat', idExemplai
 const ZZZ = { titre: 'Zzz', description: '' }
 
 describe('reverifierAction (AC1)', () => {
-  it('enchère et défausse : toujours passées (plus de statut, aucun lot n’en produit)', () => {
-    expect(reverifierAction(enchere, coll(carte()), reg(), config)).toBe('passee')
-    expect(reverifierAction(defausse, coll(carte({ valeurMarchande: 1 })), reg(), config)).toBe('passee')
+  it('enchère : ok si l’exemplaire est relié, le prix inférieur à la valeur et inchangé ; sinon passée', () => {
+    const vendable = carte({ valeurMarchande: 100, prixCible: 30 })
+    expect(reverifierAction(enchere, coll(vendable), reg(), config)).toBe('ok')
+    expect(reverifierAction(enchere, coll(carte({ valeurMarchande: 100, prixCible: 31 })), reg(), config)).toBe('passee')
+    expect(reverifierAction(enchere, coll(carte({ valeurMarchande: 20, prixCible: 30 })), reg(), config)).toBe('passee')
+    expect(reverifierAction(enchere, coll(carte({ valeurMarchande: null, prixCible: 30 })), reg(), config)).toBe('passee')
+    expect(reverifierAction(enchere, coll({ ...vendable, favori: true }), reg(), config)).toBe('passee')
+    expect(reverifierAction(enchere, coll({ ...vendable, idsSite: ['ex-2'] }), reg(), config)).toBe('passee')
     expect(reverifierAction(enchere, coll(), reg(), config)).toBe('passee')
+  })
+
+  it('défausse : ok sous le plafond sur un exemplaire relié, jamais pour un favori', () => {
+    expect(reverifierAction(defausse, coll(carte({ valeurMarchande: 1 })), reg(), config)).toBe('ok')
+    expect(reverifierAction(defausse, coll(carte({ valeurMarchande: 6 })), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll(carte({ valeurMarchande: null })), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll(carte({ valeurMarchande: 1, favori: true })), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll(carte({ valeurMarchande: 1, idsSite: ['ex-2'] })), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll(), reg(), config)).toBe('passee')
   })
 
   it('pose : étiquette de repli et étiquette d’échange', () => {

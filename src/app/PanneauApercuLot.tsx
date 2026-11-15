@@ -10,6 +10,8 @@ import { filtrerLotIgnore, type Ignoree } from '../lib/ignorees';
 import { chargerExecution, chargerIgnorees, ecouterExecution, enregistrerJournal } from '../lib/stockage';
 import { PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
 import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
+import SelectionVenteDefausse from './SelectionVenteDefausse';
+import { choixInitial, versSelection, type Choix, type ChoixCarte } from '../lib/selectionLot';
 import EtiquettesPrevues from './EtiquettesPrevues';
 import Journal, { type CoupleRetrait } from './Journal';
 import BandeauRisque from './BandeauRisque';
@@ -173,10 +175,20 @@ const PanneauApercuLot: React.FC<Props> = ({
       arreter();
     };
   }, []);
+  // Choix manuels (vente, défausse) : préremplis par les étiquettes du site tant que le joueur n’a rien touché.
+  const [choixManuels, setChoixManuels] = useState<Choix | null>(null);
+  const choix = useMemo<Choix>(() => choixManuels ?? choixInitial(collection.cartes), [choixManuels, collection.cartes]);
+  const choisir = (idCarte: string, c: ChoixCarte, exemplaires: number): void =>
+    setChoixManuels(() => {
+      const m = new Map(choix);
+      if (c === 'aucun') m.delete(idCarte);
+      else m.set(idCarte, { choix: c, exemplaires });
+      return m;
+    });
   const figer = (r: Registre | null, listeIgnorees: Ignoree[]): void => {
     setIgnorees(listeIgnorees);
     setDecochees(new Set());
-    const config = configDuLot(preferences, ventesSiteLues);
+    const config = { ...configDuLot(preferences, ventesSiteLues), selection: versSelection(collection.cartes, choix) };
     setEtat(preparerLot(collection, r, dispo, config));
     let apercu: ApercuEtiquettes | null = null;
     if (r !== null) {
@@ -379,6 +391,10 @@ const PanneauApercuLot: React.FC<Props> = ({
             </button>
           )}
         </section>
+      )}
+
+      {!zoneVisible && !ouvert && !chargement && (
+        <SelectionVenteDefausse cartes={collection.cartes} choix={choix} plafond={plafond} onChoisir={choisir} />
       )}
 
       <section aria-labelledby="titre-synchro" hidden={zoneVisible} className="mt-4 rounded border border-line bg-ink-2 p-4">

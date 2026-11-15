@@ -12,6 +12,7 @@ import {
   type Collection,
 } from './collection'
 import { exemplairesAttendus, type Config } from './lot'
+import { plafondDefausse, prixDepart } from './tri'
 import { enregistrerEtiquette, poserCouple, purgerCarte, purgerExemplaire, retirerCouple, supprimerEtiquetteDuRegistre } from './registre'
 
 /** Résultat d’une action, avec l’identifiant d’étiquette renvoyé par une création réussie. */
@@ -40,10 +41,18 @@ export function reverifierAction(
   if (!carte) return 'passee'
 
   switch (action.type) {
-    // Sans statut (2026-11-14), aucun lot ne produit d’enchère ni de défausse : un ordre ancien est toujours passé.
-    case 'enchere':
-    case 'defausse':
-      return 'passee'
+    // Enchère et défausse viennent de la sélection manuelle du joueur : revérifiées avant l’envoi.
+    case 'enchere': {
+      if (carte.favori || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
+      const valeur = carte.valeurMarchande
+      if (valeur === null || !(action.prix >= 1 && action.prix < valeur)) return 'passee'
+      // Le prix de départ courant (prix cible, sinon matrice) ne doit pas avoir changé depuis l’aperçu.
+      return (carte.prixCible ?? prixDepart(valeur)) === action.prix ? 'ok' : 'passee'
+    }
+    case 'defausse': {
+      if (carte.favori || carte.quantite < 1 || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
+      return typeof carte.valeurMarchande === 'number' && carte.valeurMarchande <= plafondDefausse({ plafondDefausse: config.plafondDefausse }) ? 'ok' : 'passee'
+    }
     case 'creation-etiquette':
       return exemplairesAttendus(carte, config).some((e) => e.etiquettes.includes(action.nomEtiquette)) ? 'ok' : 'passee'
     case 'pose-etiquette': {
