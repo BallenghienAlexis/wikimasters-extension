@@ -16,6 +16,7 @@ const FAMILLE_PAR_TYPE: Record<TypeAction, FamilleLot> = {
   'pose-etiquette': 'etiquettes',
   enchere: 'encheres',
   defausse: 'defausses',
+  favori: 'favoris',
   'suppression-etiquette': 'suppressions',
 }
 

@@ -9,6 +9,7 @@
 import type { Action, TypeAction, TypesDisponibles } from './actions'
 import { ENTREES_DEFAUSSE } from './contrat/defausse'
 import { ENTREES_ENCHERE } from './contrat/enchere'
+import { ENTREES_FAVORI } from './contrat/favori'
 import { ENTREES_ETIQUETTES } from './contrat/etiquettes'
 import { ENTREES_LECTURE } from './contrat/lecture'
 
@@ -49,6 +50,7 @@ export const TABLE_CONTRAT: TableContrat = {
   ...ENTREES_ETIQUETTES,
   ...ENTREES_ENCHERE,
   ...ENTREES_DEFAUSSE,
+  ...ENTREES_FAVORI,
 }
 
 export function typesDisponibles(table: TableContrat = TABLE_CONTRAT): TypesDisponibles {

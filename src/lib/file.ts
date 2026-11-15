@@ -39,7 +39,7 @@ export { CODES_CARTE_INDISPONIBLE }
 export const MAX_REFUS_CARTE_CONSECUTIFS = 3
 /** Plafond de refus par carte sur tout un lot, qu’un succès intercalé ne remet jamais à zéro. */
 export const MAX_REFUS_CARTE_PAR_LOT = 5
-const TYPES_PAR_EXEMPLAIRE: readonly string[] = ['pose-etiquette', 'retrait-etiquette', 'enchere', 'defausse']
+const TYPES_PAR_EXEMPLAIRE: readonly string[] = ['pose-etiquette', 'retrait-etiquette', 'enchere', 'defausse', 'favori']
 export const refusParCarte = (action: Action, codeHttp: number | null): boolean =>
   codeHttp !== null && CODES_CARTE_INDISPONIBLE.includes(codeHttp) && TYPES_PAR_EXEMPLAIRE.includes(action.type)
 /** Libellé fixe d’un résultat d’arrêt sans requête émise (jeton absent). */

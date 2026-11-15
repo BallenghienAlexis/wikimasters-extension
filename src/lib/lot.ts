@@ -53,6 +53,8 @@ export interface Config {
   selection?: SelectionLot
   /** Plafond de valeur de défausse réglé par le joueur ; absent : `PLAFOND_VALEUR_DEFAUSSE` (5). */
   plafondDefausse?: number
+  /** Thèmes gardés du joueur (« Mes thèmes ») : une carte reliée de ces thèmes est mise en favori (Alexis, 2026-11-15). */
+  mesThemes?: readonly string[]
 }
 
 /** Raison pour laquelle une étiquette précise n’est pas posée. */
@@ -125,6 +127,16 @@ function etiquettesEchange(carte: Carte, themes: readonly string[], amis: readon
  */
 export function estACLasser(carte: Carte): boolean {
   return carte.etiquettesSite.includes(ETIQUETTE_A_CLASSER) || themesPrincipaux(carte).length === 0
+}
+
+/**
+ * Carte à garder : elle porte l’un des thèmes gardés du joueur. Elle est alors mise en favori par l’extension
+ * (au lieu d’une étiquette « Garder »). Une carte « à classer » n’est jamais retenue.
+ */
+export function estAGarder(carte: Carte, mesThemes: readonly string[] | undefined): boolean {
+  if (!mesThemes || mesThemes.length === 0 || estACLasser(carte)) return false
+  const themes = themesDeCarte(carte)
+  return mesThemes.some((t) => themes.includes(t))
 }
 
 interface EtiquettesCarte {
@@ -317,6 +329,7 @@ export function construireLot(
   const dispo = (t: TypeAction): boolean => disponibles.has(t)
   const aVendre: Carte[] = []
   const defausses: Action[] = []
+  const favoris: Action[] = []
   const vendre = new Set(config.selection?.vendre ?? [])
   const defausser = config.selection?.defausser ?? {}
 
@@ -358,6 +371,12 @@ export function construireLot(
       continue
     }
     if (vendre.has(c.id)) aVendre.push(c)
+
+    // Mise en favori (Alexis, 2026-11-15) : un seul exemplaire par carte, jamais pour une carte déjà favorite
+    // ni pour une carte choisie à la main pour la vente. Jamais l’inverse (aucun défavori).
+    if (!c.favori && !vendre.has(c.id) && c.idsSite.length > 0 && dispo('favori') && estAGarder(c, config.mesThemes)) {
+      favoris.push({ type: 'favori', idCarte: c.id, idExemplaire: c.idsSite[0]! })
+    }
 
     // Étiquettes (SC-007, SC-008). Les anciennes étiquettes « Statut · … » posées par l’extension ne sont plus attendues :
     // elles sont retirées comme toute étiquette du registre qui n’est plus attendue.
@@ -443,7 +462,7 @@ export function construireLot(
   })
 
   return {
-    actions: [...creations, ...retraits, ...poses, ...encheres.actions, ...defausses],
+    actions: [...creations, ...retraits, ...poses, ...encheres.actions, ...defausses, ...favoris],
     ecartees: ecarteesUniques,
     nonPosees,
   }

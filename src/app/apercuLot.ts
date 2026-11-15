@@ -45,6 +45,8 @@ export function libelleType(type: TypeAction): string {
       return 'Mettre aux enchères';
     case 'defausse':
       return 'Défausser';
+    case 'favori':
+      return 'Mettre en favori';
     case 'lecture':
       return 'Lecture';
     default:
@@ -69,14 +71,16 @@ export interface Totaux {
   etiquettes: number;
   encheres: number;
   defausses: number;
+  favoris: number;
   lectures: number;
 }
 
 export function totauxParType(actions: readonly Action[]): Totaux {
-  const t: Totaux = { etiquettes: 0, encheres: 0, defausses: 0, lectures: 0 };
+  const t: Totaux = { etiquettes: 0, encheres: 0, defausses: 0, favoris: 0, lectures: 0 };
   for (const a of actions) {
     if (a.type === 'enchere') t.encheres++;
     else if (a.type === 'defausse') t.defausses++;
+    else if (a.type === 'favori') t.favoris++;
     else if (a.type === 'lecture') t.lectures++;
     else t.etiquettes++;
   }
@@ -92,6 +96,7 @@ export function texteTotaux(t: Totaux): string {
   ajouter(t.etiquettes, 'étiquette', 'étiquettes');
   ajouter(t.encheres, 'enchère', 'enchères');
   ajouter(t.defausses, 'défausse', 'défausses');
+  ajouter(t.favoris, 'mise en favori', 'mises en favori');
   return parts.join(' · ');
 }
 
@@ -149,6 +154,7 @@ const LIBELLES_FAMILLE: Record<FamilleLot, string> = {
   etiquettes: 'Étiquettes',
   encheres: 'Enchères',
   defausses: 'Défausses',
+  favoris: 'Favoris',
   suppressions: 'Suppressions',
   lectures: 'Lectures',
 };
@@ -239,6 +245,7 @@ export function configDuLot(preferences: Preferences, ventesSite: { enCours: num
   return {
     maxVentesSimultanees: CONFIG_PRIX.maxVentesSimultanees,
     plafondDefausse: plafondDefausse(preferences),
+    mesThemes: preferences.mesThemes,
     longueurMaxEtiquette: null,
     nomsExistants: [],
     amis: preferences.amis,
@@ -303,6 +310,8 @@ export function detailsDuLot(actions: readonly Action[], cartes: ReadonlyMap<str
         const valeur = cartes.get(a.idCarte)?.valeurMarchande;
         return valeur == null ? `départ ${a.prix}` : `départ ${a.prix} · valeur marchande ${valeur}`;
       }
+      case 'favori':
+        return 'mise en favori (thème gardé)';
       case 'retrait-etiquette':
         return `retrait${NB}: ${a.nomEtiquette}`;
       case 'creation-etiquette':

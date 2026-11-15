@@ -52,7 +52,7 @@ export interface ContexteExecution {
 }
 
 const parametreDe = (a: Action): string | null =>
-  a.type === 'enchere' ? String(a.prix) : a.type === 'lecture' || a.type === 'defausse' ? null : a.nomEtiquette;
+  a.type === 'enchere' ? String(a.prix) : a.type === 'lecture' || a.type === 'defausse' || a.type === 'favori' ? null : a.nomEtiquette;
 
 let contexte: ContexteExecution | null = null;
 

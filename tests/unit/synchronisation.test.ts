@@ -137,13 +137,13 @@ describe('totaux et durée', () => {
   ]
 
   it('compte par famille d’action', () => {
-    expect(totauxParType(actions)).toEqual({ etiquettes: 3, encheres: 1, defausses: 2, lectures: 0 })
+    expect(totauxParType(actions)).toEqual({ etiquettes: 3, encheres: 1, defausses: 2, favoris: 0, lectures: 0 })
   })
 
   it('écrit les totaux avec accords', () => {
-    expect(texteTotaux({ etiquettes: 6, encheres: 3, defausses: 3, lectures: 0 })).toBe('6 étiquettes · 3 enchères · 3 défausses')
-    expect(texteTotaux({ etiquettes: 1, encheres: 1, defausses: 1, lectures: 0 })).toBe('1 étiquette · 1 enchère · 1 défausse')
-    expect(texteTotaux({ etiquettes: 0, encheres: 2, defausses: 0, lectures: 0 })).toBe('2 enchères')
+    expect(texteTotaux({ etiquettes: 6, encheres: 3, defausses: 3, favoris: 0, lectures: 0 })).toBe('6 étiquettes · 3 enchères · 3 défausses')
+    expect(texteTotaux({ etiquettes: 1, encheres: 1, defausses: 1, favoris: 0, lectures: 0 })).toBe('1 étiquette · 1 enchère · 1 défausse')
+    expect(texteTotaux({ etiquettes: 0, encheres: 2, defausses: 0, favoris: 0, lectures: 0 })).toBe('2 enchères')
   })
 
   it('arrondit la durée à la minute supérieure (0,25 s par action en moyenne)', () => {

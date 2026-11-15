@@ -501,6 +501,9 @@ const PanneauApercuLot: React.FC<Props> = ({
               {actionsCochees.some((a) => a.type === 'defausse') && (
                 <Avertissement>Une défausse est définitive : la carte ne peut pas être récupérée.</Avertissement>
               )}
+              {actionsCochees.some((a) => a.type === 'favori') && (
+                <Avertissement>Les cartes de vos thèmes gardés sont mises en favori sur le site (étoile) ; l’extension ne retire jamais un favori.</Avertissement>
+              )}
               {plafond > PLAFOND_VALEUR_DEFAUSSE && (
                 <Avertissement>
                   Le plafond de défausse est réglé à {plafond}, au-dessus de {PLAFOND_VALEUR_DEFAUSSE} : des cartes de valeur plus élevée peuvent être défaussées.
