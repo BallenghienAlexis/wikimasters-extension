@@ -297,17 +297,16 @@ test.describe('exécution réelle (site fictif)', () => {
     await expect(page.getByTestId('historique')).toContainText('Passée : sautée');
   });
 
-  test('Décision 3 / SC-016 : seuil de refus par carte atteint, pause de 30 min affichée', async ({ context, pageCollection: page }) => {
+  test('Alexis 2026-11-15 : refus 403 → arrêt du lot sans pause de 30 min, Réessayer immédiat', async ({ context, pageCollection: page }) => {
     await amorcerLot(page, 4);
     await ouvrirSite(context, reponses(403));
     await lancer(page);
     await allerA(page, 'synchro');
     await expect(panneau(page)).toContainText(/403/, { timeout: 40_000 });
-    await expect(bouton(page, /^Réessayer cette action/)).toHaveAttribute('aria-disabled', 'true');
-    await expect(panneau(page)).toContainText(/Reprise possible à \d{2}:\d{2}/);
+    await expect(bouton(page, /^Réessayer cette action/)).not.toHaveAttribute('aria-disabled', 'true');
+    await expect(panneau(page)).not.toContainText(/Reprise possible à \d{2}:\d{2}/);
     const exe = (await stockage(page, 'execution')) as { pauseJusqua: number | null };
-    expect(exe.pauseJusqua).toBeGreaterThan(Date.now() + 25 * 60_000);
-    expect(exe.pauseJusqua).toBeLessThanOrEqual(Date.now() + 30 * 60_000 + 5000);
+    expect(exe.pauseJusqua).toBeNull();
   });
 
   test('Décision 2 : « Réessayer » désactivé après un résultat inconnu, avec la raison écrite ; Sauter reste possible', async ({ context, pageCollection: page }) => {
