@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyserPage, analyserPrix, analyserStats } from '../../src/lib/lectureApi';
+import { analyserPage, analyserPrix, analyserStats, decrireForme, diagnosticStats } from '../../src/lib/lectureApi';
 
 // Réponses fictives, conformes à specs/synchro-auto/releve-api.md.
 const etiquette = (id: string, name: string) => ({ id, name, color: '#112233', user_id: 'u-fictif', created_at: '2026-01-01' });
@@ -53,7 +53,13 @@ describe('analyserStats', () => {
     expect(analyserStats({ total: '12', totalUnique: 1, tagOptions: [] })).toBeNull();
     expect(analyserStats({ total: -1, totalUnique: 1, tagOptions: [] })).toBeNull();
     expect(analyserStats({ total: 1, totalUnique: 1 })).toBeNull();
-    expect(analyserStats({ total: 1, totalUnique: 1, tagOptions: [{ id: 1 }] })).toBeNull();
+  });
+
+  it('une étiquette illisible est ignorée, une couleur absente devient vide, plus de 200 étiquettes sont acceptées', () => {
+    const options = Array.from({ length: 300 }, (_, i) => ({ id: `t-${i}`, name: `E${i}`, color: i === 0 ? null : '#fff', cardCount: i }));
+    const r = analyserStats({ total: 1, totalUnique: 1, tagOptions: [{ id: 1 }, { id: 'x', name: '', cardCount: 1 }, ...options] });
+    expect(r?.etiquettes).toHaveLength(300);
+    expect(r?.etiquettes[0]).toMatchObject({ id: 't-0', couleur: '' });
   });
 });
 
@@ -150,5 +156,20 @@ describe('analyserPrix', () => {
 
   it('ne lit pas une clé héritée du prototype', () => {
     expect(analyserPrix(reponse({}), 'constructor')).toBeNull();
+  });
+});
+
+describe('diagnostics de forme', () => {
+  it('décrit la forme sans aucune valeur', () => {
+    expect(decrireForme(null)).toBe('vide ou non JSON');
+    expect(decrireForme([1, 2])).toBe('tableau de 2');
+    expect(decrireForme({ total: 12, secret: 'jeton-abc' })).toBe('objet {total, secret}');
+    expect(decrireForme({ total: 12, secret: 'jeton-abc' })).not.toContain('jeton-abc');
+  });
+
+  it('nomme le champ de stats fautif', () => {
+    expect(diagnosticStats({ total: 'x', totalUnique: 1, tagOptions: [] })).toContain('total');
+    expect(diagnosticStats({ total: 1, totalUnique: 1 })).toContain('tagOptions');
+    expect(diagnosticStats('html')).toContain('string');
   });
 });

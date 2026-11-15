@@ -652,27 +652,106 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.codeHttp).toBe(403);
   })
 
-  it('prix : pause de 60 s après chaque lot de 30 prix, sans requête de plus', async () => {
-    const b = banc(siteFictif(35));
+  it('prix : plus de lots ni de plafond, toutes les cartes sans prix sont interrogées sans pause', async () => {
+    const b = banc(siteFictif(150));
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('termine');
     const ventes = b.departs.filter((d) => d.chemin.includes('/sales'));
-    expect(ventes).toHaveLength(35);
+    expect(ventes).toHaveLength(150);
     const ecarts = ventes.slice(1).map((d, i) => d.t - (ventes[i]?.t ?? 0));
-    expect(ecarts.filter((e) => e >= 60_000)).toHaveLength(1);
-    expect(ecarts[29]).toBeGreaterThanOrEqual(60_000);
-    expect(b.journal.some((m) => m.startsWith('Pause de 60 s'))).toBe(true);
+    expect(Math.max(...ecarts)).toBeLessThan(1_000);
+    expect(b.journal.some((m) => m.startsWith('Pause de'))).toBe(false);
   })
 
-  it('prix : un arrêt demandé pendant la pause empêche la 31e requête', async () => {
-    let ventes = 0;
+  it('prix : un 429 isolé déclenche une pause de 30 s puis la même carte est redemandée', async () => {
+    const site = siteFictif(4);
+    let deja = false;
+    const b = banc((chemin) => {
+      if (chemin.includes('card-2/sales') && !deja) {
+        deja = true;
+        return { statut: 429, json: null };
+      }
+      return site(chemin);
+    });
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('termine');
+    const ventes = b.departs.filter((d) => d.chemin.includes('/sales'));
+    expect(ventes.filter((d) => d.chemin.includes('card-2/sales'))).toHaveLength(2);
+    expect(ventes).toHaveLength(5);
+    const i = ventes.findIndex((d) => d.chemin.includes('card-2/sales'));
+    expect((ventes[i + 1]?.t ?? 0) - (ventes[i]?.t ?? 0)).toBeGreaterThanOrEqual(30_000);
+  })
+
+  it('prix : 5 réponses 429 d’affilée arrêtent la synchro, avec des pauses qui doublent', async () => {
+    const site = siteFictif(4);
+    const b = banc((chemin) => (chemin.includes('/sales') ? { statut: 429, json: null } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('arret');
+    expect(r.codeHttp).toBe(429);
+    const ventes = b.departs.filter((d) => d.chemin.includes('/sales'));
+    expect(ventes).toHaveLength(6);
+    const ecarts = ventes.slice(1).map((d, i) => d.t - (ventes[i]?.t ?? 0));
+    expect(ecarts[0]).toBeGreaterThanOrEqual(30_000);
+    expect(ecarts[1]).toBeGreaterThanOrEqual(60_000);
+  })
+
+  it('prix : la vérification anti-bot arrête tout de suite, sans contrôle de session ni mémorisation', async () => {
+    const site = siteFictif(6);
+    const b = banc((chemin) => (chemin.includes('card-2/sales') ? { statut: 403, json: { error: 'Vérification anti-bot requise.', code: 'human_verification_required' } } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('arret');
+    expect(r.codeHttp).toBe(403);
+    expect(b.departs.filter((d) => d.chemin.includes('/sales'))).toHaveLength(2);
+    expect(b.departs.filter((d) => d.chemin.includes('/stats')).length).toBe(2);
+    expect(b.journal.some((m) => m.includes('anti-bot'))).toBe(true);
+  })
+
+  it('un 429 sur une page ou les stats arrête tout de suite, sans pause ni reprise', async () => {
+    const site = siteFictif(4);
+    const b = banc((chemin) => (/page=/.test(chemin) ? { statut: 429, json: null } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('arret');
+    expect(r.codeHttp).toBe(429);
+    expect(b.departs.filter((d) => /page=/.test(d.chemin))).toHaveLength(1);
+  })
+
+  it('la vérification anti-bot sur une page arrête tout de suite', async () => {
+    const site = siteFictif(4);
+    const b = banc((chemin) => (/page=/.test(chemin) ? { statut: 403, json: { code: 'human_verification_required' } } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('arret');
+    expect(r.codeHttp).toBe(403);
+    expect(b.departs.filter((d) => /page=/.test(d.chemin))).toHaveLength(1);
+  })
+
+  it('prix : le bail est renouvelé pendant la pause de 429', async () => {
+    const site = siteFictif(3);
+    let deja = false;
+    const b = banc((chemin) => {
+      if (chemin.includes('card-2/sales') && !deja) {
+        deja = true;
+        return { statut: 429, json: null };
+      }
+      return site(chemin);
+    });
+    const ecrits: number[] = [];
+    const ecrire = b.deps.bail.ecrire.bind(b.deps.bail);
+    b.deps.bail.ecrire = async (v: number | null) => {
+      if (v !== null) ecrits.push(v);
+      return ecrire(v);
+    };
+    await synchroniser(b.deps);
+    expect(ecrits.filter((v) => v > 0).length).toBeGreaterThan(10);
+  })
+
+  it('prix : un arrêt demandé pendant la pause de 429 est pris en compte', async () => {
+    const site = siteFictif(4);
     let arret = false;
-    const site = siteFictif(40);
     const b = banc(
       (chemin) => {
-        if (chemin.includes('/sales')) {
-          ventes += 1;
-          if (ventes === 30) arret = true;
+        if (chemin.includes('card-2/sales')) {
+          arret = true;
+          return { statut: 429, json: null };
         }
         return site(chemin);
       },
@@ -682,7 +761,8 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     );
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('arret');
-    expect(b.departs.filter((d) => d.chemin.includes('/sales'))).toHaveLength(30);
+    expect(r.raison).toBe('manuel');
+    expect(b.departs.filter((d) => d.chemin.includes('card-2/sales'))).toHaveLength(1);
   })
 
   it('prix : un refus journalise le titre, le rang et le délai depuis la première demande', async () => {
@@ -715,8 +795,8 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     }
   })
 
-  it('prix : 401 et 429 arrêtent toujours dès la première réponse', async () => {
-    for (const code of [401, 429]) {
+  it('prix : 401 arrête dès la première réponse', async () => {
+    for (const code of [401]) {
       const site = siteFictif(4);
       const b = banc((chemin) => (chemin.includes('/sales') ? { statut: code, json: null } : site(chemin)));
       const r = await synchroniser(b.deps);

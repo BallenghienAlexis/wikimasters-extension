@@ -161,7 +161,7 @@ function evenementFinal(resultat: ResultatSynchro, pages: number | null): Evenem
     if (resultat.raison === 'echecs') return arret('3 échecs consécutifs');
     return arret('arrêt demandé');
   }
-  if (!resultat.complete) return arret(pages !== null && resultat.pagesLues >= pages + PAGES_DE_MARGE ? 'plafond de pages' : 'lecture incomplète');
+  if (!resultat.complete) return arret(pages !== null && resultat.pagesLues >= pages + PAGES_DE_MARGE ? 'plafond de pages' : resultat.sautes > 0 ? 'terminée avec des éléments sautés' : 'lecture incomplète');
   return { titre: 'Synchronisation automatique : fin', parametre: null, resultat: 'reussie', codeHttp: null };
 }
 
@@ -421,7 +421,7 @@ let fileJournal: Promise<void> = Promise.resolve();
 export function journaliserDiagnostic(message: string, ecrire: (e: EvenementSynchro) => Promise<void> = ecrireEvenementJournal): void {
   if (!estDiagnosticPrix(message)) return;
   const refus = /^(Prix indisponible|Diagnostic prix|Contrôle de session en échec|Échec |Synchro incomplète)/.test(message);
-  fileJournal = fileJournal.then(() => ecrire({ titre: 'Synchronisation automatique : prix', parametre: message.slice(0, 200), resultat: refus ? 'interrompue' : 'reussie', codeHttp: null })).catch(() => undefined);
+  fileJournal = fileJournal.then(() => ecrire({ titre: 'Synchronisation automatique : prix', parametre: message.slice(0, 300), resultat: refus ? 'interrompue' : 'reussie', codeHttp: null })).catch(() => undefined);
 }
 
 /** Écriture d’un événement fixe après les diagnostics en attente : une seule écriture du journal à la fois. */

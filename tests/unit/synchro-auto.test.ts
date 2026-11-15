@@ -612,6 +612,12 @@ describe('T-206 D-03 : événements dans le journal', () => {
     expect(b.statuts.at(-1)?.etape).not.toBe('ventes');
   });
 
+  it('un échec isolé (stats illisible une fois) : cause « terminée avec des éléments sautés »', async () => {
+    const b = banc({ reponse: (c, n) => (n === 1 ? { statut: 200, json: { total: 'x' } } : siteFictif(2)(c)) });
+    await creerSynchroAuto(b.deps).declencher();
+    expect(b.evenements.at(-1)).toMatchObject({ titre: 'Synchronisation automatique : arrêt', parametre: 'terminée avec des éléments sautés' });
+  });
+
   it('une erreur d’écriture du journal n’interrompt pas la synchro', async () => {
     const b = banc();
     b.deps.journaliser = async () => {
