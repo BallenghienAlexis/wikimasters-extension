@@ -8,7 +8,7 @@
  *
  * Logique pure : pas de `chrome.runtime` ici.
  */
-import { ID_CARTE_ETIQUETTES, TYPES_ACTION, type Action, type ResultatAction, type TypeAction } from './actions'
+import { CAUSE_VERIFICATION_HUMAINE, ID_CARTE_ETIQUETTES, TYPES_ACTION, type Action, type ResultatAction, type TypeAction } from './actions'
 
 const LONGUEUR_MAX = 200
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -35,6 +35,7 @@ export const CAUSES_RESULTAT: readonly string[] = [
   'réponse hors contrat',
   'jeton-absent',
   'limite d’enchères atteinte',
+  CAUSE_VERIFICATION_HUMAINE,
   'conflit signalé par le site',
 ]
 
@@ -183,7 +184,8 @@ export function validerResultat(brut: unknown): ResultatAction | null {
   const resultat = enObjet(enveloppe.resultat)
   const avecId = resultat !== null && 'idEtiquette' in resultat
   const avecDiag = resultat !== null && 'diagnostic' in resultat
-  if (!resultat || !cles(resultat, ['classe', 'codeHttp', 'cause', ...(avecId ? ['idEtiquette'] : []), ...(avecDiag ? ['diagnostic'] : [])])) return null
+  const avecVentes = resultat !== null && 'ventes' in resultat
+  if (!resultat || !cles(resultat, ['classe', 'codeHttp', 'cause', ...(avecId ? ['idEtiquette'] : []), ...(avecDiag ? ['diagnostic'] : []), ...(avecVentes ? ['ventes'] : [])])) return null
   const { classe, codeHttp } = resultat
   if (typeof classe !== 'string' || !(CLASSES as readonly string[]).includes(classe)) return null
   if (codeHttp !== null) {
@@ -196,7 +198,15 @@ export function validerResultat(brut: unknown): ResultatAction | null {
     if (typeof resultat.diagnostic !== 'string' || Array.from(resultat.diagnostic).length > 500) return null
     diagnostic = resultat.diagnostic
   }
-  const base = { classe: classe as ResultatAction['classe'], codeHttp: codeHttp as number | null, cause, ...(diagnostic !== undefined ? { diagnostic } : {}) }
+  let ventes: { enCours: number; max: number } | undefined
+  if (avecVentes) {
+    const v = enObjet(resultat.ventes)
+    if (!v || !cles(v, ['enCours', 'max'])) return null
+    const { enCours, max } = v
+    if (typeof enCours !== 'number' || typeof max !== 'number' || !Number.isInteger(enCours) || !Number.isInteger(max) || enCours < 0 || max < 0 || enCours > 1000 || max > 1000) return null
+    ventes = { enCours, max }
+  }
+  const base = { classe: classe as ResultatAction['classe'], codeHttp: codeHttp as number | null, cause, ...(diagnostic !== undefined ? { diagnostic } : {}), ...(ventes !== undefined ? { ventes } : {}) }
   if (!avecId) return base
   const idEtiquette = uuid(resultat.idEtiquette)
   return idEtiquette === null ? null : { ...base, idEtiquette }

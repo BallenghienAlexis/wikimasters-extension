@@ -387,6 +387,7 @@ const ERREURS_LANCEMENT = new Set([
   'Un seul onglet WikiMasters est requis.',
   'Onglet WikiMasters déconnecté.',
   SYNCHRO_EN_COURS,
+  'Limite de 5 enchères actives atteinte : réessaie quand une vente se termine.',
 ]);
 
 export function libelleErreurLancement(e: unknown): string {

@@ -164,7 +164,8 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
         return { classe: 'inconnu', codeHttp: reponse.status, cause: 'réponse hors contrat' }
       }
       const id = entree.lireIdEtiquette?.(json) ?? null
-      return { classe: 'reussie', codeHttp: reponse.status, cause: 'action réussie', ...(id !== null ? { idEtiquette: id } : {}) }
+      const ventes = entree.lireVentes?.(json) ?? null
+      return { classe: 'reussie', codeHttp: reponse.status, cause: 'action réussie', ...(id !== null ? { idEtiquette: id } : {}), ...(ventes !== null ? { ventes } : {}) }
     } catch (e) {
       const delai = e instanceof Error && e.name === 'AbortError'
       return { classe: 'inconnu', codeHttp: null, cause: delai ? 'délai dépassé' : 'erreur réseau' }

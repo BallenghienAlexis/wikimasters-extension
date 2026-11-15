@@ -153,3 +153,7 @@ Un amendement daté est en tête de `spec.md`, `spec.refined.md`, `design.md` et
 - `src/lib/actions.ts:137` : `estLimiteEncheres` (regex sur le texte français) double `classerConflit` (`reseau.ts:49`) ; garder une seule règle.
 - `src/lib/journal.ts:285` : `LIBELLE_LIMITE_ENCHERES` écrit « 5 » en dur alors que le maximum vient de `marketplace/mine`.
 - `src/app/PanneauErreur.tsx:144` : le diagnostic est retrouvé par recherche dans le journal (même lot, carte et type) ; porter la cause dans `erreur` et ajouter un test du libellé du panneau.
+
+## À reprendre (relecture de marketplace/mine avant un lot d’enchères, 2026-11-15)
+- `src/app/pilotageLots.ts` (`limiterAuxPlacesLibres`) : les enchères écartées faute de place ne sont ni journalisées ni annoncées au joueur ; ajouter une ligne d’information (nombre écarté) dans l’onglet Synchro.
+- Pas d’e2e ni de capture dédiés à la relecture (la lecture passe par le site fictif des e2e existants, réponse HTML ignorée) ; ajouter un e2e avec une réponse `marketplace/mine` fictive.

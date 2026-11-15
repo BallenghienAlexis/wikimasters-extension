@@ -1,5 +1,7 @@
 import { trierEtiquettesSite } from '../lib/etiquettesPreexistantes';
+import { CONFIG_PRIX } from '../config/prix';
 import { ID_CARTE_ETIQUETTES } from '../lib/actions';
+import { limiterEncheres } from '../lib/lot';
 import type { Action, CauseJournal, EtatExecutionV2, ErreurExecution, FamilleLot, Registre, ResultatAction } from '../lib/actions';
 import type { Collection } from '../lib/collection';
 import type { Journal } from '../lib/journal';
@@ -242,7 +244,30 @@ async function lancerAvec(preparer: () => Promise<Lancement>): Promise<void> {
  * 30 minutes (message « Reprise possible à HH:MM »). Résout à la fin de l'exécution (terminée, arrêtée ou en erreur).
  */
 export async function lancerLot(actions: readonly Action[], idLot: string): Promise<void> {
-  return lancerAvec(async () => ({ actions, idLot }));
+  return lancerAvec(async () => ({ actions: await limiterAuxPlacesLibres(actions), idLot }));
+}
+
+/** Message de lancement quand aucune place d'enchère n'est libre (libellé fixe de l'extension). */
+export const AUCUNE_PLACE_ENCHERE = 'Limite de 5 enchères actives atteinte : réessaie quand une vente se termine.';
+
+/**
+ * Avant un lot qui contient des enchères : relit `GET /api/marketplace/mine` (lecture déjà autorisée, une seule requête,
+ * Alexis, 2026-11-15) et ne garde que les enchères qui tiennent dans les places libres. Lecture impossible : le lot part
+ * tel quel, sur les places de la dernière synchro (le 409 du site reste le garde-fou).
+ */
+async function limiterAuxPlacesLibres(actions: readonly Action[]): Promise<readonly Action[]> {
+  if (!actions.some((a) => a.type === 'enchere')) return actions;
+  let ventes: { enCours: number; max: number } | undefined;
+  try {
+    const r = await contexteExecution().execution.transport({ type: 'lecture', idCarte: ID_CARTE_ETIQUETTES });
+    if (r.classe === 'reussie') ventes = r.ventes;
+  } catch {
+    return actions;
+  }
+  if (ventes === undefined) return actions;
+  const { actions: gardees, ecartees } = limiterEncheres(actions, ventes, CONFIG_PRIX.maxVentesSimultanees);
+  if (ecartees > 0 && gardees.length === 0) throw new Error(AUCUNE_PLACE_ENCHERE);
+  return gardees;
 }
 
 let lotEnCours = false;

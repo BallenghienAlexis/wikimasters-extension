@@ -58,7 +58,7 @@ describe('reseau : émetteur des étiquettes', () => {
   it('type absent de la table ou identifiant manquant : action non disponible, aucune requête', async () => {
     const f = vi.fn()
     const e = emetteur(f as unknown as typeof fetch)
-    expect((await e({ type: 'lecture' } as unknown as Action)).cause).toBe('action non disponible')
+    expect((await e({ type: 'inconnu' } as unknown as Action)).cause).toBe('action non disponible')
     expect((await e({ ...pose, idEtiquette: undefined } as Action)).cause).toBe('action non disponible')
     expect(f).not.toHaveBeenCalled()
   })
@@ -84,7 +84,7 @@ describe('reseau : émetteur des étiquettes', () => {
     const session = vi.fn(() => SESSION)
     const f = vi.fn()
     const e = (origine: string) => creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: origine, session, fetchImpl: f as unknown as typeof fetch })
-    await e(ORIGINE)({ type: 'lecture' } as unknown as Action)
+    await e(ORIGINE)({ type: 'inconnu' } as unknown as Action)
     await e('https://exemple.test')(pose)
     await e(ORIGINE)({ ...pose, idEtiquette: 'a&b' } as Action)
     expect(session).not.toHaveBeenCalled()
@@ -222,5 +222,28 @@ describe('reseau : vérification anti-bot du site (Alexis, 2026-11-15)', () => {
     const r = await appel(JSON.stringify({ error: 'Interdit' }))
     expect(r.cause).toBe('action non disponible')
     expect(estVerificationHumaine(r.diagnostic)).toBe(false)
+  })
+})
+
+describe('reseau : lecture des enchères en cours (marketplace/mine)', () => {
+  const lecture: Action = { type: 'lecture', idCarte: 'x' }
+  const appeler = async (corps: unknown, statut = 200) => {
+    const f = vi.fn(async () => new Response(JSON.stringify(corps), { status: statut, headers: { 'content-type': 'application/json' } }))
+    const r = await creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: 'https://www.wiki-masters.com', fetchImpl: f as unknown as typeof fetch })(lecture)
+    return { r, f }
+  }
+  it('GET sur l’origine du site, sans corps ni en-tête d’authentification, ventes retenues', async () => {
+    const { r, f } = await appeler({ maxConcurrentAuctions: 5, sellingCount: 3 })
+    expect(r).toMatchObject({ classe: 'reussie', ventes: { enCours: 3, max: 5 } })
+    const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe('https://www.wiki-masters.com/api/marketplace/mine')
+    expect(init.method).toBe('GET')
+    expect(init.body).toBeUndefined()
+    expect(Object.keys(init.headers as Record<string, string>)).toEqual([])
+  })
+  it('réponse de forme inattendue : hors contrat, pas de ventes', async () => {
+    const { r } = await appeler({ autre: 1 })
+    expect(r.classe).toBe('inconnu')
+    expect(r.ventes).toBeUndefined()
   })
 })

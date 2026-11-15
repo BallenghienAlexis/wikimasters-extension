@@ -149,6 +149,8 @@ export interface ResultatAction {
    * construite par `reseau.ts` ; jamais de jeton, de cookie ni d’en-tête (Alexis, 2026-11-15).
    */
   diagnostic?: string
+  /** Enchères en cours et maximum du site, lus par une action `lecture` (`marketplace/mine`) ; validés avant usage. */
+  ventes?: { enCours: number; max: number }
 }
 
 /**
