@@ -605,14 +605,43 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(b2.departs.some((d) => d.chemin.includes('card-2/sales'))).toBe(false);
   })
 
-  it('prix : 3 refus 403 d’affilée (session refusée) arrêtent la synchro avec pause de 30 min', async () => {
+  it('prix : 3 refus 403 d’affilée avec session refusée (contrôle en 403) arrêtent la synchro avec pause de 30 min', async () => {
     const site = siteFictif(8);
-    const b = banc((chemin) => (chemin.includes('/sales') ? { statut: 403, json: null } : site(chemin)));
+    let apresPrix = false;
+    const b = banc((chemin) => {
+      if (chemin.includes('/sales')) {
+        apresPrix = true;
+        return { statut: 403, json: null };
+      }
+      return apresPrix ? { statut: 403, json: null } : site(chemin);
+    });
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('arret');
     expect(r.codeHttp).toBe(403);
     expect(b.departs.filter((d) => d.chemin.includes('/sales'))).toHaveLength(3);
     expect(r.etat.arretJusqua).toBe(b.horloge.t + PAUSE_APRES_ARRET_MS);
+  })
+
+  it('prix : 3 refus 403 d’affilée mais session saine (contrôle réussi) : cartes sans marché sautées, la synchro continue', async () => {
+    const site = siteFictif(8);
+    const b = banc((chemin) => (/card-[0-3]\/sales/.test(chemin) ? { statut: 403, json: null } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('termine');
+    expect(r.etat.arretJusqua).toBeNull();
+    expect(r.prixReleves).toBeGreaterThan(0);
+    // La carte qui a déclenché le contrôle est mémorisée aussi : pas redemandée à la synchro suivante.
+    for (const id of ['R|Carte 1', 'R|Carte 2', 'R|Carte 3']) {
+      expect(r.etat.prix[id]?.valeur).toBeNull();
+      expect(r.etat.prix[id]?.releveLe).toBeGreaterThan(0);
+    }
+    const chemins = b.departs.map((d) => d.chemin);
+    const i3 = chemins.findIndex((c) => c.includes('card-3/sales'));
+    expect(chemins[i3 + 1]).toContain('stats');
+    expect(b.journal.join('\n')).toContain('Carte 1');
+    const b2 = banc(site, r.collection, r.etat);
+    b2.horloge.t += 31 * 60_000;
+    await synchroniser({ ...b2.deps });
+    expect(b2.departs.some((d) => /card-[123]\/sales/.test(d.chemin))).toBe(false);
   })
 
   it('prix : 10 refus 403 sur l’exécution arrêtent même séparés par des succès', async () => {
@@ -621,6 +650,48 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('arret');
     expect(r.codeHttp).toBe(403);
+  })
+
+  it('prix : pause de 60 s après chaque lot de 30 prix, sans requête de plus', async () => {
+    const b = banc(siteFictif(35));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('termine');
+    const ventes = b.departs.filter((d) => d.chemin.includes('/sales'));
+    expect(ventes).toHaveLength(35);
+    const ecarts = ventes.slice(1).map((d, i) => d.t - (ventes[i]?.t ?? 0));
+    expect(ecarts.filter((e) => e >= 60_000)).toHaveLength(1);
+    expect(ecarts[29]).toBeGreaterThanOrEqual(60_000);
+    expect(b.journal.some((m) => m.startsWith('Pause de 60 s'))).toBe(true);
+  })
+
+  it('prix : un arrêt demandé pendant la pause empêche la 31e requête', async () => {
+    let ventes = 0;
+    let arret = false;
+    const site = siteFictif(40);
+    const b = banc(
+      (chemin) => {
+        if (chemin.includes('/sales')) {
+          ventes += 1;
+          if (ventes === 30) arret = true;
+        }
+        return site(chemin);
+      },
+      collectionDe([]),
+      etatInitial(),
+      { arretDemande: () => arret },
+    );
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('arret');
+    expect(b.departs.filter((d) => d.chemin.includes('/sales'))).toHaveLength(30);
+  })
+
+  it('prix : un refus journalise le titre, le rang et le délai depuis la première demande', async () => {
+    const site = siteFictif(6);
+    const b = banc((chemin) => (chemin.includes('card-3/sales') ? { statut: 403, json: null } : site(chemin)));
+    await synchroniser(b.deps);
+    const m = b.journal.find((x) => x.startsWith('Diagnostic prix'));
+    expect(m).toContain('Carte 3');
+    expect(m).toMatch(/demande n° 3, \d+ s après la première/);
   })
 
   it('prix : 401 et 429 arrêtent toujours dès la première réponse', async () => {
