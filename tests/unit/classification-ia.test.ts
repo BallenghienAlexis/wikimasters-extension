@@ -52,8 +52,7 @@ describe('cache', () => {
     const c = ajouterAuCache(cacheIAVide(), new Map([['A', ['moto']]]));
     expect(validerCacheIA(JSON.parse(JSON.stringify(c)))).toEqual(c);
     expect(validerCacheIA({ ...c, version: 2 })).toBeNull();
-    expect(validerCacheIA({ ...c, entrees: { A: ['nimporte'] } })).toBeNull();
-    expect(validerCacheIA({ ...c, entrees: { A: 'moto' } })).toBeNull();
+    expect(Object.keys(validerCacheIA({ ...c, entrees: { A: ['nimporte'], B: ['moto'], C: 'moto' } })?.entrees ?? {})).toEqual(['B']);
     expect(validerCacheIA(null)).toBeNull();
   });
   it('les listes vides restent au cache mais ne donnent aucun thème', () => {

@@ -36,7 +36,7 @@ export interface CarteAClasser {
   description: string;
 }
 
-/** Cache : un résultat par titre de carte, gardé tant que le catalogue ne change pas de version. */
+/** Cache : un résultat par titre de carte, sans expiration (une entrée dont un identifiant a quitté le catalogue est écartée à la lecture). */
 export interface CacheIA {
   version: 1;
   modele: string;
@@ -53,8 +53,9 @@ export function validerCacheIA(brut: unknown): CacheIA | null {
   const entrees = o['entrees'];
   if (typeof entrees !== 'object' || entrees === null || Array.isArray(entrees)) return null;
   const propres = Object.create(null) as Record<string, string[]>;
+  // Une entrée invalide (identifiant retiré du catalogue, par exemple) est écartée seule : le reste du cache, payé, est gardé.
   for (const [titre, ids] of Object.entries(entrees)) {
-    if (!Array.isArray(ids) || ids.length > MAX_THEMES_PAR_CARTE || !ids.every((id) => typeof id === 'string' && ENSEMBLE_IDS.has(id))) return null;
+    if (!Array.isArray(ids) || ids.length > MAX_THEMES_PAR_CARTE || !ids.every((id) => typeof id === 'string' && ENSEMBLE_IDS.has(id))) continue;
     propres[titre] = [...new Set(ids as string[])];
   }
   return { version: 1, modele: o['modele'], entrees: propres };

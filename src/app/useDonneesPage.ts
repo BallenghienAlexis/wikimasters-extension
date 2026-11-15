@@ -48,6 +48,8 @@ export function useDonneesPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [cacheWiki, setCacheWiki] = useState<CacheWikipedia>(cacheVide);
   const [cacheIA, setCacheIA] = useState<CacheIA>(cacheIAVide);
+  // L’aperçu des lots attend la lecture du cache IA : sans lui, des cartes classées par l’IA sembleraient sans thème (retraits à tort).
+  const [cacheIALu, setCacheIALu] = useState(false);
   const [preferences, setPreferences] = useState<Preferences>(preferencesParDefaut);
   const [ventesJoueur, setVentes] = useState<EvenementVente[]>([]);
   const [releveSite, setReleveSite] = useState<EvenementVente[]>([]);
@@ -130,7 +132,7 @@ export function useDonneesPage() {
   }, []);
 
   useEffect(() => {
-    void chargerCacheIA().then(appliquerCacheIA);
+    void chargerCacheIA().then(appliquerCacheIA).finally(() => setCacheIALu(true));
   }, [appliquerCacheIA]);
 
   useEffect(() => {
@@ -190,7 +192,7 @@ export function useDonneesPage() {
 
   return {
     collection, setCollection, chargee, setChargee, blocage, setBlocage, message, setMessage,
-    cacheWiki, appliquerCacheWiki, cacheIA, appliquerCacheIA, preferences, setPreferences, preferencesLues, enregistrerLesPreferences,
+    cacheWiki, appliquerCacheWiki, cacheIA, cacheIALu, appliquerCacheIA, preferences, setPreferences, preferencesLues, enregistrerLesPreferences,
     ventes, setVentes, etiquettesSite, registre, executionEnCours, registreIllisible, executionIllisible,
     stockageSynchroLu, relireStockageSynchro, noterVente, appliquer, editer,
   };
