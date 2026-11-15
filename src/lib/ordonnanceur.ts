@@ -27,8 +27,8 @@ export const DUREE_BAIL_MS = 2 * 60_000;
 export const PAUSE_429_PRIX_MS = 30_000;
 /** Pause maximale sur 429. */
 export const PAUSE_429_PRIX_MAX_MS = 240_000;
-/** 429 d’affilée sur un même prix après lesquels la synchro s’arrête (pause de 30 min). */
-export const MAX_429_PRIX_CONSECUTIFS = 5;
+/** 429 sur les prix, sur toute l’exécution (qu’un succès ne remet jamais à zéro), après lesquels la synchro s’arrête (pause de 30 min). */
+export const MAX_429_PRIX_PAR_EXECUTION = 5;
 /** Code de la réponse 403 du site qui exige une vérification humaine : arrêt immédiat, jamais contournée. */
 const CODE_VERIFICATION_HUMAINE = 'human_verification_required';
 /** Refus 403 d’affilée sur les prix qui arrêtent la synchro : en dessous, c’est une carte sans route de prix, pas la session. */
@@ -293,11 +293,11 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       journal('Vérification anti-bot du site requise : la synchro s’arrête (résous-la à la main sur wiki-masters.com).');
       throw new Interruption('code-http', 403);
     }
-    if (prix !== false && reponse.statut === 429 && limites429 < MAX_429_PRIX_CONSECUTIFS) {
+    if (prix !== false && reponse.statut === 429 && limites429 < MAX_429_PRIX_PAR_EXECUTION) {
       // Vrai 429 sur un prix : pause qui double à chaque 429 d’affilée, puis on redemande la même carte.
       limites429 += 1;
       const pause = Math.min(PAUSE_429_PRIX_MAX_MS, PAUSE_429_PRIX_MS * 2 ** (limites429 - 1));
-      journal(`Prix : le site demande de ralentir (429 n° ${limites429}/${MAX_429_PRIX_CONSECUTIFS}) ; pause de ${pause / 1000} s puis reprise.`);
+      journal(`Prix : le site demande de ralentir (429 n° ${limites429}/${MAX_429_PRIX_PAR_EXECUTION}) ; pause de ${pause / 1000} s puis reprise.`);
       await pauseInterruptible(pause);
       return requete(chemin, tolerant, prix);
     }
@@ -337,6 +337,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     const fin = horloge.now() + ms;
     while (horloge.now() < fin) {
       if (deps.arretDemande?.()) throw new Interruption('manuel', null);
+      // Le bail reste pris pendant toute la pause : aucune autre exécution ne démarre pendant qu’on ralentit.
+      await deps.bail.ecrire(horloge.now() + DUREE_BAIL_MS);
       await horloge.attendreJusqua(Math.min(fin, horloge.now() + 1000));
     }
     if (deps.arretDemande?.()) throw new Interruption('manuel', null);
@@ -613,7 +615,6 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         continue;
       }
       refusPrix = 0;
-      limites429 = 0;
       echecs = 0;
       const valeur = analyserPrix(r.json, carte.rarete as string);
       const courante = parId.get(carte.id) as Carte;

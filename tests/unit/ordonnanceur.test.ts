@@ -706,6 +706,44 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(b.journal.some((m) => m.includes('anti-bot'))).toBe(true);
   })
 
+  it('un 429 sur une page ou les stats arrête tout de suite, sans pause ni reprise', async () => {
+    const site = siteFictif(4);
+    const b = banc((chemin) => (/page=/.test(chemin) ? { statut: 429, json: null } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('arret');
+    expect(r.codeHttp).toBe(429);
+    expect(b.departs.filter((d) => /page=/.test(d.chemin))).toHaveLength(1);
+  })
+
+  it('la vérification anti-bot sur une page arrête tout de suite', async () => {
+    const site = siteFictif(4);
+    const b = banc((chemin) => (/page=/.test(chemin) ? { statut: 403, json: { code: 'human_verification_required' } } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('arret');
+    expect(r.codeHttp).toBe(403);
+    expect(b.departs.filter((d) => /page=/.test(d.chemin))).toHaveLength(1);
+  })
+
+  it('prix : le bail est renouvelé pendant la pause de 429', async () => {
+    const site = siteFictif(3);
+    let deja = false;
+    const b = banc((chemin) => {
+      if (chemin.includes('card-2/sales') && !deja) {
+        deja = true;
+        return { statut: 429, json: null };
+      }
+      return site(chemin);
+    });
+    const ecrits: number[] = [];
+    const ecrire = b.deps.bail.ecrire.bind(b.deps.bail);
+    b.deps.bail.ecrire = async (v: number | null) => {
+      if (v !== null) ecrits.push(v);
+      return ecrire(v);
+    };
+    await synchroniser(b.deps);
+    expect(ecrits.filter((v) => v > 0).length).toBeGreaterThan(10);
+  })
+
   it('prix : un arrêt demandé pendant la pause de 429 est pris en compte', async () => {
     const site = siteFictif(4);
     let arret = false;
