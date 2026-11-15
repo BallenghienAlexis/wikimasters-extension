@@ -285,3 +285,9 @@ b. BandeauActivite.tsx:88 : message d'échec non effacé quand synchro devient n
 
 ## Traité dans la PR de conformité (2026-11-14)
 Repris : mineurs de #145 (titre de thème, colonne du nombre, couleur des barres) et de #147 (phrase de cadence, résumé « Lecture impossible », `h4` des sous-sections de Réglages), D-50, SC-028 et AGENTS.md. Reste : `SynchroAuto.tsx` sur `useSyncAuto`, piste du graphique en `ink` (`design.md:218`), chevron du `<summary>` et `h2` en ligne de l’encadré de risque (#143), proportionnalité et valeur exacte dans les tests de la Collection, captures jointes aux PR, titres de PR en `T-xxx`.
+
+## À reprendre (PR #150, sélection vente/défausse)
+
+- `src/app/SelectionVenteDefausse.tsx` : pas de parcours e2e ni de captures aux 3 breakpoints (revue de la PR #150). À ajouter dans `tests/e2e/`.
+- `src/lib/lot.ts` (`estACLasser`) : la carte reste exclue tant que `etiquettesSite` contient « #À classer » (jusqu’à la synchro suivante), même si un thème est apparu entre-temps.
+- `src/app/SelectionVenteDefausse.tsx` : seules 50 cartes choisies sont listées, les autres partent aussi dans le lot ; afficher le total d’exemplaires à défausser.

@@ -293,7 +293,7 @@ describe('lot figé et erreurs de stockage', () => {
 describe('texte du lot vide', () => {
   it('distingue le lot vraiment vide du lot sans action disponible', () => {
     expect(texteLotVide(true)).toBe('Aucune action n’est disponible pour le moment.')
-    expect(texteLotVide(false)).toBe('Les favoris, les cartes à trier et les cartes non reliées au site ne produisent aucune action.')
+    expect(texteLotVide(false)).toBe('Aucune action : les étiquettes sont à jour. Pour vendre ou défausser, fermez l’aperçu et choisissez des cartes.')
   })
 })
 

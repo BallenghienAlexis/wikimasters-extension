@@ -32,6 +32,8 @@ const RAISONS: Record<RaisonEcart, string> = {
   'exemplaires-non-relies': 'exemplaires non reliés au site',
   'sans-etiquette-theme': 'aucune étiquette de thème ne peut être posée (nom trop long, homonyme ou limite du compte)',
   'en-vente-sur-site': 'en vente sur le site : l’exemplaire n’est plus dans la collection, aucune étiquette n’est envoyée',
+  'a-classer': 'à classer : écartée de la vente, de la défausse et de l’échange tant qu’elle n’a pas de thème',
+  'favori-verrouille': 'favori : verrouillé sur le site, ni vente ni défausse',
   'valeur-defausse-elevee': `valeur marchande inconnue ou supérieure au plafond de défausse réglé`,
 };
 
@@ -227,7 +229,7 @@ export const contientAmi = (actions: readonly Action[]): boolean =>
 export function texteLotVide(avecIndisponibles: boolean): string {
   return avecIndisponibles
     ? 'Aucune action n’est disponible pour le moment.'
-    : 'Les favoris, les cartes à trier et les cartes non reliées au site ne produisent aucune action.';
+    : 'Aucune action : les étiquettes sont à jour. Pour vendre ou défausser, fermez l’aperçu et choisissez des cartes.';
 }
 
 export type ResultatLot = { lot: LotConstruit } | { erreur: string };
