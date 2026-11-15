@@ -32,6 +32,7 @@ const RAISONS: Record<RaisonEcart, string> = {
   'exemplaires-non-relies': 'exemplaires non reliés au site',
   'sans-etiquette-theme': 'aucune étiquette de thème ne peut être posée (nom trop long, homonyme ou limite du compte)',
   'en-vente-sur-site': 'en vente sur le site : l’exemplaire n’est plus dans la collection, aucune étiquette n’est envoyée',
+  'a-classer': 'à classer : écartée de la vente, de la défausse et de l’échange tant qu’elle n’a pas de thème',
   'favori-verrouille': 'favori : verrouillé sur le site, ni vente ni défausse',
   'valeur-defausse-elevee': `valeur marchande inconnue ou supérieure au plafond de défausse réglé`,
 };

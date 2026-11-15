@@ -119,6 +119,14 @@ function etiquettesEchange(carte: Carte, themes: readonly string[], amis: readon
   return noms.map((n) => `${PREFIXE_ECHANGE}${n}`)
 }
 
+/**
+ * Carte « à classer » (Alexis, 2026-11-15) : aucun thème posable (elle reçoit « #À classer »), ou l’étiquette est déjà sur le site.
+ * Elle est écartée de toute vente, défausse et échange tant qu’elle n’est pas classée.
+ */
+export function estACLasser(carte: Carte): boolean {
+  return carte.etiquettesSite.includes(ETIQUETTE_A_CLASSER) || themesPrincipaux(carte).length === 0
+}
+
 interface EtiquettesCarte {
   retenues: readonly string[]
   ecartees: readonly string[]
@@ -148,7 +156,7 @@ function calculerEtiquettes(carte: Carte, config?: Pick<Config, 'amis' | 'limite
   if (!carte.idsSite) return { retenues: [], ecartees: [] }
   const themes = themesDeCarte(carte)
   // Étiquettes d’échange : jamais pour un favori (le site le verrouille, et c’est une carte aimée).
-  const prioritaires = carte.favori ? [] : etiquettesEchange(carte, themes, config?.amis ?? [])
+  const prioritaires = carte.favori || estACLasser(carte) ? [] : etiquettesEchange(carte, themes, config?.amis ?? [])
   // Les 4 thèmes les mieux établis seulement (Alexis, 2026-11-14) ; les parents ne servent qu’à désigner les amis.
   const precis = themesPrincipaux(carte).map((id) => LIBELLES_THEMES[id] ?? id)
   const libellesThemes = precis.length > 0 ? precis : [ETIQUETTE_A_CLASSER]
@@ -330,6 +338,10 @@ export function construireLot(
     const nbDefausses = Math.floor(defausser[c.id] ?? 0)
     if ((vendre.has(c.id) || nbDefausses > 0) && c.favori) {
       ecarter('favori-verrouille')
+      continue
+    }
+    if ((vendre.has(c.id) || nbDefausses > 0) && estACLasser(c)) {
+      ecarter('a-classer')
       continue
     }
     if (nbDefausses > 0) {

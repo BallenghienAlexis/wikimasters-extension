@@ -11,7 +11,7 @@ import {
   retirerIdSite,
   type Collection,
 } from './collection'
-import { exemplairesAttendus, type Config } from './lot'
+import { estACLasser, exemplairesAttendus, type Config } from './lot'
 import { plafondDefausse, prixDepart } from './tri'
 import { enregistrerEtiquette, poserCouple, purgerCarte, purgerExemplaire, retirerCouple, supprimerEtiquetteDuRegistre } from './registre'
 
@@ -43,14 +43,14 @@ export function reverifierAction(
   switch (action.type) {
     // Enchère et défausse viennent de la sélection manuelle du joueur : revérifiées avant l’envoi.
     case 'enchere': {
-      if (carte.favori || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
+      if (carte.favori || estACLasser(carte) || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
       const valeur = carte.valeurMarchande
       if (valeur === null || !(action.prix >= 1 && action.prix < valeur)) return 'passee'
       // Le prix de départ courant (prix cible, sinon matrice) ne doit pas avoir changé depuis l’aperçu.
       return (carte.prixCible ?? prixDepart(valeur)) === action.prix ? 'ok' : 'passee'
     }
     case 'defausse': {
-      if (carte.favori || carte.quantite < 1 || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
+      if (carte.favori || estACLasser(carte) || carte.quantite < 1 || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
       return typeof carte.valeurMarchande === 'number' && carte.valeurMarchande <= plafondDefausse({ plafondDefausse: config.plafondDefausse }) ? 'ok' : 'passee'
     }
     case 'creation-etiquette':

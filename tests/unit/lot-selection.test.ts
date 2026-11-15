@@ -9,8 +9,9 @@ import { registreVide } from '../../src/lib/registre'
 import { choixInitial, conseilLancement, estEtiquetteAVendre, precocher, versSelection } from '../../src/lib/selectionLot'
 
 const TOUS: TypesDisponibles = new Set<TypeAction>(TYPES_ACTION)
+const CHIEN = { titre: 'Berger allemand', description: 'race de chien' }
 const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
-  id, titre: `Carte ${id}`, rarete: 'commune', description: '', quantite: 1, url: null, favori: false,
+  id, ...CHIEN, rarete: 'commune', quantite: 1, url: null, favori: false,
   idsSite: [`ex-${id}-1`, `ex-${id}-2`], etiquettesSite: [], prixCible: null, note: '', ami: null, valeurMarchande: 100, ...extra,
 })
 const lot = (cartes: Carte[], selection: SelectionLot, extra: Partial<Config> = {}) =>
@@ -62,6 +63,19 @@ describe('sélection manuelle : enchères et défausses (2026-11-14)', () => {
     expect(de(lot([carte('a', { valeurMarchande: 6 })], { vendre: [], defausser: { a: 1 } }, { plafondDefausse: 10 }).actions, 'defausse')).toHaveLength(1)
   })
 
+  it('écarte une carte « à classer » : ni vente, ni défausse', () => {
+    const sansTheme = { titre: 'Zzz', description: '' }
+    const l = lot([carte('a', { ...sansTheme, valeurMarchande: 90, prixCible: 10 }), carte('b', { ...sansTheme, valeurMarchande: 1 }), carte('c', { etiquettesSite: ['#À classer'], valeurMarchande: 1 })], { vendre: ['a'], defausser: { b: 1, c: 1 } })
+    expect(de(l.actions, 'enchere')).toHaveLength(0)
+    expect(de(l.actions, 'defausse')).toHaveLength(0)
+    expect(l.ecartees.filter((e) => e.raison === 'a-classer')).toHaveLength(3)
+  })
+
+  it('ne pose aucune étiquette d’échange sur une carte « à classer »', () => {
+    const l = lot([carte('a', { titre: 'Zzz', description: '', ami: 'Zoé' })], aucune)
+    expect(l.actions.some((x) => 'nomEtiquette' in x && x.nomEtiquette.startsWith('#À échanger'))).toBe(false)
+  })
+
   it('ne touche jamais un favori', () => {
     const l = lot([carte('a', { favori: true, valeurMarchande: 1 })], { vendre: ['a'], defausser: { a: 1 } })
     expect(de(l.actions, 'enchere')).toHaveLength(0)
@@ -99,7 +113,7 @@ describe('sélection : choix de départ d’après les étiquettes du site', () 
 
 describe('pré-coche selon mes thèmes, mes amis et le plafond', () => {
   const prefs = preferencesParDefaut()
-  const zzz = { titre: 'Zzz', description: '' }
+  const zzz = {}
 
   it('valeur au plafond ou en dessous : défausse ; au-dessus : mise aux enchères ; inconnue : rien', () => {
     const cartes = [carte('a', { ...zzz, valeurMarchande: 5 }), carte('b', { ...zzz, valeurMarchande: 6 }), carte('c', { ...zzz, valeurMarchande: null })]
@@ -109,10 +123,14 @@ describe('pré-coche selon mes thèmes, mes amis et le plafond', () => {
     expect(choix.has('c')).toBe(false)
   })
 
+  it('jamais une carte « à classer »', () => {
+    expect(precocher([carte('a', { titre: 'Zzz', description: '', valeurMarchande: 1 })], prefs, new Map()).size).toBe(0)
+  })
+
   it('ni favori, ni carte d’un ami, ni thème gardé', () => {
     const cartes = [carte('f', { ...zzz, favori: true, valeurMarchande: 1 }), carte('g', { ...zzz, ami: 'Zoé', valeurMarchande: 1 }), carte('h', { ...zzz, valeurMarchande: 1 })]
     expect([...precocher(cartes, prefs, new Map()).keys()]).toEqual(['h'])
-    expect(precocher(cartes, { ...prefs, mesThemes: ['autres'] }, new Map()).size).toBe(0)
+    expect(precocher(cartes, { ...prefs, mesThemes: ['chien'] }, new Map()).size).toBe(0)
   })
 
   it('ne remplace jamais une coche existante', () => {

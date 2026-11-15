@@ -101,6 +101,7 @@ export type RaisonEcart =
   | 'en-vente-sur-site'
   | 'sans-etiquette-theme'
   | 'favori-verrouille'
+  | 'a-classer'
 
 export interface CarteEcartee {
   idCarte: string

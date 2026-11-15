@@ -7,15 +7,15 @@
 import { CONFIG_AFFLUENCE } from '../config/affluence'
 import { estHeureForte, type EvenementVente } from './affluence'
 import { normaliser, type Carte } from './collection'
-import type { SelectionLot } from './lot'
+import { estACLasser, type SelectionLot } from './lot'
 import { themesDeCarte } from './themes'
 import { amisConcernes, plafondDefausse, type Preferences } from './tri'
 
 /** Choix possibles pour une carte. */
 export type ChoixCarte = 'aucun' | 'vendre' | 'defausser'
 
-/** Une carte est proposable si elle est reliée au site et n’est pas un favori (verrouillé sur le site). */
-export const estProposable = (c: Carte): boolean => !c.favori && c.idsSite !== null && c.idsSite.length > 0 && c.quantite > 0
+/** Une carte est proposable si elle est reliée au site, n’est ni un favori (verrouillé) ni « à classer ». */
+export const estProposable = (c: Carte): boolean => !c.favori && !estACLasser(c) && c.idsSite !== null && c.idsSite.length > 0 && c.quantite > 0
 
 const sansDieseEtAccents = (nom: string): string => normaliser(nom).replace(/^#\s*/, '').trim()
 
