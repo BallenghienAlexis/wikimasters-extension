@@ -44,7 +44,7 @@ export interface CacheIA {
   entrees: Record<string, string[]>;
 }
 
-export const cacheIAVide = (): CacheIA => ({ version: 1, modele: MODELE_IA, entrees: {} });
+export const cacheIAVide = (): CacheIA => ({ version: 1, modele: MODELE_IA, entrees: Object.create(null) as Record<string, string[]> });
 
 export function validerCacheIA(brut: unknown): CacheIA | null {
   if (typeof brut !== 'object' || brut === null) return null;
@@ -52,7 +52,7 @@ export function validerCacheIA(brut: unknown): CacheIA | null {
   if (o['version'] !== 1 || typeof o['modele'] !== 'string') return null;
   const entrees = o['entrees'];
   if (typeof entrees !== 'object' || entrees === null || Array.isArray(entrees)) return null;
-  const propres: Record<string, string[]> = {};
+  const propres = Object.create(null) as Record<string, string[]>;
   for (const [titre, ids] of Object.entries(entrees)) {
     if (!Array.isArray(ids) || ids.length > MAX_THEMES_PAR_CARTE || !ids.every((id) => typeof id === 'string' && ENSEMBLE_IDS.has(id))) return null;
     propres[titre] = [...new Set(ids as string[])];
@@ -73,7 +73,7 @@ export function cartesAClasser(cartes: readonly Carte[], cache: CacheIA, sansThe
   const vus = new Set<string>();
   const liste: CarteAClasser[] = [];
   for (const c of cartes) {
-    if (c.idsSite === null || vus.has(c.titre) || c.titre in cache.entrees || !sansTheme(c)) continue;
+    if (c.idsSite === null || vus.has(c.titre) || Object.hasOwn(cache.entrees, c.titre) || !sansTheme(c)) continue;
     vus.add(c.titre);
     liste.push({ titre: c.titre, description: c.description });
   }
@@ -136,7 +136,7 @@ export function lireReponseIA(reponse: unknown, lot: readonly CarteAClasser[]): 
 }
 
 export function ajouterAuCache(cache: CacheIA, resultats: ReadonlyMap<string, readonly string[]>): CacheIA {
-  const entrees = { ...cache.entrees };
+  const entrees = Object.assign(Object.create(null) as Record<string, string[]>, cache.entrees);
   for (const [titre, ids] of resultats) entrees[titre] = [...ids];
   return { ...cache, entrees };
 }

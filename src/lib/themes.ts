@@ -294,9 +294,12 @@ export function definirThemesWikipedia(themes: ReadonlyMap<string, readonly stri
 export function themesDeCarte(carte: Pick<Carte, 'titre' | 'description'>): string[] {
   const themes = new Set(themesDeTexte(`${carte.titre} ${carte.description}`));
   for (const id of themesWikipedia.get(carte.titre) ?? []) themes.add(id);
-  for (const id of themesIA.get(carte.titre) ?? []) {
-    themes.add(id);
-    for (const parent of PARENTS.get(id) ?? []) themes.add(parent);
+  // Thèmes de l’IA : dernier recours, seulement si aucun thème local n’est retenu (sinon un cache ancien fausserait amis et favoris).
+  if (themesIA.has(carte.titre) && themesPrincipauxLocaux(carte).length === 0) {
+    for (const id of themesIA.get(carte.titre) ?? []) {
+      themes.add(id);
+      for (const parent of PARENTS.get(id) ?? []) themes.add(parent);
+    }
   }
   return themes.size > 0 ? [...themes] : [THEME_AUTRES];
 }

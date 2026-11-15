@@ -144,3 +144,15 @@ describe('mémo des étiquettes de la carte', () => {
     expect(etiquettesDeCarte(c).retenues).toEqual(['#Moto']);
   });
 });
+
+describe('robustesse', () => {
+  it('un titre comme « constructor » ou « __proto__ » est classable et mis en cache', () => {
+    const cache = ajouterAuCache(cacheIAVide(), new Map([['__proto__', ['moto']], ['constructor', []]]));
+    expect(Object.keys(cache.entrees).sort()).toEqual(['__proto__', 'constructor']);
+    expect(cartesAClasser([carte('constructor'), carte('toString')], cacheIAVide(), sansThemeLocal).map((c) => c.titre)).toEqual(['constructor', 'toString']);
+  });
+  it('themesDeCarte n’ajoute les thèmes IA que sans thème local', () => {
+    definirThemesIA(new Map([['Chien', ['moto']]]));
+    expect(themesDeCarte(carte('Chien', { description: 'race de chien' }))).not.toContain('moto');
+  });
+});
