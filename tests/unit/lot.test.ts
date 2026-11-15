@@ -40,7 +40,7 @@ const registre = (couples: Registre['couples'] = [], etiquettes: Registre['etiqu
 })
 const types = (...t: TypeAction[]): TypesDisponibles => new Set(t)
 const de = (a: Action[], type: TypeAction) => a.filter((x) => x.type === type)
-// Les cartes de ces tests n’ont aucun thème : elles reçoivent aussi l’étiquette de repli, vérifiée à part.
+// Les cartes de ces tests ont le thème #Chien (description par défaut).
 
 describe('garde-fous (étiquettes du site = vérité, 2026-11-14)', () => {
   it('une carte sans thème reconnu n’a aucune étiquette (jamais « À classer ») et est signalée, favori compris', () => {
@@ -159,5 +159,14 @@ describe('performance (AC9)', () => {
     const lot = construireLot(coll(...cartes), registre(), config(), TOUS)
     expect(performance.now() - t0).toBeLessThan(500)
     expect(lot.actions.length).toBeGreaterThan(5000)
+  })
+})
+
+describe('carte sans thème fiable avec un ami désigné', () => {
+  it('ne reçoit aucune étiquette de thème mais garde « #À échanger <ami> », et reste signalée', () => {
+    const lot = construireLot(coll(carte('a', { description: '', ami: 'Zoé' })), registre(), config(), TOUS)
+    const poses = de(lot.actions, 'pose-etiquette')
+    expect(poses.map((p) => ('nomEtiquette' in p ? p.nomEtiquette : ''))).toEqual(['#À échanger Zoé'])
+    expect(lot.ecartees).toContainEqual({ idCarte: 'a', titre: 'Carte a', raison: 'sans-theme-fiable' })
   })
 })

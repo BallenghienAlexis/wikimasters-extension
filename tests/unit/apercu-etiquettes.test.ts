@@ -141,7 +141,7 @@ describe('regrouperEtiquettes : retraits (H11)', () => {
       registre([{ ex: 'ex-a', nom: 'Statut · Garder' }], { 'Statut · Garder': 'et-1' }),
       config(),
     )
-    // L’étiquette de repli « #Chien » est à créer et à poser, l’ancien Statut est retiré.
+    // L’étiquette « #Chien » est à créer et à poser, l’ancien Statut est retiré.
     expect(r.totaux.retraits).toBe(1)
     expect(r.totaux.poses).toBe(1)
     expect(r.totaux.nomsNouveaux).toBe(1)

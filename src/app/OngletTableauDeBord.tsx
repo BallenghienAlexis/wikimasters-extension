@@ -68,12 +68,13 @@ const OngletTableauDeBord: React.FC = () => {
           valeur={v(tableau.ecarts)}
           detail={tableau.ecarts === 0 ? 'Étiquettes conformes au plan' : 'Cartes dont les étiquettes diffèrent du plan'}
         />
-        <CarteKpi
-          libelle="Sans thème fiable"
-          valeur={v(tableau.sansTheme)}
-          detail={tableau.sansTheme === 0 ? 'Toutes les cartes ont un thème' : 'Cartes reliées sans étiquette de thème pour l’instant'}
-        />
       </div>
+
+      <p className="mt-3 text-sm text-muted" data-testid="sans-theme">
+        {tableau.sansTheme === 0
+          ? 'Toutes les cartes reliées ont un thème fiable.'
+          : `${accorder(tableau.sansTheme, 'carte reliée sans thème fiable', 'cartes reliées sans thème fiable')} : aucune étiquette de thème posée pour l’instant.`}
+      </p>
 
       {vide && <p className="mt-4 rounded border border-line bg-ink-2 p-4">Aucune carte</p>}
 

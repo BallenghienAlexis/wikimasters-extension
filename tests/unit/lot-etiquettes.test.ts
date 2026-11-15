@@ -45,7 +45,7 @@ describe('étiquettes attendues (SC-008)', () => {
       const noms = attendues(carte('a', { ...CHIEN, favori }), config({ amis: AMIS, limiteParExemplaire: 1 }))
       expect(noms.some((n) => !n.startsWith('#À échanger')), `${favori}`).toBe(true)
       const vide = attendues(carte('a', { titre: 'Zzz', description: '', favori }), config({ amis: AMIS, limiteParExemplaire: 1 }))
-      expect(vide.some((n) => n === '#À classer')).toBe(false)
+      expect(vide.filter((n) => !n.startsWith('#À échanger'))).toEqual([])
     }
   })
 

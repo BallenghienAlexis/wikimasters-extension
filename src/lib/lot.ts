@@ -133,7 +133,7 @@ export function etiquettesDeCarte(carte: Carte, config?: Pick<Config, 'amis' | '
 }
 
 function calculerEtiquettes(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire'>): EtiquettesCarte {
-  // Toute carte reliée reçoit au moins une étiquette de thème, favoris compris (« #À classer » à défaut de thème).
+  // Toute carte reliée dont un thème fiable est connu reçoit 1 à 4 étiquettes de thème, favoris compris ; sans thème fiable, aucune (jamais « #À classer »).
   if (!carte.idsSite) return { retenues: [], ecartees: [] }
   const themes = themesDeCarte(carte)
   // Étiquettes d’échange : jamais pour un favori (le site le verrouille, et c’est une carte aimée).
