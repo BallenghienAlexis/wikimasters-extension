@@ -133,3 +133,9 @@ Un amendement daté est en tête de `spec.md`, `spec.refined.md`, `design.md` et
 - `src/app/App.tsx:59-64` : entre la relecture et l'écriture des préférences de l'assistant, un changement du plafond fait dans le même onglet serait écrasé (fenêtre très courte, assistant fermé).
 - `src/lib/tri.ts:94` : sans plafond réglé, l'assistant compare `valeur < seuilDefausse` (6) ; pour une valeur non entière (5,5) il propose une défausse que le lot refuse. Comparer toujours `valeur <= plafond`.
 - Noms des captures : `plafond-<light|dark>-<mobile|tablet|desktop>.png` (artefact `captures` de la CI).
+
+## À reprendre (revue de la PR #152, mise en favori, 2026-11-15)
+- `src/lib/tableauDeBord.ts:67` : `calculerEcarts` ne reçoit pas `mesThemes` (le contexte du tableau de bord ne porte que les amis) ; le chiffre d’écarts peut compter une étiquette d’échange fantôme pour une carte gardée pas encore favorite. À reprendre : ajouter `mesThemes` au contexte.
+- `src/lib/lot.ts` (`calculerEtiquettes` et sélection de vente) : une carte gardée choisie à la main pour la vente perd ses étiquettes d’échange sans recevoir de favori ; sans effet pratique, à aligner ou documenter.
+- `tests/unit/file.test.ts` : ajouter `refusParCarte({ type: 'favori', … }, 403) === true`.
+- Captures aux 3 points de rupture et e2e de l’avertissement « favori » et du libellé « Favoris » (DoD, point 3), à joindre avec les autres captures de la sélection de lot.

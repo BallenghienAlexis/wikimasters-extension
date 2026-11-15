@@ -265,9 +265,9 @@ const SynchroAuto: React.FC<Props> = ({ collection, preferences, cacheWiki }) =>
     };
   }, [relire]);
 
-  const ecarts = useMemo(() => calculerEcarts(collection.cartes, { amis: preferences.amis }),
+  const ecarts = useMemo(() => calculerEcarts(collection.cartes, { amis: preferences.amis, mesThemes: preferences.mesThemes }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `cacheWiki` change les thèmes lus par `themesDeCarte`.
-    [collection.cartes, preferences.amis, cacheWiki]);
+    [collection.cartes, preferences.amis, preferences.mesThemes, cacheWiki]);
 
   const basculer = (suivant: boolean): void => {
     setErreur(null);

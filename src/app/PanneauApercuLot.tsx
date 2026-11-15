@@ -227,7 +227,7 @@ const PanneauApercuLot: React.FC<Props> = ({
   const lignesLots = useMemo(() => lotsAffiches.map((l, i) => ({ famille: l.famille, nbActions: l.actions.length, ordre: i + 1 })), [lotsAffiches]);
   const detailsCochees = useMemo(() => detailsDuLot(actionsCochees, cartes), [actionsCochees, cartes]);
   const pageCochees = useMemo(() => pageActions(actionsCochees), [actionsCochees]);
-  const ecartsSite = useMemo(() => calculerEcarts(collection.cartes, { amis: preferences.amis }, registreCourant), [collection.cartes, preferences.amis, registreCourant]);
+  const ecartsSite = useMemo(() => calculerEcarts(collection.cartes, { amis: preferences.amis, mesThemes: preferences.mesThemes }, registreCourant), [collection.cartes, preferences.amis, preferences.mesThemes, registreCourant]);
   const detailsEcartees = useMemo(() => detailsDuLot((filtre?.ecartees ?? []).map((e) => e.action), cartes), [filtre, cartes]);
   const basculerLot = (f: FamilleLot): void =>
     setDecochees((d) => {
