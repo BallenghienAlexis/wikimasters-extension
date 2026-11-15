@@ -26,7 +26,7 @@ const CARTE = {
   id: 'UR|Loutre fictive',
   titre: 'Loutre fictive',
   rarete: 'UR',
-  description: '',
+  description: 'race de chien',
   quantite: 1,
   url: null,
   favori: false,
@@ -130,15 +130,15 @@ test('0 requête avant « Lancer » ; puis création et pose avec les bons en-t�
   expect(banc.rest, 'aucune requête avant Lancer').toHaveLength(0);
 
   await page.getByRole('button', { name: /^Lancer/ }).click();
-  // La carte fictive n’a aucun thème : « #À classer » est créée, puis posée.
+  // La carte fictive est un chien : « #Chien » est créée, puis posée.
   await expect.poll(() => banc.rest.filter((v) => v.url.includes('/user_card_tags')).length, { timeout: 45_000 }).toBeGreaterThanOrEqual(1);
 
   const creation = banc.rest.find((v) => v.url.includes('/rest/v1/tags'));
   const pose = banc.rest.find((v) => v.url.includes('/user_card_tags'));
   expect(creation!.methode).toBe('POST');
   expect(new URL(creation!.url).pathname + new URL(creation!.url).search).toBe('/rest/v1/tags?select=*');
-  expect(creation!.corps).toEqual({ user_id: ID_JOUEUR, name: '#À classer', color: COULEUR_ETIQUETTE });
-  expect(banc.rest.filter((v) => v.url.includes('/rest/v1/tags')).map((v) => (v.corps as { name: string }).name)).toContain('#À classer');
+  expect(creation!.corps).toEqual({ user_id: ID_JOUEUR, name: '#Chien', color: COULEUR_ETIQUETTE });
+  expect(banc.rest.filter((v) => v.url.includes('/rest/v1/tags')).map((v) => (v.corps as { name: string }).name)).toContain('#Chien');
   expect(creation!.entetes.prefer).toBe('return=representation');
   expect(pose!.methode).toBe('POST');
   expect(new URL(pose!.url).pathname).toBe('/rest/v1/user_card_tags');

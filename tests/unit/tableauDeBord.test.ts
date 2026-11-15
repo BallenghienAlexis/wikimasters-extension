@@ -71,7 +71,7 @@ describe('chiffres clés', () => {
 
   it('SC-001 : écarts = nombre de cartes renvoyées par calculerEcarts', () => {
     // Carte reliée au site, statut garder, sans aucune étiquette sur le site : étiquettes manquantes.
-    const reliee = (id: string) => carte(id, { idsSite: [`ex-${id}`], etiquettesSite: [] })
+    const reliee = (id: string) => carte(id, { description: 'race de chien', idsSite: [`ex-${id}`], etiquettesSite: [] })
     const t = calcul([reliee('a'), reliee('b'), carte('c', { idsSite: null })])
     expect(t.ecarts).toBe(2)
   })
@@ -171,5 +171,14 @@ describe('cas limites (jamais de NaN)', () => {
     expect(t.valeur).toBeNull()
     expect(t.partSansPrix).toBe(100)
     expect(Number.isNaN(t.partSansPrix)).toBe(false)
+  })
+})
+
+describe('cartes sans thème fiable', () => {
+  it('compte les cartes reliées dont aucun thème n’est connu', () => {
+    const avec = carte('a', { description: 'race de chien', idsSite: ['ex-a'] })
+    const sans = carte('b', { description: '', idsSite: ['ex-b'] })
+    const nonReliee = carte('c', { description: '', idsSite: null })
+    expect(calcul([avec, sans, nonReliee]).sansTheme).toBe(1)
   })
 })

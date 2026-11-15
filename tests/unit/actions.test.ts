@@ -72,6 +72,7 @@ describe('actions : types partagés', () => {
       | 'valeur-defausse-elevee'
       | 'en-vente-sur-site'
       | 'sans-etiquette-theme'
+      | 'sans-theme-fiable'
       | 'favori-verrouille'
       | 'a-classer'
     >()

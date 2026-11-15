@@ -4,6 +4,7 @@ import { plafondDefausse } from '../lib/tri';
 import type { Donnees } from '../lib/sauvegarde';
 import MesThemes from './MesThemes';
 import GestionAmis from './GestionAmis';
+import ClassementIA from './ClassementIA';
 import EtiquettesPreexistantes from './EtiquettesPreexistantes';
 import PlafondDefausse from './PlafondDefausse';
 import { lancerSuppressionEtiquettes } from './pilotageLots';
@@ -70,6 +71,10 @@ const OngletReglages: React.FC<Props> = ({ donnees, onImportee }) => {
           Les titres des cartes affichées dans la Collection sont vérifiés sur Wikipédia (puis Wikidata) pour affiner leurs thèmes, une requête
           par seconde. Seul le titre de la carte est envoyé, jamais une donnée du compte. Les résultats sont gardés 30{NB}jours.
         </p>
+      </SectionRepliable>
+
+      <SectionRepliable id="reglage-classement-ia" titre="Classement par l’IA" resume="Cartes sans thème">
+        <ClassementIA cartes={collection.cartes} cache={donnees.cacheIA} onCache={donnees.appliquerCacheIA} />
       </SectionRepliable>
 
       <SectionRepliable id="reglage-themes" titre="Thèmes" resume="Mes thèmes et amis">

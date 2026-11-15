@@ -85,8 +85,8 @@ describe('regrouperEtiquettes : totaux et durée (AC2)', () => {
   })
 
   it('un nom déjà posé par l’extension n’est pas une pose prévue', () => {
-    const c = carte('a', { })
-    const r = regrouperEtiquettes(coll(c), registre([{ ex: 'ex-a', nom: '#À classer' }], { '#À classer': 'et-2' }), config())
+    const c = carte('a', { ...CHIEN })
+    const r = regrouperEtiquettes(coll(c), registre([{ ex: 'ex-a', nom: '#Chien' }], { '#Chien': 'et-2' }), config())
     expect(r.totaux.poses).toBe(0)
     expect(r.totaux.nomsNouveaux).toBe(0)
   })
@@ -135,13 +135,13 @@ describe('regrouperEtiquettes : non posées et plafond (AC3, AC4)', () => {
 
 describe('regrouperEtiquettes : retraits (H11)', () => {
   it('expose le retrait d’une ancienne étiquette « Statut · … » de l’extension', () => {
-    const c = carte('a', { })
+    const c = carte('a', { ...CHIEN })
     const r = regrouperEtiquettes(
       coll(c),
       registre([{ ex: 'ex-a', nom: 'Statut · Garder' }], { 'Statut · Garder': 'et-1' }),
       config(),
     )
-    // L’étiquette de repli « #À classer » (carte sans thème) est à créer et à poser, l’ancien Statut est retiré.
+    // L’étiquette « #Chien » est à créer et à poser, l’ancien Statut est retiré.
     expect(r.totaux.retraits).toBe(1)
     expect(r.totaux.poses).toBe(1)
     expect(r.totaux.nomsNouveaux).toBe(1)

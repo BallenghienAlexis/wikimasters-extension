@@ -6,7 +6,7 @@ const carte = (n: number, surcharge: Record<string, unknown> = {}) => ({
   id: `R|Carte fictive ${n}`,
   titre: `Carte fictive ${n}`,
   rarete: 'R',
-  description: '',
+  description: 'race de chien',
   quantite: 1,
   url: null,
   favori: false,

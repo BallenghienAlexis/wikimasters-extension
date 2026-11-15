@@ -282,7 +282,7 @@ const COOKIE = `base64-${b64({ access_token: JETON, refresh_token: 'refresh-fict
 const NB_CARTES = 20;
 
 const carte = (i: number): object => ({
-  id: `UR|Loutre fictive ${i}`, titre: `Loutre fictive ${i}`, rarete: 'UR', description: '', quantite: 1, url: null, favori: false,
+  id: `UR|Loutre fictive ${i}`, titre: `Loutre fictive ${i}`, rarete: 'UR', description: 'race de chien', quantite: 1, url: null, favori: false,
   idsSite: [`bbbbbbbb-bbbb-4bbb-8bbb-${String(i).padStart(12, '0')}`], etiquettesSite: [], prixCible: null,
   note: '', ami: null, valeurMarchande: null,
 });

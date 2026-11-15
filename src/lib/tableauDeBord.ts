@@ -10,6 +10,7 @@
 import type { Collection } from './collection'
 import { calculerEcarts } from './ecarts'
 import type { Config } from './lot'
+import { themesPrincipaux } from './themes'
 
 export type PastilleSynchro = 'a-jour' | 'en-cours' | 'arretee' | 'erreur'
 
@@ -28,6 +29,8 @@ export interface TableauDeBord {
   valeur: number | null
   partSansPrix: number | null
   ecarts: number
+  /** Cartes reliées au site pour lesquelles aucun thème fiable n’est encore connu (aucune étiquette de thème posée). */
+  sansTheme: number
   sante: { pastille: PastilleSynchro; ageLibelle: string }
   fraicheurPrix: { releves: number; plusRecent: number | null; plusAncien: number | null }
 }
@@ -64,6 +67,7 @@ export function calculerTableauDeBord(
     distinctes: hors.length,
     valeur,
     partSansPrix,
+    sansTheme: hors.filter((c) => c.idsSite !== null && themesPrincipaux(c).length === 0).length,
     ecarts: calculerEcarts(cartes, { amis: contexte.amis, limiteParExemplaire: contexte.limiteParExemplaire }).length,
     sante: { pastille: contexte.synchro.etat, ageLibelle: ageLibelle(contexte.synchro, maintenant) },
     fraicheurPrix: {

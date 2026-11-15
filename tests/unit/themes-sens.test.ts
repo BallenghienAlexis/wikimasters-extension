@@ -2,7 +2,7 @@
 // reconstitués (aucune donnée du compte). Chaque cas dit ce qui doit sortir et ce qui ne doit surtout pas sortir.
 import { afterEach, describe, expect, it } from 'vitest';
 import { definition, genreDe } from '../../src/lib/sens';
-import { definirSignauxWikipedia, MAX_THEMES_PAR_CARTE, themesPrincipaux } from '../../src/lib/themes';
+import { definirSignauxWikipedia, MAX_THEMES_PAR_CARTE, themesDirectsDeTexte, themesPrincipaux } from '../../src/lib/themes';
 import { signauxWikipedia } from '../../src/lib/wikipedia';
 
 interface Cas {
@@ -236,5 +236,15 @@ describe('vrais cas des motifs resserrés', () => {
     ['Expresso', 'café court et serré', 'boisson'],
   ])('%s donne #%s', (titre, description, attendu) => {
     expect(themesPrincipaux({ titre, description })).toContain(attendu);
+  });
+});
+
+describe('mémoïsation de la lecture des mots-clés', () => {
+  it('renvoie le même résultat au second appel, y compris après avoir vidé le cache', () => {
+    const texte = 'race de chien';
+    const premier = themesDirectsDeTexte(texte);
+    expect(themesDirectsDeTexte(texte)).toEqual(premier);
+    for (let i = 0; i < 20_100; i++) themesDirectsDeTexte(`texte distinct ${i}`);
+    expect(themesDirectsDeTexte(texte)).toEqual(premier);
   });
 });

@@ -148,8 +148,8 @@ export default tseslint.config(
     rules: regles({ site: true, reseau: 'sauf-fetch', alea: true }),
   },
   {
-    // Seul fichier de l'application autorisé à appeler `fetch` : GET vers Wikipédia (voir AGENTS.md).
-    files: ['src/app/verifierWikipedia.ts'],
+    // Seuls fichiers de l'application autorisés à appeler `fetch` : GET vers Wikipédia, POST vers l’API Claude (voir AGENTS.md).
+    files: ['src/app/verifierWikipedia.ts', 'src/app/classerIA.ts'],
     rules: regles({ reseau: 'sauf-fetch', alea: true }),
   },
   {
