@@ -121,3 +121,19 @@ describe('revision : mise en favori', () => {
     expect(ko.collection.cartes[0]!.favori).toBe(false)
   })
 })
+
+describe('lot : favori et étiquettes d’échange', () => {
+  it('une carte gardée et concernée par un ami reçoit le favori sans étiquette « #À échanger »', () => {
+    const amis = [{ nom: 'Zoé', themes: ['chien'] }] as unknown as Config['amis']
+    const lot = construireLot(coll(carte()), registreVide(), config({ amis }), TOUS)
+    expect(lot.actions.some((a) => a.type === 'favori')).toBe(true)
+    expect(lot.actions.some((a) => a.type === 'pose-etiquette' && a.nomEtiquette.startsWith('#À échanger'))).toBe(false)
+    // Témoin : sans thème gardé, l’ami donne bien son étiquette d’échange.
+    const sans = construireLot(coll(carte()), registreVide(), config({ amis, mesThemes: [] }), TOUS)
+    expect(sans.actions.some((a) => a.type === 'pose-etiquette' && a.nomEtiquette.startsWith('#À échanger'))).toBe(true)
+  })
+  it('carte gardée choisie pour la défausse : pas de favori', () => {
+    const lot = construireLot(coll(carte({ valeurMarchande: 1 })), registreVide(), config({ selection: { vendre: [], defausser: { 'commune|Berger allemand': 1 } } }), TOUS)
+    expect(lot.actions.some((a) => a.type === 'favori')).toBe(false)
+  })
+})

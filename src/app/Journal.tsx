@@ -30,7 +30,7 @@ const CLASSES_TYPE: Record<TypeAction, string> = {
   'pose-etiquette': 'text-echanger',
   enchere: 'text-vendre',
   defausse: 'text-defausser',
-  favori: 'text-echanger',
+  favori: 'text-garder',
   'suppression-etiquette': 'text-defausser',
 };
 
