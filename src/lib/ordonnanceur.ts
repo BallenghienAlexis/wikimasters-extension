@@ -23,12 +23,14 @@ export const PAUSE_APRES_ARRET_MS = 30 * 60_000;
 export const ancienneteMaxPrixMs = 30 * 86_400_000;
 /** Durée d’un bail ; renouvelé avant chaque requête. */
 export const DUREE_BAIL_MS = 2 * 60_000;
-/** Prix demandés d’affilée avant une pause : deux synchros ont reçu leur premier 403 juste après 30 prix (quota supposé de la route). */
-export const PRIX_PAR_LOT = 30;
-/** Pause entre deux lots de prix, pour laisser la fenêtre de quota supposée se vider. */
-export const PAUSE_ENTRE_LOTS_PRIX_MS = 60_000;
-/** Plafond de prix relevés par exécution (le reste attend la synchro suivante). */
-export const MAX_PRIX_PAR_EXECUTION = 100;
+/** Pause initiale sur un vrai 429 de la route des prix ; elle double à chaque 429 d’affilée (reprise adaptative). */
+export const PAUSE_429_PRIX_MS = 30_000;
+/** Pause maximale sur 429. */
+export const PAUSE_429_PRIX_MAX_MS = 240_000;
+/** 429 d’affilée sur un même prix après lesquels la synchro s’arrête (pause de 30 min). */
+export const MAX_429_PRIX_CONSECUTIFS = 5;
+/** Code de la réponse 403 du site qui exige une vérification humaine : arrêt immédiat, jamais contournée. */
+const CODE_VERIFICATION_HUMAINE = 'human_verification_required';
 /** Refus 403 d’affilée sur les prix qui arrêtent la synchro : en dessous, c’est une carte sans route de prix, pas la session. */
 export const MAX_REFUS_PRIX_CONSECUTIFS = 3;
 /** Plafond de refus de prix sur toute une exécution, qu’un succès ou un contrôle réussi ne remet jamais à zéro. */
@@ -105,7 +107,7 @@ export interface DependancesSynchro {
   arretDemande?: () => boolean;
   /** Relance explicite du joueur : ignore la pause de 30 min après un arrêt (le bail et les arrêts automatiques restent). */
   forcer?: boolean;
-  /** Plafond de prix par exécution (défaut : MAX_PRIX_PAR_EXECUTION). */
+  /** Plafond de prix par exécution (défaut : aucun, toutes les cartes sans prix sont interrogées). */
   maxPrix?: number;
   /** Annonce, une fois avant la boucle de prix, le nombre de prix qui seront demandés (sans effet sur le plan). */
   annoncerPrix?: (n: number) => void;
@@ -228,6 +230,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   let luesCetteSynchro = new Set<string>();
   /** Refus 403 consécutifs sur la route des prix (par carte, tolérés un à un). */
   let refusPrix = 0;
+  let limites429 = 0;
   let refusPrixTotal = 0;
 
   if (!deps.forcer && etat.arretJusqua !== null && horloge.now() < etat.arretJusqua) {
@@ -286,6 +289,18 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     } catch {
       return tolerant ? null : echec('Requête impossible (réseau).');
     }
+    if (reponse.statut === 403 && estVerificationHumaine(reponse.json)) {
+      journal('Vérification anti-bot du site requise : la synchro s’arrête (résous-la à la main sur wiki-masters.com).');
+      throw new Interruption('code-http', 403);
+    }
+    if (prix !== false && reponse.statut === 429 && limites429 < MAX_429_PRIX_CONSECUTIFS) {
+      // Vrai 429 sur un prix : pause qui double à chaque 429 d’affilée, puis on redemande la même carte.
+      limites429 += 1;
+      const pause = Math.min(PAUSE_429_PRIX_MAX_MS, PAUSE_429_PRIX_MS * 2 ** (limites429 - 1));
+      journal(`Prix : le site demande de ralentir (429 n° ${limites429}/${MAX_429_PRIX_CONSECUTIFS}) ; pause de ${pause / 1000} s puis reprise.`);
+      await pauseInterruptible(pause);
+      return requete(chemin, tolerant, prix);
+    }
     if (prix !== false && (reponse.statut === 403 || reponse.statut === 404)) {
       // Prix d’une seule carte refusé : carte vendue, défaussée ou sans marché. On l’ignore et on journalise son titre.
       // Après 3 refus d’affilée, un contrôle (stats) départage « session refusée »
@@ -311,6 +326,20 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     }
     if (reponse.statut !== 200) return tolerant ? null : echec(`Réponse ${reponse.statut} inattendue.`);
     return reponse;
+  }
+
+  function estVerificationHumaine(json: unknown): boolean {
+    return typeof json === 'object' && json !== null && (json as { code?: unknown }).code === CODE_VERIFICATION_HUMAINE;
+  }
+
+  /** Attente par tranches d’une seconde : un arrêt manuel n’attend pas la fin de la pause. */
+  async function pauseInterruptible(ms: number): Promise<void> {
+    const fin = horloge.now() + ms;
+    while (horloge.now() < fin) {
+      if (deps.arretDemande?.()) throw new Interruption('manuel', null);
+      await horloge.attendreJusqua(Math.min(fin, horloge.now() + 1000));
+    }
+    if (deps.arretDemande?.()) throw new Interruption('manuel', null);
   }
 
   function echec(message: string): null {
@@ -564,7 +593,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   }
 
   async function relevePrix(): Promise<void> {
-    const plafond = deps.maxPrix ?? MAX_PRIX_PAR_EXECUTION;
+    // Toutes les cartes sans prix (ou périmé) sont interrogées : plus de plafond par exécution (Alexis, 2026-11-15).
+    const plafond = deps.maxPrix ?? Number.POSITIVE_INFINITY;
     const retenues = candidatsPrix().slice(0, Math.max(0, plafond));
     deps.annoncerPrix?.(retenues.length);
     let demandes = 0;
@@ -572,16 +602,6 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     for (const carte of retenues) {
       const cardId = etat.cardIds[carte.id];
       if (cardId === undefined) continue;
-      if (demandes > 0 && demandes % PRIX_PAR_LOT === 0) {
-        journal(`Pause de ${PAUSE_ENTRE_LOTS_PRIX_MS / 1000} s après ${demandes} prix demandés (limite de débit supposée).`);
-        // Attente par tranches d’une seconde : un arrêt manuel n’attend pas la fin de la pause.
-        const fin = horloge.now() + PAUSE_ENTRE_LOTS_PRIX_MS;
-        while (horloge.now() < fin) {
-          if (deps.arretDemande?.()) throw new Interruption('manuel', null);
-          await horloge.attendreJusqua(Math.min(fin, horloge.now() + 1000));
-        }
-        if (deps.arretDemande?.()) throw new Interruption('manuel', null);
-      }
       if (demandes === 0) premiereDemande = horloge.now();
       demandes += 1;
       const refusAvant = refusPrixTotal;
@@ -593,6 +613,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         continue;
       }
       refusPrix = 0;
+      limites429 = 0;
       echecs = 0;
       const valeur = analyserPrix(r.json, carte.rarete as string);
       const courante = parId.get(carte.id) as Carte;
