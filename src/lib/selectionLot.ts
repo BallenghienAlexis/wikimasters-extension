@@ -1,6 +1,6 @@
 /**
  * Sélection manuelle des cartes à mettre aux enchères ou à défausser (Alexis, 2026-11-14 : sans statut local,
- * le joueur choisit au lancement d’un lot ; les étiquettes « À vendre » et « Défausse » du site préremplissent le choix).
+ * le joueur choisit au lancement d’un lot ; l’étiquette « Statut · Vendre » du site préremplit la mise aux enchères).
  *
  * Logique pure, sans `chrome.*`. Rien n’est stocké : la sélection vit le temps de l’aperçu.
  */
@@ -15,11 +15,11 @@ export const estProposable = (c: Carte): boolean => !c.favori && c.idsSite !== n
 
 const sansDieseEtAccents = (nom: string): string => normaliser(nom).replace(/^#\s*/, '').trim()
 
-/** Étiquette du site qui demande la vente (« #À vendre »), casse, accents et dièse ignorés. */
-export const estEtiquetteAVendre = (nom: string): boolean => /^a vendre\b/.test(sansDieseEtAccents(nom))
-
-/** Étiquette du site qui demande la défausse (« #Défausse », « #À défausser »). */
-export const estEtiquetteDefausse = (nom: string): boolean => /^(a )?defausse(r)?\b/.test(sansDieseEtAccents(nom))
+/**
+ * Étiquette du site qui demande la vente : « Statut · Vendre » (relevé du compte d’Alexis, 2026-11-15) ou « À vendre ».
+ * Lecture seule : l’extension ne pose jamais ces étiquettes. « Statut · En vente » (déjà aux enchères), « Échanger » et « Garder » ne préchoisissent rien.
+ */
+export const estEtiquetteAVendre = (nom: string): boolean => /^(statut[^a-z]*vendre|a vendre)$/.test(sansDieseEtAccents(nom))
 
 export interface ChoixParCarte {
   choix: ChoixCarte
@@ -29,13 +29,13 @@ export interface ChoixParCarte {
 
 export type Choix = ReadonlyMap<string, ChoixParCarte>
 
-/** Choix de départ d’après les étiquettes du site ; « défausse » l’emporte si les deux sont posées. */
+/** Choix de départ d’après les étiquettes du site (mise aux enchères seulement). */
 export function choixInitial(cartes: readonly Carte[]): Choix {
   const m = new Map<string, ChoixParCarte>()
   for (const c of cartes) {
     if (!estProposable(c)) continue
-    if (c.etiquettesSite.some(estEtiquetteDefausse)) m.set(c.id, { choix: 'defausser', exemplaires: Math.min(c.quantite, c.idsSite?.length ?? 1) })
-    else if (c.etiquettesSite.some(estEtiquetteAVendre)) m.set(c.id, { choix: 'vendre', exemplaires: 1 })
+    // La défausse reste un choix manuel : le compte n’a pas d’étiquette de défausse.
+    if (c.etiquettesSite.some(estEtiquetteAVendre)) m.set(c.id, { choix: 'vendre', exemplaires: 1 })
   }
   return m
 }

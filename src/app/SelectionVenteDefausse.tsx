@@ -76,7 +76,7 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, onCho
         Cartes à mettre aux enchères ou à défausser
       </h2>
       <p className="mt-1 text-sm text-muted">
-        Choisissez les cartes ici, puis voyez l’aperçu du lot. Les cartes portant l’étiquette « À vendre » ou « Défausse » sur le site sont déjà choisies. Un favori n’est jamais proposé. Rien n’est envoyé avant « Lancer ».
+        Choisissez les cartes ici, puis voyez l’aperçu du lot. Les cartes portant l’étiquette « Statut · Vendre » sur le site sont déjà choisies pour les enchères ; la défausse se choisit à la main. Un favori n’est jamais proposé. Rien n’est envoyé avant « Lancer ».
       </p>
       <p className="mt-2 text-sm" data-testid="resume-selection">
         {choisies.length === 0 ? 'Aucune carte choisie.' : `${nbVendre} à mettre aux enchères · ${nbDefausser} à défausser`}

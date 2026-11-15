@@ -5,7 +5,7 @@ import type { Carte } from '../../src/lib/collection'
 import { collectionVide } from '../../src/lib/collection'
 import { construireLot, type Config, type SelectionLot } from '../../src/lib/lot'
 import { registreVide } from '../../src/lib/registre'
-import { choixInitial, estEtiquetteAVendre, estEtiquetteDefausse, versSelection } from '../../src/lib/selectionLot'
+import { choixInitial, estEtiquetteAVendre, versSelection } from '../../src/lib/selectionLot'
 
 const TOUS: TypesDisponibles = new Set<TypeAction>(TYPES_ACTION)
 const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
@@ -76,24 +76,22 @@ describe('sélection manuelle : enchères et défausses (2026-11-14)', () => {
 })
 
 describe('sélection : choix de départ d’après les étiquettes du site', () => {
-  it('reconnaît « #À vendre » et « #Défausse » sans tenir compte de la casse, des accents ni du dièse', () => {
+  it('reconnaît « Statut · Vendre » et « À vendre », pas les autres statuts', () => {
+    expect(estEtiquetteAVendre('Statut · Vendre')).toBe(true)
     expect(estEtiquetteAVendre('#À vendre')).toBe(true)
-    expect(estEtiquetteAVendre('a vendre')).toBe(true)
-    expect(estEtiquetteAVendre('Vendre')).toBe(false)
-    expect(estEtiquetteDefausse('#Défausse')).toBe(true)
-    expect(estEtiquetteDefausse('#À défausser')).toBe(true)
-    expect(estEtiquetteDefausse('Défaut')).toBe(false)
+    for (const nom of ['Statut · En vente', 'Statut · Échanger', 'Statut · Garder', 'Vendre']) expect(estEtiquetteAVendre(nom)).toBe(false)
   })
 
-  it('préremplit le choix, ignore les favoris et les cartes non reliées', () => {
+  it('préchoisit la vente, ignore favoris et cartes non reliées, jamais de défausse', () => {
     const cartes = [
-      carte('a', { etiquettesSite: ['#À vendre'] }),
+      carte('a', { etiquettesSite: ['Statut · Vendre'] }),
       carte('b', { etiquettesSite: ['#Défausse'], quantite: 2 }),
-      carte('c', { etiquettesSite: ['#À vendre'], favori: true }),
-      carte('d', { etiquettesSite: ['#À vendre'], idsSite: null }),
+      carte('c', { etiquettesSite: ['Statut · Vendre'], favori: true }),
+      carte('d', { etiquettesSite: ['Statut · Vendre'], idsSite: null }),
+      carte('e', { etiquettesSite: ['Statut · En vente'] }),
     ]
     const choix = choixInitial(cartes)
-    expect([...choix.keys()]).toEqual(['a', 'b'])
-    expect(versSelection(cartes, choix)).toEqual({ vendre: ['a'], defausser: { b: 2 } })
+    expect([...choix.keys()]).toEqual(['a'])
+    expect(versSelection(cartes, choix)).toEqual({ vendre: ['a'], defausser: {} })
   })
 })
