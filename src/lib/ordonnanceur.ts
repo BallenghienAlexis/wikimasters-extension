@@ -15,7 +15,7 @@
  */
 import { CODES_ARRET, INTERVALLE_MS, MAX_ECHECS, type Horloge } from './file';
 import { VERSION_SCHEMA, aEditionLocale, type Carte, type Collection } from './collection';
-import { analyserPage, analyserPrix, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
+import { analyserPage, analyserPrix, decrireForme, diagnosticStats, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
 
 /** Aucune reprise automatique avant ce délai après un arrêt (401, 403, 429 ou échecs). */
 export const PAUSE_APRES_ARRET_MS = 30 * 60_000;
@@ -286,8 +286,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     let reponse: ReponseApi;
     try {
       reponse = await deps.transport(chemin);
-    } catch {
-      return tolerant ? null : echec('Requête impossible (réseau).');
+    } catch (e) {
+      return tolerant ? null : echec(`Requête impossible (réseau : ${e instanceof Error ? e.name : 'erreur inconnue'}).`);
     }
     if (reponse.statut === 403 && estVerificationHumaine(reponse.json)) {
       journal('Vérification anti-bot du site requise : la synchro s’arrête (résous-la à la main sur wiki-masters.com).');
@@ -324,7 +324,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       journal(`Arrêt : le site a répondu ${reponse.statut}.`);
       throw new Interruption('code-http', reponse.statut);
     }
-    if (reponse.statut !== 200) return tolerant ? null : echec(`Réponse ${reponse.statut} inattendue.`);
+    if (reponse.statut !== 200) return tolerant ? null : echec(`Réponse ${reponse.statut} inattendue (forme : ${decrireForme(reponse.json)}).`);
     return reponse;
   }
 
@@ -430,7 +430,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     const r = await requete(cheminStats());
     if (r === null) return null;
     const stats = analyserStats(r.json);
-    if (stats === null) return echec('Réponse « stats » de forme inattendue.');
+    if (stats === null) return echec(`Réponse « stats » de forme inattendue (${diagnosticStats(r.json)}).`);
     return stats;
   }
 
@@ -498,7 +498,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       }
       const lue = analyserPage(r.json);
       if (lue === null) {
-        echec(`Page ${page} de forme inattendue.`);
+        echec(`Page ${page} de forme inattendue (forme : ${decrireForme(r.json)}).`);
         ok = false;
         continue;
       }
