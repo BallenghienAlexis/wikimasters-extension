@@ -17,9 +17,8 @@ describe('prompt et requête', () => {
     for (const id of IDS_CATALOGUE_IA) expect(PROMPT_SYSTEME).toContain(`${id} : `);
     expect(PROMPT_SYSTEME).toBe(corpsRequete(lot).system);
   });
-  it('n’envoie que numéro, titre et description, déterministe (température 0)', () => {
+  it('n’envoie que numéro, titre et description, corps stable', () => {
     const c = corpsRequete(lot);
-    expect(c.temperature).toBe(0);
     expect(c.messages[0]?.content).toBe('Cartes à classer :\n1. Honda CB 900\n2. Morcilla — spécialité\n3. Zzz');
     expect(corpsRequete(lot)).toEqual(c);
   });
@@ -114,12 +113,46 @@ describe('classerCartes (transport simulé)', () => {
       expect(JSON.stringify(r)).not.toContain('cle-test');
     }
   });
-  it('s’arrête après 3 réponses inexploitables', async () => {
-    const cartes = Array.from({ length: 200 }, (_, i) => ({ titre: `t${i}`, description: '' }));
+  it('un refus 400 s’arrête tout de suite avec le message de l’API, sans la clé', async () => {
+    const r = await classerCartes({ ...base, cartes: lot, transport: async () => ({ status: 400, json: async () => ({ error: { type: 'invalid_request_error', message: 'model: inconnu cle-test sk-ant-usr-abc' } }) }) });
+    expect(r).toMatchObject({ arret: 'code-http', codeHttp: 400 });
+    expect(r.detail).toContain('HTTP 400');
+    expect(r.detail).toContain('invalid_request_error');
+    expect(r.detail).not.toContain('cle-test');
+    expect(r.detail).not.toContain('sk-ant');
+  });
+  it('une erreur réseau est expliquée et un échec isolé ne stoppe pas la suite', async () => {
+    const cartes = Array.from({ length: 80 }, (_, i) => ({ titre: `t${i}`, description: '' }));
+    let n = 0;
+    const transport: TransportIA = async () => { if (n++ === 0) throw new TypeError('Failed to fetch'); return { status: 200, json: async () => reponse('{"1":["moto"]}') }; };
+    const r = await classerCartes({ ...base, cartes, transport });
+    expect(r.arret).toBeNull();
+    expect(r.lues).toBe(1);
+    const t: TransportIA = async () => { throw new TypeError('Failed to fetch'); };
+    const r2 = await classerCartes({ ...base, cartes, transport: t });
+    expect(r2.arret).toBe('aucune-lue');
+    expect(r2.detail).toContain('Failed to fetch');
+  });
+  it('saute un lot en 529 puis reprend, attend entre deux requêtes et compte le lot sauté', async () => {
+    const cartes = Array.from({ length: 80 }, (_, i) => ({ titre: `t${i}`, description: '' }));
+    let n = 0;
+    let pauses = 0;
+    const transport: TransportIA = async () => (n++ === 0 ? { status: 529, json: async () => ({ error: { type: 'overloaded_error', message: 'surcharge' } }) } : { status: 200, json: async () => reponse('{"1":["moto"]}') });
+    const r = await classerCartes({ ...base, cartes, transport, attendre: async () => { pauses++; } });
+    expect(r).toMatchObject({ arret: null, lues: 1, sautes: 1 });
+    expect(r.detail).toContain('overloaded_error');
+    expect(pauses).toBe(2);
+    pauses = 0;
+    await classerCartes({ ...base, cartes: [{ titre: 'a', description: '' }, ...cartes], transport: async () => { throw new TypeError('x'); }, attendre: async () => { pauses++; } });
+    expect(pauses).toBe(3);
+  });
+  it('s’arrête après 5 réponses inexploitables', async () => {
+    const cartes = Array.from({ length: 400 }, (_, i) => ({ titre: `t${i}`, description: '' }));
     let n = 0;
     const r = await classerCartes({ ...base, cartes, transport: async () => { n++; return { status: 200, json: async () => reponse('rien') }; } });
     expect(r.arret).toBe('echecs');
-    expect(n).toBe(3);
+    expect(n).toBe(5);
+    expect(r.detail).toContain('inexploitable');
   });
   it('s’arrête quand on l’interrompt', async () => {
     const ctl = new AbortController();

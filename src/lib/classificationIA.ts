@@ -90,12 +90,11 @@ export const decouperEnLotsIA = (cartes: readonly CarteAClasser[]): CarteAClasse
 const nettoyer = (s: string, max: number): string => s.replace(/\s+/g, ' ').trim().slice(0, max);
 
 /** Corps de la requête pour un lot : seuls le titre et la description publique de chaque carte sont envoyés. */
-export function corpsRequete(lot: readonly CarteAClasser[]): { model: string; max_tokens: number; temperature: number; system: string; messages: { role: 'user'; content: string }[] } {
+export function corpsRequete(lot: readonly CarteAClasser[]): { model: string; max_tokens: number; system: string; messages: { role: 'user'; content: string }[] } {
   const lignes = lot.map((c, i) => `${i + 1}. ${nettoyer(c.titre, 120)}${c.description.trim() === '' ? '' : ` — ${nettoyer(c.description, MAX_DESCRIPTION)}`}`);
   return {
     model: MODELE_IA,
     max_tokens: 200 + lot.length * MAX_SORTIE_PAR_CARTE,
-    temperature: 0,
     system: PROMPT_SYSTEME,
     messages: [{ role: 'user', content: `Cartes à classer :\n${lignes.join('\n')}` }],
   };
