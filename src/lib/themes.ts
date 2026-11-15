@@ -27,7 +27,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'moto', libelle: '#Moto', motifs: ['moto ', 'motos ', 'motocycl'], parents: ['vehicule'] },
   { id: 'camion', libelle: '#Camion', motifs: ['camion', 'poids lourd'], parents: ['vehicule'] },
   { id: 'bus', libelle: '#Bus', motifs: ['autobus', 'autocar', 'bus '], parents: ['vehicule'] },
-  { id: 'tracteur', libelle: '#Tracteur', motifs: ['tracteur'], parents: ['vehicule'] },
+  { id: 'tracteur', libelle: '#Tracteur', motifs: ['tracteurs?(?! de semi)(?! semi)(?!s? routiers?)'], parents: ['vehicule'] },
   { id: 'train', libelle: '#Train', motifs: ['train ', 'trains ', 'locomotive', 'ferroviaire', 'tramway', 'metro '], parents: ['vehicule'] },
   { id: 'avion', libelle: '#Avion', motifs: ['avion', 'aeronef', 'aviation', 'compagnie aerienne', 'helicoptere'], parents: ['vehicule'] },
   { id: 'bateaux', libelle: '#Bateaux', motifs: ['bateau', 'navire', 'paquebot', 'voilier', 'sous-marin', 'porte-avions', 'croiseur '], parents: ['vehicule'] },
@@ -42,6 +42,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'poprock', libelle: '#Pop Rock', motifs: ['pop rock', 'pop-rock'], parents: ['pop', 'rock', 'musique'] },
   { id: 'pop', libelle: '#Pop', motifs: ['pop '], parents: ['musique'] },
   { id: 'metal', libelle: '#Métal', motifs: ['metal ', 'heavy metal', 'black metal', 'death metal'], parents: ['musique'] },
+  { id: 'metalcore', libelle: '#Metalcore', motifs: ['metal-?core'], parents: ['metal', 'musique'] },
   { id: 'grunge', libelle: '#Grunge', motifs: ['grunge'], parents: ['rock', 'musique'] },
   { id: 'jazz', libelle: '#Jazz', motifs: ['jazz'], parents: ['musique'] },
   { id: 'techno', libelle: '#Techno', motifs: ['techno ', 'musique electronique'], parents: ['musique'] },
@@ -52,11 +53,12 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'histoire', libelle: '#Histoire', motifs: ['histoire', 'histori', 'antique', 'medieval', 'prehistor', 'siecle', 'dynastie', 'monument', 'cite inca', 'av. j.-c', 'passe du'] },
   { id: 'guerre', libelle: '#Guerre', motifs: ['guerre', 'bataille', 'militaire', 'armee', 'soldat', 'combat de'], parents: ['histoire'] },
   { id: 'nazis', libelle: '#Nazis', motifs: ['nazi', 'troisieme reich', 'fuhrer', 'hitler', 'petain'], parents: ['histoire', 'guerre'] },
-  { id: 'politique', libelle: '#Politique', motifs: ["homme d'etat", "femme d'etat", 'politi', 'president', 'election', 'dictateur', 'chancelier', 'ministre', 'depute', 'senateur', 'parti '] },
+  { id: 'politique', libelle: '#Politique', motifs: ["homme d'etat", "femme d'etat", 'politi', 'president', 'election', 'dictateur', 'chancelier', 'ministre', 'depute', 'senateur', 'parti ', 'circonscriptions? (?:electorales?|legislatives?|provinciales?|federales?)'] },
   { id: 'royaute', libelle: '#Royauté', motifs: ['roi ', 'reine ', 'prince', 'empereur', 'imperatrice', 'duc ', 'duchesse', 'cour suedoise', 'cour de'], parents: ['histoire'] },
 
   // Sciences et techniques
   { id: 'sciences', libelle: '#Sciences', motifs: ['physicien', 'physique', 'chimi', 'mathemati', 'biolog', 'scientifique', 'chercheur', 'chercheuse', 'molecule', 'atome', 'spectro', 'theoreme', 'adn', 'geolog', 'roche', 'mineral', 'element chimique'] },
+  { id: 'physique', libelle: '#Physique', motifs: ['physicien', '(?<!activite )(?<!education )(?<!condition )(?<!apparence )(?<!handicap )(?<!personne )(?<!personnes )(?<!force )(?<!forme )(?<!exercice )(?<!violence )(?<!preparation )physique', 'unites? de planck', 'constantes? fondamentales?'], parents: ['sciences'] },
   { id: 'espace', libelle: '#Espace', motifs: ['planete', 'etoile', 'asteroide', 'galaxie', 'astronom', 'constellation', 'comete', 'systeme solaire', 'cratere', 'nebuleuse'], parents: ['sciences'] },
   { id: 'sante', libelle: '#Santé', motifs: ['medecin', 'maladie', 'trouble', 'psychiatr', 'pedopsychiatr', 'chirurgien', 'syndrome', 'medicament', 'virus'], parents: ['sciences'] },
   { id: 'technologie', libelle: '#Technologies', motifs: ['ingenieur', 'inventeur', 'technologie', 'technique'] },
@@ -86,13 +88,13 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'religion', libelle: '#Religion', motifs: ['religi', 'dieu', 'deesse', 'saint', 'pape', 'eglise', 'mytholog'] },
 
   // Sport et société
-  { id: 'sport', libelle: '#Sport', motifs: ['athlete', 'sportif', 'sportive', 'joueur de', 'joueuse de', 'championnat', 'tournoi', 'olympique', 'coureur', 'coureuse', 'rugby', 'tennis', 'basket'] },
+  { id: 'sport', libelle: '#Sport', motifs: ['athlete', 'sportif', '(?<!motos? )(?<!voitures? )(?<!automobiles? )sportives?', 'joueur de', 'joueuse de', 'championnat', 'tournoi', 'olympique', 'coureur', 'coureuse', 'rugby', 'tennis', 'basket'] },
   { id: 'football', libelle: '#Football', motifs: ['football', 'club de foot'], parents: ['sport'] },
   { id: 'hockey', libelle: '#Hockey', motifs: ['hockey'], parents: ['sport'] },
   { id: 'cyclisme', libelle: '#Cyclisme', motifs: ['cyclis'], parents: ['sport'] },
   { id: 'combat', libelle: '#Arts martiaux', motifs: ['arts martiaux', 'boxeur', 'boxeuse', 'catcheur', 'judoka', 'karate'], parents: ['sport'] },
   { id: 'societe', libelle: '#Société', motifs: ['sociolog', "homme d'affaires", "femme d'affaires", 'entreprise', 'econom', 'droit', 'adulter', 'habitants'] },
-  { id: 'crime', libelle: '#Crime', motifs: ['tueur', 'criminel', 'cartel', 'assassin', 'torture', 'mafia', 'gang '], parents: ['societe'] },
+  { id: 'crime', libelle: '#Crime', motifs: ['tueur', 'criminel', 'cartel', 'assassin', 'torture', 'mafia', 'gang ', 'meurtres?(?![a-z0-9])', 'meurtrier ou meurtriere', 'condamnee? pour crime'], parents: ['societe'] },
 
   // Thèmes précis (feature theme-etiquettes). Une lookahead `(?![a-z0-9])` vise le mot entier.
   // Animaux
