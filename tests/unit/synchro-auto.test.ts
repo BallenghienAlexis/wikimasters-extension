@@ -597,7 +597,7 @@ describe('T-206 D-03 : événements dans le journal', () => {
     expect(b.evenements.at(-1)).toMatchObject({ resultat: 'interrompue', parametre: 'arrêt demandé', codeHttp: null });
   });
 
-  it('page courte avec moins d’exemplaires qu’annoncé : cause « lecture incomplète »', async () => {
+  it('page courte avec moins d’exemplaires qu’annoncé : cause « terminée avec des éléments sautés »', async () => {
     // Le site annonce 2 exemplaires mais n’en livre qu’un sur une page courte : la lecture est incomplète.
     const reponse = (chemin: string): ReponseApi => {
       if (chemin.startsWith('/api/my-collection/stats')) return { statut: 200, json: { total: 2, totalUnique: 2, tagOptions: [] } };
@@ -606,7 +606,7 @@ describe('T-206 D-03 : événements dans le journal', () => {
     };
     const b = banc({ reponse });
     await creerSynchroAuto(b.deps).declencher();
-    expect(b.evenements.at(-1)).toMatchObject({ titre: 'Synchronisation automatique : arrêt', parametre: 'lecture incomplète' });
+    expect(b.evenements.at(-1)).toMatchObject({ titre: 'Synchronisation automatique : arrêt', parametre: 'terminée avec des éléments sautés' });
     // La lecture des ventes (tolérante) n’est jamais présentée comme l’étape en cause.
     expect(b.statuts.at(-1)).toMatchObject({ etat: 'arret', raison: 'echecs' });
     expect(b.statuts.at(-1)?.etape).not.toBe('ventes');

@@ -161,7 +161,7 @@ function evenementFinal(resultat: ResultatSynchro, pages: number | null): Evenem
     if (resultat.raison === 'echecs') return arret('3 échecs consécutifs');
     return arret('arrêt demandé');
   }
-  if (!resultat.complete) return arret(pages !== null && resultat.pagesLues >= pages + PAGES_DE_MARGE ? 'plafond de pages' : 'lecture incomplète');
+  if (!resultat.complete) return arret(pages !== null && resultat.pagesLues >= pages + PAGES_DE_MARGE ? 'plafond de pages' : 'terminée avec des éléments sautés');
   return { titre: 'Synchronisation automatique : fin', parametre: null, resultat: 'reussie', codeHttp: null };
 }
 

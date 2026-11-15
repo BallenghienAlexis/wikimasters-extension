@@ -53,7 +53,13 @@ describe('analyserStats', () => {
     expect(analyserStats({ total: '12', totalUnique: 1, tagOptions: [] })).toBeNull();
     expect(analyserStats({ total: -1, totalUnique: 1, tagOptions: [] })).toBeNull();
     expect(analyserStats({ total: 1, totalUnique: 1 })).toBeNull();
-    expect(analyserStats({ total: 1, totalUnique: 1, tagOptions: [{ id: 1 }] })).toBeNull();
+  });
+
+  it('une étiquette illisible est ignorée, une couleur absente devient vide, plus de 200 étiquettes sont acceptées', () => {
+    const options = Array.from({ length: 300 }, (_, i) => ({ id: `t-${i}`, name: `E${i}`, color: i === 0 ? null : '#fff', cardCount: i }));
+    const r = analyserStats({ total: 1, totalUnique: 1, tagOptions: [{ id: 1 }, { id: 'x', name: '', cardCount: 1 }, ...options] });
+    expect(r?.etiquettes).toHaveLength(300);
+    expect(r?.etiquettes[0]).toMatchObject({ id: 't-0', couleur: '' });
   });
 });
 

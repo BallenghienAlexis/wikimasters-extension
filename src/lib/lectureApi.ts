@@ -5,6 +5,8 @@ import { RARETES, identifiantCarte } from './lecteur';
 const MAX_TEXTE = 300;
 const MAX_ID = 200;
 const MAX_ETIQUETTES = 200;
+/** Étiquettes d’un compte (`tagOptions`) : large, un compte peut en porter des centaines. */
+const MAX_ETIQUETTES_COMPTE = 2000;
 
 export interface EtiquetteStats {
   id: string;
@@ -50,11 +52,12 @@ const estTexte = (v: unknown, max = MAX_TEXTE): v is string => typeof v === 'str
 export function analyserStats(json: unknown): StatsLues | null {
   if (!estObjet(json) || !estEntier(json.total) || !estEntier(json.totalUnique)) return null;
   const options = json.tagOptions;
-  if (!Array.isArray(options) || options.length > MAX_ETIQUETTES) return null;
+  // Étiquettes du compte : une option illisible (couleur absente, nom vide…) est ignorée au lieu de faire échouer toute la lecture.
+  if (!Array.isArray(options)) return null;
   const etiquettes: EtiquetteStats[] = [];
-  for (const o of options) {
-    if (!estObjet(o) || !estTexte(o.id, MAX_ID) || !estTexte(o.name) || !estTexte(o.color, 50) || !estEntier(o.cardCount)) return null;
-    etiquettes.push({ id: o.id, nom: o.name, couleur: o.color, nbCartes: o.cardCount });
+  for (const o of options.slice(0, MAX_ETIQUETTES_COMPTE)) {
+    if (!estObjet(o) || !estTexte(o.id, MAX_ID) || !estTexte(o.name) || !estEntier(o.cardCount)) continue;
+    etiquettes.push({ id: o.id, nom: o.name, couleur: estTexte(o.color, 50) ? o.color : '', nbCartes: o.cardCount });
   }
   return { total: json.total, totalUnique: json.totalUnique, etiquettes };
 }
