@@ -281,6 +281,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         }) ?? Promise.resolve()).catch(() => undefined);
       };
       let demarree = false;
+      let etapeFautive: EtapeSynchro | null = null;
       const journaliser = (e: EvenementSynchro): Promise<void> => (deps.journaliser?.(e) ?? Promise.resolve()).catch(() => undefined);
       const transport = async (chemin: string): Promise<ReponseApi> => {
         if (!demarree) {
@@ -295,6 +296,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         if (page) await noter({ etat: 'en-cours', page: pages === null ? Number(page[1]) + 1 : Math.min(Number(page[1]) + 1, pages) });
         else await noter({ etat: 'en-cours' });
         const reponse = await deps.transport(chemin);
+        if (reponse.statut !== 200 && etape !== 'ventes' && etape !== 'prix') etapeFautive ??= etape;
         if (etape === 'prix') prixFaits += 1;
         if (!page && chemin.startsWith('/api/my-collection/stats')) {
           const stats = reponse.statut === 200 ? analyserStats(reponse.json) : null;
@@ -337,7 +339,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         const comptes = { ajoutees, etiquettes: compterEtiquettes(resultat.collection), prix: resultat.prixReleves };
         if (resultat.issue === 'arret') await noter({ etat: 'arret', raison: resultat.raison, codeHttp: resultat.codeHttp, ...comptes });
         else if (resultat.complete) await noter({ etat: 'termine', ...comptes });
-        else await noter({ etat: 'arret', raison: 'echecs', ...comptes });
+        else await noter({ etat: 'arret', raison: 'echecs', etape: etapeFautive ?? (etape === 'ventes' ? 'pages' : etape), ...comptes }); // la lecture des ventes est tolérante : elle n’est jamais la cause d’un échec
         await journaliser(evenementFinal(resultat, pages));
       }
       if (resultat.issue === 'termine') await releverMarche();
@@ -412,13 +414,13 @@ const transportSite = async (chemin: string): Promise<ReponseApi> => {
 };
 
 /** Messages de diagnostic des prix gardés dans le journal (titre, rang et délai seulement : ni identifiant, ni corps de réponse, ni jeton). */
-export const estDiagnosticPrix = (message: string): boolean => /^(Prix indisponible|Diagnostic prix|Pause de|Contrôle de session)/.test(message);
+export const estDiagnosticPrix = (message: string): boolean => /^(Prix indisponible|Diagnostic prix|Pause de|Contrôle de session|Ventes :|Échec |Synchro incomplète)/.test(message);
 
 let fileJournal: Promise<void> = Promise.resolve();
 /** Écrit les diagnostics de prix dans le journal, un à la fois ; une erreur d’écriture est sans effet. */
 export function journaliserDiagnostic(message: string, ecrire: (e: EvenementSynchro) => Promise<void> = ecrireEvenementJournal): void {
   if (!estDiagnosticPrix(message)) return;
-  const refus = /^(Prix indisponible|Diagnostic prix|Contrôle de session en échec)/.test(message);
+  const refus = /^(Prix indisponible|Diagnostic prix|Contrôle de session en échec|Échec |Synchro incomplète)/.test(message);
   fileJournal = fileJournal.then(() => ecrire({ titre: 'Synchronisation automatique : prix', parametre: message.slice(0, 200), resultat: refus ? 'interrompue' : 'reussie', codeHttp: null })).catch(() => undefined);
 }
 

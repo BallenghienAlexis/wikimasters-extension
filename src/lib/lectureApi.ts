@@ -126,7 +126,10 @@ export function analyserPage(json: unknown): PageLue | null {
 
 // Lecture de `/api/marketplace/mine` : enchères du joueur en cours et plafond du site.
 export function analyserVentes(json: unknown): { enCours: number; max: number } | null {
-  if (!estObjet(json) || !estEntier(json.sellingCount) || !estEntier(json.maxConcurrentAuctions)) return null;
+  if (!estObjet(json) || !estEntier(json.maxConcurrentAuctions)) return null;
+  // Rien en vente : le site peut omettre le compteur (ou le mettre à null) ; c’est « 0 vente en cours », pas une erreur.
+  if (json.sellingCount === undefined || json.sellingCount === null) return { enCours: 0, max: json.maxConcurrentAuctions };
+  if (!estEntier(json.sellingCount)) return null;
   return { enCours: json.sellingCount, max: json.maxConcurrentAuctions };
 }
 

@@ -694,6 +694,27 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(m).toMatch(/demande n° 3, \d+ s après la première/);
   })
 
+  it('ventes : rien en vente (compteur absent) = 0 vente, sans erreur ni arrêt', async () => {
+    const site = siteFictif(2);
+    const b = banc((chemin) => (chemin === '/api/marketplace/mine' ? { statut: 200, json: { maxConcurrentAuctions: 5 } } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('termine');
+    expect(r.complete).toBe(true);
+    expect(r.etat.ventesSite).toMatchObject({ enCours: 0, max: 5 });
+  })
+
+  it('ventes : réponse inexploitable ou 404 = ignorée et journalisée, sans arrêt ni pause', async () => {
+    for (const reponse of [{ statut: 404, json: null }, { statut: 200, json: [] }]) {
+      const site = siteFictif(2);
+      const b = banc((chemin) => (chemin === '/api/marketplace/mine' ? reponse : site(chemin)));
+      const r = await synchroniser(b.deps);
+      expect(r.issue).toBe('termine');
+      expect(r.complete).toBe(true);
+      expect(r.etat.arretJusqua).toBeNull();
+      expect(b.journal.some((m) => m.startsWith('Ventes :'))).toBe(true);
+    }
+  })
+
   it('prix : 401 et 429 arrêtent toujours dès la première réponse', async () => {
     for (const code of [401, 429]) {
       const site = siteFictif(4);

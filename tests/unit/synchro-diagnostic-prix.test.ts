@@ -6,7 +6,9 @@ describe('diagnostic des prix dans le journal', () => {
     expect(estDiagnosticPrix('Diagnostic prix : refus pour « A » à la demande n° 31, 8 s après la première.')).toBe(true);
     expect(estDiagnosticPrix('Prix indisponible (réponse 403) pour « A » : carte ignorée (1/3 refus d’affilée).')).toBe(true);
     expect(estDiagnosticPrix('Pause de 60 s après 30 prix demandés (limite de débit supposée).')).toBe(true);
-    expect(estDiagnosticPrix('Échec 1/3 d’affilée : Requête impossible (réseau).')).toBe(false);
+    expect(estDiagnosticPrix('Échec 1/3 d’affilée : Requête impossible (réseau).')).toBe(true);
+    expect(estDiagnosticPrix('Ventes : lecture ignorée (réponse non exploitable), la synchro continue.')).toBe(true);
+    expect(estDiagnosticPrix('Page 3 lue')).toBe(false);
   });
 
   it('écrit le diagnostic au journal, sans rien d’autre', async () => {
