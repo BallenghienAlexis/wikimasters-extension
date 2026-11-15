@@ -78,3 +78,39 @@ describe('thème le plus précis', () => {
     expect(t).not.toContain('histoire');
   });
 });
+
+// Revue de la PR #158 : les nouveaux motifs ne doivent pas déborder sur des textes courants.
+describe('faux positifs des nouveaux motifs', () => {
+  const themes = (texte: string): string[] => themesDeTexte(texte);
+  it('« meurtrier » adjectif ne donne pas Crime', () => {
+    expect(themes('séisme le plus meurtrier de l’histoire récente')).not.toContain('crime');
+    expect(themes('une des batailles les plus meurtrières de la Première Guerre mondiale')).not.toContain('crime');
+    expect(themes('pandémie meurtrière causée par un virus')).not.toContain('crime');
+    expect(themes('un attentat meurtrier')).not.toContain('crime');
+  });
+  it('le meurtre nominal donne Crime', () => {
+    expect(themes('condamnée pour les meurtres de deux personnes')).toContain('crime');
+    expect(themes('meurtrier ou meurtrière')).toContain('crime');
+  });
+  it('seule une circonscription électorale est Politique', () => {
+    expect(themes('arrondissement de Brest, circonscription administrative')).not.toContain('politique');
+    expect(themes('diocèse de Lyon, circonscription ecclésiastique')).not.toContain('politique');
+    expect(themes('une circonscription électorale provinciale du Québec')).toContain('politique');
+  });
+  it('« physique » adjectif ne donne pas Physique', () => {
+    expect(themes('activité physique')).not.toContain('physique');
+    expect(themes('éducation physique et sportive')).not.toContain('physique');
+    expect(themes('la physique quantique')).toContain('physique');
+    expect(themes('physicien allemand')).toContain('physique');
+  });
+  it('« sportive » ne donne pas Sport après un véhicule, pluriel compris', () => {
+    expect(themes('les voitures sportives de la marque')).not.toContain('sport');
+    expect(themes('des motos sportives')).not.toContain('sport');
+    expect(themes('une athlète sportive')).toContain('sport');
+  });
+  it('« tracteur routier » est un camion, pas un tracteur', () => {
+    expect(themes('un tracteur routier')).not.toContain('tracteur');
+    expect(themes('un tracteur agricole')).toContain('tracteur');
+  });
+});
+
