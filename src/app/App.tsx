@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { collectionVide, type Filtres } from '../lib/collection';
 import BandeauActivite from './BandeauActivite';
+import VerificationFond from './VerificationFond';
 import BlocageCollection from './BlocageCollection';
 import EnTete from './EnTete';
 import MessageStockage from './MessageStockage';
@@ -99,6 +100,7 @@ const App: React.FC = () => {
         <Onglets actif={actif} onChoisir={aller} />
 
         <BandeauActivite />
+        <VerificationFond cartes={collection.cartes} prete={chargee && !blocage} onCache={donnees.appliquerCacheWiki} />
 
         <div role="tabpanel" id={idPanneau(actif)} aria-labelledby={idOnglet(actif)} tabIndex={0}>
           {panneau}

@@ -1,7 +1,6 @@
 import React, { useEffect, useSyncExternalStore } from 'react';
-import { chargerCacheWikipedia, enregistrerCacheWikipedia } from '../lib/stockage';
 import type { CacheWikipedia } from '../lib/wikipedia';
-import { creerPlanificateur, type Planificateur } from './verifierWikipedia';
+import { definirRappelCache, lePlanificateur } from './planificateurWikipedia';
 
 interface Props {
   /** Titres des cartes consultées (affichées dans la liste). */
@@ -10,22 +9,6 @@ interface Props {
 }
 
 const NB = ' ';
-
-// Une seule file par page : elle survit au démontage du composant (ouverture de l'assistant, par exemple),
-// pour ne jamais relancer de requêtes en parallèle ni après un refus.
-let planificateur: Planificateur | null = null;
-let rappelCache: (cache: CacheWikipedia) => void = () => undefined;
-
-function lePlanificateur(): Planificateur {
-  planificateur ??= creerPlanificateur({
-    chargerCache: chargerCacheWikipedia,
-    surCache: async (cache) => {
-      rappelCache(cache);
-      await enregistrerCacheWikipedia(cache);
-    },
-  });
-  return planificateur;
-}
 
 /**
  * Vérifie automatiquement, d’après les catégories de leur page Wikipédia, les thèmes des cartes consultées
@@ -37,7 +20,7 @@ const VerificationWikipedia: React.FC<Props> = ({ titres, onCache }) => {
 
   useEffect(() => {
     // `onCache` (App) est stable et App n'est jamais démonté : on garde le rappel même quand ce composant l'est.
-    rappelCache = onCache;
+    definirRappelCache(onCache);
   }, [onCache]);
 
   useEffect(() => {
@@ -49,9 +32,9 @@ const VerificationWikipedia: React.FC<Props> = ({ titres, onCache }) => {
 
   return (
     <div className="mt-2 text-sm text-muted" data-testid="verification-wikipedia">
-      <p>Les titres des cartes affichées sont vérifiés sur Wikipédia pour affiner leurs thèmes (aucune autre donnée n’est envoyée).</p>
+      <p>Les titres des cartes affichées sont vérifiés sur Wikipédia pour affiner leurs thèmes (aucune autre donnée n’est envoyée). Ceux des autres cartes sans thème le sont ensuite, en arrière-plan.</p>
       <p aria-live="polite">
-        {etat.suspendue ?? (etat.enCours ? `Vérification en cours${NB}: ${Math.min(etat.faites, etat.total)} sur ${etat.total}` : null)}
+        {etat.suspendue === null && etat.enCours ? `Vérification en cours${NB}: ${Math.min(etat.faites, etat.total)} sur ${etat.total}` : null}
       </p>
     </div>
   );

@@ -33,7 +33,7 @@ test.describe('page de collection', () => {
     await chargerCollectionFictive(pageCollection);
     await allerA(pageCollection, 'reglages');
     await pageCollection.getByRole('button', { name: /^Sauvegarde/ }).click(); // T-309 : section repliée par défaut
-    await expect(pageCollection.locator('input[type="file"]')).toHaveCount(1);
+    await expect(pageCollection.locator('input[type="file"]:not([data-testid="classement-ia-importer"])')).toHaveCount(1);
     await expect(pageCollection.getByRole('button', { name: 'Exporter une sauvegarde' })).toBeVisible();
     for (const nom of ['Importer un fichier', 'Exporter en CSV', 'Exporter en JSON']) {
       await expect(pageCollection.getByRole('button', { name: nom })).toHaveCount(0);

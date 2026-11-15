@@ -28,3 +28,11 @@
 - Entrées de cache vides (« sujet non reconnu ») : aucun bouton pour les reclasser ; à ajouter si Alexis en a besoin.
 - Mesure de qualité sur les cas d’Alexis (Novelists, Morcilla, Honda CB 900, Tesla Semi, Software as a service, Hydravion, Hitler, Millet) : à faire une fois la clé saisie, hors du cloud.
 - Une carte classée par l’IA avec un thème erroné ne peut pas être corrigée à la main (pas d’édition de thème) ; la retirer du cache = supprimer la clé `classementIA`.
+
+## À reprendre (PR « classement automatique sans clé »)
+- Aucun test e2e du bouton d’export ni de l’import de fichier dans Réglages › Classement par l’IA (`ClassementIA.tsx`) : logique couverte en unitaire (`lireImportThemes`, `exporterCartesAClasser`).
+- La lecture de fond est testée en unitaire (`creerPlanificateur`, file de fond) et par les e2e SC-011 adaptés ; pas de test de durée sur 2 600 cartes.
+- Cartes sans page Wikipédia ni description Wikidata exploitable : restent sans thème (signalées, jamais « À classer »), sauf import ou API.
+- Modèle intégré à Chrome (Prompt API) : à étudier seulement si Alexis le demande.
+- `tests/e2e/refonte-collection.spec.ts:142-155` : le test SC-011 de la Collection ne contrôle que l’hôte des requêtes ; le contrôle du paramètre `titles` (cartes sans thème seulement) est dans `refonte-coquille.spec.ts`.
+- `src/lib/themes.ts:70` : motifs « culinaire » et « charcuterie » ajoutés à Gastronomie sans test de faux positif dédié.

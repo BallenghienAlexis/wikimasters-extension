@@ -163,3 +163,43 @@ export function estimerCout(cartes: readonly CarteAClasser[]): EstimationIA {
   const cout = (jetonsEntree * PRIX_ENTREE_MTOK + jetonsSortie * PRIX_SORTIE_MTOK) / 1_000_000;
   return { cartes: cartes.length, requetes: lots.length, jetonsEntree, jetonsSortie, cout };
 }
+
+/** Fichier d’export pour classer hors de l’extension (abonnement Claude, par exemple) : titre et description courte, rien d’autre. */
+export function exporterCartesAClasser(cartes: readonly CarteAClasser[]): string {
+  return JSON.stringify(cartes.map((c, i) => ({ id: i + 1, titre: nettoyer(c.titre, 120), description: nettoyer(c.description, MAX_DESCRIPTION) })), null, 1);
+}
+
+export type LectureImport = { type: 'ok'; resultats: Map<string, string[]>; ignores: number } | { type: 'invalide'; raison: string };
+
+/**
+ * Valide un fichier `{ "titre": ["theme", …] }` classé hors de l’extension : 1 à 4 identifiants du catalogue par carte, sans doublon.
+ * `titresConnus` limite l’import aux cartes réellement sans thème ; une entrée invalide est comptée dans `ignores`, jamais devinée.
+ */
+export function lireImportThemes(texte: string, titresConnus: ReadonlySet<string>): LectureImport {
+  let json: unknown;
+  try {
+    json = JSON.parse(texte);
+  } catch {
+    return { type: 'invalide', raison: 'Le fichier n’est pas un JSON valide.' };
+  }
+  if (typeof json !== 'object' || json === null || Array.isArray(json)) return { type: 'invalide', raison: 'Le fichier doit être un objet { "titre": ["thème", …] }.' };
+  const resultats = new Map<string, string[]>();
+  let ignores = 0;
+  for (const [titre, ids] of Object.entries(json)) {
+    const uniques = Array.isArray(ids) ? [...new Set(ids)] : [];
+    const valide = titresConnus.has(titre) && uniques.length >= 1 && uniques.length <= MAX_THEMES_PAR_CARTE && uniques.length === (ids as unknown[]).length && uniques.every((id) => typeof id === 'string' && ENSEMBLE_IDS.has(id));
+    if (valide) resultats.set(titre, uniques as string[]);
+    else ignores++;
+  }
+  return resultats.size === 0 ? { type: 'invalide', raison: 'Aucune entrée valide (titres inconnus, thèmes hors liste ou plus de 4 thèmes).' } : { type: 'ok', resultats, ignores };
+}
+
+/**
+ * Prompt à coller dans un abonnement Claude pour classer le fichier exporté : le même catalogue et les mêmes règles que `PROMPT_SYSTEME`,
+ * mais les clés de la réponse sont les titres exacts et une carte non reconnue est omise (jamais de liste vide ni de thème deviné).
+ * `docs/classement-par-ia.md` en contient le texte exact (test de synchronisation).
+ */
+export const PROMPT_EXPORT = PROMPT_SYSTEME.replace(
+  'dont les clés sont les numéros des cartes et les valeurs des listes d’identifiants. Exemple : {"1":["moto"],"2":["litterature","histoire"],"3":[]}',
+  'dont les clés sont les TITRES EXACTS des cartes (champ "titre" du fichier) et les valeurs des listes de 1 à 4 identifiants. Exemple : {"Honda CB 900":["moto"],"Morcilla":["gastronomie"]}. Traite le fichier par lots de 150 cartes et donne le JSON complet de chaque lot',
+).replace('réponds une liste vide pour cette carte.', 'omets cette carte de ta réponse (jamais de liste vide ni de thème deviné).');

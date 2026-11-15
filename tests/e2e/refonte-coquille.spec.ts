@@ -1,4 +1,4 @@
-import { allerA, carteComplete, chargerCollectionFictive, expect, ONGLETS, test } from './extension';
+import { allerA, carteComplete, chargerCartes, chargerCollectionFictive, expect, ONGLETS, test } from './extension';
 
 // T-304 : coquille à onglets (SC-012, SC-011, SC-008, SC-009, SC-010, SC-020, SC-006).
 // Données uniquement fictives.
@@ -168,27 +168,41 @@ test.describe('SC-009 : largeurs et captures', () => {
 });
 
 test.describe('SC-011 : vérification Wikipédia', () => {
-  test('SC-011 : aucune requête Wikipédia ni Wikidata hors de la vue liste de la Collection', async ({ pageCollection }) => {
+  test('SC-011 : hors de la vue liste, seule la lecture de fond interroge Wikipédia et Wikidata (titre seul)', async ({ pageCollection }) => {
     test.setTimeout(60_000);
     const requetes: string[] = [];
     await pageCollection.route(/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\//, async (route) => {
       requetes.push(route.request().url());
       await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
     });
-    await chargerCollectionFictive(pageCollection);
+    // Une carte avec un thème local (« moto ») et des cartes sans thème : seules les secondes sont lues en arrière-plan.
+    await chargerCartes(pageCollection, [
+      { id: 'a', titre: 'Zorglub fictif', description: 'secret fictif' },
+      { id: 'b', titre: 'Bidule fictif', description: 'autre secret fictif' },
+      { id: 'c', titre: 'Moto fictive', description: 'une moto de collection' },
+    ]);
     for (const o of ONGLETS.filter((x) => x.id !== 'collection')) {
       await allerA(pageCollection, o.id);
       await pageCollection.waitForTimeout(1500);
     }
-    expect(requetes).toEqual([]);
-    // Dans la vue liste de la Collection, les cartes affichées sont vérifiées (titre seul).
+    // Lecture de fond (2026-11-15) : les cartes sans thème sont vérifiées partout, mais seuls ces deux hôtes sont joints.
+    for (const u of requetes) expect(u).toMatch(/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\/w\/api\.php\?/);
+    expect(requetes.length).toBeGreaterThan(0);
+    // Titre seul : le paramètre `titles` (ou `search`) est un titre de carte sans thème, jamais une description ni une carte avec thème.
+    for (const u of requetes) {
+      const params = new URL(u).searchParams;
+      const titre = params.get('titles') ?? params.get('search');
+      if (titre !== null) expect(['Zorglub fictif', 'Bidule fictif']).toContain(titre);
+      expect(u).not.toContain('secret');
+      expect(u).not.toContain('Moto');
+    }
+    // Dans la vue liste de la Collection, la mention de vérification reste affichée (titre seul).
     await allerA(pageCollection, 'collection');
-    await expect.poll(() => requetes.length, { timeout: 15_000 }).toBeGreaterThan(0);
     for (const u of requetes) expect(u).toMatch(/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\/w\/api\.php\?/);
     await expect(pageCollection.getByText(/titres des cartes affichées sont vérifiés/i)).toBeVisible();
   });
 
-  test('SC-011 : quitter la Collection arrête de planifier de nouvelles vérifications', async ({ pageCollection }) => {
+  test('SC-011 : quitter la Collection ne coupe pas la lecture de fond, qui garde sa cadence d’une requête par seconde', async ({ pageCollection }) => {
     test.setTimeout(60_000);
     const requetes: string[] = [];
     await pageCollection.route(/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\//, async (route) => {
@@ -200,11 +214,11 @@ test.describe('SC-011 : vérification Wikipédia', () => {
     await expect.poll(() => requetes.length, { timeout: 15_000 }).toBeGreaterThan(0);
     await allerA(pageCollection, 'lots');
     await allerA(pageCollection, 'reglages');
-    // Laisse finir une éventuelle requête en vol, puis le compte ne bouge plus.
+    // La lecture de fond continue, sans dépasser une requête par seconde.
     await pageCollection.waitForTimeout(1500);
-    const fige = requetes.length;
+    const avant = requetes.length;
     await pageCollection.waitForTimeout(3000);
-    expect(requetes.length).toBe(fige);
+    expect(requetes.length - avant).toBeLessThanOrEqual(4);
   });
 });
 

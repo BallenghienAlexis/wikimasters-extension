@@ -192,6 +192,40 @@ describe('creerPlanificateur', () => {
     expect(appels).toBe(60);
   });
 
+  it('la file de fond passe après la liste, et un titre de fond redemandé par la liste passe devant', async () => {
+    const vus: string[] = [];
+    const transport: Transport = async (url, s) => { vus.push(/titles=([^&]*)/.exec(url)?.[1] ?? ''); return reponseOk(url, s); };
+    const p = creerPlanificateur({ chargerCache: async () => cacheVide(), surCache: () => undefined, attendre: sansPause, transport });
+    p.demander(['F1', 'F2', 'F3'], true);
+    p.demander(['A', 'F3']);
+    await attendreFin(p);
+    const ordre = vus.filter((t) => t !== '');
+    // La liste (A, puis F3 repris de la file de fond) précède tout le fond (F1, F2).
+    expect(ordre.slice(0, 4)).toEqual(['A', 'F3', 'F1', 'F2']);
+    expect(p.etat().fond).toBe(0);
+  });
+
+  it('annuler ne coupe pas la requête de fond en vol ni la file de fond', async () => {
+    const signaux: boolean[] = [];
+    let liberer: () => void = () => undefined;
+    const porte = new Promise<void>((r) => { liberer = r; });
+    let premier = true;
+    const vus: string[] = [];
+    const transport: Transport = async (url, s) => {
+      vus.push(/titles=([^&]*)/.exec(url)?.[1] ?? '');
+      if (premier) { premier = false; await porte; signaux.push(s.aborted); }
+      return reponseOk(url, s);
+    };
+    const p = creerPlanificateur({ chargerCache: async () => cacheVide(), surCache: () => undefined, attendre: sansPause, transport });
+    p.demander(['F1', 'F2'], true);
+    for (let i = 0; i < 20 && vus.length === 0; i++) await new Promise((r) => setTimeout(r, 1));
+    p.annuler();
+    liberer();
+    await attendreFin(p);
+    expect(signaux).toEqual([false]);
+    expect(vus.filter((t) => t !== '')).toEqual(['F1', 'F2']);
+  });
+
   it('reste suspendu après un 429, même si on redemande', async () => {
     let appels = 0;
     const transport: Transport = async () => { appels++; return { status: 429, json: async () => ({}) }; };
@@ -359,5 +393,14 @@ describe('cache calculé avant le filtre des noms propres', () => {
     expect(titresAVerifier(['Noir'], ancien, 2_000)).toEqual(['Noir']);
     const neuf = ajouterEntree(cacheVide(), 'Noir', ['train'], 1_000, false, SIG);
     expect(titresAVerifier(['Noir'], neuf, 2_000)).toEqual([]);
+  });
+});
+
+describe('règles par catégories et classes Wikidata (classement automatique)', () => {
+  it('reconnaît une spécialité culinaire, une moto, un camion, un romancier', () => {
+    expect(themesDepuisWikidata(['spécialité culinaire espagnole'])).toContain('gastronomie');
+    expect(themesDepuisCategories(['Motocyclette Honda'])).toContain('moto');
+    expect(themesDepuisCategories(['Camion électrique'])).toContain('camion');
+    expect(themesDepuisCategories(['Romancier français du XIXe siècle'])).toContain('litterature');
   });
 });

@@ -1,0 +1,49 @@
+import React, { useEffect, useSyncExternalStore } from 'react';
+import type { Carte } from '../lib/collection';
+import { sansThemeLocal } from '../lib/themes';
+import type { CacheWikipedia } from '../lib/wikipedia';
+import { definirRappelCache, lePlanificateur } from './planificateurWikipedia';
+
+interface Props {
+  cartes: readonly Carte[];
+  prete: boolean;
+  onCache: (cache: CacheWikipedia) => void;
+}
+
+const NB = ' ';
+
+/**
+ * Lecture de fond (Alexis, 2026-11-15 : classement automatique, sans clé) : tant que la page de gestion est ouverte, les
+ * titres de **toutes** les cartes sans thème fiable passent par la file Wikipédia/Wikidata, après ceux de la liste affichée.
+ * Même cadence (une requête par seconde), mêmes arrêts, même cache de 30 jours. Une ligne d'état, visible sur tous les onglets,
+ * annonce la lecture en cours ou sa suspension.
+ */
+const VerificationFond: React.FC<Props> = ({ cartes, prete, onCache }) => {
+  const file = lePlanificateur();
+  const etat = useSyncExternalStore(file.abonner, file.etat);
+
+  useEffect(() => {
+    definirRappelCache(onCache);
+  }, [onCache]);
+
+  useEffect(() => {
+    if (!prete) return;
+    const titres = [...new Set(cartes.filter(sansThemeLocal).map((c) => c.titre))];
+    if (titres.length > 0) file.demander(titres, true);
+  }, [cartes, prete, file]);
+
+  // Le décompte change chaque seconde : il n'est pas annoncé. Seuls le début, la suspension et la fin le sont (zone séparée).
+  const actif = etat.suspendue === null && etat.fond > 0;
+  return (
+    <>
+      <p className="mt-2 text-sm text-muted" hidden={!actif && etat.suspendue === null} data-testid="verification-fond">
+        {etat.suspendue ?? `Lecture en arrière-plan de Wikipédia et Wikidata pour les cartes sans thème${NB}: ${etat.fond.toLocaleString('fr-FR')} restantes.`}
+      </p>
+      <p className="sr-only" aria-live="polite">
+        {etat.suspendue === null ? (actif ? 'Lecture en arrière-plan des cartes sans thème en cours.' : '') : etat.suspendue}
+      </p>
+    </>
+  );
+};
+
+export default VerificationFond;
