@@ -9,11 +9,28 @@ const transportReel: TransportIA = (url, init, signal) => fetch(url, { method: '
 
 export type RaisonArretIA = 'manuel' | 'code-http' | 'echecs';
 
+/** Texte d’erreur affichable : sans clé (ni la clé saisie, ni rien qui ressemble à « sk-ant-… »), sur une ligne, tronqué. */
+export function assainirDetail(brut: string, cle: string): string {
+  let t = brut.replace(/\s+/g, ' ').trim();
+  if (cle.length >= 4) t = t.split(cle).join('[clé]');
+  return t.replace(/sk-ant-[\w-]+/gi, '[clé]').slice(0, 200);
+}
+
+/** Type et message d’une réponse d’erreur de l’API (`{"error":{"type":…,"message":…}}`), sinon chaîne vide. */
+function detailApi(corps: unknown): string {
+  const e = typeof corps === 'object' && corps !== null ? (corps as Record<string, unknown>)['error'] : null;
+  if (typeof e !== 'object' || e === null) return '';
+  const { type, message } = e as Record<string, unknown>;
+  return [typeof type === 'string' ? type : '', typeof message === 'string' ? message : ''].filter(Boolean).join(' : ');
+}
+
 export interface ResultatClassement {
   /** Cartes dont la réponse a été lue et mise en cache (thèmes vides compris). */
   lues: number;
   arret: RaisonArretIA | null;
   codeHttp: number | null;
+  /** Dernière erreur lisible (code, type et message de l’API ou erreur réseau), sans clé. */
+  detail: string | null;
   cache: CacheIA;
 }
 
@@ -31,7 +48,8 @@ export interface OptionsClassement {
 
 /** Une requête à la fois, une demi-seconde entre deux. */
 export const PAUSE_IA_MS = 500;
-const MAX_ECHECS = 3;
+/** Échecs d’affilée tolérés (réponse mal formée, erreur réseau ou serveur) : le lot en cause est sauté, la suite continue. */
+const MAX_ECHECS = 5;
 
 const attendreReel = (ms: number, signal: AbortSignal): Promise<void> =>
   new Promise((resolve) => {
@@ -44,7 +62,8 @@ export async function classerCartes(options: OptionsClassement): Promise<Resulta
   let cache = options.cache;
   let lues = 0;
   let echecs = 0;
-  const fini = (arret: RaisonArretIA | null, codeHttp: number | null): ResultatClassement => ({ lues, arret, codeHttp, cache });
+  let detail: string | null = null;
+  const fini = (arret: RaisonArretIA | null, codeHttp: number | null): ResultatClassement => ({ lues, arret, codeHttp, detail, cache });
   for (const lot of decouperEnLotsIA(cartes)) {
     if (signal.aborted) return fini('manuel', null);
     let reponse;
@@ -54,22 +73,25 @@ export async function classerCartes(options: OptionsClassement): Promise<Resulta
         { headers: { 'x-api-key': cle, 'anthropic-version': VERSION_API_IA, 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify(corpsRequete(lot)) },
         signal,
       );
-    } catch {
+    } catch (e) {
       if (signal.aborted) return fini('manuel', null);
+      detail = assainirDetail(`Requête impossible (${e instanceof Error ? `${e.name} : ${e.message}` : 'erreur réseau'})`, cle);
       if (++echecs >= MAX_ECHECS) return fini('echecs', null);
       continue;
     }
+    let corps: unknown;
+    try {
+      corps = await reponse.json();
+    } catch {
+      corps = null;
+    }
+    if (reponse.status !== 200) detail = assainirDetail(`HTTP ${reponse.status}${detailApi(corps) ? ` — ${detailApi(corps)}` : ''}`, cle);
     // Clé refusée, accès interdit, limite de débit ou crédit épuisé : inutile d’insister.
     if (reponse.status === 401 || reponse.status === 403 || reponse.status === 429 || reponse.status === 402) return fini('code-http', reponse.status);
-    let corps: unknown = null;
-    if (reponse.status === 200) {
-      try {
-        corps = await reponse.json();
-      } catch {
-        corps = null;
-      }
-    }
+    // Autre refus 4xx (400, 404, 413…) : la requête elle-même est refusée, la réessayer serait inutile.
+    if (reponse.status >= 400 && reponse.status < 500) return fini('code-http', reponse.status);
     const resultats = reponse.status === 200 ? lireReponseIA(corps, lot) : new Map<string, string[]>();
+    if (reponse.status === 200 && resultats.size === 0) detail = 'Réponse reçue mais inexploitable (JSON attendu absent ou invalide).';
     if (resultats.size === 0) {
       if (++echecs >= MAX_ECHECS) return fini('echecs', reponse.status === 200 ? null : reponse.status);
     } else {
@@ -80,5 +102,6 @@ export async function classerCartes(options: OptionsClassement): Promise<Resulta
     }
     await attendre(PAUSE_IA_MS, signal);
   }
-  return fini(null, null);
+  // Aucun lot lu alors qu’il y en avait à lire : ce n’est pas un succès, l’échec est annoncé avec son détail.
+  return lues === 0 && echecs > 0 ? fini('echecs', null) : fini(null, null);
 }
