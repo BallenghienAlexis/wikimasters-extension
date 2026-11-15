@@ -7,7 +7,7 @@ export type TransportIA = (url: string, init: { headers: Record<string, string>;
 
 const transportReel: TransportIA = (url, init, signal) => fetch(url, { method: 'POST', headers: init.headers, body: init.body, credentials: 'omit', redirect: 'error', signal });
 
-export type RaisonArretIA = 'manuel' | 'code-http' | 'echecs';
+export type RaisonArretIA = 'manuel' | 'code-http' | 'echecs' | 'aucune-lue';
 
 /** Texte d’erreur affichable : sans clé (ni la clé saisie, ni rien qui ressemble à « sk-ant-… »), sur une ligne, tronqué. */
 export function assainirDetail(brut: string, cle: string): string {
@@ -29,6 +29,8 @@ export interface ResultatClassement {
   lues: number;
   arret: RaisonArretIA | null;
   codeHttp: number | null;
+  /** Lots sautés (erreur réseau, serveur ou réponse inexploitable) pendant l’exécution. */
+  sautes: number;
   /** Dernière erreur lisible (code, type et message de l’API ou erreur réseau), sans clé. */
   detail: string | null;
   cache: CacheIA;
@@ -63,7 +65,8 @@ export async function classerCartes(options: OptionsClassement): Promise<Resulta
   let lues = 0;
   let echecs = 0;
   let detail: string | null = null;
-  const fini = (arret: RaisonArretIA | null, codeHttp: number | null): ResultatClassement => ({ lues, arret, codeHttp, detail, cache });
+  let sautes = 0;
+  const fini = (arret: RaisonArretIA | null, codeHttp: number | null): ResultatClassement => ({ lues, arret, codeHttp, sautes, detail, cache });
   for (const lot of decouperEnLotsIA(cartes)) {
     if (signal.aborted) return fini('manuel', null);
     let reponse;
@@ -76,7 +79,9 @@ export async function classerCartes(options: OptionsClassement): Promise<Resulta
     } catch (e) {
       if (signal.aborted) return fini('manuel', null);
       detail = assainirDetail(`Requête impossible (${e instanceof Error ? `${e.name} : ${e.message}` : 'erreur réseau'})`, cle);
+      sautes++;
       if (++echecs >= MAX_ECHECS) return fini('echecs', null);
+      await attendre(PAUSE_IA_MS, signal);
       continue;
     }
     let corps: unknown;
@@ -93,6 +98,7 @@ export async function classerCartes(options: OptionsClassement): Promise<Resulta
     const resultats = reponse.status === 200 ? lireReponseIA(corps, lot) : new Map<string, string[]>();
     if (reponse.status === 200 && resultats.size === 0) detail = 'Réponse reçue mais inexploitable (JSON attendu absent ou invalide).';
     if (resultats.size === 0) {
+      sautes++;
       if (++echecs >= MAX_ECHECS) return fini('echecs', reponse.status === 200 ? null : reponse.status);
     } else {
       echecs = 0;
@@ -103,5 +109,5 @@ export async function classerCartes(options: OptionsClassement): Promise<Resulta
     await attendre(PAUSE_IA_MS, signal);
   }
   // Aucun lot lu alors qu’il y en avait à lire : ce n’est pas un succès, l’échec est annoncé avec son détail.
-  return lues === 0 && echecs > 0 ? fini('echecs', null) : fini(null, null);
+  return lues === 0 && echecs > 0 ? fini('aucune-lue', null) : fini(null, null);
 }

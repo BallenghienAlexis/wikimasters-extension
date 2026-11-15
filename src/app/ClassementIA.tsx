@@ -18,6 +18,7 @@ const RAISONS: Record<string, string> = {
   manuel: 'Arrêté.',
   'code-http': 'Le service a refusé la demande.',
   echecs: 'Cinq échecs d’affilée : arrêt.',
+  'aucune-lue': 'Aucune réponse exploitable : arrêt.',
 };
 
 /**
@@ -51,7 +52,7 @@ const ClassementIA: React.FC<Props> = ({ cartes, cache, onCache }) => {
         setEtat(`Classement en cours${NB}: ${format(lues)} sur ${format(aClasser.length)}`);
       },
     })
-      .then((r) => setEtat(`${format(r.lues)} carte${r.lues > 1 ? 's' : ''} classée${r.lues > 1 ? 's' : ''}.${r.arret ? ` ${RAISONS[r.arret] ?? ''}` : ''}${r.arret && r.arret !== 'manuel' && r.detail ? ` Détail${NB}: ${r.detail}` : ''}`))
+      .then((r) => setEtat(`${format(r.lues)} carte${r.lues > 1 ? 's' : ''} classée${r.lues > 1 ? 's' : ''}.${r.sautes > 0 ? ` ${r.sautes} lot${r.sautes > 1 ? 's' : ''} sauté${r.sautes > 1 ? 's' : ''}.` : ''}${r.arret ? ` ${RAISONS[r.arret] ?? ''}` : ''}${(r.arret !== 'manuel' && r.detail && (r.arret || r.sautes > 0)) ? ` Détail${NB}: ${r.detail}` : ''}`))
       .catch(() => setEtat('Le classement a échoué.'))
       .finally(() => {
         setEnCours(false);
