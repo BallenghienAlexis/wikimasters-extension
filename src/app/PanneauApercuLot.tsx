@@ -180,8 +180,8 @@ const PanneauApercuLot: React.FC<Props> = ({
     };
   }, []);
   // Choix manuels (vente, défausse) : préremplis par les étiquettes du site tant que le joueur n’a rien touché.
-  const [choixManuels, setChoixManuels] = useState<Choix | null>(null);
-  const choix = useMemo<Choix>(() => choixManuels ?? choixInitial(collection.cartes), [choixManuels, collection.cartes]);
+  // Fixé au montage : une synchro pendant l’aperçu n’ajoute aucune enchère sans geste du joueur.
+  const [choix, setChoixManuels] = useState<Choix>(() => choixInitial(collection.cartes));
   const choisir = (idCarte: string, c: ChoixCarte, exemplaires: number): void =>
     setChoixManuels(() => {
       const m = new Map(choix);

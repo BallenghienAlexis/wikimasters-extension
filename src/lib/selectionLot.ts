@@ -73,7 +73,8 @@ export function precocher(cartes: readonly Carte[], preferences: Preferences, ac
     if (preferences.mesThemes.some((t) => themes.includes(t))) continue
     if (amisConcernes(themes, preferences.amis).length > 0 || c.ami !== null) continue
     if (c.valeurMarchande === null) continue
-    if (c.valeurMarchande <= plafond) m.set(c.id, { choix: 'defausser', exemplaires: Math.min(c.quantite, c.idsSite?.length ?? 1) })
+    // Défausse définitive : on garde un exemplaire quand la carte est en plusieurs (les doublons seulement).
+    if (c.valeurMarchande <= plafond) m.set(c.id, { choix: 'defausser', exemplaires: Math.max(1, Math.min(c.quantite - 1, (c.idsSite?.length ?? 1) - 1)) })
     else m.set(c.id, { choix: 'vendre', exemplaires: 1 })
   }
   return m
