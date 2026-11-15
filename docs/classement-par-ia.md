@@ -35,6 +35,7 @@ rock : Rock
 poprock : Pop Rock
 pop : Pop
 metal : Métal
+metalcore : Metalcore
 grunge : Grunge
 jazz : Jazz
 techno : Techno
@@ -46,6 +47,7 @@ nazis : Nazis
 politique : Politique
 royaute : Royauté
 sciences : Sciences
+physique : Physique
 espace : Espace
 sante : Santé
 technologie : Technologies
