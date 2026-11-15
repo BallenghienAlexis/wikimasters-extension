@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Action, ResultatAction } from '../../src/lib/actions';
-import { creerFile, MAX_REFUS_CARTE_CONSECUTIFS, MAX_REFUS_CARTE_PAR_LOT, type DependancesFile, type Horloge } from '../../src/lib/file';
+import { CAUSE_VERIFICATION_HUMAINE, type Action, type ResultatAction } from '../../src/lib/actions';
+import { creerFile, refusParCarte, MAX_REFUS_CARTE_CONSECUTIFS, MAX_REFUS_CARTE_PAR_LOT, type DependancesFile, type Horloge } from '../../src/lib/file';
 
 const OK: ResultatAction = { classe: 'reussie', codeHttp: 200, cause: 'ok' };
 const echec = (codeHttp = 500): ResultatAction => ({ classe: 'echec', codeHttp, cause: 'échec' });
@@ -732,3 +732,11 @@ describe('parallélisme (poses et retraits, décision du 2026-11-12)', () => {
     expect(f.etat()).toMatchObject({ etat: 'arretee', raison: 'echecs' });
   });
 });
+
+describe('refusParCarte : vérification anti-bot (Alexis, 2026-11-15)', () => {
+  const enchere: Action = { type: 'enchere', idCarte: 'a', idExemplaire: 'e', prix: 5 }
+  it('un 403 de vérification humaine n’est jamais un refus par carte', () => {
+    expect(refusParCarte(enchere, 403)).toBe(true)
+    expect(refusParCarte(enchere, 403, CAUSE_VERIFICATION_HUMAINE)).toBe(false)
+  })
+})

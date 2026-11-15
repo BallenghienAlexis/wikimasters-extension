@@ -124,6 +124,18 @@ export interface Lot {
   ecartees: CarteEcartee[]
 }
 
+/** Code que le site renvoie avec un 403 quand il exige une vérification humaine (anti-bot) avant d’accepter l’action. */
+export const CODE_VERIFICATION_HUMAINE = 'human_verification_required'
+/** Cause (libellé fixe) d’un refus par vérification anti-bot : ce n’est ni un exemplaire indisponible ni une session refusée. */
+export const CAUSE_VERIFICATION_HUMAINE = 'vérification anti-bot requise'
+/** Vrai si la ligne de diagnostic d’un refus porte le code de vérification humaine du site. */
+export const estVerificationHumaine = (diagnostic: string | null | undefined): boolean =>
+  typeof diagnostic === 'string' && diagnostic.includes(CODE_VERIFICATION_HUMAINE)
+
+/** Vrai si la ligne de diagnostic d’un 409 est la limite d’enchères actives du site (« Limite de 5 enchères actives atteinte »). */
+export const estLimiteEncheres = (diagnostic: string | null | undefined): boolean =>
+  typeof diagnostic === 'string' && /Limite de \d+ enchères? actives?/i.test(diagnostic)
+
 /** Résultat d’une action : classe, code HTTP éventuel et cause en libellé fixe. */
 export interface ResultatAction {
   classe: 'reussie' | 'echec' | 'arret' | 'inconnu'

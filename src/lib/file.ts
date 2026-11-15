@@ -13,7 +13,7 @@
  * requête dont le résultat est inconnu.
  */
 
-import { CODES_CARTE_INDISPONIBLE, type Action, type EtatExecution, type FamilleLot, type LotExecution, type ResultatAction } from './actions'
+import { CAUSE_VERIFICATION_HUMAINE, CODES_CARTE_INDISPONIBLE, type Action, type EtatExecution, type FamilleLot, type LotExecution, type ResultatAction } from './actions'
 import { decouperEnLots, familleDe } from './familles'
 
 /** Intervalle minimal entre deux débuts de requête. */
@@ -40,7 +40,8 @@ export const MAX_REFUS_CARTE_CONSECUTIFS = 10
 /** Plafond de refus par carte sur tout un lot, qu’un succès intercalé ne remet jamais à zéro. */
 export const MAX_REFUS_CARTE_PAR_LOT = 50
 const TYPES_PAR_EXEMPLAIRE: readonly string[] = ['pose-etiquette', 'retrait-etiquette', 'enchere', 'defausse', 'favori']
-export const refusParCarte = (action: Action, codeHttp: number | null): boolean =>
+export const refusParCarte = (action: Action, codeHttp: number | null, cause?: string): boolean =>
+  cause !== CAUSE_VERIFICATION_HUMAINE &&
   codeHttp !== null && CODES_CARTE_INDISPONIBLE.includes(codeHttp) && TYPES_PAR_EXEMPLAIRE.includes(action.type)
 /** Libellé fixe d’un résultat d’arrêt sans requête émise (jeton absent). */
 export const CAUSE_JETON_ABSENT = 'jeton-absent'
@@ -431,7 +432,7 @@ export function creerFile(deps: DependancesFile): File {
     }
     if (exception) arretApres = new Arret('transport', entree, null)
     else if (resultat.classe === 'echec') {
-      if (refusParCarte(action, resultat.codeHttp)) {
+      if (refusParCarte(action, resultat.codeHttp, resultat.cause)) {
         echecs.refus++
         echecs.refusTotal++
         if (echecs.refus >= MAX_REFUS_CARTE_CONSECUTIFS || echecs.refusTotal >= MAX_REFUS_CARTE_PAR_LOT) { arretApres = new Arret('code-http', entree, resultat.codeHttp); arretApres.seuilRefus = true }

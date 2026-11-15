@@ -135,6 +135,15 @@ describe('reverifierAction : thèmes et échanges (T-105, SC-012, H12)', () => {
     expect(reverifierAction(retrait, coll(c), reg(), config)).toBe('passee')
   })
 
+  it('retrait de « #À classer » sur une carte sans thème fiable : ok (Alexis, 2026-11-15), passé si l’exemplaire n’est plus relié ou le couple absent', () => {
+    const retrait: Action = { type: 'retrait-etiquette', idCarte: 'commune|Chat', idExemplaire: 'ex-1', nomEtiquette: '#À classer' }
+    const registre = reg([{ ex: 'ex-1', nom: '#À classer' }])
+    expect(reverifierAction(retrait, coll(carte({ ...ZZZ })), registre, config)).toBe('ok')
+    expect(reverifierAction(retrait, coll(carte({ ...ZZZ })), reg(), config)).toBe('passee')
+    expect(reverifierAction(retrait, coll(carte({ ...ZZZ, idsSite: ['ex-9'] })), registre, config)).toBe('passee')
+    expect(reverifierAction(retrait, coll(carte({ ...ZZZ, idsSite: null })), registre, config)).toBe('passee')
+  })
+
   it('création : ok tant qu’un exemplaire attend le nom', () => {
     const cr: Action = { type: 'creation-etiquette', idCarte: 'commune|Chat', nomEtiquette: '#À échanger Léa' }
     expect(reverifierAction(cr, coll(carte({ ...chien, })), reg(), amisCfg)).toBe('ok')

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { EntreeJournal, EtatExecutionV2 } from '../lib/actions';
+import { estVerificationHumaine, type EntreeJournal, type EtatExecutionV2 } from '../lib/actions';
 import { familleDe } from '../lib/familles';
 import { enregistrerExecution } from '../lib/stockage';
 import type { RaisonArret } from '../lib/file';
@@ -25,8 +25,8 @@ const LIBELLES_CODE: Record<number, string> = {
   409: 'conflit',
   429: 'trop de requêtes',
 };
-export const libelleReponse = (code: number | null): string =>
-  code === null ? 'aucune réponse exploitable' : `${code} · ${LIBELLES_CODE[code] ?? (code >= 500 ? 'erreur du site' : 'réponse inattendue')}`;
+export const libelleReponse = (code: number | null, verificationHumaine = false): string =>
+  verificationHumaine ? '403 · vérification anti-bot' : code === null ? 'aucune réponse exploitable' : `${code} · ${LIBELLES_CODE[code] ?? (code >= 500 ? 'erreur du site' : 'réponse inattendue')}`;
 
 /** Dernière erreur pour laquelle un saut a déjà été fait pendant la pause : un seul saut, la reprise est différée. */
 let sauteEnPause: string | null = null;
@@ -140,6 +140,10 @@ const PanneauErreur: React.FC<Props> = ({ execution, statut, journal, maintenant
   const nbLot = reste.filter((a) => familleDe(a) === erreur.famille).length;
   const raisonSaut = aSaute && enPause ? 'Une action a déjà été sautée pendant la pause : la reprise est différée.' : null;
 
+  // Refus par vérification anti-bot du site : libellé dédié (le journal garde la ligne de diagnostic).
+  const diagnostic = [...journal].reverse().find((e) => e.idLot === execution.idLot && e.idCarte === erreur.idCarte && e.type === erreur.type && e.resultat === 'echouee')?.diagnostic ?? null;
+  const antiBot = erreur.codeHttp === 403 && estVerificationHumaine(diagnostic);
+
   const executer = async (f: () => Promise<void>, apresSaut: boolean, defaut = 'L’action n’a pas pu être lancée.'): Promise<void> => {
     if (!reserverAction()) return;
     setMessage(null);
@@ -204,8 +208,8 @@ const PanneauErreur: React.FC<Props> = ({ execution, statut, journal, maintenant
         <Ligne intitule="Rang">
           {erreur.rang} / {erreur.totalLot}
         </Ligne>
-        <Ligne intitule="Réponse du site">{libelleReponse(erreur.codeHttp)}</Ligne>
-        <Ligne intitule="Cause probable">{libelleCause(erreur.cause as RaisonArret, erreur.codeHttp)}</Ligne>
+        <Ligne intitule="Réponse du site">{libelleReponse(erreur.codeHttp, antiBot)}</Ligne>
+        <Ligne intitule="Cause probable">{libelleCause(erreur.cause as RaisonArret, erreur.codeHttp, false, diagnostic)}</Ligne>
         <Ligne intitule="Heure">{heureReprise(erreur.le)}</Ligne>
         <Ligne intitule="Déjà fait">
           {erreur.reussies} {erreur.reussies > 1 ? 'réussies' : 'réussie'}

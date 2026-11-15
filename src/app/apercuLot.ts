@@ -1,8 +1,9 @@
 import { CONFIG_PRIX } from '../config/prix';
-import type { Action, CarteEcartee, FamilleLot, RaisonEcart, Registre, TypeAction, TypesDisponibles } from '../lib/actions';
+import { estLimiteEncheres, estVerificationHumaine, type Action, type CarteEcartee, type FamilleLot, type RaisonEcart, type Registre, type TypeAction, type TypesDisponibles } from '../lib/actions';
 import type { Carte, Collection } from '../lib/collection';
 import { familleDe } from '../lib/familles';
 import { raisonPause } from '../lib/reprise';
+import { LIBELLE_LIMITE_ENCHERES, LIBELLE_VERIFICATION_HUMAINE } from '../lib/journal';
 import { CODES_ARRET, CODE_CONFLIT, type EtatFile, type RaisonArret } from '../lib/file';
 import { construireLot, type Config, type LotConstruit } from '../lib/lot';
 import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
@@ -340,8 +341,10 @@ const CAUSES_ARRET: Record<RaisonArret, string> = {
 };
 
 /** Libellé fixe de la cause d’un arrêt (D-41) : jamais le texte d’une réponse du site. */
-export function libelleCause(raison: RaisonArret | null, codeHttp: number | null, deconnecte = false): string {
+export function libelleCause(raison: RaisonArret | null, codeHttp: number | null, deconnecte = false, diagnostic: string | null = null): string {
   if (deconnecte) return 'l’onglet WikiMasters s’est déconnecté';
+  if (raison === 'code-http' && codeHttp === 403 && estVerificationHumaine(diagnostic)) return LIBELLE_VERIFICATION_HUMAINE;
+  if (raison === 'code-http' && codeHttp === CODE_CONFLIT && estLimiteEncheres(diagnostic)) return LIBELLE_LIMITE_ENCHERES;
   if (raison === null) return CAUSES_ARRET.manuel;
   if (raison === 'code-http' && codeHttp === CODE_CONFLIT) return 'réponse 409 : le site signale un conflit (limite d’enchères, carte déjà en vente, identifiant d’exemplaire périmé après une annulation : relancer la synchronisation avant de réessayer)';
   if (raison === 'code-http' && codeHttp === 403) return 'réponse 403 : le site a refusé l’action (exemplaire périmé ou carte en vente, ou session refusée : relancer la synchronisation avant de réessayer, puis se reconnecter à WikiMasters si cela se répète)';

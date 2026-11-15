@@ -127,3 +127,12 @@ describe('diagnostic de refus (Alexis, 2026-11-15)', () => {
     expect(validerJournal(JSON.parse(JSON.stringify(journal)))).toEqual(journal)
   })
 })
+
+describe('libelleHistorique : refus par le site (Alexis, 2026-11-15)', () => {
+  const base = { id: 'x', horodatage: '2026-11-15T19:00:00.000Z', idCarte: 'c', titre: 'T', type: 'enchere', parametre: '50', resultat: 'echouee', idLot: 'l' } as const
+  it('403 anti-bot et 409 de limite d’enchères ont un libellé dédié', () => {
+    expect(libelleHistorique({ ...base, codeHttp: 403, diagnostic: 'POST /api/marketplace → 403 Vérification anti-bot requise. · human_verification_required' })).toContain('Vérification anti-bot du site requise')
+    expect(libelleHistorique({ ...base, codeHttp: 409, diagnostic: 'POST /api/marketplace → 409 Limite de 5 enchères actives atteinte.' })).toContain('Limite de 5 enchères actives atteinte : réessaie')
+    expect(libelleHistorique({ ...base, codeHttp: 403, diagnostic: 'POST /api/marketplace → 403 Interdit' })).toBe('Passée : exemplaire indisponible')
+  })
+})
