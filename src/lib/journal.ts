@@ -38,6 +38,9 @@ export interface ChampsEntree {
 
 type Resultat = EntreeJournal['resultat']
 
+/** Longueur maximale d’une ligne de diagnostic de refus. */
+const MAX_DIAGNOSTIC = 500
+
 const RESULTATS: readonly Resultat[] = ['reussie', 'echouee', 'passee', 'interrompue', 'inconnu', 'en-cours']
 
 const CLES_V1: readonly (keyof EntreeJournal)[] = [
@@ -81,6 +84,7 @@ function copier(e: EntreeJournal): EntreeJournal {
     total: e.total,
     lot: e.lot,
     cause: e.cause,
+    ...(typeof e.diagnostic === 'string' ? { diagnostic: e.diagnostic } : {}),
   }
 }
 
@@ -147,6 +151,7 @@ export function completerEntree(journal: Journal, id: string, resultat: Resultat
     if (e.id !== id || e.resultat !== 'en-cours') return c
     c.resultat = resultatDeClasse(resultat.classe)
     c.codeHttp = codeValide(resultat.codeHttp) ? resultat.codeHttp : null
+    if (typeof resultat.diagnostic === 'string' && resultat.diagnostic !== '') c.diagnostic = tronquer(resultat.diagnostic, MAX_DIAGNOSTIC)
     return c
   })
 }
@@ -174,7 +179,8 @@ function entreeValide(brut: unknown): EntreeJournal | null {
   if (typeof brut !== 'object' || brut === null || Array.isArray(brut)) return null
   const o = brut as Record<string, unknown>
   const cles = Object.keys(o)
-  const v2 = cles.length === CLES_V2.length && CLES_V2.every((k) => Object.hasOwn(o, k))
+  const avecDiag = Object.hasOwn(o, 'diagnostic')
+  const v2 = cles.length === CLES_V2.length + (avecDiag ? 1 : 0) && CLES_V2.every((k) => Object.hasOwn(o, k))
   const v1 = cles.length === CLES_V1.length && CLES_V1.every((k) => Object.hasOwn(o, k))
   if (!v1 && !v2) return null
   const { id, horodatage, idCarte, titre, type, parametre, resultat, codeHttp, idLot } = o
@@ -206,6 +212,11 @@ function entreeValide(brut: unknown): EntreeJournal | null {
     lot = l as FamilleLot | null
     cause = c as CauseJournal | null
   }
+  let diagnostic: string | undefined
+  if (v2 && avecDiag) {
+    if (typeof o.diagnostic !== 'string' || Array.from(o.diagnostic).length > MAX_DIAGNOSTIC) return null
+    diagnostic = o.diagnostic
+  }
   return {
     id,
     horodatage,
@@ -220,6 +231,7 @@ function entreeValide(brut: unknown): EntreeJournal | null {
     total,
     lot,
     cause,
+    ...(diagnostic !== undefined ? { diagnostic } : {}),
   }
 }
 

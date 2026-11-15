@@ -182,7 +182,8 @@ export function validerResultat(brut: unknown): ResultatAction | null {
   if (!enveloppe || !clesAvecId(enveloppe, ['message', 'resultat']) || enveloppe.message !== 'resultat') return null
   const resultat = enObjet(enveloppe.resultat)
   const avecId = resultat !== null && 'idEtiquette' in resultat
-  if (!resultat || !cles(resultat, ['classe', 'codeHttp', 'cause', ...(avecId ? ['idEtiquette'] : [])])) return null
+  const avecDiag = resultat !== null && 'diagnostic' in resultat
+  if (!resultat || !cles(resultat, ['classe', 'codeHttp', 'cause', ...(avecId ? ['idEtiquette'] : []), ...(avecDiag ? ['diagnostic'] : [])])) return null
   const { classe, codeHttp } = resultat
   if (typeof classe !== 'string' || !(CLASSES as readonly string[]).includes(classe)) return null
   if (codeHttp !== null) {
@@ -190,7 +191,12 @@ export function validerResultat(brut: unknown): ResultatAction | null {
   }
   const cause = texte(resultat.cause)
   if (cause === null || !CAUSES_RESULTAT.includes(cause)) return null
-  const base = { classe: classe as ResultatAction['classe'], codeHttp: codeHttp as number | null, cause }
+  let diagnostic: string | undefined
+  if (avecDiag) {
+    if (typeof resultat.diagnostic !== 'string' || resultat.diagnostic.length > 600) return null
+    diagnostic = resultat.diagnostic
+  }
+  const base = { classe: classe as ResultatAction['classe'], codeHttp: codeHttp as number | null, cause, ...(diagnostic !== undefined ? { diagnostic } : {}) }
   if (!avecId) return base
   const idEtiquette = uuid(resultat.idEtiquette)
   return idEtiquette === null ? null : { ...base, idEtiquette }
