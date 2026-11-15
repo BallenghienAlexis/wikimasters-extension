@@ -217,7 +217,21 @@ export const MAX_THEMES_PAR_CARTE = 4;
  * Occurrences de chaque thème trouvé directement (sans parents) dans un texte libre. Un mot-clé écrit avec une majuscule
  * derrière un autre mot à majuscule (« studio Bee Train », « Kōichi Mashimo ») est un nom propre : il ne compte pas.
  */
-function occurrencesDirectes(texte: string, categories = false): Map<string, number> {
+const MEMO_OCCURRENCES = new Map<string, ReadonlyMap<string, number>>();
+const MEMO_MAX = 20_000;
+
+/** Le lot, l’aperçu et les écarts relisent les mêmes textes : le résultat est mémorisé (borné), il n’est jamais modifié par les appelants. */
+function occurrencesDirectes(texte: string, categories = false): ReadonlyMap<string, number> {
+  const cle = `${categories ? 1 : 0}\u0000${texte}`;
+  const memo = MEMO_OCCURRENCES.get(cle);
+  if (memo) return memo;
+  const resultat = calculerOccurrences(texte, categories);
+  if (MEMO_OCCURRENCES.size >= MEMO_MAX) MEMO_OCCURRENCES.clear();
+  MEMO_OCCURRENCES.set(cle, resultat);
+  return resultat;
+}
+
+function calculerOccurrences(texte: string, categories: boolean): Map<string, number> {
   const brut = texte.replaceAll('’', "'");
   const normalise = `${normaliser(brut)} `;
   // Les indices ne correspondent à l’original que si la normalisation conserve la longueur.
