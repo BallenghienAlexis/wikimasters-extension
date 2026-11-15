@@ -298,7 +298,8 @@ test.describe('exécution réelle (site fictif)', () => {
   });
 
   test('Alexis 2026-11-15 : refus 403 → arrêt du lot sans pause de 30 min, Réessayer immédiat', async ({ context, pageCollection: page }) => {
-    await amorcerLot(page, 4);
+    await // Seuil de 10 refus d’affilée : il faut plus de cartes que le seuil.
+    await amorcerLot(page, 14);
     await ouvrirSite(context, reponses(403));
     await lancer(page);
     await allerA(page, 'synchro');
