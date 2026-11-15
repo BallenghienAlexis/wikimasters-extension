@@ -27,7 +27,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'moto', libelle: '#Moto', motifs: ['moto ', 'motos ', 'motocycl'], parents: ['vehicule'] },
   { id: 'camion', libelle: '#Camion', motifs: ['camion', 'poids lourd'], parents: ['vehicule'] },
   { id: 'bus', libelle: '#Bus', motifs: ['autobus', 'autocar', 'bus '], parents: ['vehicule'] },
-  { id: 'tracteur', libelle: '#Tracteur', motifs: ['tracteur(?! de semi)(?! routier)'], parents: ['vehicule'] },
+  { id: 'tracteur', libelle: '#Tracteur', motifs: ['tracteurs?(?! de semi)(?! semi)(?!s? routiers?)'], parents: ['vehicule'] },
   { id: 'train', libelle: '#Train', motifs: ['train ', 'trains ', 'locomotive', 'ferroviaire', 'tramway', 'metro '], parents: ['vehicule'] },
   { id: 'avion', libelle: '#Avion', motifs: ['avion', 'aeronef', 'aviation', 'compagnie aerienne', 'helicoptere'], parents: ['vehicule'] },
   { id: 'bateaux', libelle: '#Bateaux', motifs: ['bateau', 'navire', 'paquebot', 'voilier', 'sous-marin', 'porte-avions', 'croiseur '], parents: ['vehicule'] },
@@ -42,7 +42,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'poprock', libelle: '#Pop Rock', motifs: ['pop rock', 'pop-rock'], parents: ['pop', 'rock', 'musique'] },
   { id: 'pop', libelle: '#Pop', motifs: ['pop '], parents: ['musique'] },
   { id: 'metal', libelle: '#Métal', motifs: ['metal ', 'heavy metal', 'black metal', 'death metal'], parents: ['musique'] },
-  { id: 'metalcore', libelle: '#Metalcore', motifs: ['metalcore'], parents: ['metal', 'musique'] },
+  { id: 'metalcore', libelle: '#Metalcore', motifs: ['metal-?core'], parents: ['metal', 'musique'] },
   { id: 'grunge', libelle: '#Grunge', motifs: ['grunge'], parents: ['rock', 'musique'] },
   { id: 'jazz', libelle: '#Jazz', motifs: ['jazz'], parents: ['musique'] },
   { id: 'techno', libelle: '#Techno', motifs: ['techno ', 'musique electronique'], parents: ['musique'] },
@@ -58,7 +58,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
 
   // Sciences et techniques
   { id: 'sciences', libelle: '#Sciences', motifs: ['physicien', 'physique', 'chimi', 'mathemati', 'biolog', 'scientifique', 'chercheur', 'chercheuse', 'molecule', 'atome', 'spectro', 'theoreme', 'adn', 'geolog', 'roche', 'mineral', 'element chimique'] },
-  { id: 'physique', libelle: '#Physique', motifs: ['physicien', '(?<!activite )(?<!education )(?<!condition )(?<!apparence )(?<!handicap )(?<!personne )physique', 'unites? de planck', 'constantes? fondamentales?'], parents: ['sciences'] },
+  { id: 'physique', libelle: '#Physique', motifs: ['physicien', '(?<!activite )(?<!education )(?<!condition )(?<!apparence )(?<!handicap )(?<!personne )(?<!personnes )(?<!force )(?<!forme )(?<!exercice )(?<!violence )(?<!preparation )physique', 'unites? de planck', 'constantes? fondamentales?'], parents: ['sciences'] },
   { id: 'espace', libelle: '#Espace', motifs: ['planete', 'etoile', 'asteroide', 'galaxie', 'astronom', 'constellation', 'comete', 'systeme solaire', 'cratere', 'nebuleuse'], parents: ['sciences'] },
   { id: 'sante', libelle: '#Santé', motifs: ['medecin', 'maladie', 'trouble', 'psychiatr', 'pedopsychiatr', 'chirurgien', 'syndrome', 'medicament', 'virus'], parents: ['sciences'] },
   { id: 'technologie', libelle: '#Technologies', motifs: ['ingenieur', 'inventeur', 'technologie', 'technique'] },

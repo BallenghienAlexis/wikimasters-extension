@@ -92,6 +92,9 @@ describe('faux positifs des nouveaux motifs', () => {
     expect(themes('condamnée pour les meurtres de deux personnes')).toContain('crime');
     expect(themes('meurtrier ou meurtrière')).toContain('crime');
   });
+  it('metal-core avec trait d’union est du Metalcore', () => {
+    expect(themes('un groupe de metal-core')).toContain('metalcore');
+  });
   it('seule une circonscription électorale est Politique', () => {
     expect(themes('arrondissement de Brest, circonscription administrative')).not.toContain('politique');
     expect(themes('diocèse de Lyon, circonscription ecclésiastique')).not.toContain('politique');
@@ -100,6 +103,7 @@ describe('faux positifs des nouveaux motifs', () => {
   it('« physique » adjectif ne donne pas Physique', () => {
     expect(themes('activité physique')).not.toContain('physique');
     expect(themes('éducation physique et sportive')).not.toContain('physique');
+    expect(themes('force physique, forme physique, violence physique, personnes physiques')).not.toContain('physique');
     expect(themes('la physique quantique')).toContain('physique');
     expect(themes('physicien allemand')).toContain('physique');
   });
@@ -110,6 +114,7 @@ describe('faux positifs des nouveaux motifs', () => {
   });
   it('« tracteur routier » est un camion, pas un tracteur', () => {
     expect(themes('un tracteur routier')).not.toContain('tracteur');
+    expect(themes('des tracteurs routiers, un tracteur semi-remorque')).not.toContain('tracteur');
     expect(themes('un tracteur agricole')).toContain('tracteur');
   });
 });
