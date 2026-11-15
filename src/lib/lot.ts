@@ -53,6 +53,8 @@ export interface Config {
   selection?: SelectionLot
   /** Plafond de valeur de défausse réglé par le joueur ; absent : `PLAFOND_VALEUR_DEFAUSSE` (5). */
   plafondDefausse?: number
+  /** Thèmes gardés du joueur (« Mes thèmes ») : une carte reliée de ces thèmes est mise en favori (Alexis, 2026-11-15). */
+  mesThemes?: readonly string[]
 }
 
 /** Raison pour laquelle une étiquette précise n’est pas posée. */
@@ -127,36 +129,48 @@ export function estACLasser(carte: Carte): boolean {
   return carte.etiquettesSite.includes(ETIQUETTE_A_CLASSER) || themesPrincipaux(carte).length === 0
 }
 
+/**
+ * Carte à garder : elle porte l’un des thèmes gardés du joueur. Elle est alors mise en favori par l’extension
+ * (au lieu d’une étiquette « Garder »). Une carte « à classer » n’est jamais retenue.
+ */
+export function estAGarder(carte: Carte, mesThemes: readonly string[] | undefined): boolean {
+  if (!mesThemes || mesThemes.length === 0 || estACLasser(carte)) return false
+  const themes = themesDeCarte(carte)
+  return mesThemes.some((t) => themes.includes(t))
+}
+
 interface EtiquettesCarte {
   retenues: readonly string[]
   ecartees: readonly string[]
 }
 
-const MEMO_ETIQUETTES = new WeakMap<Carte, { amis: readonly Ami[] | undefined; limite: number | null | undefined; resultat: EtiquettesCarte }>()
+const MEMO_ETIQUETTES = new WeakMap<Carte, { amis: readonly Ami[] | undefined; gardes: readonly string[] | undefined; limite: number | null | undefined; resultat: EtiquettesCarte }>()
 
 /**
  * Étiquettes d’une carte pour chaque exemplaire relié, dans l’ordre de priorité de H5 :
  * étiquettes d’échange (cartes non favorites), puis thèmes. `ecartees` : étiquettes au-delà de la
  * limite du site par exemplaire. Vide pour une carte non reliée.
  */
-export function etiquettesDeCarte(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire'>): EtiquettesCarte {
+export function etiquettesDeCarte(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire' | 'mesThemes'>): EtiquettesCarte {
   // Le lot, l’aperçu et le regroupement demandent trois fois les mêmes étiquettes pour les mêmes cartes
   // (objets immuables) : le résultat est mémorisé par carte, tant que les amis et la limite sont les mêmes.
   const amis = config?.amis
   const limite = config?.limiteParExemplaire
+  const gardes = config?.mesThemes
   const memo = MEMO_ETIQUETTES.get(carte)
-  if (memo && memo.amis === amis && memo.limite === limite) return memo.resultat
+  if (memo && memo.amis === amis && memo.gardes === gardes && memo.limite === limite) return memo.resultat
   const resultat = calculerEtiquettes(carte, config)
-  MEMO_ETIQUETTES.set(carte, { amis, limite, resultat })
+  MEMO_ETIQUETTES.set(carte, { amis, gardes, limite, resultat })
   return resultat
 }
 
-function calculerEtiquettes(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire'>): EtiquettesCarte {
+function calculerEtiquettes(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire' | 'mesThemes'>): EtiquettesCarte {
   // Toute carte reliée reçoit au moins une étiquette de thème, favoris compris (« #À classer » à défaut de thème).
   if (!carte.idsSite) return { retenues: [], ecartees: [] }
   const themes = themesDeCarte(carte)
-  // Étiquettes d’échange : jamais pour un favori (le site le verrouille, et c’est une carte aimée).
-  const prioritaires = carte.favori || estACLasser(carte) ? [] : etiquettesEchange(carte, themes, config?.amis ?? [])
+  // Étiquettes d’échange : jamais pour un favori (le site le verrouille, et c’est une carte aimée), ni pour une carte
+  // de thème gardé qui va être mise en favori (sinon des poses suivies de retraits au lot d’après).
+  const prioritaires = carte.favori || estACLasser(carte) || estAGarder(carte, config?.mesThemes) ? [] : etiquettesEchange(carte, themes, config?.amis ?? [])
   // Les 4 thèmes les mieux établis seulement (Alexis, 2026-11-14) ; les parents ne servent qu’à désigner les amis.
   const precis = themesPrincipaux(carte).map((id) => LIBELLES_THEMES[id] ?? id)
   const libellesThemes = precis.length > 0 ? precis : [ETIQUETTE_A_CLASSER]
@@ -175,7 +189,7 @@ function calculerEtiquettes(carte: Carte, config?: Pick<Config, 'amis' | 'limite
  * Exemplaires reliés d’une carte et étiquettes attendues sur chacun.
  * Vide pour une carte non reliée.
  */
-export function exemplairesAttendus(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire'>): ExemplaireAttendu[] {
+export function exemplairesAttendus(carte: Carte, config?: Pick<Config, 'amis' | 'limiteParExemplaire' | 'mesThemes'>): ExemplaireAttendu[] {
   const { retenues } = etiquettesDeCarte(carte, config)
   if (retenues.length === 0 || !carte.idsSite) return []
   return carte.idsSite.map((idExemplaire) => ({ idExemplaire, etiquettes: [...retenues] }))
@@ -317,6 +331,7 @@ export function construireLot(
   const dispo = (t: TypeAction): boolean => disponibles.has(t)
   const aVendre: Carte[] = []
   const defausses: Action[] = []
+  const favoris: Action[] = []
   const vendre = new Set(config.selection?.vendre ?? [])
   const defausser = config.selection?.defausser ?? {}
 
@@ -358,6 +373,12 @@ export function construireLot(
       continue
     }
     if (vendre.has(c.id)) aVendre.push(c)
+
+    // Mise en favori (Alexis, 2026-11-15) : un seul exemplaire par carte, jamais pour une carte déjà favorite
+    // ni pour une carte choisie à la main pour la vente. Jamais l’inverse (aucun défavori).
+    if (!c.favori && !vendre.has(c.id) && c.idsSite.length > 0 && dispo('favori') && estAGarder(c, config.mesThemes)) {
+      favoris.push({ type: 'favori', idCarte: c.id, idExemplaire: c.idsSite[0]! })
+    }
 
     // Étiquettes (SC-007, SC-008). Les anciennes étiquettes « Statut · … » posées par l’extension ne sont plus attendues :
     // elles sont retirées comme toute étiquette du registre qui n’est plus attendue.
@@ -443,7 +464,7 @@ export function construireLot(
   })
 
   return {
-    actions: [...creations, ...retraits, ...poses, ...encheres.actions, ...defausses],
+    actions: [...creations, ...retraits, ...poses, ...encheres.actions, ...defausses, ...favoris],
     ecartees: ecarteesUniques,
     nonPosees,
   }

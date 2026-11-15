@@ -271,7 +271,7 @@ export function libelleHistorique(e: EntreeJournal): string {
   if (
     e.resultat === 'echouee' &&
     (e.codeHttp === 403 || e.codeHttp === 404) &&
-    (e.type === 'pose-etiquette' || e.type === 'retrait-etiquette' || e.type === 'enchere' || e.type === 'defausse')
+    (e.type === 'pose-etiquette' || e.type === 'retrait-etiquette' || e.type === 'enchere' || e.type === 'defausse' || e.type === 'favori')
   ) return 'Passée : exemplaire indisponible'
   return LIBELLE_RESULTAT[e.resultat]
 }

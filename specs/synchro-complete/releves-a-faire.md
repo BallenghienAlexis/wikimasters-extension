@@ -42,3 +42,7 @@ Une session Chrome pilotable sur le PC d’Alexis, onglet connecté à `https://
 - R1 (enchère) : fait. Cookies de même origine suffisent ; `card_id` du corps = identifiant de l'exemplaire (`id` de `my-collection`), relevé le 2026-11-11 au soir sur une mise manuelle (voir `contrat-api.md`).
 - R3 (défausse) : non rejouée en réel, par décision d’Alexis ; l’authentification par cookies est une inférence, à confirmer au premier usage réel (arrêt sur 401/403).
 - R4 (étiquettes) : couvert par T-019 à T-026.
+
+## R6. Mise en favori (Alexis, 2026-11-15)
+- Décision d’Alexis (relayée par le coordinateur, avec son relevé réseau) : l’extension met en favori les cartes de ses thèmes gardés au lieu d’une étiquette « Garder », jamais l’inverse. Risque de bannissement rappelé et assumé.
+- Contrat relevé : `PATCH /rest/v1/user_cards?id=eq.<exemplaire>`, corps `{ "starred": true }`, réponse 204, mêmes en-têtes que les étiquettes (`apikey`, `Authorization`, `Content-Type`, `Content-Profile: public`). Entrée : `src/lib/contrat/favori.ts`. Fait.

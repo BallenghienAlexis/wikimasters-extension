@@ -19,6 +19,7 @@ const LIBELLES_TYPE: Record<TypeAction, string> = {
   'pose-etiquette': 'Étiquette',
   enchere: 'Mettre aux enchères',
   defausse: 'Défausser',
+  favori: 'Mettre en favori',
   'suppression-etiquette': 'Suppression d’étiquette',
 };
 
@@ -29,6 +30,7 @@ const CLASSES_TYPE: Record<TypeAction, string> = {
   'pose-etiquette': 'text-echanger',
   enchere: 'text-vendre',
   defausse: 'text-defausser',
+  favori: 'text-garder',
   'suppression-etiquette': 'text-defausser',
 };
 

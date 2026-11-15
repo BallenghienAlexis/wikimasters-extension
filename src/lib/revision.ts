@@ -11,7 +11,7 @@ import {
   retirerIdSite,
   type Collection,
 } from './collection'
-import { estACLasser, exemplairesAttendus, type Config } from './lot'
+import { estAGarder, estACLasser, exemplairesAttendus, type Config } from './lot'
 import { plafondDefausse, prixDepart } from './tri'
 import { enregistrerEtiquette, poserCouple, purgerCarte, purgerExemplaire, retirerCouple, supprimerEtiquetteDuRegistre } from './registre'
 
@@ -53,6 +53,11 @@ export function reverifierAction(
       if (carte.favori || estACLasser(carte) || carte.quantite < 1 || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
       return typeof carte.valeurMarchande === 'number' && carte.valeurMarchande <= plafondDefausse({ plafondDefausse: config.plafondDefausse }) ? 'ok' : 'passee'
     }
+    case 'favori': {
+      // Jamais déjà favorite, ni à classer ; le thème gardé doit toujours correspondre.
+      if (carte.favori || estACLasser(carte) || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
+      return estAGarder(carte, config.mesThemes) ? 'ok' : 'passee'
+    }
     case 'creation-etiquette':
       return exemplairesAttendus(carte, config).some((e) => e.etiquettes.includes(action.nomEtiquette)) ? 'ok' : 'passee'
     case 'pose-etiquette': {
@@ -88,6 +93,12 @@ export function appliquerResultat(
       return { collection, registre: supprimerEtiquetteDuRegistre(registre, action.nomEtiquette) }
     case 'enchere':
       return { collection, registre }
+    case 'favori':
+      if (!carte) return { collection, registre }
+      return {
+        collection: { ...collection, cartes: collection.cartes.map((c) => (c.id === carte.id ? { ...c, favori: true } : c)) },
+        registre,
+      }
     case 'defausse': {
       if (!carte) return { collection, registre }
       const quantite = Math.max(0, carte.quantite - 1)
@@ -124,7 +135,7 @@ export function appliquerResultat(
  * est gardée mais déliée du site (`idsSite` nul). Actions sans exemplaire : rien.
  */
 export function appliquerIndisponible(collection: Collection, registre: Registre, action: Action): EtatLocal {
-  if (action.type !== 'pose-etiquette' && action.type !== 'retrait-etiquette' && action.type !== 'enchere' && action.type !== 'defausse') {
+  if (action.type !== 'pose-etiquette' && action.type !== 'retrait-etiquette' && action.type !== 'enchere' && action.type !== 'defausse' && action.type !== 'favori') {
     return { collection, registre }
   }
   const carte = collection.cartes.find((c) => c.id === action.idCarte)

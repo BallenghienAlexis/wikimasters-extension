@@ -163,6 +163,11 @@ export function validerOrdre(brut: unknown): Action | null {
       if (idCarte !== ID_CARTE_ETIQUETTES) return null
       return { type: 'suppression-etiquette', idCarte, nomEtiquette, idEtiquette }
     }
+    case 'favori': {
+      const idExemplaire = texte(ordre.idExemplaire)
+      if (!cles(ordre, ['type', 'idCarte', 'idExemplaire']) || idExemplaire === null) return null
+      return { type: 'favori', idCarte, idExemplaire }
+    }
     case 'defausse': {
       const idExemplaire = texte(ordre.idExemplaire)
       if (!cles(ordre, ['type', 'idCarte', 'idExemplaire']) || idExemplaire === null) return null
