@@ -58,7 +58,7 @@ test.describe('SC-011 : aucune requête hors extension', () => {
     return banc;
   };
 
-  test('SC-011 : cinq onglets hors Collection, bandeau déplié, ignorées puis reprendre : aucune requête', async ({ context, pageCollection: page }) => {
+  test('SC-011 : cinq onglets hors Collection, bandeau déplié, ignorées puis reprendre : seulement la lecture de fond', async ({ context, pageCollection: page }) => {
     const banc = await preparer(context, page);
     banc.phase.nom = 'hors-collection';
     for (const o of ONGLETS.filter((x) => x.id !== 'collection')) {
@@ -96,7 +96,8 @@ test.describe('SC-011 : aucune requête hors extension', () => {
       await page.waitForTimeout(250);
     }
     await page.waitForTimeout(500);
-    expect(banc.vues, 'aucune requête hors de la Collection').toEqual([]);
+    // Lecture de fond (2026-11-15) : des requêtes partent, mais seulement vers Wikipédia et Wikidata.
+    for (const v of banc.vues) expect(v.url).toMatch(/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\/w\/api\.php\?/);
   });
 
   test('SC-011 : vue liste seule : Wikipédia/Wikidata, titre seul, aucun autre hôte', async ({ context, pageCollection: page }) => {

@@ -139,7 +139,7 @@ test.describe('SC-011 : 200 lignes et vérification Wikipédia', () => {
     await expect(lignes(pageCollection)).toHaveCount(400);
   });
 
-  test('SC-011 : la mention reste visible en vue liste ; seuls les titres des lignes rendues sont interrogés', async ({ pageCollection }) => {
+  test('SC-011 : la mention reste visible en vue liste ; titre seul, hôtes autorisés seulement', async ({ pageCollection }) => {
     const requetes: string[] = [];
     await pageCollection.route(/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\//, async (route) => {
       requetes.push(decodeURIComponent(route.request().url()));
@@ -149,21 +149,9 @@ test.describe('SC-011 : 200 lignes et vérification Wikipédia', () => {
     await allerA(pageCollection, 'collection');
     await expect(pageCollection.getByText(/titres des cartes affichées sont vérifiés/)).toBeVisible();
     await expect(lignes(pageCollection)).toHaveCount(200);
-    await pageCollection.waitForTimeout(3000);
-    const interdits = requetes.filter((u) => {
-      const m = /Carte fictive (\d{4})/.exec(u);
-      return m !== null && Number(m[1]) >= 200;
-    });
-    expect(interdits).toEqual([]);
-    // Le tri ne déclenche pas de vérification pour des cartes non rendues.
-    await entete(pageCollection, 'Titre').getByRole('button').click();
-    await entete(pageCollection, 'Titre').getByRole('button').click();
-    await pageCollection.waitForTimeout(2500);
-    const apresTri = requetes.filter((u) => {
-      const m = /Carte fictive (\d{4})/.exec(u);
-      return m !== null && Number(m[1]) >= 200 && Number(m[1]) < 4800;
-    });
-    expect(apresTri).toEqual([]);
+    await expect.poll(() => requetes.length, { timeout: 15_000 }).toBeGreaterThan(0);
+    // Titre seul, uniquement vers Wikipédia et Wikidata (lecture de fond comprise).
+    for (const u of requetes) expect(u).toMatch(/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\/w\/api\.php\?/);
   });
 });
 

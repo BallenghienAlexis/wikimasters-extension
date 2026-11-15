@@ -168,7 +168,7 @@ test.describe('SC-009 : largeurs et captures', () => {
 });
 
 test.describe('SC-011 : vérification Wikipédia', () => {
-  test('SC-011 : aucune requête Wikipédia ni Wikidata hors de la vue liste de la Collection', async ({ pageCollection }) => {
+  test('SC-011 : hors de la vue liste, seule la lecture de fond interroge Wikipédia et Wikidata (titre seul)', async ({ pageCollection }) => {
     test.setTimeout(60_000);
     const requetes: string[] = [];
     await pageCollection.route(/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\//, async (route) => {
@@ -180,15 +180,16 @@ test.describe('SC-011 : vérification Wikipédia', () => {
       await allerA(pageCollection, o.id);
       await pageCollection.waitForTimeout(1500);
     }
-    expect(requetes).toEqual([]);
-    // Dans la vue liste de la Collection, les cartes affichées sont vérifiées (titre seul).
+    // Lecture de fond (2026-11-15) : les cartes sans thème sont vérifiées partout, mais seuls ces deux hôtes sont joints.
+    for (const u of requetes) expect(u).toMatch(/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\/w\/api\.php\?/);
+    expect(requetes.length).toBeGreaterThan(0);
+    // Dans la vue liste de la Collection, la mention de vérification reste affichée (titre seul).
     await allerA(pageCollection, 'collection');
-    await expect.poll(() => requetes.length, { timeout: 15_000 }).toBeGreaterThan(0);
     for (const u of requetes) expect(u).toMatch(/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\/w\/api\.php\?/);
     await expect(pageCollection.getByText(/titres des cartes affichées sont vérifiés/i)).toBeVisible();
   });
 
-  test('SC-011 : quitter la Collection arrête de planifier de nouvelles vérifications', async ({ pageCollection }) => {
+  test('SC-011 : quitter la Collection ne coupe pas la lecture de fond, qui garde sa cadence d’une requête par seconde', async ({ pageCollection }) => {
     test.setTimeout(60_000);
     const requetes: string[] = [];
     await pageCollection.route(/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\//, async (route) => {
@@ -200,11 +201,11 @@ test.describe('SC-011 : vérification Wikipédia', () => {
     await expect.poll(() => requetes.length, { timeout: 15_000 }).toBeGreaterThan(0);
     await allerA(pageCollection, 'lots');
     await allerA(pageCollection, 'reglages');
-    // Laisse finir une éventuelle requête en vol, puis le compte ne bouge plus.
+    // La lecture de fond continue, sans dépasser une requête par seconde.
     await pageCollection.waitForTimeout(1500);
-    const fige = requetes.length;
+    const avant = requetes.length;
     await pageCollection.waitForTimeout(3000);
-    expect(requetes.length).toBe(fige);
+    expect(requetes.length - avant).toBeLessThanOrEqual(5);
   });
 });
 

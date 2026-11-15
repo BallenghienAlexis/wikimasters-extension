@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import type { Carte } from '../lib/collection';
-import { cartesAClasser, estimerCout, MODELE_IA, type CacheIA } from '../lib/classificationIA';
+import { ajouterAuCache, cartesAClasser, estimerCout, exporterCartesAClasser, lireImportThemes, MODELE_IA, type CacheIA } from '../lib/classificationIA';
 import { sansThemeLocal } from '../lib/themes';
 import { enregistrerCacheIA } from '../lib/stockage';
 import { classerCartes } from './classerIA';
@@ -35,6 +35,30 @@ const ClassementIA: React.FC<Props> = ({ cartes, cache, onCache }) => {
   const estimation = useMemo(() => estimerCout(aClasser), [aClasser]);
   const dejaFaites = Object.keys(cache.entrees).length;
   const pret = !enCours && aClasser.length > 0 && confirme && cle.trim().length > 0;
+
+  const exporter = (): void => {
+    const url = URL.createObjectURL(new Blob([exporterCartesAClasser(aClasser)], { type: 'application/json' }));
+    const lien = document.createElement('a');
+    lien.href = url;
+    lien.download = 'cartes-sans-theme.json';
+    lien.click();
+    URL.revokeObjectURL(url);
+    setEtat(`${format(aClasser.length)} cartes exportées. Classe-les avec le prompt de docs/classement-par-ia.md puis importe le résultat.`);
+  };
+
+  const importer = async (fichier: File | undefined): Promise<void> => {
+    if (!fichier) return;
+    const lecture = lireImportThemes(await fichier.text(), new Set(aClasser.map((c) => c.titre)));
+    if (lecture.type === 'invalide') return void setEtat(lecture.raison);
+    const nouveau = ajouterAuCache(cache, lecture.resultats);
+    try {
+      await enregistrerCacheIA(nouveau);
+    } catch {
+      return void setEtat('Enregistrement impossible : le stockage est indisponible.');
+    }
+    onCache(nouveau);
+    setEtat(`${format(lecture.resultats.size)} carte${lecture.resultats.size > 1 ? 's' : ''} importée${lecture.resultats.size > 1 ? 's' : ''}${lecture.ignores > 0 ? `, ${format(lecture.ignores)} entrée${lecture.ignores > 1 ? 's' : ''} ignorée${lecture.ignores > 1 ? 's' : ''}` : ''}.`);
+  };
 
   const lancer = (): void => {
     const arret = new AbortController();
@@ -99,6 +123,15 @@ const ClassementIA: React.FC<Props> = ({ cartes, cache, onCache }) => {
             Arrêter
           </button>
         ) : null}
+      </div>
+      <div className="flex flex-wrap items-center gap-2" data-testid="classement-ia-fichier">
+        <button type="button" onClick={exporter} disabled={enCours || aClasser.length === 0} className="rounded border border-line px-3 py-1 disabled:opacity-50" data-testid="classement-ia-exporter">
+          Exporter les cartes sans thème
+        </button>
+        <label className="rounded border border-line px-3 py-1">
+          Importer les thèmes classés
+          <input type="file" accept="application/json,.json" className="sr-only" disabled={enCours} onChange={(e) => { void importer(e.target.files?.[0]); e.target.value = ''; }} aria-label="Fichier des thèmes classés à importer" data-testid="classement-ia-importer" />
+        </label>
       </div>
       <p aria-live="polite" data-testid="classement-ia-etat">{etat}</p>
     </div>

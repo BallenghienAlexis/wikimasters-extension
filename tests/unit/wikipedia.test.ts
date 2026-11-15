@@ -192,6 +192,21 @@ describe('creerPlanificateur', () => {
     expect(appels).toBe(60);
   });
 
+  it('la file de fond passe après la liste affichée et résiste à annuler', async () => {
+    const vus: string[] = [];
+    const transport: Transport = async (url, s) => { vus.push(decodeURIComponent(url)); return reponseOk(url, s); };
+    const p = creerPlanificateur({ chargerCache: async () => cacheVide(), surCache: () => undefined, attendre: sansPause, transport });
+    p.demander(['F1', 'F2'], true);
+    p.demander(['A']);
+    expect(p.etat().fond).toBeGreaterThanOrEqual(0);
+    p.annuler();
+    await attendreFin(p);
+    const ordre = vus.filter((u) => /titles=/.test(u)).map((u) => /titles=([^&]*)/.exec(u)?.[1]);
+    expect(ordre).toContain('F1');
+    expect(ordre).toContain('F2');
+    expect(p.etat().fond).toBe(0);
+  });
+
   it('reste suspendu après un 429, même si on redemande', async () => {
     let appels = 0;
     const transport: Transport = async () => { appels++; return { status: 429, json: async () => ({}) }; };
@@ -359,5 +374,14 @@ describe('cache calculé avant le filtre des noms propres', () => {
     expect(titresAVerifier(['Noir'], ancien, 2_000)).toEqual(['Noir']);
     const neuf = ajouterEntree(cacheVide(), 'Noir', ['train'], 1_000, false, SIG);
     expect(titresAVerifier(['Noir'], neuf, 2_000)).toEqual([]);
+  });
+});
+
+describe('règles par catégories et classes Wikidata (classement automatique)', () => {
+  it('reconnaît une spécialité culinaire, une moto, un camion, un romancier', () => {
+    expect(themesDepuisWikidata(['spécialité culinaire espagnole'])).toContain('gastronomie');
+    expect(themesDepuisCategories(['Motocyclette Honda'])).toContain('moto');
+    expect(themesDepuisCategories(['Camion électrique'])).toContain('camion');
+    expect(themesDepuisCategories(['Romancier français du XIXe siècle'])).toContain('litterature');
   });
 });

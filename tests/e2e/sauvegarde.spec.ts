@@ -39,7 +39,7 @@ test.describe('sauvegarde complète', () => {
     await allerA(pageCollection, 'reglages');
     await ouvrirSauvegarde(pageCollection);
 
-    await pageCollection.locator('input[type="file"]').setInputFiles(fichier);
+    await pageCollection.locator('input[type="file"]:not([data-testid="classement-ia-importer"])').setInputFiles(fichier);
     const apercu = pageCollection.getByTestId('apercu-sauvegarde');
     await expect(apercu).toContainText('4 cartes nouvelles');
     await expect(apercu).toContainText('1 ami ajouté');
@@ -56,7 +56,7 @@ test.describe('sauvegarde complète', () => {
     await chargerCollectionFictive(pageCollection);
     await allerA(pageCollection, 'reglages');
     await ouvrirSauvegarde(pageCollection);
-    await pageCollection.locator('input[type="file"]').setInputFiles({ name: 'faux.json', mimeType: 'application/json', buffer: Buffer.from('{"format":"autre"}') });
+    await pageCollection.locator('input[type="file"]:not([data-testid="classement-ia-importer"])').setInputFiles({ name: 'faux.json', mimeType: 'application/json', buffer: Buffer.from('{"format":"autre"}') });
     await expect(pageCollection.getByRole('alert')).toContainText('Importation refusée');
     await allerA(pageCollection, 'collection');
     await expect(pageCollection.getByTestId('resume')).toContainText('7 exemplaires');
