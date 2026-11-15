@@ -157,3 +157,6 @@ Un amendement daté est en tête de `spec.md`, `spec.refined.md`, `design.md` et
 ## À reprendre (relecture de marketplace/mine avant un lot d’enchères, 2026-11-15)
 - `src/app/pilotageLots.ts` (`limiterAuxPlacesLibres`) : les enchères écartées faute de place ne sont ni journalisées ni annoncées au joueur ; ajouter une ligne d’information (nombre écarté) dans l’onglet Synchro.
 - Pas d’e2e ni de capture dédiés à la relecture (la lecture passe par le site fictif des e2e existants, réponse HTML ignorée) ; ajouter un e2e avec une réponse `marketplace/mine` fictive.
+- (PR #160) `src/app/apercuLot.ts:385` : `AUCUNE_PLACE_ENCHERE` écrit « 5 » en dur, comme `LIBELLE_LIMITE_ENCHERES` (journal.ts) ; reformuler sans le chiffre ou le tirer du relevé.
+- (PR #160) `src/app/pilotageLots.ts:265-275` : le `throw` est rattrapé par son propre `catch` puis relancé selon le préfixe du message ; sortir la décision d’arrêt du `try`. Le chemin « exception de transport » repart aussi sans l’attente de cadence.
+- (PR #160) `tests/unit/pilotage-lots.test.ts` : la pause de 30 min posée par un 401 ou un 429 de la relecture n’existe qu’en mémoire de la page (perdue au rechargement) ; ajouter un test qui fixe ce comportement.
