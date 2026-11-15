@@ -32,11 +32,17 @@ const VerificationFond: React.FC<Props> = ({ cartes, prete, onCache }) => {
     if (titres.length > 0) file.demander(titres, true);
   }, [cartes, prete, file]);
 
-  const texte = etat.suspendue ?? (etat.fond > 0 ? `Lecture en arrière-plan de Wikipédia et Wikidata pour les cartes sans thème${NB}: ${etat.fond.toLocaleString('fr-FR')} restantes.` : null);
-  return texte === null ? null : (
-    <p className="mt-2 text-sm text-muted" aria-live="polite" data-testid="verification-fond">
-      {texte}
-    </p>
+  // Le décompte change chaque seconde : il n'est pas annoncé. Seuls le début, la suspension et la fin le sont (zone séparée).
+  const actif = etat.suspendue === null && etat.fond > 0;
+  return (
+    <>
+      <p className="mt-2 text-sm text-muted" hidden={!actif && etat.suspendue === null} data-testid="verification-fond">
+        {etat.suspendue ?? `Lecture en arrière-plan de Wikipédia et Wikidata pour les cartes sans thème${NB}: ${etat.fond.toLocaleString('fr-FR')} restantes.`}
+      </p>
+      <p className="sr-only" aria-live="polite">
+        {etat.suspendue === null ? (actif ? 'Lecture en arrière-plan des cartes sans thème en cours.' : '') : etat.suspendue}
+      </p>
+    </>
   );
 };
 

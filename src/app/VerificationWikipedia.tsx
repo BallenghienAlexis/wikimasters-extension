@@ -34,7 +34,7 @@ const VerificationWikipedia: React.FC<Props> = ({ titres, onCache }) => {
     <div className="mt-2 text-sm text-muted" data-testid="verification-wikipedia">
       <p>Les titres des cartes affichées sont vérifiés sur Wikipédia pour affiner leurs thèmes (aucune autre donnée n’est envoyée). Ceux des autres cartes sans thème le sont ensuite, en arrière-plan.</p>
       <p aria-live="polite">
-        {etat.suspendue ?? (etat.enCours ? `Vérification en cours${NB}: ${Math.min(etat.faites, etat.total)} sur ${etat.total}` : null)}
+        {etat.suspendue === null && etat.enCours ? `Vérification en cours${NB}: ${Math.min(etat.faites, etat.total)} sur ${etat.total}` : null}
       </p>
     </div>
   );
