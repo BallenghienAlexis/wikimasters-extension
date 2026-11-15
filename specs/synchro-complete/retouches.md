@@ -139,3 +139,4 @@ Un amendement daté est en tête de `spec.md`, `spec.refined.md`, `design.md` et
 - `src/lib/lot.ts` (`calculerEtiquettes` et sélection de vente) : une carte gardée choisie à la main pour la vente perd ses étiquettes d’échange sans recevoir de favori ; sans effet pratique, à aligner ou documenter.
 - `tests/unit/file.test.ts` : ajouter `refusParCarte({ type: 'favori', … }, 403) === true`.
 - Captures aux 3 points de rupture et e2e de l’avertissement « favori » et du libellé « Favoris » (DoD, point 3), à joindre avec les autres captures de la sélection de lot.
+- (PR #153) `src/app/Journal.tsx` : la ligne « Diagnostic » n’a ni test de rendu, ni capture, ni e2e (DoD point 3) ; à joindre avec les captures du lot Favoris.

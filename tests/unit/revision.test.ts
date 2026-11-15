@@ -277,9 +277,15 @@ describe('exemplaire indisponible (403/404 sur une action par exemplaire)', () =
   })
 
   it('les actions suivantes visant cet exemplaire sont ensuite passées par la revérification', () => {
-    const { collection, registre } = appliquerResultat(coll(carte()), reg(), enchere, refus(403))
+    const { collection, registre } = appliquerResultat(coll(carte()), reg(), defausse, refus(403))
     expect(reverifierAction(enchere, collection, registre, config)).toBe('passee')
     expect(reverifierAction(defausse, collection, registre, config)).toBe('passee')
+  })
+
+  it('un 403 sur une enchère ne retire rien (Alexis, 2026-11-15)', () => {
+    const c = coll(carte())
+    expect(appliquerResultat(c, reg(), enchere, refus(403)).collection).toBe(c)
+    expect(appliquerResultat(c, reg(), enchere, refus(404)).collection).toBe(c)
   })
 
   it('exemplaire inconnu, 500 ou action sans exemplaire : rien ne change', () => {

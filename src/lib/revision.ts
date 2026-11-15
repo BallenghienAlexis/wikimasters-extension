@@ -80,7 +80,9 @@ export function appliquerResultat(
   action: Action,
   resultat: ResultatApplicable,
 ): EtatLocal {
-  if (resultat.classe === 'echec' && resultat.codeHttp !== null && CODES_CARTE_INDISPONIBLE.includes(resultat.codeHttp)) {
+  // Une enchère refusée (403) ne prouve pas que l’exemplaire a disparu (Alexis, 2026-11-15 : refus alors que les cartes sont
+  // bien dans sa collection) : rien n’est retiré en local, la synchro relit l’état réel.
+  if (resultat.classe === 'echec' && resultat.codeHttp !== null && CODES_CARTE_INDISPONIBLE.includes(resultat.codeHttp) && action.type !== 'enchere') {
     return appliquerIndisponible(collection, registre, action)
   }
   if (resultat.classe !== 'reussie') return { collection, registre }

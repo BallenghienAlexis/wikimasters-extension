@@ -137,3 +137,15 @@ describe('lot : favori et étiquettes d’échange', () => {
     expect(lot.actions.some((a) => a.type === 'favori')).toBe(false)
   })
 })
+
+describe('enchère refusée en 403 : aucun retrait local', () => {
+  it('N refus 403 sur des enchères ne retirent aucune carte de la collection', () => {
+    const cartes = [1, 2, 3, 4].map((n) => carte({ id: `commune|C${n}`, titre: `C${n}`, idsSite: [`ex-${n}`] }))
+    let etat = { collection: coll(...cartes), registre: registreVide() }
+    for (const c of cartes) {
+      etat = appliquerResultat(etat.collection, etat.registre, { type: 'enchere', idCarte: c.id, idExemplaire: c.idsSite![0]!, prix: 5 }, { classe: 'echec', codeHttp: 403, cause: 'x' })
+    }
+    expect(etat.collection.cartes).toHaveLength(4)
+    expect(etat.collection.cartes.every((c) => c.quantite === 2 && c.idsSite !== null)).toBe(true)
+  })
+})

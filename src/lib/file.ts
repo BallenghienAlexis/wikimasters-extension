@@ -125,7 +125,7 @@ export interface ContexteErreur {
   reussies: number
   /** Autres requêtes du même lot parallèle déjà parties et non réussies. */
   autresEchecsEnVol: number
-  /** Présent (vrai) seulement si l’arrêt vient du seuil de refus par carte : la pause de 30 min s’applique alors. */
+  /** Présent (vrai) seulement si l’arrêt vient du seuil de refus par carte : arrête le lot, sans pause depuis le 2026-11-15. */
   seuilRefus?: true
 }
 

@@ -190,10 +190,14 @@ describe('reseau : enchère et défausse sur l’origine du site', () => {
 
 describe('reseau : conflit 409 de l’enchère', () => {
   const enchere: Action = { type: 'enchere', idCarte: 'R|T', idExemplaire: EX, prix: 25 }
-  it('classe le conflit en libellé fixe, sans recopier le corps', async () => {
+  it('classe le conflit en libellé fixe ; le corps n’est recopié que dans le diagnostic, champs listés seulement', async () => {
     const limite = vi.fn(async () => reponse(409, JSON.stringify({ message: 'Maximum de 5 enchères actives atteint', secret: 'zzz' })))
     const r1 = await creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: ORIGINE, fetchImpl: limite as unknown as typeof fetch })(enchere)
-    expect(r1).toMatchObject({ classe: 'echec', codeHttp: 409, cause: 'limite d’enchères atteinte' })
+    expect(r1.cause).toBe('limite d’enchères atteinte')
+    expect(r1.cause).not.toContain('Maximum')
+    expect(r1.diagnostic).toContain('Maximum de 5 enchères actives atteint')
+    expect(r1.diagnostic).not.toContain('zzz')
+    expect(JSON.stringify(r1)).not.toContain('"secret"')
     const autre = vi.fn(async () => reponse(409, 'oups'))
     const r2 = await creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: ORIGINE, fetchImpl: autre as unknown as typeof fetch })(enchere)
     expect(r2).toMatchObject({ classe: 'echec', codeHttp: 409, cause: 'conflit signalé par le site' })

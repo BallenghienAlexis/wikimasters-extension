@@ -193,7 +193,7 @@ export function validerResultat(brut: unknown): ResultatAction | null {
   if (cause === null || !CAUSES_RESULTAT.includes(cause)) return null
   let diagnostic: string | undefined
   if (avecDiag) {
-    if (typeof resultat.diagnostic !== 'string' || resultat.diagnostic.length > 600) return null
+    if (typeof resultat.diagnostic !== 'string' || Array.from(resultat.diagnostic).length > 500) return null
     diagnostic = resultat.diagnostic
   }
   const base = { classe: classe as ResultatAction['classe'], codeHttp: codeHttp as number | null, cause, ...(diagnostic !== undefined ? { diagnostic } : {}) }
