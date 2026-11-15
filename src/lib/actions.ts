@@ -15,6 +15,7 @@ export const TYPES_ACTION = [
   'pose-etiquette',
   'enchere',
   'defausse',
+  'favori',
   'suppression-etiquette',
 ] as const
 
@@ -64,6 +65,12 @@ export interface ActionDefausse extends ActionBase {
   idExemplaire: string
 }
 
+/** Mise en favori (étoile) d’un exemplaire d’une carte « gardée » (Alexis, 2026-11-15). Jamais l’inverse. */
+export interface ActionFavori extends ActionBase {
+  type: 'favori'
+  idExemplaire: string
+}
+
 /**
  * Suppression d’une étiquette du compte (RPC `delete_tag`, relevé du 2026-11-12). Opération hors carte :
  * `idCarte` vaut toujours `ID_CARTE_ETIQUETTES`. L’identifiant d’étiquette est obligatoire.
@@ -83,6 +90,7 @@ export type Action =
   | ActionPoseEtiquette
   | ActionEnchere
   | ActionDefausse
+  | ActionFavori
   | ActionSuppressionEtiquette
 
 /** Raison pour laquelle une carte (ou une partie de ses exemplaires) est écartée du lot. */
@@ -101,6 +109,8 @@ export type RaisonEcart =
   | 'en-vente-sur-site'
   | 'sans-etiquette-theme'
   | 'sans-theme-fiable'
+  | 'favori-verrouille'
+  | 'a-classer'
 
 export interface CarteEcartee {
   idCarte: string
@@ -122,6 +132,11 @@ export interface ResultatAction {
   cause: string
   /** Identifiant de l’étiquette créée (réponse d’une création), validé avant d’aller au registre. */
   idEtiquette?: string
+  /**
+   * Ligne de diagnostic d’un refus (méthode, chemin, corps envoyé sans secret, code et message du site tronqués),
+   * construite par `reseau.ts` ; jamais de jeton, de cookie ni d’en-tête (Alexis, 2026-11-15).
+   */
+  diagnostic?: string
 }
 
 /**
@@ -148,10 +163,12 @@ export interface EntreeJournal {
   lot?: FamilleLot | null
   /** Cause d’une action passée ou interrompue, en liste fermée ; `null` sinon. */
   cause?: CauseJournal | null
+  /** Diagnostic d’un refus (voir `ResultatAction.diagnostic`) ; absent sinon. */
+  diagnostic?: string | null
 }
 
 /** Familles de lots d’une exécution (v2). */
-export const FAMILLES_LOT = ['etiquettes', 'encheres', 'defausses', 'suppressions', 'lectures'] as const
+export const FAMILLES_LOT = ['etiquettes', 'encheres', 'defausses', 'favoris', 'suppressions', 'lectures'] as const
 export type FamilleLot = (typeof FAMILLES_LOT)[number]
 
 /** Causes d’un journal v2 : raisons d’arrêt de `file.ts`, plus `sautee` et `ignoree`. */

@@ -607,6 +607,9 @@ describe('T-206 D-03 : événements dans le journal', () => {
     const b = banc({ reponse });
     await creerSynchroAuto(b.deps).declencher();
     expect(b.evenements.at(-1)).toMatchObject({ titre: 'Synchronisation automatique : arrêt', parametre: 'lecture incomplète' });
+    // La lecture des ventes (tolérante) n’est jamais présentée comme l’étape en cause.
+    expect(b.statuts.at(-1)).toMatchObject({ etat: 'arret', raison: 'echecs' });
+    expect(b.statuts.at(-1)?.etape).not.toBe('ventes');
   });
 
   it('une erreur d’écriture du journal n’interrompt pas la synchro', async () => {

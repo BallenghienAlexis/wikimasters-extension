@@ -21,6 +21,7 @@ const NOMS_FAMILLE: Record<FamilleLot, string> = {
   etiquettes: 'Étiquettes',
   encheres: 'Enchères',
   defausses: 'Défausses',
+  favoris: 'Favoris',
   suppressions: 'Suppressions d’étiquettes',
 };
 

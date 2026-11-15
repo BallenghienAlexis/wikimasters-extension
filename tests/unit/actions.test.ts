@@ -17,7 +17,7 @@ import {
 type ClesInterdites = 'jeton' | 'token' | 'headers' | 'entetes' | 'cookie' | 'corps' | 'body'
 
 describe('actions : types partagés', () => {
-  it('SC-015 : TYPES_ACTION contient exactement les 6 types', () => {
+  it('SC-015 : TYPES_ACTION contient exactement les 8 types', () => {
     expect([...TYPES_ACTION].sort()).toEqual(
       [
         'lecture',
@@ -26,13 +26,14 @@ describe('actions : types partagés', () => {
         'pose-etiquette',
         'enchere',
         'defausse',
+        'favori',
         'suppression-etiquette',
       ].sort(),
     )
-    expect(new Set(TYPES_ACTION).size).toBe(7)
+    expect(new Set(TYPES_ACTION).size).toBe(8)
   })
 
-  it('SC-015 : TypeAction est l’union des 7 types', () => {
+  it('SC-015 : TypeAction est l’union des 8 types', () => {
     expectTypeOf<TypeAction>().toEqualTypeOf<
       | 'lecture'
       | 'creation-etiquette'
@@ -40,6 +41,7 @@ describe('actions : types partagés', () => {
       | 'pose-etiquette'
       | 'enchere'
       | 'defausse'
+      | 'favori'
       | 'suppression-etiquette'
     >()
     expectTypeOf<(typeof TYPES_ACTION)[number]>().toEqualTypeOf<TypeAction>()
@@ -71,6 +73,8 @@ describe('actions : types partagés', () => {
       | 'en-vente-sur-site'
       | 'sans-etiquette-theme'
       | 'sans-theme-fiable'
+      | 'favori-verrouille'
+      | 'a-classer'
     >()
     expectTypeOf<TypesDisponibles>().toEqualTypeOf<ReadonlySet<TypeAction>>()
     expectTypeOf<EtatExecution>().toBeObject()

@@ -37,32 +37,53 @@ const ok: ResultatAction = { classe: 'reussie', codeHttp: 200, cause: 'ok' }
 const enchere: Action = { type: 'enchere', idCarte: 'commune|Chat', idExemplaire: 'ex-1', prix: 30 }
 const defausse: Action = { type: 'defausse', idCarte: 'commune|Chat', idExemplaire: 'ex-1' }
 
-// Carte au thème reconnu (#Chien).
-const ZZZ = { titre: 'Zzz', description: 'race de chien' }
+// Carte au thème reconnu (#Chien), et carte sans thème fiable (« à classer », jamais étiquetée).
+const CHIEN = { titre: 'Berger allemand', description: 'race de chien' }
+const ZZZ = { titre: 'Zzz', description: '' }
+const ZZZ_CHIEN = { titre: 'Zzz', description: 'race de chien' }
 
 describe('reverifierAction (AC1)', () => {
-  it('enchère et défausse : toujours passées (plus de statut, aucun lot n’en produit)', () => {
-    expect(reverifierAction(enchere, coll(carte()), reg(), config)).toBe('passee')
-    expect(reverifierAction(defausse, coll(carte({ valeurMarchande: 1 })), reg(), config)).toBe('passee')
+  it('enchère : ok si l’exemplaire est relié, le prix inférieur à la valeur et inchangé ; sinon passée', () => {
+    const vendable = carte({ ...CHIEN, valeurMarchande: 100, prixCible: 30 })
+    expect(reverifierAction(enchere, coll(vendable), reg(), config)).toBe('ok')
+    expect(reverifierAction(enchere, coll(carte({ ...CHIEN, valeurMarchande: 100, prixCible: 31 })), reg(), config)).toBe('passee')
+    expect(reverifierAction(enchere, coll(carte({ ...CHIEN, valeurMarchande: 20, prixCible: 30 })), reg(), config)).toBe('passee')
+    expect(reverifierAction(enchere, coll(carte({ ...CHIEN, valeurMarchande: null, prixCible: 30 })), reg(), config)).toBe('passee')
+    expect(reverifierAction(enchere, coll({ ...vendable, favori: true }), reg(), config)).toBe('passee')
+    expect(reverifierAction(enchere, coll({ ...vendable, idsSite: ['ex-2'] }), reg(), config)).toBe('passee')
+    expect(reverifierAction(enchere, coll({ ...vendable, ...ZZZ }), reg(), config)).toBe('passee') // à classer
     expect(reverifierAction(enchere, coll(), reg(), config)).toBe('passee')
+  })
+
+  it('défausse : ok sous le plafond sur un exemplaire relié, jamais pour un favori', () => {
+    expect(reverifierAction(defausse, coll(carte({ ...CHIEN, valeurMarchande: 1 })), reg(), config)).toBe('ok')
+    expect(reverifierAction(defausse, coll(carte({ ...CHIEN, valeurMarchande: 6 })), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll(carte({ ...CHIEN, valeurMarchande: null })), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll(carte({ ...CHIEN, valeurMarchande: 1, favori: true })), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll(carte({ ...CHIEN, valeurMarchande: 1, idsSite: ['ex-2'] })), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll(carte({ ...ZZZ, valeurMarchande: 1 })), reg(), config)).toBe('passee') // à classer
+    expect(reverifierAction(defausse, coll(), reg(), config)).toBe('passee')
   })
 
   it('pose : étiquette de thème et étiquette d’échange', () => {
     const pose: Action = { type: 'pose-etiquette', idCarte: 'commune|Chat', idExemplaire: 'ex-1', nomEtiquette: '#Chien' }
-    expect(reverifierAction(pose, coll(carte(ZZZ)), reg(), config)).toBe('ok')
-    expect(reverifierAction(pose, coll(carte({ ...ZZZ, favori: true })), reg(), config)).toBe('ok')
-    expect(reverifierAction(pose, coll(carte({ ...ZZZ, idsSite: ['ex-2'] })), reg(), config)).toBe('passee')
-    expect(reverifierAction({ ...pose, nomEtiquette: 'Statut · Vendre' }, coll(carte(ZZZ)), reg(), config)).toBe('passee')
+    expect(reverifierAction(pose, coll(carte(ZZZ_CHIEN)), reg(), config)).toBe('ok')
+    expect(reverifierAction(pose, coll(carte(ZZZ)), reg(), config)).toBe('passee') // sans thème fiable : rien à poser
+    expect(reverifierAction(pose, coll(carte({ ...ZZZ_CHIEN, favori: true })), reg(), config)).toBe('ok')
+    expect(reverifierAction(pose, coll(carte({ ...ZZZ_CHIEN, idsSite: ['ex-2'] })), reg(), config)).toBe('passee')
+    expect(reverifierAction({ ...pose, nomEtiquette: 'Statut · Vendre' }, coll(carte(ZZZ_CHIEN)), reg(), config)).toBe('passee')
     const ami: Action = { ...pose, nomEtiquette: '#À échanger Zoé' }
-    expect(reverifierAction(ami, coll(carte({ ...ZZZ, ami: 'Zoé' })), reg(), config)).toBe('ok')
-    expect(reverifierAction(ami, coll(carte({ ...ZZZ, ami: 'Zoé', favori: true })), reg(), config)).toBe('passee')
-    expect(reverifierAction(ami, coll(carte({ ...ZZZ, ami: 'Léa' })), reg(), config)).toBe('passee')
+    expect(reverifierAction(ami, coll(carte({ ...CHIEN, ami: 'Zoé' })), reg(), config)).toBe('ok')
+    expect(reverifierAction(ami, coll(carte({ ...CHIEN, ami: 'Zoé', favori: true })), reg(), config)).toBe('passee')
+    expect(reverifierAction(ami, coll(carte({ ...CHIEN, ami: 'Léa' })), reg(), config)).toBe('passee')
+    // Carte « à classer » : écartée de l’échange.
+    expect(reverifierAction(ami, coll(carte({ ...ZZZ, ami: 'Zoé' })), reg(), config)).toBe('passee')
   })
 
   it('création : l’étiquette est-elle toujours nécessaire ?', () => {
     const cr: Action = { type: 'creation-etiquette', idCarte: 'commune|Chat', nomEtiquette: '#Chien' }
-    expect(reverifierAction(cr, coll(carte(ZZZ)), reg(), config)).toBe('ok')
-    expect(reverifierAction({ ...cr, nomEtiquette: 'Statut · Vendre' }, coll(carte(ZZZ)), reg(), config)).toBe('passee')
+    expect(reverifierAction(cr, coll(carte(ZZZ_CHIEN)), reg(), config)).toBe('ok')
+    expect(reverifierAction({ ...cr, nomEtiquette: 'Statut · Vendre' }, coll(carte(ZZZ_CHIEN)), reg(), config)).toBe('passee')
     expect(reverifierAction(cr, coll(), reg(), config)).toBe('passee')
   })
 
@@ -258,9 +279,15 @@ describe('exemplaire indisponible (403/404 sur une action par exemplaire)', () =
   })
 
   it('les actions suivantes visant cet exemplaire sont ensuite passées par la revérification', () => {
-    const { collection, registre } = appliquerResultat(coll(carte()), reg(), enchere, refus(403))
+    const { collection, registre } = appliquerResultat(coll(carte()), reg(), defausse, refus(403))
     expect(reverifierAction(enchere, collection, registre, config)).toBe('passee')
     expect(reverifierAction(defausse, collection, registre, config)).toBe('passee')
+  })
+
+  it('un 403 sur une enchère ne retire rien (Alexis, 2026-11-15)', () => {
+    const c = coll(carte())
+    expect(appliquerResultat(c, reg(), enchere, refus(403)).collection).toBe(c)
+    expect(appliquerResultat(c, reg(), enchere, refus(404)).collection).toBe(c)
   })
 
   it('exemplaire inconnu, 500 ou action sans exemplaire : rien ne change', () => {

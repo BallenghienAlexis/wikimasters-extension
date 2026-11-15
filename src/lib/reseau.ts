@@ -23,12 +23,14 @@ export interface DependancesReseau {
 const CODES_ARRET = [401, 403, 429]
 const NON_DISPONIBLE: ResultatAction = { classe: 'echec', codeHttp: null, cause: 'action non disponible' }
 
-async function lireJson(reponse: Response): Promise<unknown> {
+/** Corps de réponse : JSON s’il l’est, et le texte brut (pour le seul diagnostic d’un refus, jamais stocké tel quel). */
+async function lireCorps(reponse: Response): Promise<{ json: unknown; texte: string }> {
+  let texte = ''
   try {
-    const texte = await reponse.text()
-    return texte === '' ? null : JSON.parse(texte)
+    texte = await reponse.text()
+    return { json: texte === '' ? null : JSON.parse(texte), texte }
   } catch {
-    return null
+    return { json: null, texte }
   }
 }
 
@@ -45,6 +47,37 @@ export function classerConflit(json: unknown): string {
           .slice(0, 300)
       : ''
   return /actives?|simultan|concurrent|maximum|limite|limit/i.test(message) ? 'limite d’enchères atteinte' : 'conflit signalé par le site'
+}
+
+/** Types dont le corps (identifiants d’exemplaire raccourcis, prix, durée) peut figurer dans le diagnostic d’un refus. */
+const TYPES_AVEC_CORPS_DIAGNOSTIC: readonly string[] = ['enchere', 'defausse', 'favori']
+
+/** Raccourcit les identifiants (UUID) et masque tout texte ressemblant à un jeton. */
+function assainir(texte: string, max: number): string {
+  return texte
+    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, (u) => `${u.slice(0, 8)}…`)
+    .replace(/eyJ[\w-]*\.[\w-]*\.[\w-]*/g, '[jeton masqué]')
+    .replace(/[A-Za-z0-9_\-+/=.]{40,}/g, '[masqué]')
+    .replace(/\s+/g, ' ')
+    .slice(0, max)
+}
+
+/**
+ * Ligne de diagnostic d’un refus (Alexis, 2026-11-15) : méthode, chemin, corps envoyé (enchère, défausse, favori
+ * seulement), code et message du site (champs `message`, `error`, `code`, `details` ou `hint`, tronqués).
+ * Jamais d’en-tête, de cookie ni de jeton ; les identifiants sont raccourcis.
+ */
+export function diagnosticDeRefus(methode: string, chemin: string, type: string, corps: unknown, statut: number, json: unknown, texte = '', secret = ''): string {
+  const champs = typeof json === 'object' && json !== null && !Array.isArray(json) ? (json as Record<string, unknown>) : {}
+  const deJson = ['message', 'error', 'code', 'details', 'hint']
+    .map((k) => champs[k])
+    .filter((v): v is string => typeof v === 'string' && v !== '')
+    .join(' · ')
+  // Corps non JSON (page d’erreur, pare-feu) : début du texte, sans balise ni secret.
+  const brut = texte.replace(/<[^>]*>/g, ' ').trim().slice(0, 160)
+  const message = (deJson !== '' ? deJson : brut).split(secret === '' ? '\u0000' : secret).join('[jeton masqué]')
+  const envoye = TYPES_AVEC_CORPS_DIAGNOSTIC.includes(type) && corps !== null && corps !== undefined ? ` corps ${JSON.stringify(corps)}` : ''
+  return assainir(`${methode} ${chemin.split('?')[0]}${chemin.includes('?') ? '?…' : ''}${envoye} → ${statut}${message === '' ? ' (sans message)' : ` ${message}`}`, 500)
 }
 
 export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promise<ResultatAction> {
@@ -102,15 +135,16 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
         cache: 'no-store',
         signal: controle.signal,
       })
-      const json = await lireJson(reponse)
+      const { json, texte } = await lireCorps(reponse)
+      const diagnostic = reponse.status < 200 || reponse.status > 299 ? diagnosticDeRefus(entree.methode, chemin, ordre.type, corps, reponse.status, json, texte, session?.jeton ?? '') : null
       if (CODES_ARRET.includes(reponse.status)) {
-        return { classe: 'echec', codeHttp: reponse.status, cause: 'action non disponible' }
+        return { classe: 'echec', codeHttp: reponse.status, cause: 'action non disponible', ...(diagnostic ? { diagnostic } : {}) }
       }
       if (siteSeul && reponse.status === 409) {
-        return { classe: 'echec', codeHttp: 409, cause: classerConflit(json) }
+        return { classe: 'echec', codeHttp: 409, cause: classerConflit(json), ...(diagnostic ? { diagnostic } : {}) }
       }
       if (reponse.status < 200 || reponse.status > 299) {
-        return { classe: 'echec', codeHttp: reponse.status, cause: 'erreur d’émission' }
+        return { classe: 'echec', codeHttp: reponse.status, cause: 'erreur d’émission', ...(diagnostic ? { diagnostic } : {}) }
       }
       if (entree.validerReponse(reponse.status, json) !== 'reussie') {
         return { classe: 'inconnu', codeHttp: reponse.status, cause: 'réponse hors contrat' }

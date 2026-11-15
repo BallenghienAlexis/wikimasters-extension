@@ -162,11 +162,11 @@ describe('performance (AC9)', () => {
   })
 })
 
-describe('carte sans thème fiable avec un ami désigné', () => {
-  it('ne reçoit aucune étiquette de thème mais garde « #À échanger <ami> », et reste signalée', () => {
+describe('carte sans thème fiable avec un ami désigné (écartée de l’échange)', () => {
+  it('ne reçoit aucune étiquette (ni thème ni échange) et reste signalée', () => {
     const lot = construireLot(coll(carte('a', { description: '', ami: 'Zoé' })), registre(), config(), TOUS)
     const poses = de(lot.actions, 'pose-etiquette')
-    expect(poses.map((p) => ('nomEtiquette' in p ? p.nomEtiquette : ''))).toEqual(['#À échanger Zoé'])
+    expect(poses.map((p) => ('nomEtiquette' in p ? p.nomEtiquette : ''))).toEqual([])
     expect(lot.ecartees).toContainEqual({ idCarte: 'a', titre: 'Carte a', raison: 'sans-theme-fiable' })
   })
 })

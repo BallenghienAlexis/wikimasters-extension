@@ -113,11 +113,11 @@ describe('regrouperEtiquettes : totaux et durée (AC2)', () => {
 describe('regrouperEtiquettes : non posées et plafond (AC3, AC4)', () => {
   it('expose les étiquettes non posées avec carte et raison', () => {
     const r = regrouperEtiquettes(
-      coll(carte('a', { ami: 'x'.repeat(60) })),
+      coll(carte('a', { ...CHIEN, ami: 'x'.repeat(60) })),
       registre(),
       config({ longueurMaxEtiquette: 20 }),
     )
-    expect(r.nonPosees).toEqual([expect.objectContaining({ idCarte: 'a', raison: 'nom-trop-long', titre: 'Carte a' })])
+    expect(r.nonPosees).toEqual([expect.objectContaining({ idCarte: 'a', raison: 'nom-trop-long', titre: 'Berger allemand' })])
     expect(r.lignes.some((l) => l.nom.length > 20)).toBe(false)
   })
 

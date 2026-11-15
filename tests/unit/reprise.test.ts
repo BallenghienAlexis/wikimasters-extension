@@ -38,23 +38,22 @@ describe('AC3 : pauseJusqua = maintenant + 30 min (SC-016)', () => {
   it.each([
     ['401', 'code-http', 401],
     ['429', 'code-http', 429],
-    ['403 hors exemplaire (création ou suppression d’étiquette)', 'code-http', 403],
-    ['3 échecs', 'echecs', 500],
-    ['3 échecs sans code', 'echecs', null],
   ] as Array<[string, RaisonArret, number | null]>)('SC-016 : %s -> pause de 30 min', (_nom, raison, codeHttp) => {
     expect(calculerPauseJusqua({ raison, codeHttp }, MAINTENANT)).toBe(MAINTENANT + PAUSE_LOTS_MS);
   });
 
-  it('décision 3 : le seuil de refus par carte atteint (arrêt code-http 403) pause aussi 30 min', () => {
-    // Le seuil (3 d’affilée ou 5 par lot) arrête la file avec la raison `code-http` et le code 403 :
-    // traité comme un refus hors exemplaire.
-    expect(calculerPauseJusqua({ raison: 'code-http', codeHttp: 403 }, MAINTENANT)).toBe(MAINTENANT + PAUSE_LOTS_MS);
+  it.each([
+    ['403 hors exemplaire (création ou suppression d’étiquette)', 'code-http', 403],
+    ['3 échecs', 'echecs', 500],
+    ['3 échecs sans code', 'echecs', null],
+  ] as Array<[string, RaisonArret, number | null]>)('Alexis 2026-11-15 : %s -> plus de pause (Réessayer immédiat)', (_nom, raison, codeHttp) => {
+    expect(calculerPauseJusqua({ raison, codeHttp }, MAINTENANT)).toBeNull();
   });
 
-  it('décision 3 : le seuil de refus par carte déclenche la pause même si le dernier refus est un 404', () => {
-    expect(calculerPauseJusqua({ raison: 'code-http', codeHttp: 404, seuilRefus: true }, MAINTENANT)).toBe(MAINTENANT + PAUSE_LOTS_MS)
-    expect(calculerPauseJusqua({ raison: 'code-http', codeHttp: 404 }, MAINTENANT)).toBeNull()
-  })
+  it('le seuil de refus par carte arrête le lot sans pause, quel que soit le dernier code (403 ou 404)', () => {
+    expect(calculerPauseJusqua({ raison: 'code-http', codeHttp: 403, seuilRefus: true }, MAINTENANT)).toBeNull();
+    expect(calculerPauseJusqua({ raison: 'code-http', codeHttp: 404, seuilRefus: true }, MAINTENANT)).toBeNull();
+  });
 
   it.each([
     ['409 (conflit sur enchère ou défausse)', 'code-http', 409],

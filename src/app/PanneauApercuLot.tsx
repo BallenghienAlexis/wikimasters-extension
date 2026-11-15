@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CONFIG_PRIX } from '../config/prix';
+import type { EvenementVente } from '../lib/affluence';
 import type { Action, CarteEcartee, FamilleLot, Registre, TypesDisponibles } from '../lib/actions';
 import type { Collection } from '../lib/collection';
 import { typesDisponibles } from '../lib/contrat';
@@ -10,6 +11,8 @@ import { filtrerLotIgnore, type Ignoree } from '../lib/ignorees';
 import { chargerExecution, chargerIgnorees, ecouterExecution, enregistrerJournal } from '../lib/stockage';
 import { PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
 import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
+import SelectionVenteDefausse from './SelectionVenteDefausse';
+import { choixInitial, precocher, versSelection, type Choix, type ChoixCarte } from '../lib/selectionLot';
 import EtiquettesPrevues from './EtiquettesPrevues';
 import Journal, { type CoupleRetrait } from './Journal';
 import BandeauRisque from './BandeauRisque';
@@ -67,6 +70,8 @@ interface Props {
   /** Nombre d’onglets WikiMasters ouverts (comptés par la page d’exécution, T-017). */
   nbOnglets: number;
   executionEnCours: boolean;
+  /** Évènements de vente pour les heures de plus forte influence. */
+  ventes?: readonly EvenementVente[];
   /** Types d’action dont l’entrée existe dans la table du contrat. */
   disponibles?: TypesDisponibles;
   /** Relit vraiment le stockage ; renvoie le registre, ou `null` s’il reste illisible. */
@@ -92,6 +97,7 @@ const PanneauApercuLot: React.FC<Props> = ({
   nbOnglets,
   executionEnCours,
   disponibles,
+  ventes = [],
   onReessayer,
   onLancer,
 }) => {
@@ -173,10 +179,20 @@ const PanneauApercuLot: React.FC<Props> = ({
       arreter();
     };
   }, []);
+  // Choix manuels (vente, défausse) : préremplis par les étiquettes du site tant que le joueur n’a rien touché.
+  // Fixé au montage : une synchro pendant l’aperçu n’ajoute aucune enchère sans geste du joueur.
+  const [choix, setChoixManuels] = useState<Choix>(() => choixInitial(collection.cartes));
+  const choisir = (idCarte: string, c: ChoixCarte, exemplaires: number): void =>
+    setChoixManuels(() => {
+      const m = new Map(choix);
+      if (c === 'aucun') m.delete(idCarte);
+      else m.set(idCarte, { choix: c, exemplaires });
+      return m;
+    });
   const figer = (r: Registre | null, listeIgnorees: Ignoree[]): void => {
     setIgnorees(listeIgnorees);
     setDecochees(new Set());
-    const config = configDuLot(preferences, ventesSiteLues);
+    const config = { ...configDuLot(preferences, ventesSiteLues), selection: versSelection(collection.cartes, choix) };
     setEtat(preparerLot(collection, r, dispo, config));
     let apercu: ApercuEtiquettes | null = null;
     if (r !== null) {
@@ -211,7 +227,7 @@ const PanneauApercuLot: React.FC<Props> = ({
   const lignesLots = useMemo(() => lotsAffiches.map((l, i) => ({ famille: l.famille, nbActions: l.actions.length, ordre: i + 1 })), [lotsAffiches]);
   const detailsCochees = useMemo(() => detailsDuLot(actionsCochees, cartes), [actionsCochees, cartes]);
   const pageCochees = useMemo(() => pageActions(actionsCochees), [actionsCochees]);
-  const ecartsSite = useMemo(() => calculerEcarts(collection.cartes, { amis: preferences.amis }, registreCourant), [collection.cartes, preferences.amis, registreCourant]);
+  const ecartsSite = useMemo(() => calculerEcarts(collection.cartes, { amis: preferences.amis, mesThemes: preferences.mesThemes }, registreCourant), [collection.cartes, preferences.amis, preferences.mesThemes, registreCourant]);
   const detailsEcartees = useMemo(() => detailsDuLot((filtre?.ecartees ?? []).map((e) => e.action), cartes), [filtre, cartes]);
   const basculerLot = (f: FamilleLot): void =>
     setDecochees((d) => {
@@ -381,6 +397,18 @@ const PanneauApercuLot: React.FC<Props> = ({
         </section>
       )}
 
+      {!zoneVisible && !ouvert && !chargement && (
+        <SelectionVenteDefausse
+          cartes={collection.cartes}
+          choix={choix}
+          plafond={plafond}
+          onChoisir={choisir}
+          onPrecocher={() => setChoixManuels(precocher(collection.cartes, preferences, choix))}
+          onVider={() => setChoixManuels(new Map())}
+          ventes={ventes}
+        />
+      )}
+
       <section aria-labelledby="titre-synchro" hidden={zoneVisible} className="mt-4 rounded border border-line bg-ink-2 p-4">
         <h2 id="titre-synchro" ref={titreRef} tabIndex={-1} className="font-semibold" data-testid="titre-apercu">
           {lot ? titreApercu(n) : 'Synchronisation avec WikiMasters'}
@@ -472,6 +500,9 @@ const PanneauApercuLot: React.FC<Props> = ({
               )}
               {actionsCochees.some((a) => a.type === 'defausse') && (
                 <Avertissement>Une défausse est définitive : la carte ne peut pas être récupérée.</Avertissement>
+              )}
+              {actionsCochees.some((a) => a.type === 'favori') && (
+                <Avertissement>Les cartes de vos thèmes gardés sont mises en favori sur le site (étoile) ; l’extension ne retire jamais un favori.</Avertissement>
               )}
               {plafond > PLAFOND_VALEUR_DEFAUSSE && (
                 <Avertissement>

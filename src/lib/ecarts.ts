@@ -21,7 +21,7 @@ export interface EcartCarte {
 
 export function calculerEcarts(
   cartes: readonly Carte[],
-  config?: Pick<Config, 'amis' | 'limiteParExemplaire'>,
+  config?: Pick<Config, 'amis' | 'limiteParExemplaire' | 'mesThemes'>,
   /** Registre : une étiquette retirée à la main par le joueur n'est plus « manquante ». */
   registre?: Registre,
 ): EcartCarte[] {

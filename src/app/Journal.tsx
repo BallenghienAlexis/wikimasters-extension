@@ -19,6 +19,7 @@ const LIBELLES_TYPE: Record<TypeAction, string> = {
   'pose-etiquette': 'Étiquette',
   enchere: 'Mettre aux enchères',
   defausse: 'Défausser',
+  favori: 'Mettre en favori',
   'suppression-etiquette': 'Suppression d’étiquette',
 };
 
@@ -29,6 +30,7 @@ const CLASSES_TYPE: Record<TypeAction, string> = {
   'pose-etiquette': 'text-echanger',
   enchere: 'text-vendre',
   defausse: 'text-defausser',
+  favori: 'text-garder',
   'suppression-etiquette': 'text-defausser',
 };
 
@@ -251,6 +253,12 @@ const Journal: React.FC<Props> = ({ entrees, registre, retraitDisponible, onglet
                   </span>
                   {e.codeHttp !== null && <span className="text-muted"> · HTTP {e.codeHttp}</span>}
                   {mentionNonAnnulable(e) && <p className="text-sm text-muted">Non annulable par l’extension</p>}
+                  {typeof e.diagnostic === 'string' && e.diagnostic !== '' && (
+                    <p data-testid="diagnostic-refus" className="mt-1 break-all font-mono text-xs text-muted">
+                      Diagnostic{' : '}
+                      {e.diagnostic}
+                    </p>
+                  )}
                 </div>
                 {couple && (
                   <div className="flex flex-col gap-1 md:items-end">

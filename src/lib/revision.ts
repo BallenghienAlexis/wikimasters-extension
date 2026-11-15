@@ -11,7 +11,8 @@ import {
   retirerIdSite,
   type Collection,
 } from './collection'
-import { exemplairesAttendus, type Config } from './lot'
+import { estAGarder, estACLasser, exemplairesAttendus, type Config } from './lot'
+import { plafondDefausse, prixDepart } from './tri'
 import { enregistrerEtiquette, poserCouple, purgerCarte, purgerExemplaire, retirerCouple, supprimerEtiquetteDuRegistre } from './registre'
 
 /** Résultat d’une action, avec l’identifiant d’étiquette renvoyé par une création réussie. */
@@ -40,10 +41,23 @@ export function reverifierAction(
   if (!carte) return 'passee'
 
   switch (action.type) {
-    // Sans statut (2026-11-14), aucun lot ne produit d’enchère ni de défausse : un ordre ancien est toujours passé.
-    case 'enchere':
-    case 'defausse':
-      return 'passee'
+    // Enchère et défausse viennent de la sélection manuelle du joueur : revérifiées avant l’envoi.
+    case 'enchere': {
+      if (carte.favori || estACLasser(carte) || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
+      const valeur = carte.valeurMarchande
+      if (valeur === null || !(action.prix >= 1 && action.prix < valeur)) return 'passee'
+      // Le prix de départ courant (prix cible, sinon matrice) ne doit pas avoir changé depuis l’aperçu.
+      return (carte.prixCible ?? prixDepart(valeur)) === action.prix ? 'ok' : 'passee'
+    }
+    case 'defausse': {
+      if (carte.favori || estACLasser(carte) || carte.quantite < 1 || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
+      return typeof carte.valeurMarchande === 'number' && carte.valeurMarchande <= plafondDefausse({ plafondDefausse: config.plafondDefausse }) ? 'ok' : 'passee'
+    }
+    case 'favori': {
+      // Jamais déjà favorite, ni à classer ; le thème gardé doit toujours correspondre.
+      if (carte.favori || estACLasser(carte) || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
+      return estAGarder(carte, config.mesThemes) ? 'ok' : 'passee'
+    }
     case 'creation-etiquette':
       return exemplairesAttendus(carte, config).some((e) => e.etiquettes.includes(action.nomEtiquette)) ? 'ok' : 'passee'
     case 'pose-etiquette': {
@@ -66,7 +80,9 @@ export function appliquerResultat(
   action: Action,
   resultat: ResultatApplicable,
 ): EtatLocal {
-  if (resultat.classe === 'echec' && resultat.codeHttp !== null && CODES_CARTE_INDISPONIBLE.includes(resultat.codeHttp)) {
+  // Une enchère refusée (403) ne prouve pas que l’exemplaire a disparu (Alexis, 2026-11-15 : refus alors que les cartes sont
+  // bien dans sa collection) : rien n’est retiré en local, la synchro relit l’état réel.
+  if (resultat.classe === 'echec' && resultat.codeHttp !== null && CODES_CARTE_INDISPONIBLE.includes(resultat.codeHttp) && action.type !== 'enchere') {
     return appliquerIndisponible(collection, registre, action)
   }
   if (resultat.classe !== 'reussie') return { collection, registre }
@@ -79,6 +95,12 @@ export function appliquerResultat(
       return { collection, registre: supprimerEtiquetteDuRegistre(registre, action.nomEtiquette) }
     case 'enchere':
       return { collection, registre }
+    case 'favori':
+      if (!carte) return { collection, registre }
+      return {
+        collection: { ...collection, cartes: collection.cartes.map((c) => (c.id === carte.id ? { ...c, favori: true } : c)) },
+        registre,
+      }
     case 'defausse': {
       if (!carte) return { collection, registre }
       const quantite = Math.max(0, carte.quantite - 1)
@@ -115,7 +137,7 @@ export function appliquerResultat(
  * est gardée mais déliée du site (`idsSite` nul). Actions sans exemplaire : rien.
  */
 export function appliquerIndisponible(collection: Collection, registre: Registre, action: Action): EtatLocal {
-  if (action.type !== 'pose-etiquette' && action.type !== 'retrait-etiquette' && action.type !== 'enchere' && action.type !== 'defausse') {
+  if (action.type !== 'pose-etiquette' && action.type !== 'retrait-etiquette' && action.type !== 'enchere' && action.type !== 'defausse' && action.type !== 'favori') {
     return { collection, registre }
   }
   const carte = collection.cartes.find((c) => c.id === action.idCarte)
