@@ -6,7 +6,7 @@ import type { Action, CauseJournal, EtatExecutionV2, ErreurExecution, FamilleLot
 import type { Collection } from '../lib/collection';
 import type { Journal } from '../lib/journal';
 import { DUREE_BAIL_MS } from '../lib/ordonnanceur';
-import { SUPPLEMENT_MAX_MS, creerFile, type ContexteErreur, type ContexteJournal, type File as FileLot, type SuiteExecution } from '../lib/file';
+import { INTERVALLE_MS, SUPPLEMENT_MAX_MS, creerFile, type ContexteErreur, type ContexteJournal, type File as FileLot, type SuiteExecution } from '../lib/file';
 import { familleDe } from '../lib/familles';
 import { ajouterIgnoree } from '../lib/ignorees';
 import { completerEntree, ouvrirEntree, passerEntree } from '../lib/journal';
@@ -264,6 +264,8 @@ async function limiterAuxPlacesLibres(actions: readonly Action[]): Promise<reado
   } catch {
     return actions;
   }
+  // Même cadence que la file : 0,2 s au minimum plus la gigue entre cette lecture et la première requête du lot.
+  await horlogeReelle.attendreJusqua(horlogeReelle.now() + INTERVALLE_MS + Math.floor(Math.random() * (SUPPLEMENT_MAX_MS + 1)));
   if (ventes === undefined) return actions;
   const { actions: gardees, ecartees } = limiterEncheres(actions, ventes, CONFIG_PRIX.maxVentesSimultanees);
   if (ecartees > 0 && gardees.length === 0) throw new Error(AUCUNE_PLACE_ENCHERE);
