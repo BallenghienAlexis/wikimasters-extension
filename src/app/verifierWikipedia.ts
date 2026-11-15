@@ -235,7 +235,7 @@ export function creerPlanificateur(options: OptionsPlanificateur): Planificateur
   };
 
   async function boucle(): Promise<void> {
-    changer({ enCours: true, faites: 0, total: file.length + fileFond.length, fond: fileFond.length });
+    changer({ enCours: true, faites: 0, total: file.length, fond: fileFond.length });
     let echecs = 0;
     try {
       cache ??= await chargerCache();
@@ -267,7 +267,7 @@ export function creerPlanificateur(options: OptionsPlanificateur): Planificateur
         // Aucune page lue et aucun arrêt : réponse illisible ou erreur réseau.
         echecs = r.verifiees === 0 ? echecs + 1 : 0;
         if (echecs >= 3) return void changer({ suspendue: MESSAGE_ECHECS });
-        changer({ faites: etat.faites + 1, total: etat.faites + 1 + file.length + fileFond.length });
+        changer(courantFond ? { fond: fileFond.length } : { faites: etat.faites + 1, total: etat.faites + 1 + file.length });
       }
     } catch {
       changer({ suspendue: 'Enregistrement du cache Wikipédia impossible : vérification suspendue.' });
@@ -283,12 +283,21 @@ export function creerPlanificateur(options: OptionsPlanificateur): Planificateur
       if (etat.suspendue !== null) return;
       const cible = fond ? fileFond : file;
       for (const titre of titres) {
+        if (!fond && tentes.has(titre)) {
+          // Déjà en attente dans la file de fond : la liste affichée le fait passer devant.
+          const rang = fileFond.indexOf(titre);
+          if (rang !== -1) {
+            fileFond.splice(rang, 1);
+            file.push(titre);
+          }
+          continue;
+        }
         if (tentes.has(titre)) continue;
         tentes.add(titre);
         cible.push(titre);
       }
       if (!etat.enCours && cible.length > 0) void boucle();
-      else if (etat.enCours) changer({ total: etat.faites + file.length + fileFond.length, fond: fileFond.length });
+      else if (etat.enCours) changer({ total: etat.faites + file.length, fond: fileFond.length });
     },
     annuler() {
       // Un titre de fond en cours n'est pas coupé : seule la file de la liste affichée est vidée.
@@ -298,7 +307,7 @@ export function creerPlanificateur(options: OptionsPlanificateur): Planificateur
       }
       for (const titre of file) tentes.delete(titre);
       file.length = 0;
-      if (etat.enCours) changer({ total: etat.faites + fileFond.length });
+      if (etat.enCours) changer({ total: etat.faites, fond: fileFond.length });
     },
     etat: () => etat,
     abonner(rappel) {

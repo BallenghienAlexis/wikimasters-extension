@@ -192,19 +192,38 @@ describe('creerPlanificateur', () => {
     expect(appels).toBe(60);
   });
 
-  it('la file de fond passe après la liste affichée et résiste à annuler', async () => {
+  it('la file de fond passe après la liste, et un titre de fond redemandé par la liste passe devant', async () => {
     const vus: string[] = [];
-    const transport: Transport = async (url, s) => { vus.push(decodeURIComponent(url)); return reponseOk(url, s); };
+    const transport: Transport = async (url, s) => { vus.push(/titles=([^&]*)/.exec(url)?.[1] ?? ''); return reponseOk(url, s); };
+    const p = creerPlanificateur({ chargerCache: async () => cacheVide(), surCache: () => undefined, attendre: sansPause, transport });
+    p.demander(['F1', 'F2', 'F3'], true);
+    p.demander(['A', 'F3']);
+    await attendreFin(p);
+    const ordre = vus.filter((t) => t !== '');
+    // La liste (A, puis F3 repris de la file de fond) précède tout le fond (F1, F2).
+    expect(ordre.slice(0, 4)).toEqual(['A', 'F3', 'F1', 'F2']);
+    expect(p.etat().fond).toBe(0);
+  });
+
+  it('annuler ne coupe pas la requête de fond en vol ni la file de fond', async () => {
+    const signaux: boolean[] = [];
+    let liberer: () => void = () => undefined;
+    const porte = new Promise<void>((r) => { liberer = r; });
+    let premier = true;
+    const vus: string[] = [];
+    const transport: Transport = async (url, s) => {
+      vus.push(/titles=([^&]*)/.exec(url)?.[1] ?? '');
+      if (premier) { premier = false; await porte; signaux.push(s.aborted); }
+      return reponseOk(url, s);
+    };
     const p = creerPlanificateur({ chargerCache: async () => cacheVide(), surCache: () => undefined, attendre: sansPause, transport });
     p.demander(['F1', 'F2'], true);
-    p.demander(['A']);
-    expect(p.etat().fond).toBeGreaterThanOrEqual(0);
+    for (let i = 0; i < 20 && vus.length === 0; i++) await new Promise((r) => setTimeout(r, 1));
     p.annuler();
+    liberer();
     await attendreFin(p);
-    const ordre = vus.filter((u) => /titles=/.test(u)).map((u) => /titles=([^&]*)/.exec(u)?.[1]);
-    expect(ordre).toContain('F1');
-    expect(ordre).toContain('F2');
-    expect(p.etat().fond).toBe(0);
+    expect(signaux).toEqual([false]);
+    expect(vus.filter((t) => t !== '')).toEqual(['F1', 'F2']);
   });
 
   it('reste suspendu après un 429, même si on redemande', async () => {

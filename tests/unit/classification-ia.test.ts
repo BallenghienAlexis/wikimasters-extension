@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Carte } from '../../src/lib/collection';
 import {
-  ajouterAuCache, cacheIAVide, cartesAClasser, corpsRequete, decouperEnLotsIA, estimerCout, exporterCartesAClasser, lireImportThemes, IDS_CATALOGUE_IA, lireReponseIA, PROMPT_SYSTEME, TAILLE_LOT_IA, themesIAParTitre, validerCacheIA,
+  ajouterAuCache, cacheIAVide, cartesAClasser, corpsRequete, decouperEnLotsIA, estimerCout, exporterCartesAClasser, lireImportThemes, PROMPT_EXPORT, IDS_CATALOGUE_IA, lireReponseIA, PROMPT_SYSTEME, TAILLE_LOT_IA, themesIAParTitre, validerCacheIA,
 } from '../../src/lib/classificationIA';
 import { definirThemesIA, sansThemeLocal, themesDeCarte, themesPrincipaux, versionThemes } from '../../src/lib/themes';
 import { classerCartes, type TransportIA } from '../../src/app/classerIA';
@@ -197,11 +197,11 @@ describe('export / import sans clé', () => {
   });
   it('importe 1 à 4 thèmes du catalogue pour des cartes connues et compte le reste', () => {
     const connus = new Set(['Honda CB 900', 'Morcilla', 'Zzz']);
-    const r = lireImportThemes(JSON.stringify({ 'Honda CB 900': ['moto'], Morcilla: ['gastronomie', 'gastronomie'], Zzz: [], Inconnue: ['moto'], __proto__: ['moto'] }), connus);
+    const r = lireImportThemes('{"Honda CB 900":["moto"],"Morcilla":["gastronomie","gastronomie"],"Zzz":[],"Inconnue":["moto"],"__proto__":["moto"]}', connus);
     expect(r.type).toBe('ok');
     if (r.type !== 'ok') return;
     expect([...r.resultats.keys()]).toEqual(['Honda CB 900']);
-    expect(r.ignores).toBe(3);
+    expect(r.ignores).toBe(4);
   });
   it('refuse thème hors liste, plus de 4 thèmes, JSON invalide ou tableau', () => {
     const connus = new Set(['A']);
@@ -212,6 +212,8 @@ describe('export / import sans clé', () => {
   });
   it('le prompt de docs/classement-par-ia.md cite tout le catalogue', () => {
     const doc = fs.readFileSync('docs/classement-par-ia.md', 'utf8');
+    expect(doc).toContain(PROMPT_EXPORT);
+    expect(PROMPT_EXPORT).not.toContain('liste vide pour cette carte');
     for (const id of IDS_CATALOGUE_IA) expect(doc).toContain(`${id} : `);
     expect(doc).toContain('Exporter les cartes sans thème');
   });

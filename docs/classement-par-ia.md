@@ -4,8 +4,8 @@ Circuit sans clé API ni coût supplémentaire (rattrapage ponctuel) : l’exten
 
 1. Extension › Réglages › « Classement par l’IA » › **Exporter les cartes sans thème** : tu obtiens `cartes-sans-theme.json` (id, titre, description courte ; rien du compte).
 2. Dans une conversation Claude, colle le prompt ci-dessous, puis joins le fichier (ou colle-le par morceaux d’environ 150 cartes si Claude le demande).
-3. Claude répond par un objet JSON `{ "titre": ["theme", …] }`. Enregistre-le dans un fichier `.json`.
-4. Extension › Réglages › « Classement par l’IA » › **Importer les thèmes classés**. Les entrées invalides (titre inconnu, thème hors liste, plus de 4 thèmes) sont ignorées et comptées ; rien n’est deviné. Les thèmes importés sont gardés par titre, comme ceux de l’API, et ne servent qu’en dernier recours.
+3. Claude répond par un objet JSON `{ "titre": ["theme", …] }`. Enregistre-le dans un fichier `.json` (2 Mo au plus).
+4. Extension › Réglages › « Classement par l’IA » › **Importer les thèmes classés**. Les entrées invalides (titre inconnu, thème hors liste, plus de 4 thèmes, liste vide) sont ignorées et comptées ; rien n’est deviné. Les thèmes importés sont gardés par titre, comme ceux de l’API, et ne servent qu’en dernier recours.
 
 ## Prompt à coller
 
@@ -13,8 +13,8 @@ Circuit sans clé API ni coût supplémentaire (rattrapage ponctuel) : l’exten
 Tu classes des cartes d’un jeu de collection dont chaque carte porte le titre d’un article de Wikipédia (personne, œuvre, lieu, objet, notion, animal…).
 Pour chaque carte, choisis de 1 à 4 thèmes parmi le catalogue ci-dessous, du plus caractéristique au moins caractéristique.
 Règles : réponds d’après le sens du sujet (ce qu’il est, ce qu’il fait), pas d’après les mots du titre ; choisis le thème le plus précis qui existe (« Moto » plutôt que « Véhicule ») ;
-n’ajoute pas un thème parent en plus de son thème précis ; n’invente aucun identifiant ; si tu ne reconnais pas le sujet, omets cette carte de ta réponse (jamais de liste vide).
-Format de réponse : uniquement un objet JSON, sans texte autour, dont les clés sont les TITRES EXACTS des cartes (champ "titre" du fichier) et les valeurs des listes de 1 à 4 identifiants. Exemple : {"Honda CB 900":["moto"],"Morcilla":["gastronomie"]}. Chaque carte du fichier doit apparaître, avec au moins un thème (choisis le plus proche si tu hésites). Traite le fichier par lots de 150 cartes et donne le JSON complet de chaque lot
+n’ajoute pas un thème parent en plus de son thème précis ; n’invente aucun identifiant ; si tu ne reconnais pas le sujet, omets cette carte de ta réponse (jamais de liste vide ni de thème deviné).
+Format de réponse : uniquement un objet JSON, sans texte autour, dont les clés sont les TITRES EXACTS des cartes (champ "titre" du fichier) et les valeurs des listes de 1 à 4 identifiants. Exemple : {"Honda CB 900":["moto"],"Morcilla":["gastronomie"]}. Traite le fichier par lots de 150 cartes et donne le JSON complet de chaque lot
 Catalogue (identifiant : libellé) :
 vehicule : Véhicule
 automobile : Automobile

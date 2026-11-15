@@ -193,3 +193,13 @@ export function lireImportThemes(texte: string, titresConnus: ReadonlySet<string
   }
   return resultats.size === 0 ? { type: 'invalide', raison: 'Aucune entrée valide (titres inconnus, thèmes hors liste ou plus de 4 thèmes).' } : { type: 'ok', resultats, ignores };
 }
+
+/**
+ * Prompt à coller dans un abonnement Claude pour classer le fichier exporté : le même catalogue et les mêmes règles que `PROMPT_SYSTEME`,
+ * mais les clés de la réponse sont les titres exacts et une carte non reconnue est omise (jamais de liste vide ni de thème deviné).
+ * `docs/classement-par-ia.md` en contient le texte exact (test de synchronisation).
+ */
+export const PROMPT_EXPORT = PROMPT_SYSTEME.replace(
+  'dont les clés sont les numéros des cartes et les valeurs des listes d’identifiants. Exemple : {"1":["moto"],"2":["litterature","histoire"],"3":[]}',
+  'dont les clés sont les TITRES EXACTS des cartes (champ "titre" du fichier) et les valeurs des listes de 1 à 4 identifiants. Exemple : {"Honda CB 900":["moto"],"Morcilla":["gastronomie"]}. Traite le fichier par lots de 150 cartes et donne le JSON complet de chaque lot',
+).replace('réponds une liste vide pour cette carte.', 'omets cette carte de ta réponse (jamais de liste vide ni de thème deviné).');

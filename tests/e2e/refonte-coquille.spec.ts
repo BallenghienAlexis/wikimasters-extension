@@ -1,4 +1,4 @@
-import { allerA, carteComplete, chargerCollectionFictive, expect, ONGLETS, test } from './extension';
+import { allerA, carteComplete, chargerCartes, chargerCollectionFictive, expect, ONGLETS, test } from './extension';
 
 // T-304 : coquille à onglets (SC-012, SC-011, SC-008, SC-009, SC-010, SC-020, SC-006).
 // Données uniquement fictives.
@@ -175,7 +175,12 @@ test.describe('SC-011 : vérification Wikipédia', () => {
       requetes.push(route.request().url());
       await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
     });
-    await chargerCollectionFictive(pageCollection);
+    // Une carte avec un thème local (« moto ») et des cartes sans thème : seules les secondes sont lues en arrière-plan.
+    await chargerCartes(pageCollection, [
+      { id: 'a', titre: 'Zorglub fictif', description: 'secret fictif' },
+      { id: 'b', titre: 'Bidule fictif', description: 'autre secret fictif' },
+      { id: 'c', titre: 'Moto fictive', description: 'une moto de collection' },
+    ]);
     for (const o of ONGLETS.filter((x) => x.id !== 'collection')) {
       await allerA(pageCollection, o.id);
       await pageCollection.waitForTimeout(1500);
@@ -183,6 +188,14 @@ test.describe('SC-011 : vérification Wikipédia', () => {
     // Lecture de fond (2026-11-15) : les cartes sans thème sont vérifiées partout, mais seuls ces deux hôtes sont joints.
     for (const u of requetes) expect(u).toMatch(/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\/w\/api\.php\?/);
     expect(requetes.length).toBeGreaterThan(0);
+    // Titre seul : le paramètre `titles` (ou `search`) est un titre de carte sans thème, jamais une description ni une carte avec thème.
+    for (const u of requetes) {
+      const params = new URL(u).searchParams;
+      const titre = params.get('titles') ?? params.get('search');
+      if (titre !== null) expect(['Zorglub fictif', 'Bidule fictif']).toContain(titre);
+      expect(u).not.toContain('secret');
+      expect(u).not.toContain('Moto');
+    }
     // Dans la vue liste de la Collection, la mention de vérification reste affichée (titre seul).
     await allerA(pageCollection, 'collection');
     for (const u of requetes) expect(u).toMatch(/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\/w\/api\.php\?/);
@@ -205,7 +218,7 @@ test.describe('SC-011 : vérification Wikipédia', () => {
     await pageCollection.waitForTimeout(1500);
     const avant = requetes.length;
     await pageCollection.waitForTimeout(3000);
-    expect(requetes.length - avant).toBeLessThanOrEqual(5);
+    expect(requetes.length - avant).toBeLessThanOrEqual(4);
   });
 });
 

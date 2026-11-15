@@ -12,6 +12,8 @@ interface Props {
 }
 
 const NB = ' ';
+/** Un fichier de thèmes pèse quelques dizaines de Ko ; au-delà, ce n'est pas le bon fichier. */
+const TAILLE_MAX_IMPORT = 2 * 1024 * 1024;
 const format = (n: number): string => n.toLocaleString('fr-FR');
 
 const RAISONS: Record<string, string> = {
@@ -48,6 +50,7 @@ const ClassementIA: React.FC<Props> = ({ cartes, cache, onCache }) => {
 
   const importer = async (fichier: File | undefined): Promise<void> => {
     if (!fichier) return;
+    if (fichier.size > TAILLE_MAX_IMPORT) return void setEtat('Fichier trop volumineux (2 Mo au plus).');
     const lecture = lireImportThemes(await fichier.text(), new Set(aClasser.map((c) => c.titre)));
     if (lecture.type === 'invalide') return void setEtat(lecture.raison);
     const nouveau = ajouterAuCache(cache, lecture.resultats);

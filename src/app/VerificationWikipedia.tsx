@@ -36,9 +36,6 @@ const VerificationWikipedia: React.FC<Props> = ({ titres, onCache }) => {
       <p aria-live="polite">
         {etat.suspendue ?? (etat.enCours ? `Vérification en cours${NB}: ${Math.min(etat.faites, etat.total)} sur ${etat.total}` : null)}
       </p>
-      {etat.suspendue === null && etat.fond > 0 ? (
-        <p data-testid="verification-fond">Lecture en arrière-plan des cartes sans thème{NB}: {etat.fond.toLocaleString('fr-FR')} restantes.</p>
-      ) : null}
     </div>
   );
 };

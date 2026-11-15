@@ -97,6 +97,7 @@ test.describe('SC-011 : aucune requête hors extension', () => {
     }
     await page.waitForTimeout(500);
     // Lecture de fond (2026-11-15) : des requêtes partent, mais seulement vers Wikipédia et Wikidata.
+    expect(banc.vues.length).toBeGreaterThan(0);
     for (const v of banc.vues) expect(v.url).toMatch(/^https:\/\/(fr\.wikipedia|www\.wikidata)\.org\/w\/api\.php\?/);
   });
 
