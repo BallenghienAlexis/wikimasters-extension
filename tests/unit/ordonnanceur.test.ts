@@ -682,20 +682,37 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.etat.arretJusqua).toBeNull();
   })
 
-  it('prix : « passer cette carte » n’est pris en compte qu’après le seuil d’avertissement, jamais automatiquement', async () => {
+  it('prix : « passer cette carte » : un clic fait avant l’avertissement est périmé, la phase continue d’attendre', async () => {
     const site = siteFictif(3);
     let demande = false;
-    const b = banc((chemin) => {
-      if (chemin.includes('card-2/sales')) return { statut: 403, json: null };
-      return site(chemin);
-    });
-    const attentes: number[] = [];
+    let arret = false;
+    const b = banc((chemin) => (chemin.includes('card-2/sales') ? { statut: 403, json: null } : site(chemin)));
     const r = await synchroniser({
       ...b.deps,
       annoncerAttente: (a) => {
-        if (a !== null) attentes.push(a.essai);
-        // Le joueur clique dès le premier essai : ignoré tant que le seuil n’est pas atteint.
-        if (a !== null && a.essai >= 1) demande = true;
+        if (a !== null && a.essai === 2) demande = true;
+        if (a !== null && a.essai >= SEUIL_AVERTISSEMENT_PRIX + 2) arret = true;
+      },
+      passerCarteDemandee: () => {
+        const d = demande;
+        demande = false;
+        return d;
+      },
+      arretDemande: () => arret,
+    });
+    expect(r.issue).toBe('arret');
+    expect(b.journal.join('\n')).not.toContain('passée à la demande du joueur');
+    expect(b.departs.filter((d) => d.chemin.includes('card-2/sales')).length).toBeGreaterThan(SEUIL_AVERTISSEMENT_PRIX);
+  })
+
+  it('prix : « passer cette carte » : un clic fait une fois l’avertissement affiché passe la carte (redemandée dans 1 jour)', async () => {
+    const site = siteFictif(3);
+    let demande = false;
+    const b = banc((chemin) => (chemin.includes('card-2/sales') ? { statut: 403, json: null } : site(chemin)));
+    const r = await synchroniser({
+      ...b.deps,
+      annoncerAttente: (a) => {
+        if (a !== null && a.essai > SEUIL_AVERTISSEMENT_PRIX) demande = true;
       },
       passerCarteDemandee: () => {
         const d = demande;
@@ -704,10 +721,29 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
       },
     });
     expect(r.issue).toBe('termine');
-    const essais = b.departs.filter((d) => d.chemin.includes('card-2/sales'));
-    expect(essais).toHaveLength(SEUIL_AVERTISSEMENT_PRIX);
     expect(b.journal.join('\n')).toContain('passée à la demande du joueur');
     expect(r.etat.prix[idCarte(2)]?.valeur).toBeNull();
+  })
+
+  it('prix : un clic resté levé depuis la carte précédente ne passe pas la carte suivante', async () => {
+    const site = siteFictif(4);
+    let demande = true; // clic périmé levé avant la carte 2
+    let arret = false;
+    const b = banc((chemin) => (chemin.includes('card-2/sales') ? { statut: 403, json: null } : site(chemin)));
+    const r = await synchroniser({
+      ...b.deps,
+      annoncerAttente: (a) => {
+        if (a !== null && a.essai >= SEUIL_AVERTISSEMENT_PRIX + 1) arret = true;
+      },
+      passerCarteDemandee: () => {
+        const d = demande;
+        demande = false;
+        return d;
+      },
+      arretDemande: () => arret,
+    });
+    expect(r.issue).toBe('arret');
+    expect(b.journal.join('\n')).not.toContain('passée à la demande du joueur');
   })
 
   it('prix : un 404 isolé (carte sans marché) est ignoré sans attente et mémorisé', async () => {

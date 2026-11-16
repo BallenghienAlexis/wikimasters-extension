@@ -20,6 +20,8 @@ import { analyserPage, analyserPrix, sensDuPrix, type SensPrix, decrireForme, di
 /** Aucune reprise automatique avant ce délai après un arrêt (401, 403, 429 ou échecs). */
 export const PAUSE_APRES_ARRET_MS = 30 * 60_000;
 /** Une valeur marchande relevée est périmée après 30 jours. */
+/** Une carte passée par le joueur est redemandée dans 1 jour. */
+export const REPORT_CARTE_PASSEE_MS = 86_400_000;
 export const ancienneteMaxPrixMs = 30 * 86_400_000;
 /** Durée d’un bail ; renouvelé avant chaque requête. */
 export const DUREE_BAIL_MS = 2 * 60_000;
@@ -360,6 +362,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       ralentissementPrix = Math.min(RALENTISSEMENT_PRIX_MAX_MS, ralentissementPrix + 500);
       journal(`Prix : ${motif} pour « ${titre} » ; en attente, nouvel essai dans ${pause / 1000} s (essai ${essai}). Le joueur peut arrêter.`);
       deps.annoncerAttente?.({ jusqua: horloge.now() + pause, titre: titre.slice(0, 200), codeHttp, verification, essai });
+      // Un clic arrivé avant l’affichage de l’avertissement de cette carte est périmé : il est écarté (jamais gardé pour plus tard).
+      if (essai <= SEUIL_AVERTISSEMENT_PRIX) deps.passerCarteDemandee?.();
       if (await pauseInterruptible(pause, essai >= SEUIL_AVERTISSEMENT_PRIX)) {
         journal(`Prix : carte « ${titre} » passée à la demande du joueur après ${essai} échecs.`);
         deps.annoncerAttente?.(null);
@@ -647,7 +651,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       const obtenu = await requetePrix(cheminPrix(cardId), carte.titre, carte.rarete as string);
       if (obtenu === 'passee') {
         // Passée par le joueur : valeur précédente gardée, redemandée dans un jour.
-        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() - ancienneteMaxPrixMs + 86_400_000 };
+        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() - ancienneteMaxPrixMs + REPORT_CARTE_PASSEE_MS };
         deps.prixTermine?.();
         continue;
       }
