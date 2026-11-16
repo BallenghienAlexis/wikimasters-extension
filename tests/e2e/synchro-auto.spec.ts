@@ -171,7 +171,7 @@ test.describe('synchronisation automatique sur site fictif', () => {
     verifierLectureSeule(site.api);
   });
 
-  test('403 isolé sur le prix d\u2019une carte : ignoré, la synchro va au bout sans pause', async ({ context, serviceWorker }) => {
+  test('403 sur le prix d\u2019une carte : la synchro attend et redemande, sans s\u2019arrêter ni pause de 30 min', async ({ context, serviceWorker }) => {
     test.setTimeout(90_000);
     await poser(serviceWorker, { collection: { version: 3, cartes: [carteLocale({ })] }, syncAuto: true });
     const site = await ouvrirSite(context, {
@@ -179,7 +179,9 @@ test.describe('synchronisation automatique sur site fictif', () => {
       [CHEMIN_PAGE(0)]: { corps: PAGE_0 },
       [CHEMIN_PRIX]: { corps: '{"error":"forbidden"}', statut: 403 },
     });
-    await expect.poll(() => chemins(site.api).includes(CHEMIN_VENTES), { timeout: 60_000, intervals: [250] }).toBe(true);
+    // Attente de 5 s après la première erreur, puis nouvel essai de la même carte : la phase ne s’arrête jamais toute seule.
+    await expect.poll(() => chemins(site.api).filter((c) => c === CHEMIN_PRIX).length, { timeout: 45_000, intervals: [250] }).toBeGreaterThanOrEqual(2);
+    expect(chemins(site.api)).not.toContain(CHEMIN_VENTES);
     const arret = await serviceWorker.evaluate(
       async () => ((await chrome.storage.local.get('etatSynchro')).etatSynchro as { arretJusqua: number | null } | undefined)?.arretJusqua ?? null,
     );
