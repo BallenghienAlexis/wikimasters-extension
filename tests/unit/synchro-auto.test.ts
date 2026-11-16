@@ -579,10 +579,11 @@ describe('T-206 D-03 : événements dans le journal', () => {
     expect(b.evenements.at(-1)).toEqual({ titre: 'Synchronisation automatique : arrêt', resultat: 'interrompue', parametre: 'le site a refusé', codeHttp: code });
   });
 
-  it('3 échecs : cause « 3 échecs »', async () => {
+  it('des échecs répétés n’arrêtent plus la synchro (Alexis, 2026-11-16)', async () => {
     const b = banc({ reponse: () => ({ statut: 500, json: null }) });
     await creerSynchroAuto(b.deps).declencher();
-    expect(b.evenements.at(-1)).toMatchObject({ titre: 'Synchronisation automatique : arrêt', parametre: '3 échecs consécutifs', codeHttp: null });
+    // Terminée sans arrêt « échecs » : la cause n’est plus « 3 échecs consécutifs ».
+    expect(b.evenements.at(-1)?.parametre).not.toBe('3 échecs consécutifs');
   });
 
   it('arrêt manuel : cause « arrêt demandé »', async () => {
