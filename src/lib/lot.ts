@@ -249,17 +249,18 @@ export function limiterEncheres(
   actions: readonly Action[],
   ventes: { enCours: number; max: number },
   maxConfig: number,
-): { actions: Action[]; ecartees: number } {
+): { actions: Action[]; ecartees: number; retirees: Action[] } {
   const libres = Math.max(0, Math.min(maxConfig, ventes.max) - ventes.enCours)
   let gardees = 0
   let ecartees = 0
   const sortie: Action[] = []
+  const retirees: Action[] = []
   for (const a of actions) {
     if (a.type !== 'enchere') sortie.push(a)
     else if (gardees < libres) { gardees++; sortie.push(a) }
-    else ecartees++
+    else { ecartees++; retirees.push(a) }
   }
-  return { actions: sortie, ecartees }
+  return { actions: sortie, ecartees, retirees }
 }
 
 /**

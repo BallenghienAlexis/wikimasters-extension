@@ -9,7 +9,7 @@ import { DUREE_BAIL_MS } from '../lib/ordonnanceur';
 import { CODES_ARRET, INTERVALLE_MS, SUPPLEMENT_MAX_MS, creerFile, type ContexteErreur, type ContexteJournal, type File as FileLot, type SuiteExecution } from '../lib/file';
 import { familleDe } from '../lib/familles';
 import { ajouterIgnoree } from '../lib/ignorees';
-import { LIBELLE_VERIFICATION_HUMAINE, completerEntree, ouvrirEntree, passerEntree } from '../lib/journal';
+import { LIBELLE_VERIFICATION_HUMAINE, completerEntree, ouvrirEntree, ouvrirEntreePassee, passerEntree } from '../lib/journal';
 import { PAUSE_LOTS_MS, RAISON_RESULTAT_INCONNU, calculerPauseJusqua, raisonPause, resultatInconnu } from '../lib/reprise';
 import { appliquerResultat, reverifierAction } from '../lib/revision';
 import {
@@ -247,7 +247,17 @@ async function lancerAvec(preparer: () => Promise<Lancement>): Promise<void> {
  * 30 minutes (message « Reprise possible à HH:MM »). Résout à la fin de l'exécution (terminée, arrêtée ou en erreur).
  */
 export async function lancerLot(actions: readonly Action[], idLot: string): Promise<void> {
-  return lancerAvec(async () => ({ actions: await limiterAuxPlacesLibres(actions), idLot }));
+  return lancerAvec(async () => ({ actions: await limiterAuxPlacesLibres(actions, idLot), idLot }));
+}
+
+/** Une entrée « Passée » par enchère écartée (20 au plus), pour que le joueur voie pourquoi elle n'est pas partie. */
+async function noterEncheresEcartees(retirees: readonly Action[], ventes: { enCours: number; max: number }, idLot: string): Promise<void> {
+  const information = `Aucune place d’enchère libre : ${ventes.enCours} en cours sur ${Math.min(ventes.max, CONFIG_PRIX.maxVentesSimultanees)} (relu juste avant le lot).`;
+  let journal = await chargerJournal();
+  for (const a of retirees.slice(0, 20)) {
+    journal = ouvrirEntreePassee(journal, { idCarte: a.idCarte, titre: await titreDe(a.idCarte), type: a.type, parametre: parametreDe(a), idLot }, information, () => new Date());
+  }
+  await enregistrerJournal(journal);
 }
 
 /**
@@ -255,7 +265,7 @@ export async function lancerLot(actions: readonly Action[], idLot: string): Prom
  * Alexis, 2026-11-15) et ne garde que les enchères qui tiennent dans les places libres. Lecture impossible : le lot part
  * tel quel, sur les places de la dernière synchro (le 409 du site reste le garde-fou).
  */
-async function limiterAuxPlacesLibres(actions: readonly Action[]): Promise<readonly Action[]> {
+async function limiterAuxPlacesLibres(actions: readonly Action[], idLot: string): Promise<readonly Action[]> {
   if (!actions.some((a) => a.type === 'enchere')) return actions;
   let ventes: { enCours: number; max: number } | undefined;
   try {
@@ -273,8 +283,12 @@ async function limiterAuxPlacesLibres(actions: readonly Action[]): Promise<reado
   // Même cadence que la file : 0,2 s au minimum plus la gigue entre cette lecture et la première requête du lot.
   await horlogeReelle.attendreJusqua(horlogeReelle.now() + INTERVALLE_MS + Math.floor(Math.random() * (SUPPLEMENT_MAX_MS + 1)));
   if (ventes === undefined) return actions;
-  const { actions: gardees, ecartees } = limiterEncheres(actions, ventes, CONFIG_PRIX.maxVentesSimultanees);
+  const { actions: gardees, ecartees, retirees } = limiterEncheres(actions, ventes, CONFIG_PRIX.maxVentesSimultanees);
   if (ecartees > 0 && gardees.length === 0) throw new Error(AUCUNE_PLACE_ENCHERE);
+  if (ecartees > 0) {
+    // Simple information : un journal illisible ne doit pas bloquer le lot.
+    try { await noterEncheresEcartees(retirees, ventes, idLot); } catch { /* information perdue, le lot continue */ }
+  }
   return gardees;
 }
 

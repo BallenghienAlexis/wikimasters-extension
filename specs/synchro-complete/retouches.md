@@ -151,7 +151,6 @@ Un amendement daté est en tête de `spec.md`, `spec.refined.md`, `design.md` et
 ## À reprendre (revue de la PR #159, anti-bot et limite d’enchères, 2026-11-15)
 - `tests/unit/file.test.ts:736` : seul `refusParCarte` est testé ; ajouter un test de `creerFile` (plusieurs enchères, la première répond `CAUSE_VERIFICATION_HUMAINE`) vérifiant l’arrêt `code-http` sans pause, les cartes suivantes non envoyées et `appliquer` non appelé.
 - `src/lib/actions.ts:137` : `estLimiteEncheres` (regex sur le texte français) double `classerConflit` (`reseau.ts:49`) ; garder une seule règle.
-- `src/lib/journal.ts:285` : `LIBELLE_LIMITE_ENCHERES` écrit « 5 » en dur alors que le maximum vient de `marketplace/mine`.
 - `src/app/PanneauErreur.tsx:144` : le diagnostic est retrouvé par recherche dans le journal (même lot, carte et type) ; porter la cause dans `erreur` et ajouter un test du libellé du panneau.
 
 ## À reprendre (revue de la PR #161, stats tolérantes et prix sans lots, 2026-11-15)
@@ -164,8 +163,6 @@ Un amendement daté est en tête de `spec.md`, `spec.refined.md`, `design.md` et
 - Anti-bot : afficher dans l’onglet Synchro « résous la vérification à la main sur wiki-masters.com » à côté de « Relancer la synchro ».
 
 ## À reprendre (relecture de marketplace/mine avant un lot d’enchères, 2026-11-15)
-- `src/app/pilotageLots.ts` (`limiterAuxPlacesLibres`) : les enchères écartées faute de place ne sont ni journalisées ni annoncées au joueur ; ajouter une ligne d’information (nombre écarté) dans l’onglet Synchro.
-- Pas d’e2e ni de capture dédiés à la relecture (la lecture passe par le site fictif des e2e existants, réponse HTML ignorée) ; ajouter un e2e avec une réponse `marketplace/mine` fictive.
-- (PR #160) `src/app/apercuLot.ts:385` : `AUCUNE_PLACE_ENCHERE` écrit « 5 » en dur, comme `LIBELLE_LIMITE_ENCHERES` (journal.ts) ; reformuler sans le chiffre ou le tirer du relevé.
 - (PR #160) `src/app/pilotageLots.ts:265-275` : le `throw` est rattrapé par son propre `catch` puis relancé selon le préfixe du message ; sortir la décision d’arrêt du `try`. Le chemin « exception de transport » repart aussi sans l’attente de cadence.
 - (PR #160) `tests/unit/pilotage-lots.test.ts` : la pause de 30 min posée par un 401 ou un 429 de la relecture n’existe qu’en mémoire de la page (perdue au rechargement) ; ajouter un test qui fixe ce comportement.
+- (PR #166) `src/lib/journal.ts:163-166` : `ouvrirEntreePassee` met une information de l’extension dans `diagnostic` (documenté « ligne de diagnostic de refus ») et laisse `lot: null`, donc le filtre par famille ne montre pas ces lignes ; documenter le champ et renseigner `lot`.
