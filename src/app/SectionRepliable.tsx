@@ -1,4 +1,4 @@
-import React, { useId, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 
 interface Props {
   titre: string;
@@ -20,6 +20,11 @@ interface Props {
 /** Section repliable (D-50) : replié par défaut, contenu `invisible` donc hors tabulation. */
 const SectionRepliable: React.FC<Props> = ({ titre, resume, id, niveau = 3, ouvertParDefaut = false, testId, className = '', children }) => {
   const [ouvert, setOuvert] = useState(ouvertParDefaut);
+  // L’opération en cours peut arriver après le montage (lecture du stockage) : le bloc s’ouvre alors, sauf si le joueur l’a replié à la main.
+  const manuel = useRef(false);
+  useEffect(() => {
+    if (ouvertParDefaut && !manuel.current) setOuvert(true);
+  }, [ouvertParDefaut]);
   const suffixe = useId();
   const idContenu = `${id}-contenu${suffixe}`;
   const Titre = `h${niveau}` as 'h2' | 'h3' | 'h4';
@@ -30,7 +35,10 @@ const SectionRepliable: React.FC<Props> = ({ titre, resume, id, niveau = 3, ouve
           type="button"
           aria-expanded={ouvert}
           aria-controls={idContenu}
-          onClick={() => setOuvert((o) => !o)}
+          onClick={() => {
+            manuel.current = true;
+            setOuvert((o) => !o);
+          }}
           className="flex min-h-11 w-full items-center justify-between gap-2 px-3 text-left focus-visible:shadow-(--halo-focus)"
         >
           <span className="min-w-0 shrink-0 max-w-[55%] font-bold">{titre}</span>

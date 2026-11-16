@@ -293,7 +293,6 @@ test.describe('exécution réelle (site fictif)', () => {
     }
     await expect(bouton(page, /^Réessayer cette action/)).toHaveAttribute('aria-disabled', 'true');
     await expect(bouton(page, /^Arrêter tout/)).not.toHaveAttribute('aria-disabled', 'true');
-    await deplierTout(page);
     await page.getByRole('link', { name: /historique/i }).click();
     await expect(page.getByTestId('historique')).toContainText('Passée : sautée');
   });

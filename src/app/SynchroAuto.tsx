@@ -123,13 +123,14 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
   const enCours = synchroEnCours(entree);
 
   return (
+    <>
     <SectionRepliable
       id="synchro-auto"
       testId="synchro-auto"
       className="mt-4"
       titre="Synchronisation automatique"
-      ouvertParDefaut={enCours || erreur !== null}
-      resume={`${actif ? 'Activée' : 'Désactivée'} · ${ecarts.length === 0 ? 'aucun écart' : `${ecarts.length} écart${ecarts.length > 1 ? 's' : ''}`}`}
+      ouvertParDefaut={enCours || erreur !== null || relancePossible(entree) || relanceRefusee(entree)}
+      resume={`${texteEtatSynchro(entree)} · ${ecarts.length === 0 ? 'aucun écart' : `${ecarts.length} écart${ecarts.length > 1 ? 's' : ''}`}`}
     >
       <span id="titre-synchro-auto" className="sr-only">
         Synchronisation automatique
@@ -172,7 +173,7 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
         )}
       </div>
 
-      <p id="etat-synchro-auto" aria-live="polite" className="mt-3 font-medium" data-testid="etat-synchro-auto">
+      <p id="etat-synchro-auto" className="mt-3 font-medium" data-testid="etat-synchro-auto">
         {texteEtatSynchro(entree)}
       </p>
       {relancePossible(entree) && <p className="mt-1 text-sm text-muted">{texteRelance(statut)}</p>}
@@ -187,9 +188,7 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
         </p>
       )}
       {erreur !== null && (
-        <p role="alert" className="mt-2 font-semibold text-defausser">
-          {erreur}
-        </p>
+        <p className="mt-2 font-semibold text-defausser">{erreur}</p>
       )}
 
       <p className="mt-2 text-sm" data-testid="derniere-synchro">
@@ -231,6 +230,16 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
         </>
       )}
     </SectionRepliable>
+    {/* Annonces hors du bloc repliable : un contenu replié sort de l’arbre d’accessibilité. */}
+    <p aria-live="polite" className="sr-only">
+      {texteEtatSynchro(entree)}
+    </p>
+    {erreur !== null && (
+      <p role="alert" className="sr-only">
+        {erreur}
+      </p>
+    )}
+    </>
   );
 };
 

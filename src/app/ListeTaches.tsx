@@ -35,6 +35,8 @@ const ListeTaches: React.FC<Props> = ({ listes }) => {
   const defiler = (e: React.MouseEvent<HTMLAnchorElement>): void => {
     e.preventDefault();
     const cible = document.getElementById('historique');
+    // Le Journal est repliable : le lien le déplie avant d’y mener.
+    cible?.querySelector<HTMLElement>('button[aria-expanded="false"]')?.click();
     cible?.scrollIntoView();
     cible?.focus();
   };
