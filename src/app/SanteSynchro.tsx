@@ -1,5 +1,6 @@
 import React from 'react';
 import type { PastilleSynchro } from '../lib/tableauDeBord';
+import type { LigneSante } from '../lib/tableauDeBord';
 import PastilleStatut, { MOT_PASTILLE, SYMBOLE_PASTILLE } from './PastilleStatut';
 import SectionRepliable from './SectionRepliable';
 
@@ -12,14 +13,6 @@ interface Props {
   prixReleves: number;
   /** Lignes Lecture / Étiquettes / Prix / Ignorées (symbole + mot, jamais la couleur seule). */
   lignes?: readonly LigneSante[];
-}
-
-export interface LigneSante {
-  symbole: string;
-  nom: string;
-  texte: string;
-  /** Lien « gérer » vers un onglet. */
-  lien?: { libelle: string; href: string };
 }
 
 const LIEN: Record<PastilleSynchro, string | null> = {
@@ -60,7 +53,7 @@ const SanteSynchro: React.FC<Props> = ({ pastille, ageLibelle, activee, prixRele
               </span>
               <span className="min-w-0 break-words">{l.texte}</span>
               {l.lien && (
-                <a href={l.lien.href} className="inline-flex min-h-11 items-center rounded px-2 underline">
+                <a href={l.lien.href} aria-label={l.lien.nomAccessible} className="inline-flex min-h-11 items-center rounded px-2 underline">
                   {l.lien.libelle}
                 </a>
               )}

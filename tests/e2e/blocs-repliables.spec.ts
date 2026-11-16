@@ -74,5 +74,7 @@ test('tableau de bord : santé en quatre lignes Lecture, Étiquettes, Prix, Igno
   await expect(lignes).toHaveCount(4);
   await expect(lignes.nth(0)).toContainText('Lecture');
   await expect(lignes.nth(1)).toContainText('5 étiquettes lues');
+  await expect(lignes.nth(2)).toContainText('Prix');
   await expect(lignes.nth(3)).toContainText('2 actions ignorées');
+  await expect(lignes.nth(3).getByRole('link', { name: 'Gérer les actions ignorées' })).toBeVisible();
 });

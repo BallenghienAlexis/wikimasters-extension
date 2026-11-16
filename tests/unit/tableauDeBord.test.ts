@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Carte, Collection } from '../../src/lib/collection'
 import { themesDeCarte } from '../../src/lib/themes'
 import { etiquettesDeCarte, placesEncheres } from '../../src/lib/lot'
-import { calculerTableauDeBord, type ContexteTableauDeBord } from '../../src/lib/tableauDeBord'
+import { calculerTableauDeBord, lignesSante, type ContexteTableauDeBord } from '../../src/lib/tableauDeBord'
 
 // Données fictives uniquement.
 const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
@@ -180,5 +180,39 @@ describe('cartes sans thème fiable', () => {
     const sans = carte('b', { description: '', idsSite: ['ex-b'] })
     const nonReliee = carte('c', { description: '', idsSite: null })
     expect(calcul([avec, sans, nonReliee]).sansTheme).toBe(1)
+  })
+})
+
+describe('lignesSante : santé de la synchro en quatre lignes', () => {
+  const JOUR = 86_400_000
+  const base = { exemplaires: 12, ageLibelle: 'il y a 12 min', derniereTerminee: 1000, etiquettesLues: 5, releves: [] as number[], ignorees: 0, maintenant: 100 * JOUR }
+
+  it('à vide : jamais synchronisé, rien de lu, rien d’ignoré', () => {
+    const l = lignesSante({ ...base, derniereTerminee: null, etiquettesLues: 0 })
+    expect(l.map((x) => x.nom)).toEqual(['Lecture', 'Étiquettes', 'Prix', 'Ignorées'])
+    expect(l[0]).toMatchObject({ symbole: '○', texte: 'Pas encore de synchro terminée' })
+    expect(l[1]).toMatchObject({ symbole: '○', texte: 'Aucune étiquette lue' })
+    expect(l[2]).toMatchObject({ symbole: '○', texte: 'Aucun prix relevé' })
+    expect(l[3]).toMatchObject({ symbole: '✓', texte: 'Aucune action ignorée' })
+  })
+
+  it('synchro faite : lecture, étiquettes et prix récents, accords au singulier', () => {
+    const l = lignesSante({ ...base, exemplaires: 1, etiquettesLues: 1, releves: [100 * JOUR - JOUR] })
+    expect(l[0]?.texte).toBe('1 exemplaire · il y a 12 min')
+    expect(l[1]?.texte).toBe('1 étiquette lue à la dernière synchro')
+    expect(l[2]).toMatchObject({ symbole: '✓', texte: '1 prix relevé, tous récents' })
+  })
+
+  it('prix périmés : seuil au-delà de 30 jours, comme l’ordonnanceur', () => {
+    const exact = lignesSante({ ...base, releves: [100 * JOUR - 30 * JOUR] })
+    expect(exact[2]?.symbole).toBe('✓')
+    const perime = lignesSante({ ...base, releves: [100 * JOUR - 30 * JOUR - 1, 100 * JOUR] })
+    expect(perime[2]).toMatchObject({ symbole: '○', texte: '1 prix à rafraîchir (plus de 30 jours)' })
+  })
+
+  it('actions ignorées : symbole d’alerte et lien nommé', () => {
+    const l = lignesSante({ ...base, ignorees: 2 })
+    expect(l[3]).toMatchObject({ symbole: '✕', texte: '2 actions ignorées jusqu’à la prochaine synchro' })
+    expect(l[3]?.lien?.nomAccessible).toBe('Gérer les actions ignorées')
   })
 })

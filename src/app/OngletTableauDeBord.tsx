@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { collectionVide, type Collection } from '../lib/collection';
 import { chargerCollection, chargerIgnorees, chargerPreferences, ecouterCollection, ecouterIgnorees } from '../lib/stockage';
-import { calculerTableauDeBord, type ContexteTableauDeBord } from '../lib/tableauDeBord';
+import { calculerTableauDeBord, lignesSante as lignesSanteDe, type ContexteTableauDeBord, type LigneSante } from '../lib/tableauDeBord';
 import { preferencesParDefaut, type Preferences } from '../lib/tri';
 import CarteKpi from './CarteKpi';
-import SanteSynchro, { type LigneSante } from './SanteSynchro';
+import SanteSynchro from './SanteSynchro';
 import { pastilleDe, useLectureSynchro } from './useLectureSynchro';
 
 const accorder = (n: number, singulier: string, pluriel: string): string => `${n} ${n > 1 ? pluriel : singulier}`;
@@ -45,26 +45,19 @@ const OngletTableauDeBord: React.FC = () => {
     return calculerTableauDeBord(collection, contexte, synchro.maintenant);
   }, [collection, preferences.amis, synchro]);
 
-  const lignesSante = useMemo((): LigneSante[] => {
-    const JOUR = 86_400_000;
-    const releves = Object.values(synchro.etat?.prix ?? {}).map((r) => r.releveLe);
-    const perimes = releves.filter((d) => synchro.maintenant - d >= 30 * JOUR).length;
-    const etiquettes = synchro.statut?.etiquettes ?? 0;
-    return [
-      synchro.derniere !== null
-        ? { symbole: '✓', nom: 'Lecture', texte: `${accorder(tableau.exemplaires, 'exemplaire', 'exemplaires')} · ${tableau.sante.ageLibelle}` }
-        : { symbole: '○', nom: 'Lecture', texte: 'Pas encore de synchro terminée' },
-      etiquettes > 0
-        ? { symbole: '✓', nom: 'Étiquettes', texte: `${accorder(etiquettes, 'étiquette lue', 'étiquettes lues')} à la dernière synchro` }
-        : { symbole: '○', nom: 'Étiquettes', texte: 'Aucune étiquette lue' },
-      perimes > 0
-        ? { symbole: '○', nom: 'Prix', texte: `${accorder(perimes, 'titre à rafraîchir', 'titres à rafraîchir')} (plus de 30 jours)` }
-        : { symbole: releves.length > 0 ? '✓' : '○', nom: 'Prix', texte: releves.length > 0 ? `${accorder(releves.length, 'prix relevé', 'prix relevés')}, tous récents` : 'Aucun prix relevé' },
-      nbIgnorees > 0
-        ? { symbole: '✕', nom: 'Ignorées', texte: `${accorder(nbIgnorees, 'action ignorée', 'actions ignorées')} jusqu’à la prochaine synchro`, lien: { libelle: 'Gérer', href: '#synchro' } }
-        : { symbole: '✓', nom: 'Ignorées', texte: 'Aucune action ignorée' },
-    ];
-  }, [synchro, tableau, nbIgnorees]);
+  const lignesSante = useMemo(
+    (): LigneSante[] =>
+      lignesSanteDe({
+        exemplaires: tableau.exemplaires,
+        ageLibelle: tableau.sante.ageLibelle,
+        derniereTerminee: synchro.derniere,
+        etiquettesLues: synchro.statut?.etiquettes ?? 0,
+        releves: Object.values(synchro.etat?.prix ?? {}).map((r) => r.releveLe),
+        ignorees: nbIgnorees,
+        maintenant: synchro.maintenant,
+      }),
+    [synchro, tableau, nbIgnorees],
+  );
 
   // Avant la lecture du stockage, les chiffres partent de 0 : le compteur défile ensuite jusqu’à la valeur (D-61).
   const v = (n: number | null): number | null => (chargee ? n : 0);
