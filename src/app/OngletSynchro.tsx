@@ -15,6 +15,7 @@ import {
   enregistrerJournal,
 } from '../lib/stockage';
 import PastilleStatut, { type EtatSynchro } from './PastilleStatut';
+import BlocRepliable from './BlocRepliable';
 import FraicheurPrix from './FraicheurPrix';
 import ListeTaches from './ListeTaches';
 import Journal from './Journal';
@@ -66,7 +67,16 @@ function useLecture(): Lecture {
       }),
       sans(chargerEtatSynchro(), null),
     ]);
-    setLecture({ statut, bail, execution, executionIllisible, journal, journalIllisible, etat, maintenant: Date.now() });
+    setLecture({
+      statut,
+      bail,
+      execution,
+      executionIllisible,
+      journal,
+      journalIllisible,
+      etat,
+      maintenant: Date.now(),
+    });
   }, []);
   useEffect(() => {
     const premiere = setTimeout(() => void relire(), 0);
@@ -111,8 +121,17 @@ const OngletSynchro: React.FC<Props> = ({ donnees }) => {
           Durée restante estimée&nbsp;: <span data-testid="duree-restante">{dureeRestante(secondesSynchro(statut))}</span>
         </p>
       )}
-      <ListeTaches listes={listes} />
-      <FraicheurPrix releves={releves} maintenant={maintenant} />
+      <BlocRepliable
+        id="taches"
+        titre="Tâches"
+        resume={listes.aucuneActivite ? 'Aucune activité' : `${listes.enCours.length} en cours · ${listes.aVenir.length} à venir`}
+        ouvertParDefaut={synchroActive}
+      >
+        <ListeTaches listes={listes} />
+      </BlocRepliable>
+      <BlocRepliable id="prix" titre="Prix du marché" resume={releves.length > 0 ? `${releves.length} relevés` : 'Aucun prix'}>
+        <FraicheurPrix releves={releves} maintenant={maintenant} />
+      </BlocRepliable>
       <SynchroAuto collection={collection} preferences={preferences} cacheWiki={cacheWiki} />
       {executionIllisible && (
         <p role="alert" data-testid="etat-execution-illisible" className="mt-4 break-words rounded border border-line border-l-[6px] border-l-defausser bg-ink-2 p-4 font-semibold">
@@ -129,18 +148,24 @@ const OngletSynchro: React.FC<Props> = ({ donnees }) => {
         }}
       />
       <TableIgnorees collection={collection} />
-      <div id="historique" tabIndex={-1} className="focus-visible:shadow-(--halo-focus)">
-        <Journal
-          idTest="historique"
-          titre="Historique"
-          illisible={journalIllisible}
-          entrees={journal}
-          registre={registre}
-          retraitDisponible={false}
-          ongletPret={false}
-          onVider={() => void enregistrerJournal([]).catch(() => undefined)}
-        />
-      </div>
+      <BlocRepliable
+        id="historique-bloc"
+        titre="Historique"
+        resume={journal.length > 0 ? `${journal.length} ${journal.length > 1 ? 'entrées' : 'entrée'}` : 'Vide'}
+      >
+        <div id="historique" tabIndex={-1} className="focus-visible:shadow-(--halo-focus)">
+          <Journal
+            idTest="historique"
+            titre="Historique"
+            illisible={journalIllisible}
+            entrees={journal}
+            registre={registre}
+            retraitDisponible={false}
+            ongletPret={false}
+            onVider={() => void enregistrerJournal([]).catch(() => undefined)}
+          />
+        </div>
+      </BlocRepliable>
     </>
   );
 };

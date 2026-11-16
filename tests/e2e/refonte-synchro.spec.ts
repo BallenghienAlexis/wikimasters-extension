@@ -84,11 +84,12 @@ const entreeJournal = (n: number): Record<string, unknown> => ({
   cause: null,
 });
 
-async function poser(page: Page, valeurs: Record<string, unknown>): Promise<void> {
+async function poser(page: Page, valeurs: Record<string, unknown>, deplier = true): Promise<void> {
   await chargerCartes(page, CARTES);
   await page.evaluate((v) => chrome.storage.local.set(v), valeurs);
   await page.reload();
-  await allerA(page, 'synchro');
+  // Les tests d’annonces (fenêtre de 2 s) ne déplient rien : les clics retarderaient les mesures.
+  await allerA(page, 'synchro', deplier);
 }
 
 const maj = (page: Page, valeurs: Record<string, unknown>) => page.evaluate((v) => chrome.storage.local.set(v), valeurs);
@@ -202,7 +203,7 @@ test.describe('SC-002 : barre globale et étapes', () => {
     await poser(pageCollection, {
       bailSynchro: Date.now() + 120_000,
       statutSynchro: statut({ etape: 'pages', page: 2, pages: 100 }),
-    });
+    }, false);
     const zone = pageCollection.getByTestId('annonce-synchro');
     await expect(zone).toHaveAttribute('aria-live', 'polite');
     await expect(zone).not.toBeEmpty();
@@ -493,7 +494,7 @@ test.describe('Revue T-306 : couleur par état, bail expiré, pastille D-40', ()
     await poser(pageCollection, {
       bailSynchro: Date.now() + 120_000,
       statutSynchro: statut({ etape: 'pages', page: 11, pages: 40 }),
-    });
+    }, false);
     const zone = pageCollection.getByTestId('annonce-synchro');
     await expect(zone).toContainText('Étape 2 / 4 · 31 %');
     await maj(pageCollection, {

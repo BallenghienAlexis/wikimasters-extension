@@ -3,6 +3,7 @@ import { collectionVide, type Collection } from '../lib/collection';
 import { chargerCollection, chargerPreferences, ecouterCollection } from '../lib/stockage';
 import { calculerTableauDeBord, type ContexteTableauDeBord } from '../lib/tableauDeBord';
 import { preferencesParDefaut, type Preferences } from '../lib/tri';
+import BlocRepliable from './BlocRepliable';
 import CarteKpi from './CarteKpi';
 import SanteSynchro from './SanteSynchro';
 import { pastilleDe, useLectureSynchro } from './useLectureSynchro';
@@ -30,7 +31,11 @@ const OngletTableauDeBord: React.FC = () => {
 
   const tableau = useMemo(() => {
     const contexte: ContexteTableauDeBord = {
-      synchro: { activee: synchro.activee, etat: pastilleDe(synchro), derniereTerminee: synchro.derniere },
+      synchro: {
+        activee: synchro.activee,
+        etat: pastilleDe(synchro),
+        derniereTerminee: synchro.derniere,
+      },
       prix: synchro.etat?.prix ?? {},
       amis: preferences.amis,
     };
@@ -78,12 +83,14 @@ const OngletTableauDeBord: React.FC = () => {
 
       {vide && <p className="mt-4 rounded border border-line bg-ink-2 p-4">Aucune carte</p>}
 
-      <SanteSynchro
-        pastille={tableau.sante.pastille}
-        ageLibelle={tableau.sante.ageLibelle}
-        activee={synchro.activee}
-        prixReleves={tableau.fraicheurPrix.releves}
-      />
+      <BlocRepliable id="sante" titre="Santé de la synchro" resume={tableau.sante.ageLibelle}>
+        <SanteSynchro
+          pastille={tableau.sante.pastille}
+          ageLibelle={tableau.sante.ageLibelle}
+          activee={synchro.activee}
+          prixReleves={tableau.fraicheurPrix.releves}
+        />
+      </BlocRepliable>
     </section>
   );
 };

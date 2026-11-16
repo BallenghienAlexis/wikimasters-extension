@@ -47,12 +47,14 @@ export const ONGLETS = [
 export type IdOnglet = (typeof ONGLETS)[number]['id'];
 
 /** Ouvre un onglet de la page de gestion par son fragment d'URL, puis attend qu'il soit sélectionné. */
-export async function allerA(page: Page, onglet: IdOnglet): Promise<void> {
+export async function allerA(page: Page, onglet: IdOnglet, deplier = true): Promise<void> {
   await page.evaluate((id) => {
     window.location.hash = id;
   }, onglet);
   const { nom } = ONGLETS.find((o) => o.id === onglet) ?? { nom: onglet };
   await expect(page.getByRole('tab', { name: new RegExp(`^${nom}`) })).toHaveAttribute('aria-selected', 'true');
+  // Les blocs repliables (BlocRepliable) sont dépliés par défaut dans les tests ; les tests de repli les referment eux-mêmes.
+  if (deplier) await ouvrirTousLesBlocs(page);
 }
 
 /** Largeurs et thèmes des vérifications transverses (SC-009) et des captures finales. */
@@ -231,6 +233,18 @@ export async function ouvrirSectionsReglages(page: Page): Promise<void> {
 export async function ouvrirIgnorees(page: Page): Promise<void> {
   const titre = page.getByTestId('ignorees').getByRole('button', { name: /^Ignorées/ });
   if ((await titre.getAttribute('aria-expanded')) === 'false') await titre.click();
+}
+
+/** Déplie un bloc repliable (`BlocRepliable`) par son identifiant, s'il est replié. */
+export async function ouvrirBloc(page: Page, id: string): Promise<void> {
+  const b = page.getByTestId(`bloc-${id}-bouton`);
+  if ((await b.getAttribute('aria-expanded')) === 'false') await b.click();
+}
+
+/** Déplie tous les blocs repliables visibles de la page. */
+export async function ouvrirTousLesBlocs(page: Page): Promise<void> {
+  const boutons = page.locator('[data-testid^="bloc-"][data-testid$="-bouton"][aria-expanded="false"]');
+  for (let i = await boutons.count(); i > 0; i = await boutons.count()) await boutons.first().click();
 }
 
 interface Fixtures {

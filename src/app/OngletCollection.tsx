@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { filtrerCartes, resumer, type Filtres } from '../lib/collection';
 import { themesDeCarte } from '../lib/themes';
 import { trierLignes } from '../lib/ordreTableau';
+import BlocRepliable from './BlocRepliable';
 import AnalysesCollection from './AnalysesCollection';
 import GraphiqueEvolution from './GraphiqueEvolution';
 import TableauCartes, { valeurDeTri, type EtatTri } from './TableauCartes';
@@ -89,8 +90,12 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
         )}
       </section>
 
-      <AnalysesCollection cartes={collection.cartes} cacheWiki={cacheWiki} />
-      <GraphiqueEvolution />
+      <BlocRepliable id="analyses" titre="Analyses" resume="Doublons · plus chères · thèmes">
+        <AnalysesCollection cartes={collection.cartes} cacheWiki={cacheWiki} />
+      </BlocRepliable>
+      <BlocRepliable id="evolution-bloc" titre="Évolution" resume="30 derniers jours">
+        <GraphiqueEvolution />
+      </BlocRepliable>
     </>
   );
 };

@@ -19,6 +19,7 @@ import BandeauRisque from './BandeauRisque';
 import ListeActionsLot from './ListeActionsLot';
 import CartesNonIncluses from './CartesNonIncluses';
 import ListeEcarts from './ListeEcarts';
+import BlocRepliable from './BlocRepliable';
 import SectionRepliable from './SectionRepliable';
 import TableauLots from './TableauLots';
 import { useExecution } from './useExecution';
@@ -192,7 +193,10 @@ const PanneauApercuLot: React.FC<Props> = ({
   const figer = (r: Registre | null, listeIgnorees: Ignoree[]): void => {
     setIgnorees(listeIgnorees);
     setDecochees(new Set());
-    const config = { ...configDuLot(preferences, ventesSiteLues), selection: versSelection(collection.cartes, choix) };
+    const config = {
+      ...configDuLot(preferences, ventesSiteLues),
+      selection: versSelection(collection.cartes, choix),
+    };
     setEtat(preparerLot(collection, r, dispo, config));
     let apercu: ApercuEtiquettes | null = null;
     if (r !== null) {
@@ -224,7 +228,15 @@ const PanneauApercuLot: React.FC<Props> = ({
     [lotsAffiches, decochees],
   );
   const actionsCochees = useMemo(() => actionsDesLotsCoches(separes?.disponibles ?? [], cochees), [separes, cochees]);
-  const lignesLots = useMemo(() => lotsAffiches.map((l, i) => ({ famille: l.famille, nbActions: l.actions.length, ordre: i + 1 })), [lotsAffiches]);
+  const lignesLots = useMemo(
+    () =>
+      lotsAffiches.map((l, i) => ({
+        famille: l.famille,
+        nbActions: l.actions.length,
+        ordre: i + 1,
+      })),
+    [lotsAffiches],
+  );
   const detailsCochees = useMemo(() => detailsDuLot(actionsCochees, cartes), [actionsCochees, cartes]);
   const pageCochees = useMemo(() => pageActions(actionsCochees), [actionsCochees]);
   const ecartsSite = useMemo(() => calculerEcarts(collection.cartes, { amis: preferences.amis, mesThemes: preferences.mesThemes }, registreCourant), [collection.cartes, preferences.amis, preferences.mesThemes, registreCourant]);
@@ -345,7 +357,9 @@ const PanneauApercuLot: React.FC<Props> = ({
                   aria-valuemax={exec.etat.total}
                   aria-valuenow={exec.etat.traitees}
                   className="h-2 rounded bg-paper"
-                  style={{ width: `${pourcentage(exec.etat.traitees, exec.etat.total)}%` }}
+                  style={{
+                    width: `${pourcentage(exec.etat.traitees, exec.etat.total)}%`,
+                  }}
                 />
               </div>
               <button ref={arreterRef} type="button" className={`${CLASSE_BOUTON} ${CLASSE_ACTIF} mt-3 border-muted font-semibold`} onClick={arreter}>
@@ -471,28 +485,38 @@ const PanneauApercuLot: React.FC<Props> = ({
             )}
 
             {filtre && filtre.ecartees.length > 0 && (
-              <section aria-labelledby="titre-ecartees" className="mt-4" data-testid="actions-ecartees">
-                <h3 id="titre-ecartees" className="font-semibold">
-                  Actions écartées
-                </h3>
-                <ul className="mt-1 text-sm">
-                  {filtre.ecartees.slice(0, 50).map((e, i) => (
-                    <li key={i} className="break-words py-1">
-                      {carteTexte(e.action.idCarte, cartes)}
-                      {NB}: {libelleType(e.action.type)}
-                      {detailsEcartees[i] ? ` (${detailsEcartees[i]})` : ''} · <span className="text-muted">{e.raison}</span>
-                    </li>
-                  ))}
-                </ul>
-                {filtre.ecartees.length > 50 && (
-                  <p className="text-sm text-muted">… et {filtre.ecartees.length - 50} autres.</p>
-                )}
-              </section>
+              <BlocRepliable id="ecartees" titre="Actions écartées" resume={texteActionsEcartees(filtre.ecartees.length)}>
+                <section aria-labelledby="titre-ecartees" className="mt-4" data-testid="actions-ecartees">
+                  <h3 id="titre-ecartees" className="font-semibold">
+                    Actions écartées
+                  </h3>
+                  <ul className="mt-1 text-sm">
+                    {filtre.ecartees.slice(0, 50).map((e, i) => (
+                      <li key={i} className="break-words py-1">
+                        {carteTexte(e.action.idCarte, cartes)}
+                        {NB}: {libelleType(e.action.type)}
+                        {detailsEcartees[i] ? ` (${detailsEcartees[i]})` : ''} · <span className="text-muted">{e.raison}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {filtre.ecartees.length > 50 && <p className="text-sm text-muted">… et {filtre.ecartees.length - 50} autres.</p>}
+                </section>
+              </BlocRepliable>
             )}
 
-            {apercuEtiquettes && <EtiquettesPrevues apercu={apercuEtiquettes} cartes={cartes} />}
+            {apercuEtiquettes && (
+              <BlocRepliable
+                id="etiquettes-prevues"
+                titre="Étiquettes prévues"
+                resume={`${apercuEtiquettes.lignes.length} ${apercuEtiquettes.lignes.length > 1 ? 'étiquettes' : 'étiquette'}`}
+              >
+                <EtiquettesPrevues apercu={apercuEtiquettes} cartes={cartes} />
+              </BlocRepliable>
+            )}
 
-            <ListeEcarts ecarts={ecartsSite} />
+            <BlocRepliable id="ecarts-site" titre="Écarts avec le site" resume={`${ecartsSite.length}`}>
+              <ListeEcarts ecarts={ecartsSite} />
+            </BlocRepliable>
 
             <div className="mt-4 grid gap-2">
               {actionsCochees.some((a) => a.type === 'creation-etiquette' || a.type === 'pose-etiquette' || a.type === 'retrait-etiquette') && (
@@ -511,9 +535,15 @@ const PanneauApercuLot: React.FC<Props> = ({
               )}
             </div>
 
-            {lignes.length > 0 && <CartesNonIncluses lignes={lignes} groupees={groupees} places={places} cartes={cartes} />}
+            {lignes.length > 0 && (
+              <BlocRepliable id="non-incluses" titre="Cartes non incluses" resume={`${lignes.length}`}>
+                <CartesNonIncluses lignes={lignes} groupees={groupees} places={places} cartes={cartes} />
+              </BlocRepliable>
+            )}
 
-            <p className="mt-3 text-sm text-muted">{CADENCE_TEXTE}</p>
+            <BlocRepliable id="cadence" titre="Cadence d’envoi" resume="Règles du site">
+              <p className="mt-3 text-sm text-muted">{CADENCE_TEXTE}</p>
+            </BlocRepliable>
 
             <div
               data-testid="barre-lancer"
@@ -553,15 +583,21 @@ const PanneauApercuLot: React.FC<Props> = ({
         </p>
       )}
 
-      <Journal
-        entrees={entrees}
-        registre={registreCourant}
-        retraitDisponible={dispo.has('retrait-etiquette')}
-        ongletPret={nbOngletsReel === 1}
-        illisible={journalIllisible}
-        onRetirer={retirer}
-        onVider={vider}
-      />
+      <BlocRepliable
+        id="journal-lots"
+        titre="Journal des lots"
+        resume={entrees.length > 0 ? `${entrees.length} ${entrees.length > 1 ? 'entrées' : 'entrée'}` : 'Vide'}
+      >
+        <Journal
+          entrees={entrees}
+          registre={registreCourant}
+          retraitDisponible={dispo.has('retrait-etiquette')}
+          ongletPret={nbOngletsReel === 1}
+          illisible={journalIllisible}
+          onRetirer={retirer}
+          onVider={vider}
+        />
+      </BlocRepliable>
     </div>
   );
 };
