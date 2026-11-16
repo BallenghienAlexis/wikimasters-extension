@@ -128,6 +128,7 @@ describe('familles de descriptions courtes', () => {
     ['rue de Paris', 'Rue Charras', 'ville'],
     ['voie de Nantes, en France', 'Passage Bouchaud', 'ville'],
     ['census-designated place du comté de Kay, dans l’État d’Oklahoma, aux États-Unis', 'Tonkawa Tribal Housing', 'ville'],
+    ['comté des États-Unis', 'Comté de Floyd', 'geographie'],
     ['district de l’État indien du Gujarat', 'District de Devbhoomi Dwarka', 'geographie'],
     ['comté de l’Indiana, aux USA', 'Comté de Floyd (Indiana)', 'geographie'],
     ['prélat catholique († 1361)', 'Pierre Ier de Cros', 'religion'],
