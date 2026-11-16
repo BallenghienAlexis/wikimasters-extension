@@ -4,7 +4,6 @@ import type { Carte, Collection } from '../../src/lib/collection';
 import { VERSION_SCHEMA } from '../../src/lib/collection';
 import {
   MAX_PAGES_SANS_TOTAL,
-  MAX_PAUSES_403_PRIX,
   PAUSE_APRES_ARRET_MS,
   ancienneteMaxPrixMs,
   etatInitial,
@@ -95,8 +94,6 @@ interface Banc {
   enregistrements: Array<{ collection: Collection; etat: EtatOrdonnanceur }>;
   enVolMax: () => number;
 }
-
-const horlogeFin = (b: { horloge: { t: number } }): number => b.horloge.t;
 
 function banc(
   reponse: (chemin: string, n: number) => ReponseApi | Promise<ReponseApi>,
@@ -593,63 +590,6 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r3.issue).toBe('termine');
   });
 
-  it('prix : un 403 sur une seule carte est ignoré, la synchro va au bout sans pause', async () => {
-    const site = siteFictif(6);
-    const b = banc((chemin) => (chemin.includes('card-2/sales') ? { statut: 403, json: null } : site(chemin)));
-    const r = await synchroniser(b.deps);
-    expect(r.issue).toBe('termine');
-    expect(r.etat.arretJusqua).toBeNull();
-    expect(r.prixReleves).toBe(5);
-    // Un 403 isolé : pas redemandée avant 1 jour, sans valeur inventée.
-    expect(r.etat.prix['R|Carte 2']?.valeur).toBeNull();
-    const b2 = banc(site, r.collection, r.etat);
-    b2.horloge.t += 31 * 60_000;
-    await synchroniser({ ...b2.deps });
-    expect(b2.departs.some((d) => d.chemin.includes('card-2/sales'))).toBe(false);
-  })
-
-  it('prix : des 403 en série sans reprise ne coûtent que des cartes ignorées, jamais un arrêt (plus de restriction des 3 erreurs)', async () => {
-    const site = siteFictif(8);
-    const b = banc((chemin) => (/card-[0-9]+\/sales/.test(chemin) ? { statut: 403, json: null } : site(chemin)));
-    const r = await synchroniser(b.deps);
-    expect(r.issue).toBe('termine');
-    expect(r.etat.arretJusqua).toBeNull();
-    // Les cartes refusées sont ignorées, la série déclenche les pauses adaptatives (4 au plus) sans arrêt.
-    expect(b.journal.join('\n')).toContain('limitation de débit possible');
-    expect(b.journal.filter((l) => l.includes('limitation de débit possible'))).toHaveLength(MAX_PAUSES_403_PRIX);
-    // Coupure de la phase Prix, sans mémoriser toute la file : seules les cartes refusées sont reportées d'un jour.
-    expect(b.journal.join('\n')).toContain('reprendra à la prochaine synchro');
-    const memorisees = Object.values(r.etat.prix);
-    expect(memorisees.length).toBeLessThan(8);
-    for (const m of memorisees) expect(horlogeFin(b) - m.releveLe).toBeGreaterThan(ancienneteMaxPrixMs - JOUR - 1);
-  })
-
-  it('prix : une rafale de 403 (limitation de débit) passe après une pause, sans arrêt', async () => {
-    const site = siteFictif(10);
-    let refus = 0;
-    const b = banc((chemin) => {
-      if (/card-[3-5]\/sales/.test(chemin) && refus < 4) {
-        refus += 1;
-        return { statut: 403, json: null };
-      }
-      return site(chemin);
-    });
-    const r = await synchroniser(b.deps);
-    expect(r.issue).toBe('termine');
-    expect(r.etat.arretJusqua).toBeNull();
-    expect(r.prixReleves).toBe(8);
-    expect(b.journal.join('\n')).toContain('limitation de débit possible');
-  })
-
-  it('prix : un 404 isolé est mémorisé 30 jours, un 403 isolé seulement 1 jour', async () => {
-    const site = siteFictif(6);
-    const b = banc((chemin) => (chemin.includes('card-2/sales') ? { statut: 404, json: null } : chemin.includes('card-4/sales') ? { statut: 403, json: null } : site(chemin)));
-    const r = await synchroniser(b.deps);
-    const age = (id: string) => b.horloge.t - (r.etat.prix[id]?.releveLe ?? 0);
-    expect(age('R|Carte 2')).toBeLessThan(60_000);
-    expect(ancienneteMaxPrixMs - age('R|Carte 4')).toBeLessThan(JOUR + 60_000);
-  })
-
   it('prix : une série de 404 ne déclenche aucune pause', async () => {
     const site = siteFictif(8);
     const b = banc((chemin) => (/card-[0-9]+\/sales/.test(chemin) ? { statut: 404, json: null } : site(chemin)));
@@ -658,17 +598,96 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(b.journal.join('\n')).not.toContain('limitation de débit possible');
   })
 
-  it('prix : la vérification anti-bot arrive au 3e refus d’une série : arrêt immédiat, sans pause', async () => {
-    const site = siteFictif(8);
+  it('prix : une erreur 403 attend 5 s puis redemande la même carte, sans arrêt ni plafond', async () => {
+    const site = siteFictif(4);
+    let refus = 0;
     const b = banc((chemin) => {
-      const m = /card-([0-9]+)\/sales/.exec(chemin);
-      if (m === null) return site(chemin);
-      return Number(m[1]) >= 3 ? { statut: 403, json: { code: 'human_verification_required' } } : { statut: 403, json: null };
+      if (chemin.includes('card-2/sales') && refus < 3) {
+        refus += 1;
+        return { statut: 403, json: null };
+      }
+      return site(chemin);
     });
     const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('termine');
+    expect(r.etat.arretJusqua).toBeNull();
+    expect(r.prixReleves).toBe(4);
+    const essais = b.departs.filter((d) => d.chemin.includes('card-2/sales'));
+    expect(essais).toHaveLength(4);
+    // Attente de 5 s, puis 10 s, puis 15 s : +5 s à chaque nouvel échec de la même carte.
+    expect(essais[1]!.t - essais[0]!.t).toBeGreaterThanOrEqual(5_000);
+    expect(essais[2]!.t - essais[1]!.t).toBeGreaterThanOrEqual(10_000);
+    expect(essais[3]!.t - essais[2]!.t).toBeGreaterThanOrEqual(15_000);
+    expect(b.journal.join('\n')).toContain('en attente');
+  })
+
+  it('prix : 429 répétés (plus de 5) : aucune limite, la synchro attend jusqu’au succès', async () => {
+    const site = siteFictif(3);
+    let refus = 0;
+    const b = banc((chemin) => (chemin.includes('card-1/sales') && refus++ < 8 ? { statut: 429, json: null } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('termine');
+    expect(r.prixReleves).toBe(3);
+    expect(b.departs.filter((d) => d.chemin.includes('card-1/sales'))).toHaveLength(9);
+  })
+
+  it('prix : la vérification anti-bot met la phase en attente (message clair) et reprend dès que le joueur l’a franchie', async () => {
+    const site = siteFictif(3);
+    let verif = 2;
+    const attentes: Array<{ verification: boolean; codeHttp: number | null } | null> = [];
+    const b = banc((chemin) => (chemin.includes('card-2/sales') && verif-- > 0 ? { statut: 403, json: { code: 'human_verification_required' } } : site(chemin)));
+    const r = await synchroniser({ ...b.deps, annoncerAttente: (a) => attentes.push(a === null ? null : { verification: a.verification, codeHttp: a.codeHttp }) });
+    expect(r.issue).toBe('termine');
+    expect(r.prixReleves).toBe(3);
+    expect(attentes.filter((a) => a?.verification === true)).toHaveLength(2);
+    expect(attentes.at(-1)).toBeNull();
+    expect(b.journal.join('\n')).toContain('anti-bot');
+  })
+
+  it('prix : une réponse vide ou une erreur réseau attend aussi 5 s, 10 s… puis redemande', async () => {
+    const site = siteFictif(3);
+    let n = 0;
+    const b = banc((chemin) => {
+      if (chemin.includes('card-2/sales')) {
+        n += 1;
+        if (n === 1) return { statut: 200, json: null };
+        if (n === 2) throw new Error('réseau');
+      }
+      return site(chemin);
+    });
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('termine');
+    const essais = b.departs.filter((d) => d.chemin.includes('card-2/sales'));
+    expect(essais).toHaveLength(3);
+    expect(essais[1]!.t - essais[0]!.t).toBeGreaterThanOrEqual(5_000);
+    expect(essais[2]!.t - essais[1]!.t).toBeGreaterThanOrEqual(10_000);
+    expect(r.etat.prix[idCarte(2)]?.valeur).toBe(102);
+  })
+
+  it('prix : seul le joueur arrête une attente (arrêt manuel pendant la pause), sans pause de 30 min', async () => {
+    const site = siteFictif(3);
+    let arret = false;
+    const b = banc((chemin) => {
+      if (chemin.includes('card-2/sales')) {
+        arret = true;
+        return { statut: 403, json: null };
+      }
+      return site(chemin);
+    });
+    const r = await synchroniser({ ...b.deps, arretDemande: () => arret });
     expect(r.issue).toBe('arret');
-    expect(r.codeHttp).toBe(403);
-    expect(b.journal.join('\n')).not.toContain('limitation de débit possible');
+    expect(r.raison).toBe('manuel');
+    expect(r.etat.arretJusqua).toBeNull();
+  })
+
+  it('prix : un 404 isolé (carte sans marché) est ignoré sans attente et mémorisé', async () => {
+    const site = siteFictif(4);
+    const b = banc((chemin) => (chemin.includes('card-2/sales') ? { statut: 404, json: null } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('termine');
+    expect(r.prixReleves).toBe(3);
+    expect(b.departs.filter((d) => d.chemin.includes('card-2/sales'))).toHaveLength(1);
+    expect(r.etat.prix[idCarte(2)]?.valeur).toBeNull();
   })
 
   it('prix : plus de lots ni de plafond, toutes les cartes sans prix sont interrogées sans pause', async () => {
@@ -682,38 +701,6 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(b.journal.some((m) => m.startsWith('Pause de'))).toBe(false);
   })
 
-  it('prix : un 429 isolé déclenche une pause de 30 s puis la même carte est redemandée', async () => {
-    const site = siteFictif(4);
-    let deja = false;
-    const b = banc((chemin) => {
-      if (chemin.includes('card-2/sales') && !deja) {
-        deja = true;
-        return { statut: 429, json: null };
-      }
-      return site(chemin);
-    });
-    const r = await synchroniser(b.deps);
-    expect(r.issue).toBe('termine');
-    const ventes = b.departs.filter((d) => d.chemin.includes('/sales'));
-    expect(ventes.filter((d) => d.chemin.includes('card-2/sales'))).toHaveLength(2);
-    expect(ventes).toHaveLength(5);
-    const i = ventes.findIndex((d) => d.chemin.includes('card-2/sales'));
-    expect((ventes[i + 1]?.t ?? 0) - (ventes[i]?.t ?? 0)).toBeGreaterThanOrEqual(30_000);
-  })
-
-  it('prix : 5 réponses 429 d’affilée arrêtent la synchro, avec des pauses qui doublent', async () => {
-    const site = siteFictif(4);
-    const b = banc((chemin) => (chemin.includes('/sales') ? { statut: 429, json: null } : site(chemin)));
-    const r = await synchroniser(b.deps);
-    expect(r.issue).toBe('arret');
-    expect(r.codeHttp).toBe(429);
-    const ventes = b.departs.filter((d) => d.chemin.includes('/sales'));
-    expect(ventes).toHaveLength(6);
-    const ecarts = ventes.slice(1).map((d, i) => d.t - (ventes[i]?.t ?? 0));
-    expect(ecarts[0]).toBeGreaterThanOrEqual(30_000);
-    expect(ecarts[1]).toBeGreaterThanOrEqual(60_000);
-  })
-
   it('prix : une vraie absence de vente est notée sans erreur, mémorisée et sans pause', async () => {
     const b = banc(siteFictif(3, { prix: () => null }));
     const r = await synchroniser(b.deps);
@@ -721,56 +708,6 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(b.journal.some((m) => m.startsWith('Aucune vente enregistrée'))).toBe(true);
     expect(b.journal.some((m) => m.includes('réponse vide'))).toBe(false);
     expect(r.etat.prix[idCarte(1)]?.valeur).toBeNull();
-  })
-
-  it('prix : une réponse vide ralentit, la même carte est redemandée après une pause, puis lue', async () => {
-    const site = siteFictif(3);
-    let vides = 1;
-    const b = banc((chemin) => {
-      if (chemin.includes('card-2/sales') && vides-- > 0) return { statut: 200, json: null };
-      return site(chemin);
-    });
-    const r = await synchroniser(b.deps);
-    expect(r.issue).toBe('termine');
-    const ventes = b.departs.filter((d) => d.chemin.includes('card-2/sales'));
-    expect(ventes).toHaveLength(2);
-    expect((ventes[1]?.t ?? 0) - (ventes[0]?.t ?? 0)).toBeGreaterThanOrEqual(3_000);
-    expect(r.etat.prix[idCarte(2)]?.valeur).toBe(102);
-  })
-
-  it('prix : réponses vides en série → cartes reportées d’un jour (pas 30), la phase prix s’arrête sans erreur', async () => {
-    const site = siteFictif(6);
-    const b = banc((chemin) => (chemin.includes('/sales') ? { statut: 200, json: {} } : site(chemin)));
-    const r = await synchroniser(b.deps);
-    expect(r.issue).toBe('termine');
-    expect(r.prixReleves).toBe(0);
-    for (const id of Object.keys(r.etat.prix)) expect(r.etat.prix[id]?.valeur).toBeNull();
-    expect(Object.keys(r.etat.prix).length).toBeLessThanOrEqual(3);
-    expect(b.journal.some((m) => m.includes('reprendra à la prochaine synchro'))).toBe(true);
-  })
-
-  it('prix : des cartes toujours vides ne bloquent pas la file à la synchro suivante, et la cadence des prix est respectée', async () => {
-    const site = siteFictif(6);
-    const b = banc((chemin) => (/card-[123]\/sales/.test(chemin) ? { statut: 200, json: {} } : site(chemin)));
-    const r = await synchroniser(b.deps);
-    expect(r.issue).toBe('termine');
-    const b2 = banc((chemin) => (/card-[123]\/sales/.test(chemin) ? { statut: 200, json: {} } : site(chemin)), r.collection, r.etat);
-    const r2 = await synchroniser(b2.deps);
-    expect(r2.prixReleves).toBe(3);
-    const ventes = b2.departs.filter((d) => d.chemin.includes('/sales'));
-    const ecarts = ventes.slice(1).map((d, i) => d.t - (ventes[i]?.t ?? 0));
-    expect(Math.min(...ecarts)).toBeGreaterThanOrEqual(200 + 300);
-  })
-
-  it('prix : la vérification anti-bot arrête tout de suite, sans contrôle de session ni mémorisation', async () => {
-    const site = siteFictif(6);
-    const b = banc((chemin) => (chemin.includes('card-2/sales') ? { statut: 403, json: { error: 'Vérification anti-bot requise.', code: 'human_verification_required' } } : site(chemin)));
-    const r = await synchroniser(b.deps);
-    expect(r.issue).toBe('arret');
-    expect(r.codeHttp).toBe(403);
-    expect(b.departs.filter((d) => d.chemin.includes('/sales'))).toHaveLength(2);
-    expect(b.departs.filter((d) => d.chemin.includes('/stats')).length).toBe(2);
-    expect(b.journal.some((m) => m.includes('anti-bot'))).toBe(true);
   })
 
   it('un 429 sur une page ou les stats arrête tout de suite, sans pause ni reprise', async () => {
@@ -832,15 +769,6 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(b.departs.filter((d) => d.chemin.includes('card-2/sales'))).toHaveLength(1);
   })
 
-  it('prix : un refus journalise le titre, le rang et le délai depuis la première demande', async () => {
-    const site = siteFictif(6);
-    const b = banc((chemin) => (chemin.includes('card-3/sales') ? { statut: 403, json: null } : site(chemin)));
-    await synchroniser(b.deps);
-    const m = b.journal.find((x) => x.startsWith('Diagnostic prix'));
-    expect(m).toContain('Carte 3');
-    expect(m).toMatch(/demande n° 3, \d+ s après la première/);
-  })
-
   it('ventes : rien en vente (compteur absent) = 0 vente, sans erreur ni arrêt', async () => {
     const site = siteFictif(2);
     const b = banc((chemin) => (chemin === '/api/marketplace/mine' ? { statut: 200, json: { maxConcurrentAuctions: 5 } } : site(chemin)));
@@ -859,16 +787,6 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
       expect(r.complete).toBe(true);
       expect(r.etat.arretJusqua).toBeNull();
       expect(b.journal.some((m) => m.startsWith('Ventes :'))).toBe(true);
-    }
-  })
-
-  it('prix : 401 arrête dès la première réponse', async () => {
-    for (const code of [401]) {
-      const site = siteFictif(4);
-      const b = banc((chemin) => (chemin.includes('/sales') ? { statut: code, json: null } : site(chemin)));
-      const r = await synchroniser(b.deps);
-      expect(r.issue).toBe('arret');
-      expect(b.departs.filter((d) => d.chemin.includes('/sales'))).toHaveLength(1);
     }
   })
 
@@ -906,14 +824,6 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.issue).toBe('termine');
     expect(r.raison).not.toBe('echecs');
     expect(r.complete).toBe(false);
-  })
-
-  it('plus de 10 échecs sur une exécution n’arrêtent plus la synchro', async () => {
-    const site = siteFictif(40);
-    const b = banc((chemin) => (/card-(\d+)\/sales/.test(chemin) && Number(/card-(\d+)\//.exec(chemin)![1]) % 2 === 0 ? { statut: 500, json: null } : site(chemin)));
-    const r = await synchroniser(b.deps);
-    expect(r.issue).toBe('termine');
-    
   })
 
   it('s’arrête sur demande manuelle avant la requête suivante', async () => {

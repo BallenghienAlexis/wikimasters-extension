@@ -6,7 +6,7 @@
 import { VERSION_SCHEMA, aEditionLocale, type Carte, type Collection } from '../lib/collection';
 import { INTERVALLE_MS, type Horloge } from '../lib/file';
 import type { EtapeSynchro } from '../lib/statutSynchro';
-import { DUREE_BAIL_MS, PAUSE_APRES_ARRET_MS, etatInitial, synchroniser, type Bail, type EtatOrdonnanceur, type ReponseApi, type ResultatSynchro } from '../lib/ordonnanceur';
+import { DUREE_BAIL_MS, PAUSE_APRES_ARRET_MS, etatInitial, synchroniser, type AttentePrix, type Bail, type EtatOrdonnanceur, type ReponseApi, type ResultatSynchro } from '../lib/ordonnanceur';
 import {
   chargerBailSynchro,
   chargerCollection,
@@ -248,6 +248,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
       let etape: EtapeSynchro | null = null;
       let prixFaits = 0;
       let prixPrevus: number | null = null;
+      let attente: AttentePrix | null = null;
       let derniereEcriture = Number.NEGATIVE_INFINITY;
       let dernierEtat: StatutSynchro['etat'] | null = null;
       let derniereEtape: EtapeSynchro | null = null;
@@ -258,7 +259,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         // au plus une écriture de stockage local par page). Dans l'étape des prix, la limite d'une par seconde s'applique.
         const page = partiel.page ?? null;
         const memePosition = partiel.etat === dernierEtat && etape === derniereEtape && page === dernierePage;
-        if (memePosition && maintenant - derniereEcriture < 1000) return;
+        if (memePosition && partiel.attente === undefined && maintenant - derniereEcriture < 1000) return;
         derniereEcriture = maintenant;
         dernierEtat = partiel.etat;
         derniereEtape = etape;
@@ -269,6 +270,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
           prixFaits,
           prixPrevus,
           debut,
+          ...(attente !== null ? { attente } : {}),
           page: null,
           pages,
           raison: null,
@@ -325,6 +327,10 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         forcer,
         annoncerPrix: (n) => {
           prixPrevus = n;
+        },
+        annoncerAttente: (a) => {
+          attente = a;
+          if (a !== null) void noter({ etat: 'en-cours', attente: a });
         },
         enregistrer: async (produite, courant) => {
           const stockee = await deps.chargerCollection();

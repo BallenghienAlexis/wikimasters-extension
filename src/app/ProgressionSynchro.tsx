@@ -25,6 +25,26 @@ const COULEURS: Record<EtatAffiche, string> = {
 
 const horloge = (): number => Date.now();
 
+/** Phase Prix en attente après une erreur : pause en cours, décompte, et rappel que seul le joueur arrête. */
+const AttentePrixLigne: React.FC<{ jusqua: number; codeHttp: number | null; verification: boolean; essai: number }> = ({ jusqua, codeHttp, verification, essai }) => {
+  const [maintenant, setMaintenant] = useState(horloge());
+  useEffect(() => {
+    const m = setInterval(() => setMaintenant(horloge()), 1000);
+    return () => clearInterval(m);
+  }, []);
+  const reste = Math.max(0, Math.ceil((jusqua - maintenant) / 1000));
+  const cause = verification
+    ? 'Vérification anti-bot du site requise : franchis-la à la main sur wiki-masters.com, la synchro reprendra toute seule.'
+    : codeHttp === null
+      ? 'Erreur de réseau ou réponse vide.'
+      : `Le site a répondu ${codeHttp}.`;
+  return (
+    <p data-testid="attente-prix" role="status" className="mt-3 text-sm text-defausser">
+      {`En attente : ${cause} Nouvel essai dans ${reste} s (essai ${essai}). La synchro ne s’arrête pas toute seule : utilise « Arrêter » pour la couper.`}
+    </p>
+  );
+};
+
 const barreMinimale = (pourcent: number): Barre => ({ valeur: 0, max: 100, pourcent, indeterminee: false, texte: '' });
 
 interface Plafond {
@@ -87,6 +107,7 @@ const ProgressionSynchro: React.FC<Props> = ({ statut, actif }) => {
           fine
           enCours={actif}
         />
+        {actif && statut.attente != null && <AttentePrixLigne {...statut.attente} />}
         <ol data-testid="etapes-synchro" className="mt-3 grid grid-cols-1 gap-2">
           {p.etapes.map((e) => {
             let etat: EtatAffiche = e.etat;
