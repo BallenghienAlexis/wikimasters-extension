@@ -15,7 +15,7 @@
  */
 import { CODES_ARRET, INTERVALLE_MS, MAX_ECHECS, type Horloge } from './file';
 import { VERSION_SCHEMA, aEditionLocale, type Carte, type Collection } from './collection';
-import { analyserPage, analyserPrix, decrireForme, diagnosticStats, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
+import { analyserPage, analyserPrix, sensDuPrix, type SensPrix, decrireForme, diagnosticStats, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
 
 /** Aucune reprise automatique avant ce délai après un arrêt (401, 403, 429 ou échecs). */
 export const PAUSE_APRES_ARRET_MS = 30 * 60_000;
@@ -29,6 +29,20 @@ export const PAUSE_429_PRIX_MS = 30_000;
 export const PAUSE_429_PRIX_MAX_MS = 240_000;
 /** 429 sur les prix, sur toute l’exécution (qu’un succès ne remet jamais à zéro), après lesquels la synchro s’arrête (pause de 30 min). */
 export const MAX_429_PRIX_PAR_EXECUTION = 5;
+/** Petite pause ajoutée avant chaque demande de prix (en plus de l’intervalle et de la gigue) : ni lots ni longue pause. */
+export const PAUSE_PRIX_MS = 300;
+/** Réponse vide ou illisible sur un prix : pause initiale avant de redemander la même carte, doublée à chaque essai. */
+export const PAUSE_VIDE_PRIX_MS = 3_000;
+/** Essais de la même carte après une réponse vide (donc 1 + ce nombre de demandes au plus). */
+export const MAX_REESSAIS_VIDE_PRIX = 2;
+/** Cartes d’affilée toujours vides après réessais : la phase Prix s’arrête là, sans erreur, et reprend à la synchro suivante. */
+export const MAX_VIDES_CONSECUTIFS_PRIX = 3;
+/** Cartes vides (après réessais) sur toute l'exécution au-delà desquelles la phase Prix s'arrête. */
+export const MAX_VIDES_PRIX_PAR_EXECUTION = 10;
+/** Une carte restée vide est redemandée après ce délai (et non avant 30 jours), pour ne jamais affamer le reste de la file. */
+export const REPORT_VIDE_PRIX_MS = 86_400_000;
+/** Ralentissement supplémentaire maximal entre deux demandes de prix, appris des réponses vides. */
+export const RALENTISSEMENT_PRIX_MAX_MS = 2_000;
 /** Code de la réponse 403 du site qui exige une vérification humaine : arrêt immédiat, jamais contournée. */
 const CODE_VERIFICATION_HUMAINE = 'human_verification_required';
 /** Refus 403 d’affilée sur les prix qui arrêtent la synchro : en dessous, c’est une carte sans route de prix, pas la session. */
@@ -232,6 +246,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   let refusPrix = 0;
   let limites429 = 0;
   let refusPrixTotal = 0;
+  /** Ralentissement appris des réponses vides (ms), réduit de moitié à chaque prix lu. */
+  let ralentissementPrix = 0;
 
   if (!deps.forcer && etat.arretJusqua !== null && horloge.now() < etat.arretJusqua) {
     journal('Synchronisation en pause après un arrêt : pas de reprise avant la fin du délai.');
@@ -275,7 +291,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     // Cadence : 0,2 s depuis la dernière requête (budget commun), sans plafond par minute.
     const t = horloge.now();
     const derniere = etat.requetes.length === 0 ? undefined : Math.max(...etat.requetes);
-    const echeance = derniere === undefined ? t : Math.max(t, derniere + INTERVALLE_MS + gigue());
+    const supplementPrix = prix === false ? 0 : PAUSE_PRIX_MS + ralentissementPrix;
+    const echeance = derniere === undefined ? t : Math.max(t, derniere + INTERVALLE_MS + supplementPrix + gigue());
     await horloge.attendreJusqua(echeance);
     if (deps.arretDemande?.()) throw new Interruption('manuel', null);
 
@@ -601,13 +618,45 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     deps.annoncerPrix?.(retenues.length);
     let demandes = 0;
     let premiereDemande = 0;
+    let videsConsecutifs = 0;
+    let videsTotal = 0;
     for (const carte of retenues) {
       const cardId = etat.cardIds[carte.id];
       if (cardId === undefined) continue;
       if (demandes === 0) premiereDemande = horloge.now();
       demandes += 1;
       const refusAvant = refusPrixTotal;
-      const r = await requete(cheminPrix(cardId), false, carte.titre);
+      let r = await requete(cheminPrix(cardId), false, carte.titre);
+      // Réponse 200 vide ou illisible : souvent un trop grand rythme. On ralentit et on redemande la même carte
+      // (pauses 3 s, 6 s), sans rien mémoriser ; différent d’une vraie absence de vente (`aucune-vente`).
+      let sens: SensPrix = r === null ? 'valeur' : sensDuPrix(r.json, carte.rarete as string);
+      for (let essai = 1; r !== null && sens === 'vide' && essai <= MAX_REESSAIS_VIDE_PRIX; essai++) {
+        ralentissementPrix = Math.min(RALENTISSEMENT_PRIX_MAX_MS, Math.max(500, ralentissementPrix * 2));
+        const pause = PAUSE_VIDE_PRIX_MS * 2 ** (essai - 1);
+        journal(`Prix : réponse vide pour « ${carte.titre} » (rythme trop rapide ?) ; pause de ${pause / 1000} s puis nouvel essai (${essai}/${MAX_REESSAIS_VIDE_PRIX}).`);
+        await pauseInterruptible(pause);
+        r = await requete(cheminPrix(cardId), false, carte.titre);
+        sens = r === null ? 'valeur' : sensDuPrix(r.json, carte.rarete as string);
+      }
+      if (r !== null && sens === 'vide') {
+        // Toujours vide : ce n’est pas une absence de vente. La carte est reportée d’un jour (voir ci-dessous), pas mémorisée 30 jours.
+        videsConsecutifs += 1;
+        videsTotal += 1;
+        // Reportée d'un jour seulement : elle passe en fin de file, les cartes suivantes sont lues quand même.
+        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() - ancienneteMaxPrixMs + REPORT_VIDE_PRIX_MS };
+        journal(`Prix reporté pour « ${carte.titre} » : réponse vide malgré les pauses (${videsConsecutifs}/${MAX_VIDES_CONSECUTIFS_PRIX} d’affilée), nouvel essai dans 1 jour.`);
+        if (videsConsecutifs >= MAX_VIDES_CONSECUTIFS_PRIX || videsTotal >= MAX_VIDES_PRIX_PAR_EXECUTION) {
+          journal('Prix : le site répond à vide en série (limitation probable) ; la lecture des prix reprendra à la prochaine synchro.');
+          await deps.enregistrer(instantane(), etat);
+          return;
+        }
+        continue;
+      }
+      if (r !== null) {
+        videsConsecutifs = 0;
+        ralentissementPrix = Math.floor(ralentissementPrix / 2);
+        if (sens === 'aucune-vente') journal(`Aucune vente enregistrée pour « ${carte.titre} » : prix inconnu (ce n’est pas une erreur).`);
+      }
       if (r === null) {
         if (refusPrixTotal > refusAvant) journal(`Diagnostic prix : refus pour « ${carte.titre} » (rareté ${carte.rarete ?? '?'}) à la demande n° ${demandes}, ${Math.round((horloge.now() - (premiereDemande)) / 1000)} s après la première.`);
         // Refus par carte : on ne la redemande pas avant la fin de l’ancienneté (30 jours), sans valeur inventée.
@@ -621,7 +670,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       const saisieMain = courante.valeurMarchande !== null && etat.prix[carte.id]?.valeur !== courante.valeurMarchande;
       etat.prix[carte.id] = { valeur, releveLe: horloge.now() };
       if (valeur === null) {
-        journal(`Pas de valeur marchande pour « ${carte.titre} ».`);
+        if (sens !== 'aucune-vente') journal(`Pas de valeur marchande pour « ${carte.titre} ».`);
       } else if (saisieMain) {
         if (valeur !== courante.valeurMarchande) {
           resultat.signalements.push({ idCarte: carte.id, saisie: courante.valeurMarchande as number, site: valeur });

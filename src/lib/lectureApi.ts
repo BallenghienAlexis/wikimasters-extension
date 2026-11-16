@@ -162,3 +162,19 @@ export function analyserPrix(json: unknown, rarete: string): number | null {
   if (!estObjet(entree) || !estEntier(entree.average)) return null;
   return entree.average;
 }
+
+/**
+ * Sens d’une réponse de prix : `valeur` (moyenne lue), `aucune-vente` (le site répond normalement mais la rareté n’a pas
+ * d’historique : c’est une vraie absence, pas une erreur) ou `vide` (corps absent, `summary` manquant ou illisible :
+ * souvent une limitation de débit, à redemander plus tard sans rien mémoriser).
+ */
+export type SensPrix = 'valeur' | 'aucune-vente' | 'vide';
+
+export function sensDuPrix(json: unknown, rarete: string): SensPrix {
+  if (!estObjet(json) || !estObjet(json.summary)) return 'vide';
+  if (!Object.prototype.hasOwnProperty.call(json.summary, rarete)) return 'aucune-vente';
+  const entree = json.summary[rarete];
+  if (!estObjet(entree)) return 'vide';
+  if (entree.average === undefined || entree.average === null) return 'aucune-vente';
+  return estEntier(entree.average) ? 'valeur' : 'vide';
+}
