@@ -18,6 +18,7 @@ import Journal, { type CoupleRetrait } from './Journal';
 import BandeauRisque from './BandeauRisque';
 import ListeActionsLot from './ListeActionsLot';
 import CartesNonIncluses from './CartesNonIncluses';
+import EtapesLots from './EtapesLots';
 import ListeEcarts from './ListeEcarts';
 import SectionRepliable from './SectionRepliable';
 import TableauLots from './TableauLots';
@@ -318,6 +319,7 @@ const PanneauApercuLot: React.FC<Props> = ({
   return (
     <div data-testid="synchronisation">
       <BandeauRisque avertirAmis={lot !== null && contientAmi(actionsCochees)} />
+      <EtapesLots courante={zoneVisible ? 3 : ouvert ? 2 : 1} />
 
       {zoneVisible && (
         <section
@@ -489,8 +491,6 @@ const PanneauApercuLot: React.FC<Props> = ({
 
             {apercuEtiquettes && <EtiquettesPrevues apercu={apercuEtiquettes} cartes={cartes} />}
 
-            <ListeEcarts ecarts={ecartsSite} />
-
             <div className="mt-4 grid gap-2">
               {actionsCochees.some((a) => a.type === 'creation-etiquette' || a.type === 'pose-etiquette' || a.type === 'retrait-etiquette') && (
                 <Avertissement>Les étiquettes posées sont visibles des autres joueurs.</Avertissement>
@@ -545,6 +545,8 @@ const PanneauApercuLot: React.FC<Props> = ({
           </>
         )}
       </section>
+
+      {!zoneVisible && !chargement && <ListeEcarts ecarts={ecartsSite} />}
 
       {erreurLancement !== null && (
         <p role="alert" className="mt-4 break-words font-semibold text-defausser">

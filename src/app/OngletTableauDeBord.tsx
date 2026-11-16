@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { collectionVide, type Collection } from '../lib/collection';
-import { chargerCollection, chargerPreferences, ecouterCollection } from '../lib/stockage';
-import { calculerTableauDeBord, type ContexteTableauDeBord } from '../lib/tableauDeBord';
+import { chargerCollection, chargerIgnorees, chargerPreferences, ecouterCollection, ecouterIgnorees } from '../lib/stockage';
+import { calculerTableauDeBord, lignesSante as lignesSanteDe, type ContexteTableauDeBord, type LigneSante } from '../lib/tableauDeBord';
 import { preferencesParDefaut, type Preferences } from '../lib/tri';
 import CarteKpi from './CarteKpi';
 import SanteSynchro from './SanteSynchro';
@@ -18,6 +18,7 @@ const OngletTableauDeBord: React.FC = () => {
   const [preferences, setPreferences] = useState<Preferences>(preferencesParDefaut);
   const [chargee, setChargee] = useState(false);
   const synchro = useLectureSynchro();
+  const [nbIgnorees, setNbIgnorees] = useState(0);
 
   useEffect(() => {
     void chargerPreferences().then(setPreferences).catch(() => undefined);
@@ -25,7 +26,14 @@ const OngletTableauDeBord: React.FC = () => {
       .then(setCollection)
       .catch(() => undefined)
       .finally(() => setChargee(true));
-    return ecouterCollection(setCollection);
+    const relireIgnorees = (): void => void chargerIgnorees().then((l) => setNbIgnorees(l.length)).catch(() => undefined);
+    relireIgnorees();
+    const arretIgnorees = ecouterIgnorees(relireIgnorees);
+    const arretCollection = ecouterCollection(setCollection);
+    return () => {
+      arretIgnorees();
+      arretCollection();
+    };
   }, []);
 
   const tableau = useMemo(() => {
@@ -36,6 +44,20 @@ const OngletTableauDeBord: React.FC = () => {
     };
     return calculerTableauDeBord(collection, contexte, synchro.maintenant);
   }, [collection, preferences.amis, synchro]);
+
+  const lignesSante = useMemo(
+    (): LigneSante[] =>
+      lignesSanteDe({
+        exemplaires: tableau.exemplaires,
+        ageLibelle: tableau.sante.ageLibelle,
+        derniereTerminee: synchro.derniere,
+        etiquettesLues: synchro.statut?.etiquettes ?? 0,
+        releves: Object.values(synchro.etat?.prix ?? {}).map((r) => r.releveLe),
+        ignorees: nbIgnorees,
+        maintenant: synchro.maintenant,
+      }),
+    [synchro, tableau, nbIgnorees],
+  );
 
   // Avant la lecture du stockage, les chiffres partent de 0 : le compteur défile ensuite jusqu’à la valeur (D-61).
   const v = (n: number | null): number | null => (chargee ? n : 0);
@@ -83,6 +105,7 @@ const OngletTableauDeBord: React.FC = () => {
         ageLibelle={tableau.sante.ageLibelle}
         activee={synchro.activee}
         prixReleves={tableau.fraicheurPrix.releves}
+        lignes={lignesSante}
       />
     </section>
   );

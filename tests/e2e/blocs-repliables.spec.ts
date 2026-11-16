@@ -55,11 +55,29 @@ test('synchro : tâches, prix, historique repliés avec résumé, dépliés au c
   await expect(prix).toHaveAttribute('aria-expanded', 'true');
 });
 
-test('lots : écarts avec le site et cadence repliés dans l’aperçu', async ({ pageCollection: page }) => {
+test('lots : écarts avec le site en carte propre, cadence repliée dans l’aperçu', async ({ pageCollection: page }) => {
   await ecrireJeuRiche(page);
   await allerA(page, 'lots');
+  await expect(page.getByTestId('etapes-lots').locator('[aria-current="step"]')).toContainText('1. Choisir');
+  await expect(page.getByRole('button', { name: /^Écarts avec le site/ })).toHaveAttribute('aria-expanded', 'false');
   await page.getByRole('button', { name: 'Voir l’aperçu du lot' }).click();
+  await expect(page.getByTestId('etapes-lots').locator('[aria-current="step"]')).toContainText('2. Aperçu');
   for (const nom of [/^Écarts avec le site/, /^Cadence d’envoi/]) {
     await expect(page.getByRole('button', { name: nom })).toHaveAttribute('aria-expanded', 'false');
   }
+});
+
+test('tableau de bord : santé en quatre lignes Lecture, Étiquettes, Prix, Ignorées', async ({ pageCollection: page }) => {
+  await ecrireJeuRiche(page);
+  await page.evaluate(() => chrome.storage.local.set({ syncAuto: true }));
+  await page.reload();
+  await allerA(page, 'tableau-de-bord');
+  await page.getByTestId('sante-synchro').getByRole('button', { name: /^Santé de la synchro/ }).click();
+  const lignes = page.getByTestId('lignes-sante').getByRole('listitem');
+  await expect(lignes).toHaveCount(4);
+  await expect(lignes.nth(0)).toContainText('Lecture');
+  await expect(lignes.nth(1)).toContainText('5 étiquettes lues');
+  await expect(lignes.nth(2)).toContainText('Prix');
+  await expect(lignes.nth(3)).toContainText('2 actions ignorées');
+  await expect(lignes.nth(3).getByRole('link', { name: 'Gérer les actions ignorées' })).toBeVisible();
 });
