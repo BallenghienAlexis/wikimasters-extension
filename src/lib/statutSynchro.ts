@@ -3,7 +3,7 @@
  * Logique pure, sans `chrome.*`. Uniquement des nombres et des codes fixes (aucun secret).
  */
 
-import type { RaisonArretSynchro } from './ordonnanceur'
+import type { AttentePrix, RaisonArretSynchro } from './ordonnanceur'
 
 export type EtapeSynchro = 'stats' | 'pages' | 'prix' | 'ventes'
 
@@ -33,6 +33,8 @@ export interface StatutSynchro extends StatutBase {
   prixPrevus?: number | null
   /** Horodatage de début de la synchro (décision 1 de tasks.md). */
   debut?: number | null
+  /** Phase Prix en attente après une erreur (pause en cours) : seul le joueur arrête. */
+  attente?: AttentePrix | null
 }
 
 /** Statut lu : toujours en v2, champs v2 à `null` pour une v1. */
@@ -42,6 +44,7 @@ export interface StatutSynchroV2 extends StatutBase {
   prixFaits: number | null
   prixPrevus: number | null
   debut: number | null
+  attente?: AttentePrix | null
 }
 
 const ETATS = ['en-cours', 'termine', 'arret']
@@ -73,8 +76,17 @@ export function validerStatutSynchro(brut: unknown): StatutSynchroV2 | null {
     prixPrevus = brut.prixPrevus
     debut = brut.debut
   }
+  let attente: AttentePrix | null = null
+  if (brut.version === 2 && brut.attente !== undefined && brut.attente !== null) {
+    const a = brut.attente
+    if (!objet(a) || !entier(a.jusqua) || !entier(a.essai) || typeof a.verification !== 'boolean') return null
+    if (typeof a.titre !== 'string' || a.titre.length > 200) return null
+    if (a.codeHttp !== null && !(typeof a.codeHttp === 'number' && Number.isSafeInteger(a.codeHttp) && a.codeHttp >= 100 && a.codeHttp <= 599)) return null
+    attente = { jusqua: a.jusqua, titre: a.titre, essai: a.essai, verification: a.verification, codeHttp: a.codeHttp }
+  }
   return {
     version: 2,
+    ...(attente !== null ? { attente } : {}),
     etat: etat as StatutBase['etat'],
     page,
     pages,

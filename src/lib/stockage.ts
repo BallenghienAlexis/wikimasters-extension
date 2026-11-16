@@ -29,6 +29,7 @@ const CLE_BAIL_SYNCHRO = 'bailSynchro';
 const CLE_ETAT_SYNCHRO = 'etatSynchro';
 const CLE_ARRET_SYNCHRO = 'arretSynchro';
 const CLE_RELANCE_SYNCHRO = 'relanceSynchro';
+const CLE_PASSER_CARTE = 'passerCarteSynchro';
 const CLE_DERNIERE_RELANCE = 'derniereRelance';
 const CLE_STATUT_SYNCHRO = 'statutSynchro';
 const CLE_WIKIPEDIA = 'wikipedia';
@@ -62,6 +63,7 @@ export const CLES_STOCKAGE = {
   etatSynchro: CLE_ETAT_SYNCHRO,
   arretSynchro: CLE_ARRET_SYNCHRO,
   relanceSynchro: CLE_RELANCE_SYNCHRO,
+  passerCarteSynchro: CLE_PASSER_CARTE,
   derniereRelance: CLE_DERNIERE_RELANCE,
   statutSynchro: CLE_STATUT_SYNCHRO,
   wikipedia: CLE_WIKIPEDIA,
@@ -305,6 +307,22 @@ export async function enregistrerRelanceSynchro(horodatage: number): Promise<voi
 export function ecouterRelanceSynchro(rappel: () => void): () => void {
   const ecouteur = (changements: Record<string, chrome.storage.StorageChange>, zone: string): void => {
     const changement = changements[CLE_RELANCE_SYNCHRO];
+    if (zone === 'local' && changement && horodatageValide(changement.newValue)) rappel();
+  };
+  chrome.storage.onChanged.addListener(ecouteur);
+  return () => chrome.storage.onChanged.removeListener(ecouteur);
+}
+
+/** Demande de passer la carte de prix en attente (bouton « Passer cette carte ») : un horodatage, aucune autre donnée. */
+export async function enregistrerPasserCarteSynchro(horodatage: number): Promise<void> {
+  if (!horodatageValide(horodatage)) throw new Error('Horodatage invalide.');
+  await chrome.storage.local.set({ [CLE_PASSER_CARTE]: horodatage });
+}
+
+/** Ne signale que les demandes faites pendant l’écoute. */
+export function ecouterPasserCarteSynchro(rappel: () => void): () => void {
+  const ecouteur = (changements: Record<string, chrome.storage.StorageChange>, zone: string): void => {
+    const changement = changements[CLE_PASSER_CARTE];
     if (zone === 'local' && changement && horodatageValide(changement.newValue)) rappel();
   };
   chrome.storage.onChanged.addListener(ecouteur);

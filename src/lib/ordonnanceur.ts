@@ -19,38 +19,26 @@ import { analyserPage, analyserPrix, sensDuPrix, type SensPrix, decrireForme, di
 
 /** Aucune reprise automatique avant ce délai après un arrêt (401, 403, 429 ou échecs). */
 export const PAUSE_APRES_ARRET_MS = 30 * 60_000;
+/** Une carte passée par le joueur est redemandée dans 1 jour. */
+export const REPORT_CARTE_PASSEE_MS = 86_400_000;
 /** Une valeur marchande relevée est périmée après 30 jours. */
 export const ancienneteMaxPrixMs = 30 * 86_400_000;
 /** Durée d’un bail ; renouvelé avant chaque requête. */
 export const DUREE_BAIL_MS = 2 * 60_000;
-/** Pause initiale sur un vrai 429 de la route des prix ; elle double à chaque 429 d’affilée (reprise adaptative). */
-export const PAUSE_429_PRIX_MS = 30_000;
-/** 403 d’affilée sur les prix : avant d’y voir des cartes sans marché, pause adaptative (30, 60, 120 puis 240 s) puis même carte redemandée, au plus 4 fois par série (remise à zéro par un prix lu). */
-export const MAX_PAUSES_403_PRIX = 4;
-/** Pause maximale sur 429. */
-export const PAUSE_429_PRIX_MAX_MS = 240_000;
-/** 429 sur les prix, sur toute l’exécution (qu’un succès ne remet jamais à zéro), après lesquels la synchro s’arrête (pause de 30 min). */
-export const MAX_429_PRIX_PAR_EXECUTION = 5;
-/** Petite pause ajoutée avant chaque demande de prix (en plus de l’intervalle et de la gigue) : ni lots ni longue pause. */
+/** Petite pause ajoutée avant chaque demande de prix (en plus de l’intervalle et de la gigue). */
 export const PAUSE_PRIX_MS = 1_200;
-/** Réponse vide ou illisible sur un prix : pause initiale avant de redemander la même carte, doublée à chaque essai. */
-export const PAUSE_VIDE_PRIX_MS = 3_000;
-/** Essais de la même carte après une réponse vide (donc 1 + ce nombre de demandes au plus). */
-export const MAX_REESSAIS_VIDE_PRIX = 2;
-/** Cartes d’affilée toujours vides après réessais : la phase Prix s’arrête là, sans erreur, et reprend à la synchro suivante. */
-export const MAX_VIDES_CONSECUTIFS_PRIX = 3;
-/** Cartes vides (après réessais) sur toute l'exécution au-delà desquelles la phase Prix s'arrête. */
-export const MAX_VIDES_PRIX_PAR_EXECUTION = 10;
-/** Une carte restée vide est redemandée après ce délai (et non avant 30 jours), pour ne jamais affamer le reste de la file. */
-export const REPORT_VIDE_PRIX_MS = 86_400_000;
-/** Ralentissement supplémentaire maximal entre deux demandes de prix, appris des réponses vides. */
+/**
+ * Prix : après une erreur (403, 429, 401, réponse vide, réseau, vérification anti-bot…), pause de 5 s au moins, puis 5 s de plus
+ * à chaque nouvel échec de la même carte, sans plafond, jusqu’à ce que la requête réussisse (Alexis, 2026-11-16).
+ * Aucun arrêt automatique : seul le joueur arrête.
+ */
+export const PAS_ATTENTE_PRIX_MS = 5_000;
+/** Après ce nombre d’échecs de la même carte, un avertissement propose au joueur de la passer (Alexis, 2026-11-16) ; jamais de passage automatique. */
+export const SEUIL_AVERTISSEMENT_PRIX = 5;
+/** Ralentissement supplémentaire maximal entre deux demandes de prix, appris des échecs (réduit de moitié à chaque prix lu). */
 export const RALENTISSEMENT_PRIX_MAX_MS = 2_000;
-/** Code de la réponse 403 du site qui exige une vérification humaine : arrêt immédiat, jamais contournée. */
+/** Code de la réponse 403 du site qui exige une vérification humaine : jamais contournée (le joueur la franchit à la main). */
 const CODE_VERIFICATION_HUMAINE = 'human_verification_required';
-/** Refus 403 d’affilée sur les prix à partir desquels on suppose une limitation de débit (pause adaptative avant de conclure). Aucun arrêt (Alexis, 2026-11-16). */
-export const SEUIL_PAUSE_403_PRIX = 2;
-/** 403 d’affilée (pauses épuisées comprises, soit 3 de plus après le seuil) qui coupent la phase Prix (sans erreur ni pause de 30 min, sans mémoriser la rafale) : le site refuse tout. */
-export const REFUS_FIN_PHASE_PRIX = SEUIL_PAUSE_403_PRIX + 3;
 const PREMIERE_PAGE = 0;
 const CARTES_PAR_PAGE = 50;
 /** Retrait automatique des cartes disparues : au plus ce nombre, ou 10 % de la collection si plus. */
@@ -125,8 +113,24 @@ export interface DependancesSynchro {
   maxPrix?: number;
   /** Annonce, une fois avant la boucle de prix, le nombre de prix qui seront demandés (sans effet sur le plan). */
   annoncerPrix?: (n: number) => void;
+  /** Annonce l’attente en cours d’une demande de prix (fin de la pause, code HTTP, vérification anti-bot), ou `null` quand elle réussit. */
+  annoncerAttente?: (attente: AttentePrix | null) => void;
+  /** Appelé quand une carte est terminée (prix lu ou carte sans marché), jamais à chaque essai. */
+  prixTermine?: () => void;
+  /** Le joueur a demandé de passer la carte en attente : renvoie `true` une seule fois par demande. */
+  passerCarteDemandee?: () => boolean;
   /** Millisecondes ajoutées à l’intervalle minimal entre deux requêtes (délai variable). Absent : 0. */
   gigue?: () => number;
+}
+
+/** Attente de la phase Prix après une erreur : seul le joueur peut l’arrêter. */
+export interface AttentePrix {
+  jusqua: number;
+  /** Titre de la carte en attente (pour l’avertissement). */
+  titre: string;
+  codeHttp: number | null;
+  verification: boolean;
+  essai: number;
 }
 
 export type RaisonArretSynchro = 'manuel' | 'code-http' | 'echecs';
@@ -242,15 +246,6 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   let echecsTotal = 0;
   /** Cartes vues sur le site pendant la dernière passe de lecture de cette synchro (les prix ne sont demandés que pour elles). */
   let luesCetteSynchro = new Set<string>();
-  /** Refus 403 consécutifs sur la route des prix (par carte, tolérés un à un). */
-  let refusPrix = 0;
-  let limites429 = 0;
-  let refusPrixTotal = 0;
-  /** Pauses adaptatives déjà prises sur des 403 de prix en série (limitation de débit supposée). */
-  let pauses403Serie = 0;
-  /** 403 d’affilée sur les prix (les 404 n’y comptent pas) et statut du dernier refus de prix. */
-  let refus403Serie = 0;
-  let dernierRefusPrix = 0;
   /** Ralentissement appris des réponses vides (ms), réduit de moitié à chaque prix lu. */
   let ralentissementPrix = 0;
 
@@ -291,13 +286,13 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     return Number.isFinite(g) ? Math.max(0, g) : 0;
   }
 
-  async function requete(chemin: string, tolerant = false, prix: false | string = false): Promise<ReponseApi | null> {
+  /** Cadence commune : attend l’échéance, puis envoie. `null` = erreur réseau. */
+  async function envoyer(chemin: string, supplement: number): Promise<ReponseApi | { erreur: string }> {
     if (deps.arretDemande?.()) throw new Interruption('manuel', null);
     // Cadence : 0,2 s depuis la dernière requête (budget commun), sans plafond par minute.
     const t = horloge.now();
     const derniere = etat.requetes.length === 0 ? undefined : Math.max(...etat.requetes);
-    const supplementPrix = prix === false ? 0 : PAUSE_PRIX_MS + ralentissementPrix + 4 * gigue();
-    const echeance = derniere === undefined ? t : Math.max(t, derniere + INTERVALLE_MS + supplementPrix + gigue());
+    const echeance = derniere === undefined ? t : Math.max(t, derniere + INTERVALLE_MS + supplement + gigue());
     await horloge.attendreJusqua(echeance);
     if (deps.arretDemande?.()) throw new Interruption('manuel', null);
 
@@ -305,43 +300,19 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     etat.requetes = [...etat.requetes, debut].slice(-20);
     await deps.bail.ecrire(debut + DUREE_BAIL_MS);
     resultat.requetes += 1;
-    let reponse: ReponseApi;
     try {
-      reponse = await deps.transport(chemin);
+      return await deps.transport(chemin);
     } catch (e) {
-      return tolerant ? null : echec(`Requête impossible (réseau : ${e instanceof Error ? e.name : 'erreur inconnue'}).`);
+      return { erreur: e instanceof Error ? e.name : 'erreur inconnue' };
     }
+  }
+
+  async function requete(chemin: string, tolerant = false): Promise<ReponseApi | null> {
+    const reponse = await envoyer(chemin, 0);
+    if ('erreur' in reponse) return tolerant ? null : echec(`Requête impossible (réseau : ${reponse.erreur}).`);
     if (reponse.statut === 403 && estVerificationHumaine(reponse.json)) {
       journal('Vérification anti-bot du site requise : la synchro s’arrête (résous-la à la main sur wiki-masters.com).');
       throw new Interruption('code-http', 403);
-    }
-    if (prix !== false && reponse.statut === 429 && limites429 < MAX_429_PRIX_PAR_EXECUTION) {
-      // Vrai 429 sur un prix : pause qui double à chaque 429 d’affilée, puis on redemande la même carte.
-      limites429 += 1;
-      const pause = Math.min(PAUSE_429_PRIX_MAX_MS, PAUSE_429_PRIX_MS * 2 ** (limites429 - 1));
-      journal(`Prix : le site demande de ralentir (429 n° ${limites429}/${MAX_429_PRIX_PAR_EXECUTION}) ; pause de ${pause / 1000} s puis reprise.`);
-      await pauseInterruptible(pause);
-      return requete(chemin, tolerant, prix);
-    }
-    if (prix !== false && (reponse.statut === 403 || reponse.statut === 404)) {
-      // Prix d’une seule carte refusé : carte vendue, défaussée ou sans marché, ou limitation de débit. Aucun arrêt
-      // (Alexis, 2026-11-16 : plus de restriction des 3 erreurs) : seuls 401, 429 répétés et la vérification anti-bot arrêtent.
-      if (reponse.statut === 403 && refus403Serie >= SEUIL_PAUSE_403_PRIX && pauses403Serie < MAX_PAUSES_403_PRIX) {
-        // Une série de 403 ressemble à une limitation de débit autant qu’à des cartes sans marché : on ralentit,
-        // on attend (30 s qui doublent) et on redemande la même carte avant de conclure. Jamais de contournement.
-        const pause = Math.min(PAUSE_429_PRIX_MAX_MS, PAUSE_429_PRIX_MS * 2 ** pauses403Serie);
-        pauses403Serie += 1;
-        ralentissementPrix = Math.min(RALENTISSEMENT_PRIX_MAX_MS, Math.max(500, ralentissementPrix * 2));
-        journal(`Prix : ${refusPrix + 1} refus 403 d’affilée (limitation de débit possible) ; pause de ${pause / 1000} s, rythme ralenti, puis même carte redemandée (${pauses403Serie}/${MAX_PAUSES_403_PRIX}).`);
-        await pauseInterruptible(pause);
-        return requete(chemin, tolerant, prix);
-      }
-      refusPrix += 1;
-      refusPrixTotal += 1;
-      dernierRefusPrix = reponse.statut;
-      if (reponse.statut === 403) refus403Serie += 1;
-      journal(`Prix indisponible (réponse ${reponse.statut}) pour « ${prix} » : carte ignorée, la synchro continue (${refusPrix} refus d’affilée).`);
-      return null;
     }
     if (CODES_ARRET.includes(reponse.statut)) {
       journal(`Arrêt : le site a répondu ${reponse.statut}.`);
@@ -351,20 +322,72 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     return reponse;
   }
 
+  /**
+   * Prix d’une carte : réessaie sans fin jusqu’à une réponse exploitable (5 s, 10 s, 15 s… d’attente), sans jamais arrêter la
+   * synchro (Alexis, 2026-11-16). Seul un 404 (carte sans route de prix) la sort de la boucle : `null`. L’arrêt du joueur
+   * interrompt les pauses. La vérification anti-bot n’est jamais contournée : la phase attend que le joueur la franchisse à la main.
+   */
+  async function requetePrix(chemin: string, titre: string, rarete: string): Promise<{ reponse: ReponseApi; sens: SensPrix } | 'passee' | null> {
+    deps.passerCarteDemandee?.(); // une demande ancienne ne vaut pas pour cette carte
+    for (let essai = 1; ; essai++) {
+      const reponse = await envoyer(chemin, PAUSE_PRIX_MS + ralentissementPrix + 4 * gigue());
+      let codeHttp: number | null = null;
+      let verification = false;
+      let motif: string;
+      if ('erreur' in reponse) {
+        motif = `erreur réseau (${reponse.erreur})`;
+      } else if (reponse.statut === 200) {
+        const sens = sensDuPrix(reponse.json, rarete);
+        if (sens !== 'vide') {
+          deps.annoncerAttente?.(null);
+          return { reponse, sens };
+        }
+        motif = 'réponse vide (rythme trop rapide ?)';
+      } else if (reponse.statut === 404) {
+        deps.annoncerAttente?.(null);
+        journal(`Prix indisponible (réponse 404) pour « ${titre} » : carte sans marché, ignorée.`);
+        return null;
+      } else {
+        codeHttp = reponse.statut;
+        verification = reponse.statut === 403 && estVerificationHumaine(reponse.json);
+        motif = verification
+          ? 'vérification anti-bot du site requise : franchis-la à la main sur wiki-masters.com'
+          : reponse.statut === 429
+            ? 'le site demande de ralentir (429)'
+            : reponse.statut === 401
+              ? 'session refusée (401) : reconnecte-toi à WikiMasters'
+              : `réponse ${reponse.statut}`;
+      }
+      const pause = PAS_ATTENTE_PRIX_MS * essai;
+      ralentissementPrix = Math.min(RALENTISSEMENT_PRIX_MAX_MS, ralentissementPrix + 500);
+      journal(`Prix : ${motif} pour « ${titre} » ; en attente, nouvel essai dans ${pause / 1000} s (essai ${essai}). Le joueur peut arrêter.`);
+      deps.annoncerAttente?.({ jusqua: horloge.now() + pause, titre: titre.slice(0, 200), codeHttp, verification, essai });
+      // Un clic arrivé avant l’affichage de l’avertissement de cette carte est périmé : il est écarté (jamais gardé pour plus tard).
+      if (essai <= SEUIL_AVERTISSEMENT_PRIX) deps.passerCarteDemandee?.();
+      if (await pauseInterruptible(pause, essai >= SEUIL_AVERTISSEMENT_PRIX)) {
+        journal(`Prix : carte « ${titre} » passée à la demande du joueur après ${essai} échecs.`);
+        deps.annoncerAttente?.(null);
+        return 'passee';
+      }
+    }
+  }
+
   function estVerificationHumaine(json: unknown): boolean {
     return typeof json === 'object' && json !== null && (json as { code?: unknown }).code === CODE_VERIFICATION_HUMAINE;
   }
 
   /** Attente par tranches d’une seconde : un arrêt manuel n’attend pas la fin de la pause. */
-  async function pauseInterruptible(ms: number): Promise<void> {
+  async function pauseInterruptible(ms: number, passable = false): Promise<boolean> {
     const fin = horloge.now() + ms;
     while (horloge.now() < fin) {
       if (deps.arretDemande?.()) throw new Interruption('manuel', null);
+      if (passable && deps.passerCarteDemandee?.()) return true;
       // Le bail reste pris pendant toute la pause : aucune autre exécution ne démarre pendant qu’on ralentit.
       await deps.bail.ecrire(horloge.now() + DUREE_BAIL_MS);
       await horloge.attendreJusqua(Math.min(fin, horloge.now() + 1000));
     }
     if (deps.arretDemande?.()) throw new Interruption('manuel', null);
+    return passable && (deps.passerCarteDemandee?.() ?? false);
   }
 
   function echec(message: string): null {
@@ -621,63 +644,28 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     const plafond = deps.maxPrix ?? Number.POSITIVE_INFINITY;
     const retenues = candidatsPrix().slice(0, Math.max(0, plafond));
     deps.annoncerPrix?.(retenues.length);
-    let demandes = 0;
-    let premiereDemande = 0;
-    let videsConsecutifs = 0;
-    let videsTotal = 0;
     for (const carte of retenues) {
       const cardId = etat.cardIds[carte.id];
       if (cardId === undefined) continue;
-      if (demandes === 0) premiereDemande = horloge.now();
-      demandes += 1;
-      const refusAvant = refusPrixTotal;
-      let r = await requete(cheminPrix(cardId), false, carte.titre);
-      // Réponse 200 vide ou illisible : souvent un trop grand rythme. On ralentit et on redemande la même carte
-      // (pauses 3 s, 6 s), sans rien mémoriser ; différent d’une vraie absence de vente (`aucune-vente`).
-      let sens: SensPrix = r === null ? 'valeur' : sensDuPrix(r.json, carte.rarete as string);
-      for (let essai = 1; r !== null && sens === 'vide' && essai <= MAX_REESSAIS_VIDE_PRIX; essai++) {
-        ralentissementPrix = Math.min(RALENTISSEMENT_PRIX_MAX_MS, Math.max(500, ralentissementPrix * 2));
-        const pause = PAUSE_VIDE_PRIX_MS * 2 ** (essai - 1);
-        journal(`Prix : réponse vide pour « ${carte.titre} » (rythme trop rapide ?) ; pause de ${pause / 1000} s puis nouvel essai (${essai}/${MAX_REESSAIS_VIDE_PRIX}).`);
-        await pauseInterruptible(pause);
-        r = await requete(cheminPrix(cardId), false, carte.titre);
-        sens = r === null ? 'valeur' : sensDuPrix(r.json, carte.rarete as string);
-      }
-      if (r !== null && sens === 'vide') {
-        // Toujours vide : ce n’est pas une absence de vente. La carte est reportée d’un jour (voir ci-dessous), pas mémorisée 30 jours.
-        videsConsecutifs += 1;
-        videsTotal += 1;
-        // Reportée d'un jour seulement : elle passe en fin de file, les cartes suivantes sont lues quand même.
-        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() - ancienneteMaxPrixMs + REPORT_VIDE_PRIX_MS };
-        journal(`Prix reporté pour « ${carte.titre} » : réponse vide malgré les pauses (${videsConsecutifs}/${MAX_VIDES_CONSECUTIFS_PRIX} d’affilée), nouvel essai dans 1 jour.`);
-        if (videsConsecutifs >= MAX_VIDES_CONSECUTIFS_PRIX || videsTotal >= MAX_VIDES_PRIX_PAR_EXECUTION) {
-          journal('Prix : le site répond à vide en série (limitation probable) ; la lecture des prix reprendra à la prochaine synchro.');
-          await deps.enregistrer(instantane(), etat);
-          return;
-        }
+      // Réessaie sans fin (5 s, 10 s, 15 s…) jusqu’à une réponse exploitable ; seul un 404 (sans marché) renvoie `null`.
+      const obtenu = await requetePrix(cheminPrix(cardId), carte.titre, carte.rarete as string);
+      if (obtenu === 'passee') {
+        // Passée par le joueur : valeur précédente gardée, redemandée dans un jour.
+        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() - ancienneteMaxPrixMs + REPORT_CARTE_PASSEE_MS };
+        deps.prixTermine?.();
         continue;
       }
-      if (r !== null) {
-        videsConsecutifs = 0;
-        ralentissementPrix = Math.floor(ralentissementPrix / 2);
-        if (sens === 'aucune-vente') journal(`Aucune vente enregistrée pour « ${carte.titre} » : prix inconnu (ce n’est pas une erreur).`);
-      }
-      if (r === null) {
-        if (refusPrixTotal > refusAvant) journal(`Diagnostic prix : refus pour « ${carte.titre} » (rareté ${carte.rarete ?? '?'}) à la demande n° ${demandes}, ${Math.round((horloge.now() - (premiereDemande)) / 1000)} s après la première.`);
-        if (refusPrixTotal > refusAvant && pauses403Serie >= MAX_PAUSES_403_PRIX && refus403Serie >= REFUS_FIN_PHASE_PRIX) {
-          // Le site refuse tout malgré les pauses : on coupe la phase Prix (pas d’erreur ni de pause de 30 min), reprise à la prochaine synchro.
-          journal('Prix : le site refuse toutes les demandes malgré les pauses (limitation probable) ; la lecture des prix reprendra à la prochaine synchro.');
-          await deps.enregistrer(instantane(), etat);
-          return;
-        }
-        // Refus par carte, sans valeur inventée : un 403 (peut être une limitation de débit) est reporté d’un jour, un 404 (sans marché) de 30 jours.
-        if (refusPrixTotal > refusAvant) etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: dernierRefusPrix === 403 ? horloge.now() - ancienneteMaxPrixMs + REPORT_VIDE_PRIX_MS : horloge.now() };
+      if (obtenu === null) {
+        // Carte sans route de prix : ignorée, valeur précédente gardée, pas redemandée avant 30 jours.
+        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() };
+        deps.prixTermine?.();
         continue;
       }
-      refusPrix = 0;
-      refus403Serie = 0;
-      pauses403Serie = 0;
+      const { reponse: r, sens } = obtenu;
+      ralentissementPrix = Math.floor(ralentissementPrix / 2);
+      if (sens === 'aucune-vente') journal(`Aucune vente enregistrée pour « ${carte.titre} » : prix inconnu (ce n’est pas une erreur).`);
       echecs = 0;
+      deps.prixTermine?.();
       const valeur = analyserPrix(r.json, carte.rarete as string);
       const courante = parId.get(carte.id) as Carte;
       const saisieMain = courante.valeurMarchande !== null && etat.prix[carte.id]?.valeur !== courante.valeurMarchande;

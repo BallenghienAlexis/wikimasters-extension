@@ -6,7 +6,7 @@
 import { VERSION_SCHEMA, aEditionLocale, type Carte, type Collection } from '../lib/collection';
 import { INTERVALLE_MS, type Horloge } from '../lib/file';
 import type { EtapeSynchro } from '../lib/statutSynchro';
-import { DUREE_BAIL_MS, PAUSE_APRES_ARRET_MS, etatInitial, synchroniser, type Bail, type EtatOrdonnanceur, type ReponseApi, type ResultatSynchro } from '../lib/ordonnanceur';
+import { DUREE_BAIL_MS, PAUSE_APRES_ARRET_MS, etatInitial, synchroniser, type AttentePrix, type Bail, type EtatOrdonnanceur, type ReponseApi, type ResultatSynchro } from '../lib/ordonnanceur';
 import {
   chargerBailSynchro,
   chargerCollection,
@@ -17,6 +17,7 @@ import {
   chargerEtatSynchro,
   chargerSyncAuto,
   ecouterArretSynchro,
+  ecouterPasserCarteSynchro,
   ecouterRelanceSynchro,
   enregistrerBailSynchro,
   enregistrerCollection,
@@ -87,6 +88,8 @@ export interface SynchroAuto {
   relancer: () => Promise<ResultatSynchro | null>;
   /** Arrêt immédiat : plus aucune requête n'est émise après celle en vol. */
   arreter: () => void;
+  /** Le joueur demande de passer la carte dont le prix est en attente (avertissement de l’étape Prix). */
+  passerCarte: () => void;
 }
 
 /**
@@ -169,6 +172,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
   const journal = deps.journal ?? (() => undefined);
   let enCours = false;
   let arretDemande = false;
+  let passerDemande = false;
   let dernierEssai: number | null = null;
   let derniereRelance: number | null = null;
 
@@ -248,6 +252,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
       let etape: EtapeSynchro | null = null;
       let prixFaits = 0;
       let prixPrevus: number | null = null;
+      let attente: AttentePrix | null = null;
       let derniereEcriture = Number.NEGATIVE_INFINITY;
       let dernierEtat: StatutSynchro['etat'] | null = null;
       let derniereEtape: EtapeSynchro | null = null;
@@ -258,7 +263,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         // au plus une écriture de stockage local par page). Dans l'étape des prix, la limite d'une par seconde s'applique.
         const page = partiel.page ?? null;
         const memePosition = partiel.etat === dernierEtat && etape === derniereEtape && page === dernierePage;
-        if (memePosition && maintenant - derniereEcriture < 1000) return;
+        if (memePosition && partiel.attente === undefined && maintenant - derniereEcriture < 1000) return;
         derniereEcriture = maintenant;
         dernierEtat = partiel.etat;
         derniereEtape = etape;
@@ -269,6 +274,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
           prixFaits,
           prixPrevus,
           debut,
+          ...(attente !== null ? { attente } : {}),
           page: null,
           pages,
           raison: null,
@@ -297,7 +303,6 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         else await noter({ etat: 'en-cours' });
         const reponse = await deps.transport(chemin);
         if (reponse.statut !== 200 && etape !== 'ventes' && etape !== 'prix') etapeFautive ??= etape;
-        if (etape === 'prix') prixFaits += 1;
         if (!page && chemin.startsWith('/api/my-collection/stats')) {
           const stats = reponse.statut === 200 ? analyserStats(reponse.json) : null;
           const total = stats?.total;
@@ -322,9 +327,22 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         journal,
         gigue: deps.gigue,
         arretDemande: () => arretDemande,
+        passerCarteDemandee: () => {
+          const d = passerDemande;
+          passerDemande = false;
+          return d;
+        },
         forcer,
         annoncerPrix: (n) => {
           prixPrevus = n;
+        },
+        annoncerAttente: (a) => {
+          if (a === null && attente === null) return;
+          attente = a;
+          void noter({ etat: 'en-cours', attente: a });
+        },
+        prixTermine: () => {
+          prixFaits += 1;
         },
         enregistrer: async (produite, courant) => {
           const stockee = await deps.chargerCollection();
@@ -375,6 +393,9 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
     arreter: () => {
       arretDemande = true;
     },
+    passerCarte: () => {
+      passerDemande = true;
+    },
   };
 }
 
@@ -391,6 +412,8 @@ export interface OptionsDemarrage {
   ecouterArret: (rappel: () => void) => () => void;
   /** Demande de relance venue de l'interface. */
   ecouterRelance: (rappel: () => void) => () => void;
+  /** Demande de passer la carte de prix en attente, venue de l’interface. */
+  ecouterPasserCarte: (rappel: () => void) => () => void;
 }
 
 const horlogeReelle: Horloge = {
@@ -475,6 +498,7 @@ export function demarrerSynchroAuto(options: Partial<OptionsDemarrage> = {}): ()
   const visibilite = options.visibilite ?? visibiliteDuNavigateur();
   const ecouterArret = options.ecouterArret ?? ecouterArretSynchro;
   const ecouterRelance = options.ecouterRelance ?? ecouterRelanceSynchro;
+  const ecouterPasser = options.ecouterPasserCarte ?? ecouterPasserCarteSynchro;
 
   const lancer = (): void => void synchro.declencher().catch(() => undefined);
   let minuteur: ReturnType<typeof setInterval> | undefined;
@@ -496,6 +520,7 @@ export function demarrerSynchroAuto(options: Partial<OptionsDemarrage> = {}): ()
   });
   const retirerArret = ecouterArret(() => synchro.arreter());
   const retirerRelance = ecouterRelance(() => void synchro.relancer().catch(() => undefined));
+  const retirerPasser = ecouterPasser(() => synchro.passerCarte());
 
   armer();
   lancer();
@@ -505,5 +530,6 @@ export function demarrerSynchroAuto(options: Partial<OptionsDemarrage> = {}): ()
     retirerVisibilite();
     retirerArret();
     retirerRelance();
+    retirerPasser();
   };
 }

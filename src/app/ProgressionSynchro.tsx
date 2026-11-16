@@ -3,6 +3,8 @@ import SectionRepliable from './SectionRepliable';
 import type { EtapeSynchro, StatutSynchroV2 } from '../lib/statutSynchro';
 import { annoncer, INTERVALLE_ANNONCE_MS, progressionSynchro, type Annonce, type Barre } from '../lib/progression';
 import BarreProgression from './BarreProgression';
+import { enregistrerPasserCarteSynchro } from '../lib/stockage';
+import { SEUIL_AVERTISSEMENT_PRIX } from '../lib/ordonnanceur';
 
 interface Props {
   statut: StatutSynchroV2;
@@ -24,6 +26,58 @@ const COULEURS: Record<EtatAffiche, string> = {
 };
 
 const horloge = (): number => Date.now();
+
+/** Phase Prix en attente après une erreur : pause en cours, décompte, et rappel que seul le joueur arrête. */
+const AttentePrixLigne: React.FC<{ jusqua: number; titre: string; codeHttp: number | null; verification: boolean; essai: number }> = ({ jusqua, titre, codeHttp, verification, essai }) => {
+  const [maintenant, setMaintenant] = useState(horloge());
+  // « Continuer d’attendre » masque l’avertissement pour cette carte seulement ; il revient pour la carte suivante.
+  const [masquePour, setMasquePour] = useState<string | null>(null);
+  const [erreur, setErreur] = useState(false);
+  useEffect(() => {
+    const m = setInterval(() => setMaintenant(horloge()), 1000);
+    return () => clearInterval(m);
+  }, []);
+  const reste = Math.max(0, Math.ceil((jusqua - maintenant) / 1000));
+  const cause = verification
+    ? 'Vérification anti-bot du site requise : franchis-la à la main sur wiki-masters.com, la synchro reprendra toute seule.'
+    : codeHttp === null
+      ? 'Erreur de réseau ou réponse vide.'
+      : codeHttp === 401
+        ? 'Le site a répondu 401 : session refusée, reconnecte-toi à WikiMasters.'
+        : `Le site a répondu ${codeHttp}.`;
+  const avertir = essai >= SEUIL_AVERTISSEMENT_PRIX && masquePour !== titre;
+  return (
+    <>
+      <p data-testid="attente-prix" role="status" className="mt-3 text-sm text-defausser">
+        {`En attente : ${cause} Nouvel essai dans ${reste} s (essai ${essai}). La synchro ne s’arrête pas toute seule : utilise « Arrêter » pour la couper.`}
+      </p>
+      {avertir && (
+        <div data-testid="avertissement-prix" role="alert" className="mt-3 rounded border border-defausser p-3 text-sm">
+          <p>
+            {`La carte « ${titre} » échoue depuis ${essai} essais (${cause}) Tu peux la passer : elle sera redemandée dans 1 jour, sans rien perdre. Sinon la synchro continue d’attendre.`}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              data-testid="passer-carte"
+              className="rounded border border-line px-3 py-2 min-h-11"
+              onClick={() => {
+                setErreur(false);
+                enregistrerPasserCarteSynchro(Date.now()).catch(() => setErreur(true));
+              }}
+            >
+              Passer cette carte
+            </button>
+            <button type="button" data-testid="continuer-attente" className="rounded border border-line px-3 py-2 min-h-11" onClick={() => setMasquePour(titre)}>
+              Continuer d’attendre
+            </button>
+          </div>
+          {erreur && <p className="mt-2 text-defausser">La demande n’a pas pu être enregistrée.</p>}
+        </div>
+      )}
+    </>
+  );
+};
 
 const barreMinimale = (pourcent: number): Barre => ({ valeur: 0, max: 100, pourcent, indeterminee: false, texte: '' });
 
@@ -87,6 +141,7 @@ const ProgressionSynchro: React.FC<Props> = ({ statut, actif }) => {
           fine
           enCours={actif}
         />
+        {actif && statut.attente != null && <AttentePrixLigne {...statut.attente} />}
         <ol data-testid="etapes-synchro" className="mt-3 grid grid-cols-1 gap-2">
           {p.etapes.map((e) => {
             let etat: EtatAffiche = e.etat;
