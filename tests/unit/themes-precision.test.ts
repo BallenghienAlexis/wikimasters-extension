@@ -119,3 +119,37 @@ describe('faux positifs des nouveaux motifs', () => {
   });
 });
 
+
+// Cartes sans thème dont seule la courte description du site est connue (descriptions Wikidata publiques, 2026-11-16).
+describe('familles de descriptions courtes', () => {
+  const CAS_DESCRIPTION: [string, string, string][] = [
+    ['Freguesia', 'Vilar de Nantes', 'ville'],
+    ['établissement humain', 'Brooksburg', 'ville'],
+    ['rue de Paris', 'Rue Charras', 'ville'],
+    ['voie de Nantes, en France', 'Passage Bouchaud', 'ville'],
+    ['census-designated place du comté de Kay, dans l’État d’Oklahoma, aux États-Unis', 'Tonkawa Tribal Housing', 'ville'],
+    ['district de l’État indien du Gujarat', 'District de Devbhoomi Dwarka', 'geographie'],
+    ['comté de l’Indiana, aux USA', 'Comté de Floyd (Indiana)', 'geographie'],
+    ['prélat catholique († 1361)', 'Pierre Ier de Cros', 'religion'],
+    ['joueur américain de baseball', 'Jarrett Parker', 'sport'],
+    ['handballeuse norvégienne', 'Unni Birkrem', 'sport'],
+    ['entomologiste allemand (1724-1795)', 'Johann Siegfried Hufnagel', 'sciences'],
+    ['ligne de chemin de fer finlandaise', 'Ligne de Raisio à Naantali', 'train'],
+    ['aéroport malaisien', 'Aéroport de Bario', 'avion'],
+    ['mois de 1849', 'Janvier 1849', 'histoire'],
+    ['peinture de Mary Cassatt', 'La Toilette de l’enfant', 'arts'],
+  ];
+  it.each(CAS_DESCRIPTION)('« %s » donne le thème %s', (description, titre, attendu) => {
+    expect(themesPrincipaux({ titre, description })).toEqual([attendu]);
+  });
+
+  it('ne classe pas une homonymie, une date ou un nom de famille', () => {
+    for (const description of ['page d’homonymie', 'date', 'nom de famille', 'prénom masculin']) {
+      expect(themesPrincipaux({ titre: 'Maledon', description })).toEqual([]);
+    }
+  });
+
+  it('un comté nobiliaire n’est pas une zone géographique', () => {
+    expect(themesPrincipaux({ titre: 'Edmund Sheffield (2e comte de Mulgrave)', description: 'pair anglais, 2e comte de Mulgrave' })).toEqual(['royaute']);
+  });
+});
