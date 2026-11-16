@@ -382,7 +382,7 @@ export const SYNCHRO_EN_COURS = 'Une synchronisation ou un autre lot est en cour
 
 /** Libellés fixes d'un lancement refusé avant un lot d'enchères (relecture de `marketplace/mine`). */
 export const ECHEC_LECTURE_ENCHERES = 'Le site a refusé la lecture de tes enchères en cours';
-export const AUCUNE_PLACE_ENCHERE = 'Limite de 5 enchères actives atteinte : réessaie quand une vente se termine.';
+export const AUCUNE_PLACE_ENCHERE = 'Limite d’enchères actives atteinte : réessaie quand une vente se termine.';
 const MESSAGES_LANCEMENT_SUPPLEMENTAIRES: readonly string[] = [AUCUNE_PLACE_ENCHERE, ECHEC_LECTURE_ENCHERES, LIBELLE_VERIFICATION_HUMAINE];
 
 /** Message affiché au lancement : libellé fixe de l’extension, jamais un texte venu d’ailleurs (D-41). */
