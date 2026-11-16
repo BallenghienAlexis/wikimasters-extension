@@ -127,8 +127,10 @@ const OngletSynchro: React.FC<Props> = ({ donnees }) => {
         }}
       />
       {statut && <ProgressionSynchro statut={statut} actif={synchroActive} />}
-      <ListeTaches listes={listes} />
-      <TableIgnorees collection={collection} />
+      <div className="grid items-start gap-x-4 lg:grid-cols-2">
+        <ListeTaches listes={listes} />
+        <TableIgnorees collection={collection} />
+      </div>
       <FraicheurPrix releves={releves} maintenant={maintenant} />
       <SynchroAuto collection={collection} preferences={preferences} cacheWiki={cacheWiki} />
       <div id="historique" tabIndex={-1} className="focus-visible:shadow-(--halo-focus)">
