@@ -153,3 +153,31 @@ describe('familles de descriptions courtes', () => {
     expect(themesPrincipaux({ titre: 'Edmund Sheffield (2e comte de Mulgrave)', description: 'pair anglais, 2e comte de Mulgrave' })).toEqual(['royaute']);
   });
 });
+
+describe('faux positifs des familles de descriptions courtes', () => {
+  const SANS = (titre: string, description: string, interdit: string[]): void => {
+    const themes = themesPrincipaux({ titre, description });
+    for (const t of interdit) expect(themes, `${titre} : ${description}`).not.toContain(t);
+  };
+  it('un comte nobiliaire qui cite les États-Unis n’est pas un comté', () => {
+    SANS('Gilbert du Motier', 'comte de La Fayette, officier aux États-Unis', ['geographie']);
+    SANS('Chavaniac', 'militaire, comte de Chavaniac, héros de l’indépendance des États-Unis', ['geographie']);
+  });
+  it('« chapelle » et « manoir » dans un titre de commune ou de film ne donnent pas d’architecture', () => {
+    SANS('La Chapelle-sur-Erdre', 'commune française', ['architecture', 'arts']);
+    SANS('Le Manoir hanté', 'film américain', ['architecture', 'arts']);
+  });
+  it('un épisode historique n’est pas un épisode de série', () => {
+    SANS('Siège d’Orléans', 'épisode de la guerre de Cent Ans', ['television']);
+    expect(themesPrincipaux({ titre: 'Resurrection of the Daleks', description: 'épisode de Doctor Who' })).toEqual(['television']);
+  });
+  it('rue d’une apostrophe reconnue, voie de fait écartée', () => {
+    expect(themesPrincipaux({ titre: 'Rue d’Alésia', description: 'rue d’Alésia, Paris' })).toContain('ville');
+    SANS('Voie de fait', 'notion de droit', ['ville', 'geographie']);
+  });
+  it('un titre qui contient « archer », « avenue » ou « Tour de France » n’est pas classé pour autant', () => {
+    SANS('Archer', 'série télévisée', ['sport']);
+    SANS('Avenue Q', 'comédie musicale', ['ville']);
+    SANS('Le Tour de France par deux enfants', 'livre', ['cyclisme', 'sport']);
+  });
+});
