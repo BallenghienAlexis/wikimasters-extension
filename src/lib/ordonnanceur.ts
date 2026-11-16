@@ -639,7 +639,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         sens = r === null ? 'valeur' : sensDuPrix(r.json, carte.rarete as string);
       }
       if (r !== null && sens === 'vide') {
-        // Toujours vide : ce n’est pas une absence de vente. Rien n’est mémorisé, la carte sera redemandée à la prochaine synchro.
+        // Toujours vide : ce n’est pas une absence de vente. La carte est reportée d’un jour (voir ci-dessous), pas mémorisée 30 jours.
         videsConsecutifs += 1;
         videsTotal += 1;
         // Reportée d'un jour seulement : elle passe en fin de file, les cartes suivantes sont lues quand même.
