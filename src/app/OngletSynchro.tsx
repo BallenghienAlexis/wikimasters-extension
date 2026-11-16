@@ -101,19 +101,17 @@ const OngletSynchro: React.FC<Props> = ({ donnees }) => {
   const releves = useMemo(() => Object.values(etat?.prix ?? {}).map((r) => r.releveLe), [etat]);
   return (
     <>
-      <h2 className="mt-4 text-xl font-semibold">Synchro</h2>
-      <div className="mt-4" data-testid="pastille-synchro">
-        <PastilleStatut etat={pastille} />
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <h2 className="text-xl font-semibold">Synchro</h2>
+        <div data-testid="pastille-synchro">
+          <PastilleStatut etat={pastille} />
+        </div>
+        {synchroActive && statut && (
+          <p className="text-sm text-muted">
+            Durée restante estimée&nbsp;: <span data-testid="duree-restante">{dureeRestante(secondesSynchro(statut))}</span>
+          </p>
+        )}
       </div>
-      {statut && <ProgressionSynchro statut={statut} actif={synchroActive} />}
-      {synchroActive && statut && (
-        <p className="mt-2 text-sm text-muted">
-          Durée restante estimée&nbsp;: <span data-testid="duree-restante">{dureeRestante(secondesSynchro(statut))}</span>
-        </p>
-      )}
-      <ListeTaches listes={listes} />
-      <FraicheurPrix releves={releves} maintenant={maintenant} />
-      <SynchroAuto collection={collection} preferences={preferences} cacheWiki={cacheWiki} />
       {executionIllisible && (
         <p role="alert" data-testid="etat-execution-illisible" className="mt-4 break-words rounded border border-line border-l-[6px] border-l-defausser bg-ink-2 p-4 font-semibold">
           L’état de l’exécution est illisible. Aucun lot ne peut être lancé ni sauté tant qu’il n’est pas rétabli ; il n’a pas été modifié.
@@ -128,7 +126,11 @@ const OngletSynchro: React.FC<Props> = ({ donnees }) => {
           window.location.hash = 'lots';
         }}
       />
+      {statut && <ProgressionSynchro statut={statut} actif={synchroActive} />}
+      <ListeTaches listes={listes} />
       <TableIgnorees collection={collection} />
+      <FraicheurPrix releves={releves} maintenant={maintenant} />
+      <SynchroAuto collection={collection} preferences={preferences} cacheWiki={cacheWiki} />
       <div id="historique" tabIndex={-1} className="focus-visible:shadow-(--halo-focus)">
         <Journal
           idTest="historique"

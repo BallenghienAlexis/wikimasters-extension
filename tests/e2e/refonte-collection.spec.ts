@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { allerA, chargerCartes, expect, test } from './extension';
+import { allerA, deplierTout, chargerCartes, expect, test } from './extension';
 
 // T-308 : onglet Collection (SC-021, SC-020, SC-024, SC-011, SC-009). Données uniquement fictives.
 //
@@ -166,6 +166,7 @@ test.describe('SC-021 : analyses', () => {
       { id: 'd', titre: 'Trop chère fictive', quantite: 1, valeurMarchande: 90, },
     ]);
     await allerA(pageCollection, 'collection');
+    await deplierTout(pageCollection);
     for (const a of ANALYSES) await expect(pageCollection.getByTestId(`analyse-${a}`)).toBeVisible();
     await expect(pageCollection.getByTestId('analyse-doublons')).toContainText('Doublon fictif');
     const cheres = pageCollection.getByTestId('analyse-plus-cheres');
@@ -245,6 +246,7 @@ test.describe('SC-020 : évolution sur 30 jours', () => {
     );
     await chargerCartes(pageCollection, CARTES);
     await allerA(pageCollection, 'collection');
+    await deplierTout(pageCollection);
     const evo = pageCollection.getByTestId('evolution');
     await expect(evo.getByTestId('evolution-colonne')).toHaveCount(4); // 3 points + aujourd’hui
     await expect(evo.getByTestId('evolution-trou')).toHaveCount(26);

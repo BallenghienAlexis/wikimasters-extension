@@ -2,7 +2,7 @@ import type { BrowserContext, Locator, Page } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 import { NOM_COOKIE_SESSION, ORIGINE_REST } from '../../src/config/synchro';
-import { allerA, chargerCartes, expect, test } from './extension';
+import { allerA, deplierTout, chargerCartes, expect, test } from './extension';
 
 // T-307 : panneau d'erreur, ignorées, historique filtrable (SC-004 à SC-008, SC-016 à SC-018). Données ENTIÈREMENT fictives ;
 // le vrai site et son hôte REST ne sont jamais contactés (routes simulées, requêtes externes abandonnées et comptées).
@@ -293,6 +293,7 @@ test.describe('exécution réelle (site fictif)', () => {
     }
     await expect(bouton(page, /^Réessayer cette action/)).toHaveAttribute('aria-disabled', 'true');
     await expect(bouton(page, /^Arrêter tout/)).not.toHaveAttribute('aria-disabled', 'true');
+    await deplierTout(page);
     await page.getByRole('link', { name: /historique/i }).click();
     await expect(page.getByTestId('historique')).toContainText('Passée : sautée');
   });
@@ -419,6 +420,7 @@ test.describe('Historique', () => {
 
   test('SC-018 : filtres type, résultat, carte, exécution combinés en ET, puis « Aucune action ne correspond »', async ({ pageCollection: page }) => {
     await poser(page, { journal: { version: 2, entrees: journal } });
+    await deplierTout(page);
     const h = page.getByTestId('historique');
     await expect(lignes(page)).toHaveCount(4);
     await h.getByLabel('Type').selectOption({ label: 'Étiquette' });
@@ -436,6 +438,7 @@ test.describe('Historique', () => {
 
   test('SC-008 : filtres au clavier (Tab atteint les quatre filtres)', async ({ pageCollection: page }) => {
     await poser(page, { journal: { version: 2, entrees: journal } });
+    await deplierTout(page);
     const h = page.getByTestId('historique');
     for (const nom of ['Type', 'Résultat', 'Carte', 'Exécution']) {
       await h.getByLabel(nom).focus();

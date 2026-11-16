@@ -227,6 +227,13 @@ export async function ouvrirSectionsReglages(page: Page): Promise<void> {
   }
 }
 
+/** Déplie tous les blocs repliés du panneau actif (blocs dépliables : seul leur résumé est visible replié). */
+export async function deplierTout(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    for (let i = 0; i < 5; i += 1) document.querySelectorAll<HTMLElement>('[role="tabpanel"] button[aria-expanded="false"]').forEach((b) => b.click());
+  });
+}
+
 /** Déplie la section « Ignorées » de l'onglet Synchro si elle est repliée. */
 export async function ouvrirIgnorees(page: Page): Promise<void> {
   const titre = page.getByTestId('ignorees').getByRole('button', { name: /^Ignorées/ });

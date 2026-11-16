@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import SectionRepliable from './SectionRepliable';
 import type { EtapeSynchro, StatutSynchroV2 } from '../lib/statutSynchro';
 import { annoncer, INTERVALLE_ANNONCE_MS, progressionSynchro, type Annonce, type Barre } from '../lib/progression';
 import BarreProgression from './BarreProgression';
@@ -70,7 +71,14 @@ const ProgressionSynchro: React.FC<Props> = ({ statut, actif }) => {
 
   return (
     <>
-      <section aria-label="Progression" data-testid="progression-synchro" className="mt-4 rounded border border-line bg-ink-2 p-4">
+      <SectionRepliable
+        id="progression-synchro"
+        testId="progression-synchro"
+        className="mt-4"
+        titre="Progression"
+        ouvertParDefaut={actif}
+        resume={p.texte}
+      >
         <BarreProgression
           valeur={p.indeterminee ? null : p.pourcent}
           max={100}
@@ -104,7 +112,7 @@ const ProgressionSynchro: React.FC<Props> = ({ statut, actif }) => {
             );
           })}
         </ol>
-      </section>
+      </SectionRepliable>
       <p aria-live="polite" className="sr-only" data-testid="annonce-synchro">
         {texteAnnonce}
       </p>

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import SectionRepliable from './SectionRepliable';
 import { serie30Jours, type PointHistorique } from '../lib/historique';
 import { chargerHistorique, ecouterHistorique } from '../lib/stockage';
 
@@ -38,8 +39,13 @@ const GraphiqueEvolution: React.FC = () => {
   const survol = serie.find((j) => j.jour === actif && j.exemplaires !== null);
 
   return (
-    <section data-testid="evolution" aria-labelledby="titre-evolution" className="mt-4 rounded border border-line bg-ink-2 p-4">
-      <h2 id="titre-evolution" className="font-semibold">Évolution de la collection (30 jours)</h2>
+    <SectionRepliable
+      id="evolution"
+      testId="evolution"
+      className="mt-4"
+      titre="Évolution de la collection (30 jours)"
+      resume={dansFenetre.length >= 2 ? `${nombre.format(dernier)} exemplaires (${delta >= 0 ? '+' : '−'}${nombre.format(Math.abs(delta))})` : 'Historique en constitution'}
+    >
       {dansFenetre.length >= 2 && (
         <p className="mt-1 text-sm text-muted">
           Exemplaires à la fin de chaque jour · de {nombre.format(premier)} à {nombre.format(dernier)} ({delta >= 0 ? '+' : '−'}
@@ -99,7 +105,7 @@ const GraphiqueEvolution: React.FC = () => {
           </table>
         </>
       )}
-    </section>
+    </SectionRepliable>
   );
 };
 

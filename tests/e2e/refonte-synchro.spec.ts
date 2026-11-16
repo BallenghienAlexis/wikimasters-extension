@@ -1,4 +1,4 @@
-import { allerA, chargerCartes, expect, test } from './extension';
+import { allerA, deplierTout, chargerCartes, expect, test } from './extension';
 import type { Page } from '@playwright/test';
 
 // T-306 : onglet Synchro (SC-002, SC-003, SC-028 interrupteur, SC-009). Données uniquement fictives, aucune requête vers le site.
@@ -89,6 +89,7 @@ async function poser(page: Page, valeurs: Record<string, unknown>): Promise<void
   await page.evaluate((v) => chrome.storage.local.set(v), valeurs);
   await page.reload();
   await allerA(page, 'synchro');
+  await deplierTout(page);
 }
 
 const maj = (page: Page, valeurs: Record<string, unknown>) => page.evaluate((v) => chrome.storage.local.set(v), valeurs);
