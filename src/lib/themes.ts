@@ -72,15 +72,15 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'gastronomie', libelle: '#Gastronomie', motifs: ['agrume', 'fruit', 'legume', 'cereale', 'plat ', 'cuisine', 'culinaire', 'charcuterie', 'boisson', 'fromage', 'vin ', 'patisserie', 'epice', 'lait '] },
 
   // Lieux
-  { id: 'geographie', libelle: '#Géographie', motifs: ['region', 'fleuve', 'riviere', 'montagne', 'volcan', 'ile ', 'lac ', 'departement', 'province', 'territoire', 'detroit', 'mer ', 'ocean', 'desert', 'etat des', 'etat federe', 'districts? (?:de |du |administratif)', 'comtes? d[eu][^.;(),]{0,40}(?:, dans l\'etat d[^,]{1,30})?, (?:aux |des )?(?:usa|etats-unis)', 'intercommunalite', 'canton ', 'sous-prefecture'] },
+  { id: 'geographie', libelle: '#Géographie', motifs: ['region', 'fleuve', 'riviere', 'montagne', 'volcan', 'ile ', 'lac ', 'departement', 'province', 'territoire', 'detroit', 'mer ', 'ocean', 'desert', 'etat des', 'etat federe', 'districts? (?:de |du |administratif)', 'comtes? des etats-unis', 'comtes? d[eu][^.;(),]{0,40}(?:, dans l\'etat d[^,]{1,30})?, (?:aux |des )?(?:usa|etats-unis)', 'intercommunalite', 'canton ', 'sous-prefecture'] },
   { id: 'pays', libelle: '#Pays', motifs: ['pays', 'etat souverain', 'capitale'], parents: ['geographie'] },
   { id: 'ville', libelle: '#Ville', motifs: ['ville', 'commune', 'localite', 'village', 'quartier', 'etablissement humain', 'census-designated place', 'unite urbaine', 'raion municipal', 'town d[eu] ', 'bourg ', 'freguesia', 'municipalite', 'gmina', 'hameau', 'voies? d(?:e |u |\')(?!fait|communication|droit|garage|acces|recours|circulation)', 'rues? (?:a |de |du |des |d\')', 'avenues? (?:de |du |des |d\')'], parents: ['geographie'] },
 
   // Culture
   { id: 'arts', libelle: '#Art', motifs: ['peintre', 'sculpt', 'artiste', 'art ', 'musee', 'tableau', 'photograph', 'dessinat', 'peinture d', 'peinture murale'] },
-  { id: 'architecture', libelle: '#Architecture', motifs: ['architect', 'cathedrale', 'chateau', 'pont ', 'gratte-ciel', 'batiment', 'manoir (?:d[eu]|a|situe)', 'hotel particulier', 'chapelle (?:d[eu]|situee|catholique|romane|gothique)', 'immeuble a '], parents: ['arts'] },
+  { id: 'architecture', libelle: '#Architecture', motifs: ['architect', 'cathedrale', 'chateau', 'pont ', 'gratte-ciel', 'batiment', 'manoir (?:d[eu] |du |a |en |situe)', 'hotel particulier', 'chapelle (?:d[eu] |du |situee|catholique|romane|gothique|a |en )', 'immeuble a '], parents: ['arts'] },
   { id: 'cinema', libelle: '#Cinéma', motifs: ['film', 'acteur', 'actrice', 'realisat', 'cineaste', 'comedien', 'comedienne', 'humoriste'] },
-  { id: 'television', libelle: '#Télévision', motifs: ['serie televisee', 'television', 'animateur', 'animatrice', 'emission', 'episodes? (?:de|du|des) (?!la |l\'|le |les )'], parents: ['cinema'] },
+  { id: 'television', libelle: '#Télévision', motifs: ['serie televisee', 'television', 'animateur', 'animatrice', 'emission', 'episodes? (?:de|du|des) (?!la guerre|l\'histoire|la revolution|la bataille|la campagne)'], parents: ['cinema'] },
   { id: 'litterature', libelle: '#Littérature', motifs: ['ecrivain', 'roman', 'auteur', 'autrice', 'poete', 'poetesse', 'livre', 'theatre', 'dramaturge', 'maison d\'edition', 'revue litteraire'] },
   { id: 'bd', libelle: '#BD et Manga', motifs: ['bande dessinee', 'manga', 'anime ', 'comics', 'one piece'], parents: ['litterature'] },
   { id: 'langue', libelle: '#Langue', motifs: ['langue', 'linguist', 'terme ', 'mot ', 'consonne', 'voyelle', 'alphabet', 'dialecte'] },

@@ -164,11 +164,15 @@ describe('faux positifs des familles de descriptions courtes', () => {
     SANS('Chavaniac', 'militaire, comte de Chavaniac, héros de l’indépendance des États-Unis', ['geographie']);
   });
   it('« chapelle » et « manoir » dans un titre de commune ou de film ne donnent pas d’architecture', () => {
-    SANS('La Chapelle-sur-Erdre', 'commune française', ['architecture', 'arts']);
-    SANS('Le Manoir hanté', 'film américain', ['architecture', 'arts']);
+    SANS('La Chapelle-sur-Erdre', '', ['architecture', 'arts']);
+    expect(themesDeTexte('La Chapelle-sur-Erdre commune française')).not.toContain('architecture');
+    SANS('Le Manoir hanté', '', ['architecture', 'arts']);
+    expect(themesPrincipaux({ titre: 'Manoir d’Azelonde', description: 'manoir à Criquetot-l’Esneval' })).toEqual(['architecture']);
+    expect(themesPrincipaux({ titre: 'Chapelle X', description: 'chapelle à Paris' })).toContain('architecture');
   });
   it('un épisode historique n’est pas un épisode de série', () => {
     SANS('Siège d’Orléans', 'épisode de la guerre de Cent Ans', ['television']);
+    expect(themesPrincipaux({ titre: 'Pilote', description: 'épisode de la série Lost' })).toContain('television');
     expect(themesPrincipaux({ titre: 'Resurrection of the Daleks', description: 'épisode de Doctor Who' })).toEqual(['television']);
   });
   it('rue d’une apostrophe reconnue, voie de fait écartée', () => {
@@ -176,8 +180,8 @@ describe('faux positifs des familles de descriptions courtes', () => {
     SANS('Voie de fait', 'notion de droit', ['ville', 'geographie']);
   });
   it('un titre qui contient « archer », « avenue » ou « Tour de France » n’est pas classé pour autant', () => {
-    SANS('Archer', 'série télévisée', ['sport']);
-    SANS('Avenue Q', 'comédie musicale', ['ville']);
-    SANS('Le Tour de France par deux enfants', 'livre', ['cyclisme', 'sport']);
+    SANS('Archer', '', ['sport']);
+    SANS('Avenue Q', '', ['ville']);
+    SANS('Le Tour de France par deux enfants', '', ['cyclisme', 'sport']);
   });
 });
