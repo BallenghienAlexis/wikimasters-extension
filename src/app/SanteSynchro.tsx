@@ -10,6 +10,16 @@ interface Props {
   activee: boolean;
   /** Nombre de prix relevés (fraîcheur des prix). */
   prixReleves: number;
+  /** Lignes Lecture / Étiquettes / Prix / Ignorées (symbole + mot, jamais la couleur seule). */
+  lignes?: readonly LigneSante[];
+}
+
+export interface LigneSante {
+  symbole: string;
+  nom: string;
+  texte: string;
+  /** Lien « gérer » vers un onglet. */
+  lien?: { libelle: string; href: string };
 }
 
 const LIEN: Record<PastilleSynchro, string | null> = {
@@ -20,7 +30,7 @@ const LIEN: Record<PastilleSynchro, string | null> = {
 };
 
 /** Santé de la synchro (D-40) : pastille texte + symbole, âge de la dernière synchro terminée, lien vers #synchro. */
-const SanteSynchro: React.FC<Props> = ({ pastille, ageLibelle, activee, prixReleves }) => {
+const SanteSynchro: React.FC<Props> = ({ pastille, ageLibelle, activee, prixReleves, lignes = [] }) => {
   const lien = LIEN[pastille];
   return (
     <SectionRepliable
@@ -40,7 +50,25 @@ const SanteSynchro: React.FC<Props> = ({ pastille, ageLibelle, activee, prixRele
           </a>
         )}
       </div>
-      {prixReleves > 0 && <p className="mt-2 text-sm text-muted">{`Prix relevés\u00a0: ${prixReleves}`}</p>}
+      {lignes.length > 0 && (
+        <ul className="mt-3 divide-y divide-line border-y border-line text-sm" data-testid="lignes-sante">
+          {lignes.map((l) => (
+            <li key={l.nom} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2">
+              <span className="w-28 shrink-0 font-semibold">
+                <span aria-hidden="true">{l.symbole} </span>
+                {l.nom}
+              </span>
+              <span className="min-w-0 break-words">{l.texte}</span>
+              {l.lien && (
+                <a href={l.lien.href} className="inline-flex min-h-11 items-center rounded px-2 underline">
+                  {l.lien.libelle}
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {prixReleves > 0 && lignes.length === 0 && <p className="mt-2 text-sm text-muted">{`Prix relevés\u00a0: ${prixReleves}`}</p>}
     </SectionRepliable>
   );
 };
