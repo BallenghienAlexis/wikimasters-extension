@@ -80,8 +80,9 @@ export function validerStatutSynchro(brut: unknown): StatutSynchroV2 | null {
   if (brut.version === 2 && brut.attente !== undefined && brut.attente !== null) {
     const a = brut.attente
     if (!objet(a) || !entier(a.jusqua) || !entier(a.essai) || typeof a.verification !== 'boolean') return null
+    if (typeof a.titre !== 'string' || a.titre.length > 200) return null
     if (a.codeHttp !== null && !(typeof a.codeHttp === 'number' && Number.isSafeInteger(a.codeHttp) && a.codeHttp >= 100 && a.codeHttp <= 599)) return null
-    attente = { jusqua: a.jusqua, essai: a.essai, verification: a.verification, codeHttp: a.codeHttp }
+    attente = { jusqua: a.jusqua, titre: a.titre, essai: a.essai, verification: a.verification, codeHttp: a.codeHttp }
   }
   return {
     version: 2,

@@ -31,6 +31,8 @@ export const PAUSE_PRIX_MS = 1_200;
  * Aucun arrêt automatique : seul le joueur arrête.
  */
 export const PAS_ATTENTE_PRIX_MS = 5_000;
+/** Après ce nombre d’échecs de la même carte, un avertissement propose au joueur de la passer (Alexis, 2026-11-16) ; jamais de passage automatique. */
+export const SEUIL_AVERTISSEMENT_PRIX = 5;
 /** Ralentissement supplémentaire maximal entre deux demandes de prix, appris des échecs (réduit de moitié à chaque prix lu). */
 export const RALENTISSEMENT_PRIX_MAX_MS = 2_000;
 /** Code de la réponse 403 du site qui exige une vérification humaine : jamais contournée (le joueur la franchit à la main). */
@@ -113,6 +115,8 @@ export interface DependancesSynchro {
   annoncerAttente?: (attente: AttentePrix | null) => void;
   /** Appelé quand une carte est terminée (prix lu ou carte sans marché), jamais à chaque essai. */
   prixTermine?: () => void;
+  /** Le joueur a demandé de passer la carte en attente : renvoie `true` une seule fois par demande. */
+  passerCarteDemandee?: () => boolean;
   /** Millisecondes ajoutées à l’intervalle minimal entre deux requêtes (délai variable). Absent : 0. */
   gigue?: () => number;
 }
@@ -120,6 +124,8 @@ export interface DependancesSynchro {
 /** Attente de la phase Prix après une erreur : seul le joueur peut l’arrêter. */
 export interface AttentePrix {
   jusqua: number;
+  /** Titre de la carte en attente (pour l’avertissement). */
+  titre: string;
   codeHttp: number | null;
   verification: boolean;
   essai: number;
@@ -319,7 +325,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
    * synchro (Alexis, 2026-11-16). Seul un 404 (carte sans route de prix) la sort de la boucle : `null`. L’arrêt du joueur
    * interrompt les pauses. La vérification anti-bot n’est jamais contournée : la phase attend que le joueur la franchisse à la main.
    */
-  async function requetePrix(chemin: string, titre: string, rarete: string): Promise<{ reponse: ReponseApi; sens: SensPrix } | null> {
+  async function requetePrix(chemin: string, titre: string, rarete: string): Promise<{ reponse: ReponseApi; sens: SensPrix } | 'passee' | null> {
+    deps.passerCarteDemandee?.(); // une demande ancienne ne vaut pas pour cette carte
     for (let essai = 1; ; essai++) {
       const reponse = await envoyer(chemin, PAUSE_PRIX_MS + ralentissementPrix + 4 * gigue());
       let codeHttp: number | null = null;
@@ -352,8 +359,12 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       const pause = PAS_ATTENTE_PRIX_MS * essai;
       ralentissementPrix = Math.min(RALENTISSEMENT_PRIX_MAX_MS, ralentissementPrix + 500);
       journal(`Prix : ${motif} pour « ${titre} » ; en attente, nouvel essai dans ${pause / 1000} s (essai ${essai}). Le joueur peut arrêter.`);
-      deps.annoncerAttente?.({ jusqua: horloge.now() + pause, codeHttp, verification, essai });
-      await pauseInterruptible(pause);
+      deps.annoncerAttente?.({ jusqua: horloge.now() + pause, titre: titre.slice(0, 200), codeHttp, verification, essai });
+      if (await pauseInterruptible(pause, essai >= SEUIL_AVERTISSEMENT_PRIX)) {
+        journal(`Prix : carte « ${titre} » passée à la demande du joueur après ${essai} échecs.`);
+        deps.annoncerAttente?.(null);
+        return 'passee';
+      }
     }
   }
 
@@ -362,15 +373,17 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   }
 
   /** Attente par tranches d’une seconde : un arrêt manuel n’attend pas la fin de la pause. */
-  async function pauseInterruptible(ms: number): Promise<void> {
+  async function pauseInterruptible(ms: number, passable = false): Promise<boolean> {
     const fin = horloge.now() + ms;
     while (horloge.now() < fin) {
       if (deps.arretDemande?.()) throw new Interruption('manuel', null);
+      if (passable && deps.passerCarteDemandee?.()) return true;
       // Le bail reste pris pendant toute la pause : aucune autre exécution ne démarre pendant qu’on ralentit.
       await deps.bail.ecrire(horloge.now() + DUREE_BAIL_MS);
       await horloge.attendreJusqua(Math.min(fin, horloge.now() + 1000));
     }
     if (deps.arretDemande?.()) throw new Interruption('manuel', null);
+    return passable && (deps.passerCarteDemandee?.() ?? false);
   }
 
   function echec(message: string): null {
@@ -632,6 +645,12 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       if (cardId === undefined) continue;
       // Réessaie sans fin (5 s, 10 s, 15 s…) jusqu’à une réponse exploitable ; seul un 404 (sans marché) renvoie `null`.
       const obtenu = await requetePrix(cheminPrix(cardId), carte.titre, carte.rarete as string);
+      if (obtenu === 'passee') {
+        // Passée par le joueur : valeur précédente gardée, redemandée dans un jour.
+        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() - ancienneteMaxPrixMs + 86_400_000 };
+        deps.prixTermine?.();
+        continue;
+      }
       if (obtenu === null) {
         // Carte sans route de prix : ignorée, valeur précédente gardée, pas redemandée avant 30 jours.
         etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() };

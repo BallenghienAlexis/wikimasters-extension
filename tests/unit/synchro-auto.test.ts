@@ -382,7 +382,7 @@ describe('T-205 AC1 : déclencheurs de page', () => {
   const options = (declencher = vi.fn(async () => null), arreter = vi.fn()) => {
     let arret: (() => void) | null = null;
     return {
-      synchro: { declencher, arreter, relancer: vi.fn(async () => null) },
+      synchro: { declencher, arreter, relancer: vi.fn(async () => null), passerCarte: vi.fn() },
       declencherArret: () => arret?.(),
       ecouterArret: (rappel: () => void) => {
         arret = rappel;
@@ -399,7 +399,7 @@ describe('T-205 AC1 : déclencheurs de page', () => {
     vi.useFakeTimers();
     const v = visibilite(true);
     const o = options();
-    demarrerSynchroAuto({ synchro: o.synchro, visibilite: v.source, ecouterArret: o.ecouterArret, ecouterRelance: () => () => undefined });
+    demarrerSynchroAuto({ synchro: o.synchro, visibilite: v.source, ecouterArret: o.ecouterArret, ecouterRelance: () => () => undefined, ecouterPasserCarte: () => () => undefined });
     expect(o.declencher).toHaveBeenCalledTimes(1);
     vi.advanceTimersByTime(DELAI_SYNCHRO_MS);
     expect(o.declencher).toHaveBeenCalledTimes(2);
@@ -411,7 +411,7 @@ describe('T-205 AC1 : déclencheurs de page', () => {
     vi.useFakeTimers();
     const v = visibilite(false);
     const o = options();
-    demarrerSynchroAuto({ synchro: o.synchro, visibilite: v.source, ecouterArret: o.ecouterArret, ecouterRelance: () => () => undefined });
+    demarrerSynchroAuto({ synchro: o.synchro, visibilite: v.source, ecouterArret: o.ecouterArret, ecouterRelance: () => () => undefined, ecouterPasserCarte: () => () => undefined });
     vi.advanceTimersByTime(3 * DELAI_SYNCHRO_MS);
     expect(o.declencher).toHaveBeenCalledTimes(1); // chargement de la page seulement
     v.changer(true);
@@ -426,7 +426,7 @@ describe('T-205 AC1 : déclencheurs de page', () => {
   it('la demande d’arrêt de l’interface appelle arreter()', () => {
     vi.useFakeTimers();
     const o = options();
-    demarrerSynchroAuto({ synchro: o.synchro, visibilite: visibilite(true).source, ecouterArret: o.ecouterArret, ecouterRelance: () => () => undefined });
+    demarrerSynchroAuto({ synchro: o.synchro, visibilite: visibilite(true).source, ecouterArret: o.ecouterArret, ecouterRelance: () => () => undefined, ecouterPasserCarte: () => () => undefined });
     o.declencherArret();
     expect(o.arreter).toHaveBeenCalledTimes(1);
   });
@@ -438,6 +438,7 @@ describe('T-205 AC1 : déclencheurs de page', () => {
       synchro: o.synchro,
       visibilite: visibilite(true).source,
       ecouterArret: o.ecouterArret,
+      ecouterPasserCarte: () => () => undefined,
       ecouterRelance: (rappel) => {
         relance = rappel;
         return () => {
@@ -455,7 +456,7 @@ describe('T-205 AC1 : déclencheurs de page', () => {
     vi.useFakeTimers();
     const v = visibilite(true);
     const o = options();
-    const stop = demarrerSynchroAuto({ synchro: o.synchro, visibilite: v.source, ecouterArret: o.ecouterArret, ecouterRelance: () => () => undefined });
+    const stop = demarrerSynchroAuto({ synchro: o.synchro, visibilite: v.source, ecouterArret: o.ecouterArret, ecouterRelance: () => () => undefined, ecouterPasserCarte: () => () => undefined });
     stop();
     vi.advanceTimersByTime(3 * DELAI_SYNCHRO_MS);
     expect(o.declencher).toHaveBeenCalledTimes(1);

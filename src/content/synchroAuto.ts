@@ -17,6 +17,7 @@ import {
   chargerEtatSynchro,
   chargerSyncAuto,
   ecouterArretSynchro,
+  ecouterPasserCarteSynchro,
   ecouterRelanceSynchro,
   enregistrerBailSynchro,
   enregistrerCollection,
@@ -87,6 +88,8 @@ export interface SynchroAuto {
   relancer: () => Promise<ResultatSynchro | null>;
   /** Arrêt immédiat : plus aucune requête n'est émise après celle en vol. */
   arreter: () => void;
+  /** Le joueur demande de passer la carte dont le prix est en attente (avertissement de l’étape Prix). */
+  passerCarte: () => void;
 }
 
 /**
@@ -169,6 +172,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
   const journal = deps.journal ?? (() => undefined);
   let enCours = false;
   let arretDemande = false;
+  let passerDemande = false;
   let dernierEssai: number | null = null;
   let derniereRelance: number | null = null;
 
@@ -323,6 +327,11 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         journal,
         gigue: deps.gigue,
         arretDemande: () => arretDemande,
+        passerCarteDemandee: () => {
+          const d = passerDemande;
+          passerDemande = false;
+          return d;
+        },
         forcer,
         annoncerPrix: (n) => {
           prixPrevus = n;
@@ -384,6 +393,9 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
     arreter: () => {
       arretDemande = true;
     },
+    passerCarte: () => {
+      passerDemande = true;
+    },
   };
 }
 
@@ -400,6 +412,8 @@ export interface OptionsDemarrage {
   ecouterArret: (rappel: () => void) => () => void;
   /** Demande de relance venue de l'interface. */
   ecouterRelance: (rappel: () => void) => () => void;
+  /** Demande de passer la carte de prix en attente, venue de l’interface. */
+  ecouterPasserCarte: (rappel: () => void) => () => void;
 }
 
 const horlogeReelle: Horloge = {
@@ -484,6 +498,7 @@ export function demarrerSynchroAuto(options: Partial<OptionsDemarrage> = {}): ()
   const visibilite = options.visibilite ?? visibiliteDuNavigateur();
   const ecouterArret = options.ecouterArret ?? ecouterArretSynchro;
   const ecouterRelance = options.ecouterRelance ?? ecouterRelanceSynchro;
+  const ecouterPasser = options.ecouterPasserCarte ?? ecouterPasserCarteSynchro;
 
   const lancer = (): void => void synchro.declencher().catch(() => undefined);
   let minuteur: ReturnType<typeof setInterval> | undefined;
@@ -505,6 +520,7 @@ export function demarrerSynchroAuto(options: Partial<OptionsDemarrage> = {}): ()
   });
   const retirerArret = ecouterArret(() => synchro.arreter());
   const retirerRelance = ecouterRelance(() => void synchro.relancer().catch(() => undefined));
+  const retirerPasser = ecouterPasser(() => synchro.passerCarte());
 
   armer();
   lancer();
@@ -514,5 +530,6 @@ export function demarrerSynchroAuto(options: Partial<OptionsDemarrage> = {}): ()
     retirerVisibilite();
     retirerArret();
     retirerRelance();
+    retirerPasser();
   };
 }

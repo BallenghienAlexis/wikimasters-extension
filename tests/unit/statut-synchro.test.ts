@@ -20,7 +20,7 @@ describe('T-303 statut de synchro v2', () => {
   });
 
   it('attente de la phase Prix : conservée si valide, statut rejeté si elle est mal formée', () => {
-    const attente = { jusqua: 1700000005000, codeHttp: 403, verification: true, essai: 2 };
+    const attente = { titre: 'Carte A', jusqua: 1700000005000, codeHttp: 403, verification: true, essai: 2 };
     expect(validerStatutSynchro(v2({ attente }))).toEqual(v2({ attente }));
     expect(validerStatutSynchro(v2({ attente: { ...attente, verification: 'oui' } }))).toBeNull();
     expect(validerStatutSynchro(v2({ attente: { ...attente, codeHttp: 99 } }))).toBeNull();

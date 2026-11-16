@@ -6,6 +6,7 @@ import {
   MAX_PAGES_SANS_TOTAL,
   PAUSE_APRES_ARRET_MS,
   PAUSE_PRIX_MS,
+  SEUIL_AVERTISSEMENT_PRIX,
   ancienneteMaxPrixMs,
   etatInitial,
   synchroniser,
@@ -679,6 +680,34 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.issue).toBe('arret');
     expect(r.raison).toBe('manuel');
     expect(r.etat.arretJusqua).toBeNull();
+  })
+
+  it('prix : « passer cette carte » n’est pris en compte qu’après le seuil d’avertissement, jamais automatiquement', async () => {
+    const site = siteFictif(3);
+    let demande = false;
+    const b = banc((chemin) => {
+      if (chemin.includes('card-2/sales')) return { statut: 403, json: null };
+      return site(chemin);
+    });
+    const attentes: number[] = [];
+    const r = await synchroniser({
+      ...b.deps,
+      annoncerAttente: (a) => {
+        if (a !== null) attentes.push(a.essai);
+        // Le joueur clique dès le premier essai : ignoré tant que le seuil n’est pas atteint.
+        if (a !== null && a.essai >= 1) demande = true;
+      },
+      passerCarteDemandee: () => {
+        const d = demande;
+        demande = false;
+        return d;
+      },
+    });
+    expect(r.issue).toBe('termine');
+    const essais = b.departs.filter((d) => d.chemin.includes('card-2/sales'));
+    expect(essais).toHaveLength(SEUIL_AVERTISSEMENT_PRIX);
+    expect(b.journal.join('\n')).toContain('passée à la demande du joueur');
+    expect(r.etat.prix[idCarte(2)]?.valeur).toBeNull();
   })
 
   it('prix : un 404 isolé (carte sans marché) est ignoré sans attente et mémorisé', async () => {
