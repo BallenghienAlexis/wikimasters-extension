@@ -600,7 +600,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.issue).toBe('termine');
     expect(r.etat.arretJusqua).toBeNull();
     expect(r.prixReleves).toBe(5);
-    // Pas redemandée avant la fin de l’ancienneté, sans valeur inventée.
+    // Un 403 isolé : pas redemandée avant 1 jour, sans valeur inventée.
     expect(r.etat.prix['R|Carte 2']?.valeur).toBeNull();
     const b2 = banc(site, r.collection, r.etat);
     b2.horloge.t += 31 * 60_000;
@@ -639,6 +639,15 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.etat.arretJusqua).toBeNull();
     expect(r.prixReleves).toBe(8);
     expect(b.journal.join('\n')).toContain('limitation de débit possible');
+  })
+
+  it('prix : un 404 isolé est mémorisé 30 jours, un 403 isolé seulement 1 jour', async () => {
+    const site = siteFictif(6);
+    const b = banc((chemin) => (chemin.includes('card-2/sales') ? { statut: 404, json: null } : chemin.includes('card-4/sales') ? { statut: 403, json: null } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    const age = (id: string) => b.horloge.t - (r.etat.prix[id]?.releveLe ?? 0);
+    expect(age('R|Carte 2')).toBeLessThan(60_000);
+    expect(ancienneteMaxPrixMs - age('R|Carte 4')).toBeLessThan(JOUR + 60_000);
   })
 
   it('prix : une série de 404 ne déclenche aucune pause', async () => {

@@ -49,7 +49,7 @@ export const RALENTISSEMENT_PRIX_MAX_MS = 2_000;
 const CODE_VERIFICATION_HUMAINE = 'human_verification_required';
 /** Refus 403 d’affilée sur les prix à partir desquels on suppose une limitation de débit (pause adaptative avant de conclure). Aucun arrêt (Alexis, 2026-11-16). */
 export const SEUIL_PAUSE_403_PRIX = 2;
-/** Refus d’affilée, pauses 403 épuisées, qui coupent la phase Prix (sans erreur ni pause de 30 min, sans mémoriser la rafale) : le site refuse tout. */
+/** 403 d’affilée (pauses épuisées comprises, soit 3 de plus après le seuil) qui coupent la phase Prix (sans erreur ni pause de 30 min, sans mémoriser la rafale) : le site refuse tout. */
 export const REFUS_FIN_PHASE_PRIX = SEUIL_PAUSE_403_PRIX + 3;
 const PREMIERE_PAGE = 0;
 const CARTES_PAR_PAGE = 50;
@@ -248,6 +248,9 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   let refusPrixTotal = 0;
   /** Pauses adaptatives déjà prises sur des 403 de prix en série (limitation de débit supposée). */
   let pauses403Serie = 0;
+  /** 403 d’affilée sur les prix (les 404 n’y comptent pas) et statut du dernier refus de prix. */
+  let refus403Serie = 0;
+  let dernierRefusPrix = 0;
   /** Ralentissement appris des réponses vides (ms), réduit de moitié à chaque prix lu. */
   let ralentissementPrix = 0;
 
@@ -323,7 +326,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     if (prix !== false && (reponse.statut === 403 || reponse.statut === 404)) {
       // Prix d’une seule carte refusé : carte vendue, défaussée ou sans marché, ou limitation de débit. Aucun arrêt
       // (Alexis, 2026-11-16 : plus de restriction des 3 erreurs) : seuls 401, 429 répétés et la vérification anti-bot arrêtent.
-      if (reponse.statut === 403 && refusPrix >= SEUIL_PAUSE_403_PRIX && pauses403Serie < MAX_PAUSES_403_PRIX) {
+      if (reponse.statut === 403 && refus403Serie >= SEUIL_PAUSE_403_PRIX && pauses403Serie < MAX_PAUSES_403_PRIX) {
         // Une série de 403 ressemble à une limitation de débit autant qu’à des cartes sans marché : on ralentit,
         // on attend (30 s qui doublent) et on redemande la même carte avant de conclure. Jamais de contournement.
         const pause = Math.min(PAUSE_429_PRIX_MAX_MS, PAUSE_429_PRIX_MS * 2 ** pauses403Serie);
@@ -335,6 +338,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       }
       refusPrix += 1;
       refusPrixTotal += 1;
+      dernierRefusPrix = reponse.statut;
+      if (reponse.statut === 403) refus403Serie += 1;
       journal(`Prix indisponible (réponse ${reponse.statut}) pour « ${prix} » : carte ignorée, la synchro continue (${refusPrix} refus d’affilée).`);
       return null;
     }
@@ -659,17 +664,18 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       }
       if (r === null) {
         if (refusPrixTotal > refusAvant) journal(`Diagnostic prix : refus pour « ${carte.titre} » (rareté ${carte.rarete ?? '?'}) à la demande n° ${demandes}, ${Math.round((horloge.now() - (premiereDemande)) / 1000)} s après la première.`);
-        if (refusPrixTotal > refusAvant && pauses403Serie >= MAX_PAUSES_403_PRIX && refusPrix >= REFUS_FIN_PHASE_PRIX) {
+        if (refusPrixTotal > refusAvant && pauses403Serie >= MAX_PAUSES_403_PRIX && refus403Serie >= REFUS_FIN_PHASE_PRIX) {
           // Le site refuse tout malgré les pauses : on coupe la phase Prix (pas d’erreur ni de pause de 30 min), reprise à la prochaine synchro.
           journal('Prix : le site refuse toutes les demandes malgré les pauses (limitation probable) ; la lecture des prix reprendra à la prochaine synchro.');
           await deps.enregistrer(instantane(), etat);
           return;
         }
-        // Refus par carte : reportée d’un jour seulement (peut être une limitation de débit), sans valeur inventée.
-        if (refusPrixTotal > refusAvant) etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() - ancienneteMaxPrixMs + REPORT_VIDE_PRIX_MS };
+        // Refus par carte, sans valeur inventée : un 403 (peut être une limitation de débit) est reporté d’un jour, un 404 (sans marché) de 30 jours.
+        if (refusPrixTotal > refusAvant) etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: dernierRefusPrix === 403 ? horloge.now() - ancienneteMaxPrixMs + REPORT_VIDE_PRIX_MS : horloge.now() };
         continue;
       }
       refusPrix = 0;
+      refus403Serie = 0;
       pauses403Serie = 0;
       echecs = 0;
       const valeur = analyserPrix(r.json, carte.rarete as string);
