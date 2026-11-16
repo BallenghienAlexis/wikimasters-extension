@@ -414,7 +414,7 @@ const transportSite = async (chemin: string): Promise<ReponseApi> => {
 };
 
 /** Messages de diagnostic des prix gardés dans le journal (titre, rang et délai seulement : ni identifiant, ni corps de réponse, ni jeton). */
-export const estDiagnosticPrix = (message: string): boolean => /^(Prix indisponible|Diagnostic prix|Pause de|Contrôle de session|Ventes :|Échec |Synchro incomplète)/.test(message);
+export const estDiagnosticPrix = (message: string): boolean => /^(Prix indisponible|Prix reporté|Prix : |Aucune vente enregistrée|Diagnostic prix|Pause de|Contrôle de session|Ventes :|Échec |Synchro incomplète)/.test(message);
 
 let fileJournal: Promise<void> = Promise.resolve();
 /** Écrit les diagnostics de prix dans le journal, un à la fois ; une erreur d’écriture est sans effet. */

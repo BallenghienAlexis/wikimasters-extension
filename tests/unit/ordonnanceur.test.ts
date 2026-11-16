@@ -695,6 +695,40 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(ecarts[1]).toBeGreaterThanOrEqual(60_000);
   })
 
+  it('prix : une vraie absence de vente est notée sans erreur, mémorisée et sans pause', async () => {
+    const b = banc(siteFictif(3, { prix: () => null }));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('termine');
+    expect(b.journal.some((m) => m.startsWith('Aucune vente enregistrée'))).toBe(true);
+    expect(b.journal.some((m) => m.includes('réponse vide'))).toBe(false);
+    expect(r.etat.prix[idCarte(1)]?.valeur).toBeNull();
+  })
+
+  it('prix : une réponse vide ralentit, la même carte est redemandée après une pause, puis lue', async () => {
+    const site = siteFictif(3);
+    let vides = 1;
+    const b = banc((chemin) => {
+      if (chemin.includes('card-2/sales') && vides-- > 0) return { statut: 200, json: null };
+      return site(chemin);
+    });
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('termine');
+    const ventes = b.departs.filter((d) => d.chemin.includes('card-2/sales'));
+    expect(ventes).toHaveLength(2);
+    expect((ventes[1]?.t ?? 0) - (ventes[0]?.t ?? 0)).toBeGreaterThanOrEqual(3_000);
+    expect(r.etat.prix[idCarte(2)]?.valeur).toBe(102);
+  })
+
+  it('prix : réponses vides en série → carte reportée sans mémorisation, la phase prix s’arrête sans erreur', async () => {
+    const site = siteFictif(6);
+    const b = banc((chemin) => (chemin.includes('/sales') ? { statut: 200, json: {} } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('termine');
+    expect(r.prixReleves).toBe(0);
+    expect(Object.keys(r.etat.prix)).toHaveLength(0);
+    expect(b.journal.some((m) => m.includes('reprendra à la prochaine synchro'))).toBe(true);
+  })
+
   it('prix : la vérification anti-bot arrête tout de suite, sans contrôle de session ni mémorisation', async () => {
     const site = siteFictif(6);
     const b = banc((chemin) => (chemin.includes('card-2/sales') ? { statut: 403, json: { error: 'Vérification anti-bot requise.', code: 'human_verification_required' } } : site(chemin)));

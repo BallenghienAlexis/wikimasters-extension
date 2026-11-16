@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyserPage, analyserPrix, analyserStats, decrireForme, diagnosticStats } from '../../src/lib/lectureApi';
+import { analyserPage, analyserPrix, sensDuPrix, analyserStats, decrireForme, diagnosticStats } from '../../src/lib/lectureApi';
 
 // Réponses fictives, conformes à specs/synchro-auto/releve-api.md.
 const etiquette = (id: string, name: string) => ({ id, name, color: '#112233', user_id: 'u-fictif', created_at: '2026-01-01' });
@@ -171,5 +171,19 @@ describe('diagnostics de forme', () => {
     expect(diagnosticStats({ total: 'x', totalUnique: 1, tagOptions: [] })).toContain('total');
     expect(diagnosticStats({ total: 1, totalUnique: 1 })).toContain('tagOptions');
     expect(diagnosticStats('html')).toContain('string');
+  });
+});
+
+describe('sensDuPrix', () => {
+  const reponse = (summary: unknown) => ({ summary, isPro: false });
+  it('distingue une valeur, une vraie absence de vente et une réponse vide', () => {
+    expect(sensDuPrix(reponse({ L: { average: 5 } }), 'L')).toBe('valeur');
+    expect(sensDuPrix(reponse({}), 'L')).toBe('aucune-vente');
+    expect(sensDuPrix(reponse({ L: { average: null } }), 'L')).toBe('aucune-vente');
+    expect(sensDuPrix(reponse({ L: {} }), 'L')).toBe('aucune-vente');
+    expect(sensDuPrix(null, 'L')).toBe('vide');
+    expect(sensDuPrix({}, 'L')).toBe('vide');
+    expect(sensDuPrix(reponse(null), 'L')).toBe('vide');
+    expect(sensDuPrix(reponse({ L: { average: '5' } }), 'L')).toBe('vide');
   });
 });
