@@ -26,7 +26,9 @@ test('tableau de bord : une synchro arrêtée ouvre la santé et montre la pasti
     }),
   );
   await allerA(page, 'tableau-de-bord');
-  await expect(page.getByTestId('sante-synchro').getByRole('button', { name: /^Santé de la synchro/ })).toContainText('Erreur');
+  const bouton = page.getByTestId('sante-synchro').getByRole('button', { name: /^Santé de la synchro/ });
+  await expect(bouton).toContainText('Erreur');
+  await expect(bouton).toHaveAttribute('aria-expanded', 'true');
 });
 
 test('collection : analyses et évolution repliées, contenu hors tabulation', async ({ pageCollection: page }) => {

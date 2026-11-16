@@ -1,6 +1,6 @@
 import React from 'react';
 import type { PastilleSynchro } from '../lib/tableauDeBord';
-import PastilleStatut, { MOT_PASTILLE } from './PastilleStatut';
+import PastilleStatut, { MOT_PASTILLE, SYMBOLE_PASTILLE } from './PastilleStatut';
 import SectionRepliable from './SectionRepliable';
 
 interface Props {
@@ -29,7 +29,7 @@ const SanteSynchro: React.FC<Props> = ({ pastille, ageLibelle, activee, prixRele
       className="mt-4"
       titre="Santé de la synchro"
       ouvertParDefaut={pastille === 'erreur' || pastille === 'arretee'}
-      resume={`${pastille === 'a-jour' ? '●' : pastille === 'en-cours' ? '▶' : pastille === 'arretee' ? '■' : '✕'} ${MOT_PASTILLE(pastille)} · ${ageLibelle}${prixReleves > 0 ? ` · ${prixReleves} prix relevés` : ''}`}
+      resume={`${SYMBOLE_PASTILLE(pastille)} ${MOT_PASTILLE(pastille)} · ${ageLibelle}${prixReleves > 0 ? ` · ${prixReleves} prix relevés` : ''}`}
     >
       <div className="flex flex-wrap items-center gap-3">
         <PastilleStatut etat={pastille} />
