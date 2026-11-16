@@ -420,7 +420,7 @@ let fileJournal: Promise<void> = Promise.resolve();
 /** Écrit les diagnostics de prix dans le journal, un à la fois ; une erreur d’écriture est sans effet. */
 export function journaliserDiagnostic(message: string, ecrire: (e: EvenementSynchro) => Promise<void> = ecrireEvenementJournal): void {
   if (!estDiagnosticPrix(message)) return;
-  const refus = /^(Prix indisponible|Diagnostic prix|Contrôle de session en échec|Échec |Synchro incomplète)/.test(message);
+  const refus = /^(Prix indisponible|Prix reporté|Prix : le site répond|Diagnostic prix|Contrôle de session en échec|Échec |Synchro incomplète)/.test(message);
   fileJournal = fileJournal.then(() => ecrire({ titre: 'Synchronisation automatique : prix', parametre: message.slice(0, 300), resultat: refus ? 'interrompue' : 'reussie', codeHttp: null })).catch(() => undefined);
 }
 

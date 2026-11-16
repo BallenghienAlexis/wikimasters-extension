@@ -37,6 +37,10 @@ export const PAUSE_VIDE_PRIX_MS = 3_000;
 export const MAX_REESSAIS_VIDE_PRIX = 2;
 /** Cartes d’affilée toujours vides après réessais : la phase Prix s’arrête là, sans erreur, et reprend à la synchro suivante. */
 export const MAX_VIDES_CONSECUTIFS_PRIX = 3;
+/** Cartes vides (après réessais) sur toute l'exécution au-delà desquelles la phase Prix s'arrête. */
+export const MAX_VIDES_PRIX_PAR_EXECUTION = 10;
+/** Une carte restée vide est redemandée après ce délai (et non avant 30 jours), pour ne jamais affamer le reste de la file. */
+export const REPORT_VIDE_PRIX_MS = 86_400_000;
 /** Ralentissement supplémentaire maximal entre deux demandes de prix, appris des réponses vides. */
 export const RALENTISSEMENT_PRIX_MAX_MS = 2_000;
 /** Code de la réponse 403 du site qui exige une vérification humaine : arrêt immédiat, jamais contournée. */
@@ -615,6 +619,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     let demandes = 0;
     let premiereDemande = 0;
     let videsConsecutifs = 0;
+    let videsTotal = 0;
     for (const carte of retenues) {
       const cardId = etat.cardIds[carte.id];
       if (cardId === undefined) continue;
@@ -636,9 +641,13 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       if (r !== null && sens === 'vide') {
         // Toujours vide : ce n’est pas une absence de vente. Rien n’est mémorisé, la carte sera redemandée à la prochaine synchro.
         videsConsecutifs += 1;
-        journal(`Prix reporté pour « ${carte.titre} » : réponse vide malgré les pauses (${videsConsecutifs}/${MAX_VIDES_CONSECUTIFS_PRIX} d’affilée).`);
-        if (videsConsecutifs >= MAX_VIDES_CONSECUTIFS_PRIX) {
+        videsTotal += 1;
+        // Reportée d'un jour seulement : elle passe en fin de file, les cartes suivantes sont lues quand même.
+        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() - ancienneteMaxPrixMs + REPORT_VIDE_PRIX_MS };
+        journal(`Prix reporté pour « ${carte.titre} » : réponse vide malgré les pauses (${videsConsecutifs}/${MAX_VIDES_CONSECUTIFS_PRIX} d’affilée), nouvel essai dans 1 jour.`);
+        if (videsConsecutifs >= MAX_VIDES_CONSECUTIFS_PRIX || videsTotal >= MAX_VIDES_PRIX_PAR_EXECUTION) {
           journal('Prix : le site répond à vide en série (limitation probable) ; la lecture des prix reprendra à la prochaine synchro.');
+          await deps.enregistrer(instantane(), etat);
           return;
         }
         continue;

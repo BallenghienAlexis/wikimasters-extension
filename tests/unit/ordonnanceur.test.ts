@@ -719,14 +719,28 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.etat.prix[idCarte(2)]?.valeur).toBe(102);
   })
 
-  it('prix : réponses vides en série → carte reportée sans mémorisation, la phase prix s’arrête sans erreur', async () => {
+  it('prix : réponses vides en série → cartes reportées d’un jour (pas 30), la phase prix s’arrête sans erreur', async () => {
     const site = siteFictif(6);
     const b = banc((chemin) => (chemin.includes('/sales') ? { statut: 200, json: {} } : site(chemin)));
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('termine');
     expect(r.prixReleves).toBe(0);
-    expect(Object.keys(r.etat.prix)).toHaveLength(0);
+    for (const id of Object.keys(r.etat.prix)) expect(r.etat.prix[id]?.valeur).toBeNull();
+    expect(Object.keys(r.etat.prix).length).toBeLessThanOrEqual(3);
     expect(b.journal.some((m) => m.includes('reprendra à la prochaine synchro'))).toBe(true);
+  })
+
+  it('prix : des cartes toujours vides ne bloquent pas la file à la synchro suivante, et la cadence des prix est respectée', async () => {
+    const site = siteFictif(6);
+    const b = banc((chemin) => (/card-[123]\/sales/.test(chemin) ? { statut: 200, json: {} } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('termine');
+    const b2 = banc((chemin) => (/card-[123]\/sales/.test(chemin) ? { statut: 200, json: {} } : site(chemin)), r.collection, r.etat);
+    const r2 = await synchroniser(b2.deps);
+    expect(r2.prixReleves).toBe(3);
+    const ventes = b2.departs.filter((d) => d.chemin.includes('/sales'));
+    const ecarts = ventes.slice(1).map((d, i) => d.t - (ventes[i]?.t ?? 0));
+    expect(Math.min(...ecarts)).toBeGreaterThanOrEqual(200 + 300);
   })
 
   it('prix : la vérification anti-bot arrête tout de suite, sans contrôle de session ni mémorisation', async () => {
