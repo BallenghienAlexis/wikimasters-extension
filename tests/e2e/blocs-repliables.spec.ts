@@ -63,3 +63,18 @@ test('lots : écarts avec le site et cadence repliés dans l’aperçu', async (
     await expect(page.getByRole('button', { name: nom })).toHaveAttribute('aria-expanded', 'false');
   }
 });
+
+test('tableau de bord : santé en quatre lignes Lecture, Étiquettes, Prix, Ignorées', async ({ pageCollection: page }) => {
+  await ecrireJeuRiche(page);
+  await page.evaluate(() => chrome.storage.local.set({ syncAuto: true }));
+  await page.reload();
+  await allerA(page, 'tableau-de-bord');
+  await page.getByTestId('sante-synchro').getByRole('button', { name: /^Santé de la synchro/ }).click();
+  const lignes = page.getByTestId('lignes-sante').getByRole('listitem');
+  await expect(lignes).toHaveCount(4);
+  await expect(lignes.nth(0)).toContainText('Lecture');
+  await expect(lignes.nth(1)).toContainText('5 étiquettes lues');
+  await expect(lignes.nth(2)).toContainText('Prix');
+  await expect(lignes.nth(3)).toContainText('2 actions ignorées');
+  await expect(lignes.nth(3).getByRole('link', { name: 'Gérer les actions ignorées' })).toBeVisible();
+});

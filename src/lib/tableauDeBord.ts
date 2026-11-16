@@ -10,6 +10,7 @@
 import type { Collection } from './collection'
 import { calculerEcarts } from './ecarts'
 import type { Config } from './lot'
+import { ancienneteMaxPrixMs } from './ordonnanceur'
 import { themesPrincipaux } from './themes'
 
 export type PastilleSynchro = 'a-jour' | 'en-cours' | 'arretee' | 'erreur'
@@ -76,4 +77,53 @@ export function calculerTableauDeBord(
       plusAncien: releves.length === 0 ? null : Math.min(...releves),
     },
   }
+}
+
+export interface LigneSante {
+  symbole: string
+  nom: string
+  texte: string
+  lien?: { libelle: string; href: string; nomAccessible: string }
+}
+
+export interface EntreeLignesSante {
+  /** Exemplaires de la collection. */
+  exemplaires: number
+  /** Libellé d’âge de la dernière synchro terminée (« il y a 12 min »). */
+  ageLibelle: string
+  derniereTerminee: number | null
+  /** Étiquettes lues à la dernière synchro. */
+  etiquettesLues: number
+  /** Dates de relevé des prix connus. */
+  releves: readonly number[]
+  ignorees: number
+  maintenant: number
+}
+
+const accord = (n: number, singulier: string, pluriel: string): string => `${n} ${n > 1 ? pluriel : singulier}`
+
+/** Santé de la synchro en quatre lignes (maquette) : Lecture, Étiquettes, Prix, Ignorées. Symbole et mot, jamais la couleur seule. */
+export function lignesSante(e: EntreeLignesSante): LigneSante[] {
+  const perimes = e.releves.filter((d) => e.maintenant - d > ancienneteMaxPrixMs).length
+  return [
+    e.derniereTerminee !== null
+      ? { symbole: '✓', nom: 'Lecture', texte: `${accord(e.exemplaires, 'exemplaire', 'exemplaires')} · ${e.ageLibelle}` }
+      : { symbole: '○', nom: 'Lecture', texte: 'Pas encore de synchro terminée' },
+    e.etiquettesLues > 0
+      ? { symbole: '✓', nom: 'Étiquettes', texte: `${accord(e.etiquettesLues, 'étiquette lue', 'étiquettes lues')} à la dernière synchro` }
+      : { symbole: '○', nom: 'Étiquettes', texte: 'Aucune étiquette lue' },
+    perimes > 0
+      ? { symbole: '○', nom: 'Prix', texte: `${accord(perimes, 'prix à rafraîchir', 'prix à rafraîchir')} (plus de 30 jours)` }
+      : e.releves.length > 0
+        ? { symbole: '✓', nom: 'Prix', texte: `${accord(e.releves.length, 'prix relevé', 'prix relevés')}, tous récents` }
+        : { symbole: '○', nom: 'Prix', texte: 'Aucun prix relevé' },
+    e.ignorees > 0
+      ? {
+          symbole: '✕',
+          nom: 'Ignorées',
+          texte: `${accord(e.ignorees, 'action ignorée', 'actions ignorées')} jusqu’à la prochaine synchro`,
+          lien: { libelle: 'Gérer', href: '#synchro', nomAccessible: 'Gérer les actions ignorées' },
+        }
+      : { symbole: '✓', nom: 'Ignorées', texte: 'Aucune action ignorée' },
+  ]
 }
