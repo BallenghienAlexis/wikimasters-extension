@@ -156,6 +156,15 @@ export function completerEntree(journal: Journal, id: string, resultat: Resultat
   })
 }
 
+/**
+ * Entrée « passée » pour une action écartée avant l'envoi (aucune requête), avec une ligne d'information dans le champ
+ * de diagnostic (texte fixe de l'extension, jamais une réponse du site).
+ */
+export function ouvrirEntreePassee(journal: Journal, champs: ChampsEntree, information: string, maintenant: () => Date): Journal {
+  const { journal: ouvert, id } = ouvrirEntree(journal, champs, maintenant)
+  return passerEntree(ouvert, id).map((e) => (e.id === id ? { ...e, diagnostic: tronquer(information, MAX_DIAGNOSTIC) } : e))
+}
+
 /** Inscrit une entrée « en cours » en « passée » (action non envoyée) ; sans effet sinon. */
 export function passerEntree(journal: Journal, id: string): Journal {
   return journal.map((e) => {
@@ -282,7 +291,7 @@ export const LIBELLE_VERIFICATION_HUMAINE =
   'Vérification anti-bot du site requise : mets une carte aux enchères à la main sur wiki-masters.com, résous la vérification, puis relance'
 
 /** Libellé d’un 409 « limite d’enchères actives » (Alexis, 2026-11-15). */
-export const LIBELLE_LIMITE_ENCHERES = 'Limite de 5 enchères actives atteinte : réessaie quand une vente se termine'
+export const LIBELLE_LIMITE_ENCHERES = 'Limite d’enchères actives atteinte : réessaie quand une vente se termine'
 
 export function libelleHistorique(e: EntreeJournal): string {
   if (e.cause === 'sautee') return 'Passée : sautée'
