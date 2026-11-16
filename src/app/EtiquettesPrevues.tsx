@@ -1,4 +1,5 @@
 import React from 'react';
+import SectionRepliable from './SectionRepliable';
 import type { RaisonNonPosee } from '../lib/lot';
 import { texteDureeLongue, type ApercuEtiquettes, type LigneEtiquette } from '../lib/apercuEtiquettes';
 import type { Carte } from '../lib/collection';
@@ -45,10 +46,15 @@ const EtiquettesPrevues: React.FC<Props> = ({ apercu, cartes, disponible = false
   const attendue = lignes.length > 0;
 
   return (
-    <section aria-label="Étiquettes prévues" className="mt-4" data-testid="etiquettes-prevues">
+    <SectionRepliable
+      id="etiquettes-prevues"
+      testId="etiquettes-prevues"
+      className="mt-4"
+      titre={TITRE}
+      resume={`${lignes.length} ${lignes.length > 1 ? 'étiquettes prévues' : 'étiquette prévue'}${nonPosees.length > 0 ? ` · ${nonPosees.length} non posée${nonPosees.length > 1 ? 's' : ''}` : ''}`}
+    >
       {attendue && (
         <>
-          <h3 className="font-semibold md:hidden">{TITRE}</h3>
           <table className="hidden w-full text-sm md:table">
             <caption className="pb-2 text-left font-semibold">{TITRE}</caption>
             <thead>
@@ -120,7 +126,7 @@ const EtiquettesPrevues: React.FC<Props> = ({ apercu, cartes, disponible = false
           </p>
         </div>
       )}
-    </section>
+    </SectionRepliable>
   );
 };
 

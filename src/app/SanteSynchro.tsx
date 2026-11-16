@@ -1,6 +1,7 @@
 import React from 'react';
 import type { PastilleSynchro } from '../lib/tableauDeBord';
-import PastilleStatut from './PastilleStatut';
+import PastilleStatut, { MOT_PASTILLE } from './PastilleStatut';
+import SectionRepliable from './SectionRepliable';
 
 interface Props {
   pastille: PastilleSynchro;
@@ -22,8 +23,14 @@ const LIEN: Record<PastilleSynchro, string | null> = {
 const SanteSynchro: React.FC<Props> = ({ pastille, ageLibelle, activee, prixReleves }) => {
   const lien = LIEN[pastille];
   return (
-    <section aria-label="Santé de la synchro" data-testid="sante-synchro" className="mt-4 rounded border border-line bg-ink-2 p-4">
-      <h3 className="mb-2 text-[17px] font-semibold">Santé de la synchro</h3>
+    <SectionRepliable
+      id="sante-synchro"
+      testId="sante-synchro"
+      className="mt-4"
+      titre="Santé de la synchro"
+      ouvertParDefaut={pastille === 'erreur' || pastille === 'arretee'}
+      resume={`${pastille === 'a-jour' ? '●' : pastille === 'en-cours' ? '▶' : pastille === 'arretee' ? '■' : '✕'} ${MOT_PASTILLE(pastille)} · ${ageLibelle}${prixReleves > 0 ? ` · ${prixReleves} prix relevés` : ''}`}
+    >
       <div className="flex flex-wrap items-center gap-3">
         <PastilleStatut etat={pastille} />
         <p>{activee ? `Dernière synchro\u00a0: ${ageLibelle}` : `Synchro\u00a0: ${ageLibelle}`}</p>
@@ -34,7 +41,7 @@ const SanteSynchro: React.FC<Props> = ({ pastille, ageLibelle, activee, prixRele
         )}
       </div>
       {prixReleves > 0 && <p className="mt-2 text-sm text-muted">{`Prix relevés\u00a0: ${prixReleves}`}</p>}
-    </section>
+    </SectionRepliable>
   );
 };
 

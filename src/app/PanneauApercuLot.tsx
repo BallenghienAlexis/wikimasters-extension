@@ -471,10 +471,7 @@ const PanneauApercuLot: React.FC<Props> = ({
             )}
 
             {filtre && filtre.ecartees.length > 0 && (
-              <section aria-labelledby="titre-ecartees" className="mt-4" data-testid="actions-ecartees">
-                <h3 id="titre-ecartees" className="font-semibold">
-                  Actions écartées
-                </h3>
+              <SectionRepliable id="actions-ecartees" testId="actions-ecartees" className="mt-4" titre="Actions écartées" resume={texteActionsEcartees(filtre.ecartees.length)}>
                 <ul className="mt-1 text-sm">
                   {filtre.ecartees.slice(0, 50).map((e, i) => (
                     <li key={i} className="break-words py-1">
@@ -487,7 +484,7 @@ const PanneauApercuLot: React.FC<Props> = ({
                 {filtre.ecartees.length > 50 && (
                   <p className="text-sm text-muted">… et {filtre.ecartees.length - 50} autres.</p>
                 )}
-              </section>
+              </SectionRepliable>
             )}
 
             {apercuEtiquettes && <EtiquettesPrevues apercu={apercuEtiquettes} cartes={cartes} />}
@@ -513,7 +510,9 @@ const PanneauApercuLot: React.FC<Props> = ({
 
             {lignes.length > 0 && <CartesNonIncluses lignes={lignes} groupees={groupees} places={places} cartes={cartes} />}
 
-            <p className="mt-3 text-sm text-muted">{CADENCE_TEXTE}</p>
+            <SectionRepliable id="cadence-envoi" className="mt-4" titre="Cadence d’envoi" resume="Règles du site">
+              <p className="text-sm text-muted">{CADENCE_TEXTE}</p>
+            </SectionRepliable>
 
             <div
               data-testid="barre-lancer"

@@ -364,6 +364,7 @@ test.describe('SC-028 : interrupteur et relance dans l’onglet Synchro, règles
       derniereSynchro: Date.now() - 3_600_000,
       statutSynchro: statut({ etat: 'arret', etape: 'pages', raison: 'code-http', codeHttp: 403, page: 5, pages: 40 }),
     });
+    await deplierTout(pageCollection);
     await expect(pageCollection.getByRole('button', { name: 'Relancer la synchro' })).toBeVisible();
     await expect(pageCollection.getByTestId('synchro-auto')).toContainText(/Relancer ignore la pause de 30\s?min/);
     await maj(pageCollection, { statutSynchro: statut({ etat: 'arret', etape: 'pages', raison: 'code-http', codeHttp: 429, page: 5, pages: 40 }) });
