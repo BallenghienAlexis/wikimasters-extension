@@ -404,6 +404,17 @@ describe('Lecture des enchères en cours avant un lot d’enchères (Alexis, 202
     expect(banc.appels).toEqual([defausse(1), enchere(2), enchere(3)]);
   });
 
+  it('les enchères écartées sont notées « Passée » dans le journal avec la raison, sans requête', async () => {
+    const api = await frais();
+    banc.ventes = { enCours: 4, max: 5 };
+    await api.lancerLot([enchere(1), enchere(2), enchere(3)], 'lot-1');
+    expect(banc.appels).toEqual([enchere(1)]);
+    const journal = await api.chargerJournal();
+    const passees = journal.filter((e) => e.resultat === 'passee');
+    expect(passees.map((e) => e.idCarte)).toEqual(['Rare|Carte 2', 'Rare|Carte 3']);
+    expect(passees[0]?.diagnostic).toContain('Aucune place d’enchère libre : 4 en cours sur 5');
+  });
+
   it('lecture sans résultat exploitable : le lot part tel quel', async () => {
     const api = await frais();
     banc.ventes = undefined;
@@ -448,7 +459,7 @@ describe('Lecture des enchères en cours avant un lot d’enchères (Alexis, 202
   it('aucune place libre : lancement refusé avec un libellé fixe, rien d’envoyé', async () => {
     const api = await frais();
     banc.ventes = { enCours: 5, max: 5 };
-    await expect(api.lancerLot([enchere(1), enchere(2)], 'lot-1')).rejects.toThrow('Limite de 5 enchères actives atteinte');
+    await expect(api.lancerLot([enchere(1), enchere(2)], 'lot-1')).rejects.toThrow('Limite d’enchères actives atteinte');
     expect(banc.appels).toEqual([]);
   });
 });

@@ -310,6 +310,38 @@ test.describe('exécution réelle (site fictif)', () => {
     expect(exe.pauseJusqua).toBeNull();
   });
 
+  test('Alexis 2026-11-15 : relecture de marketplace/mine avant les enchères, les enchères sans place libre sont écartées et notées', async ({ context, pageCollection: page }) => {
+    const cartes = Array.from({ length: 3 }, (_, i) => ({
+      id: `UR|Berger allemand ${i + 1}`, titre: `Berger allemand ${i + 1}`, description: 'race de chien', rarete: 'UR', quantite: 1,
+      idsSite: [`bbbbbbbb-bbbb-4bbb-8bbb-${String(i + 1).padStart(12, '0')}`], url: null, favori: false,
+      etiquettesSite: ['Statut · Vendre'], prixCible: null, note: '', ami: null, valeurMarchande: 100 - i,
+    }));
+    await page.evaluate(async (c) => {
+      await chrome.storage.local.set({
+        collection: { version: 3, cartes: c },
+        preferences: { version: 2, mesThemes: [], amis: [] },
+        amisInitiaux: 999,
+        syncAuto: false,
+      });
+    }, cartes);
+    await page.reload();
+    const banc = await ouvrirSite(context, (url) =>
+      url.includes('/rest/v1/tags') ? reponses(201)(url) : { status: 201, corps: {} });
+    const site: string[] = [];
+    await context.route('https://www.wiki-masters.com/api/marketplace**', (route) => {
+      const r = route.request();
+      site.push(`${r.method()} ${new URL(r.url()).pathname}`);
+      if (r.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ maxConcurrentAuctions: 5, sellingCount: 4 }) });
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ auction_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd' }) });
+    });
+    await lancer(page);
+    await allerA(page, 'synchro');
+    await expect.poll(() => site.filter((s) => s === 'POST /api/marketplace').length, { timeout: 40_000 }).toBe(1);
+    expect(site.filter((s) => s === 'GET /api/marketplace/mine')).toHaveLength(1);
+    await expect.poll(async () => ((await stockage(page, 'journal')) as { entrees: Array<{ resultat: string; diagnostic?: string }> }).entrees.filter((e) => e.resultat === 'passee' && (e.diagnostic ?? '').includes('Aucune place d’enchère libre : 4 en cours sur 5')).length).toBe(2);
+    expect(banc.externes).toEqual([]);
+  });
+
   test('Décision 2 : « Réessayer » désactivé après un résultat inconnu, avec la raison écrite ; Sauter reste possible', async ({ context, pageCollection: page }) => {
     await amorcerLot(page, 2);
     const banc = await ouvrirSite(context, reponses(200));

@@ -184,9 +184,10 @@ describe('limiterEncheres (Alexis, 2026-11-15)', () => {
     const r = limiterEncheres([enchere(1), defausse, enchere(2), enchere(3)], { enCours: 4, max: 5 }, 5)
     expect(r.actions).toEqual([enchere(1), defausse])
     expect(r.ecartees).toBe(2)
+    expect(r.retirees).toEqual([enchere(2), enchere(3)])
   })
   it('le plus petit des deux maxima compte ; jamais de nombre négatif', () => {
     expect(limiterEncheres([enchere(1), enchere(2), enchere(3)], { enCours: 0, max: 10 }, 2).actions).toHaveLength(2)
-    expect(limiterEncheres([enchere(1)], { enCours: 7, max: 5 }, 5)).toEqual({ actions: [], ecartees: 1 })
+    expect(limiterEncheres([enchere(1)], { enCours: 7, max: 5 }, 5)).toEqual({ actions: [], ecartees: 1, retirees: [enchere(1)] })
   })
 })
