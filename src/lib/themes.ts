@@ -28,16 +28,16 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'camion', libelle: '#Camion', motifs: ['camion', 'poids lourd'], parents: ['vehicule'] },
   { id: 'bus', libelle: '#Bus', motifs: ['autobus', 'autocar', 'bus '], parents: ['vehicule'] },
   { id: 'tracteur', libelle: '#Tracteur', motifs: ['tracteurs?(?! de semi)(?! semi)(?!s? routiers?)'], parents: ['vehicule'] },
-  { id: 'train', libelle: '#Train', motifs: ['train ', 'trains ', 'locomotive', 'ferroviaire', 'tramway', 'metro '], parents: ['vehicule'] },
-  { id: 'avion', libelle: '#Avion', motifs: ['avion', 'aeronef', 'aviation', 'compagnie aerienne', 'helicoptere'], parents: ['vehicule'] },
-  { id: 'bateaux', libelle: '#Bateaux', motifs: ['bateau', 'navire', 'paquebot', 'voilier', 'sous-marin', 'porte-avions', 'croiseur '], parents: ['vehicule'] },
+  { id: 'train', libelle: '#Train', motifs: ['train ', 'trains ', 'chemin de fer', 'locomotive', 'ferroviaire', 'tramway', 'metro '], parents: ['vehicule'] },
+  { id: 'avion', libelle: '#Avion', motifs: ['avion', 'aeronef', 'aviation', 'compagnie aerienne', 'helicoptere', 'accident aerien', 'aeroport', 'aerodrome'], parents: ['vehicule'] },
+  { id: 'bateaux', libelle: '#Bateaux', motifs: ['bateau', 'navire', 'paquebot', 'voilier', 'sous-marin', 'porte-avions', 'croiseur ', 'torpilleur'], parents: ['vehicule'] },
   { id: 'course', libelle: '#Course', motifs: ['course automobile', 'course de', 'pilote automobile', 'pilote de', 'grand prix', 'circuit automobile'], parents: ['sport'] },
   { id: 'formule1', libelle: '#Formule 1', motifs: ['formule 1', 'formula one'], parents: ['course', 'sport'] },
   { id: 'nascar', libelle: '#Nascar', motifs: ['nascar'], parents: ['course', 'sport'] },
   { id: 'rallye', libelle: '#Rallye', motifs: ['rallye'], parents: ['course', 'sport'] },
 
   // Musique
-  { id: 'musique', libelle: '#Musique', motifs: ['musicien', 'musique', 'musical', 'chanteur', 'chanteuse', 'compositeur', 'compositrice', 'album', 'chanson', 'groupe de', 'rappeur', 'rappeuse', 'guitariste', 'batteur', 'pianiste', 'single '] },
+  { id: 'musique', libelle: '#Musique', motifs: ['musicien', 'musique', 'musical', 'chanteur', 'chanteuse', 'compositeur', 'compositrice', 'album', 'chanson', 'groupe de', 'rappeur', 'rappeuse', 'guitariste', 'batteur', 'pianiste', 'single ', 'compilation de', 'label discographique', 'troubadour'] },
   { id: 'rock', libelle: '#Rock', motifs: ['rock '], parents: ['musique'] },
   { id: 'poprock', libelle: '#Pop Rock', motifs: ['pop rock', 'pop-rock'], parents: ['pop', 'rock', 'musique'] },
   { id: 'pop', libelle: '#Pop', motifs: ['pop '], parents: ['musique'] },
@@ -50,50 +50,50 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'classique', libelle: '#Musique classique', motifs: ['opera', 'symphonie', 'musique classique', 'chef d\'orchestre'], parents: ['musique'] },
 
   // Histoire et politique
-  { id: 'histoire', libelle: '#Histoire', motifs: ['histoire', 'histori', 'antique', 'medieval', 'prehistor', 'siecle', 'dynastie', 'monument', 'cite inca', 'av. j.-c', 'passe du'] },
-  { id: 'guerre', libelle: '#Guerre', motifs: ['guerre', 'bataille', 'militaire', 'armee', 'soldat', 'combat de'], parents: ['histoire'] },
+  { id: 'histoire', libelle: '#Histoire', motifs: ['histoire', 'histori', 'antique', 'medieval', 'prehistor', 'siecle', 'dynastie', 'monument', 'cite inca', 'av. j.-c', 'passe du', 'chronologie', 'mois de [0-9]{4}', 'evenements lies'] },
+  { id: 'guerre', libelle: '#Guerre', motifs: ['guerre', 'bataille', 'militaire', 'armee', 'soldat', 'combat de', 'contre-torpilleur', 'officier superieur'], parents: ['histoire'] },
   { id: 'nazis', libelle: '#Nazis', motifs: ['nazi', 'troisieme reich', 'fuhrer', 'hitler', 'petain'], parents: ['histoire', 'guerre'] },
-  { id: 'politique', libelle: '#Politique', motifs: ["homme d'etat", "femme d'etat", 'politi', 'president', 'election', 'dictateur', 'chancelier', 'ministre', 'depute', 'senateur', 'parti ', 'circonscriptions? (?:electorales?|legislatives?|provinciales?|federales?)'] },
-  { id: 'royaute', libelle: '#Royauté', motifs: ['roi ', 'reine ', 'prince', 'empereur', 'imperatrice', 'duc ', 'duchesse', 'cour suedoise', 'cour de'], parents: ['histoire'] },
+  { id: 'politique', libelle: '#Politique', motifs: ["homme d'etat", "femme d'etat", 'politi', 'president', 'election', 'dictateur', 'chancelier', 'ministre', 'depute', 'senateur', 'parti ', 'circonscriptions? (?:electorales?|legislatives?|provinciales?|federales?)', 'relations diplomatiques', 'administrateur colonial'] },
+  { id: 'royaute', libelle: '#Royauté', motifs: ['roi ', 'reine ', 'prince', 'empereur', 'imperatrice', 'duc ', 'duchesse', 'cour suedoise', 'cour de', 'pairs? anglais', 'pairs? anglo-irlandais', 'noblesse', 'noble allemande'], parents: ['histoire'] },
 
   // Sciences et techniques
-  { id: 'sciences', libelle: '#Sciences', motifs: ['physicien', 'physique', 'chimi', 'mathemati', 'biolog', 'scientifique', 'chercheur', 'chercheuse', 'molecule', 'atome', 'spectro', 'theoreme', 'adn', 'geolog', 'roche', 'mineral', 'element chimique'] },
+  { id: 'sciences', libelle: '#Sciences', motifs: ['physicien', 'physique', 'chimi', 'mathemati', 'biolog', 'scientifique', 'chercheur', 'chercheuse', 'molecule', 'atome', 'spectro', 'theoreme', 'adn', 'geolog', 'roche', 'mineral', 'element chimique', 'entomolog', 'arachnolog', 'botanist', 'zoolog', 'ornitholog', 'mycolog', 'paleontolog', 'naturaliste', 'astronome'] },
   { id: 'physique', libelle: '#Physique', motifs: ['physicien', '(?<!activite )(?<!education )(?<!condition )(?<!apparence )(?<!handicap )(?<!personne )(?<!personnes )(?<!force )(?<!forme )(?<!exercice )(?<!violence )(?<!preparation )physique', 'unites? de planck', 'constantes? fondamentales?'], parents: ['sciences'] },
   { id: 'espace', libelle: '#Espace', motifs: ['planete', 'etoile', 'asteroide', 'galaxie', 'astronom', 'constellation', 'comete', 'systeme solaire', 'cratere', 'nebuleuse'], parents: ['sciences'] },
   { id: 'sante', libelle: '#Santé', motifs: ['medecin', 'maladie', 'trouble', 'psychiatr', 'pedopsychiatr', 'chirurgien', 'syndrome', 'medicament', 'virus'], parents: ['sciences'] },
   { id: 'technologie', libelle: '#Technologies', motifs: ['ingenieur', 'inventeur', 'technologie', 'technique'] },
-  { id: 'informatique', libelle: '#Informatique', motifs: ['informatique', 'logiciel', 'open source', 'site web', 'internet', 'programm', 'domaine de premier niveau', 'ordinateur', 'microblogage', 'reseau social', 'systeme d\'exploitation'], parents: ['technologie'] },
+  { id: 'informatique', libelle: '#Informatique', motifs: ['informatique', 'logiciel', 'open source', 'site web', 'internet', 'programm', 'domaine de premier niveau', 'ordinateur', 'microblogage', 'reseau social', 'systeme d\'exploitation', 'protocole reseau', 'framework'], parents: ['technologie'] },
   { id: 'jeuvideo', libelle: '#Jeu vidéo', motifs: ['jeu video', 'jeux video', 'console de jeu'], parents: ['informatique', 'technologie'] },
 
   // Nature et cuisine
-  { id: 'nature', libelle: '#Nature', motifs: ['espece', 'genre de'] },
+  { id: 'nature', libelle: '#Nature', motifs: ['espece', 'genre de', 'parc national', 'reserve naturelle', 'espace naturel', 'grottes?', 'ilots? '] },
   { id: 'animaux', libelle: '#Animaux', motifs: ['animal', 'animaux', 'mammifere', 'oiseau', 'insecte', 'poisson', 'reptile', 'amphibien', 'felide', 'canide', 'strigide', 'octopode', 'dinosaure', 'araignee', 'papillon'], parents: ['nature'] },
-  { id: 'plantes', libelle: '#Plantes', motifs: ['plante', 'arbre', 'fleur', 'champignon', 'graminee'], parents: ['nature'] },
+  { id: 'plantes', libelle: '#Plantes', motifs: ['plante', 'arbre', 'fleur', 'champignon', 'graminee', 'tribu d[eu] [a-z]+aceae', 'algues?'], parents: ['nature'] },
   { id: 'gastronomie', libelle: '#Gastronomie', motifs: ['agrume', 'fruit', 'legume', 'cereale', 'plat ', 'cuisine', 'culinaire', 'charcuterie', 'boisson', 'fromage', 'vin ', 'patisserie', 'epice', 'lait '] },
 
   // Lieux
-  { id: 'geographie', libelle: '#Géographie', motifs: ['region', 'fleuve', 'riviere', 'montagne', 'volcan', 'ile ', 'lac ', 'departement', 'province', 'territoire', 'detroit', 'mer ', 'ocean', 'desert', 'etat des', 'etat federe'] },
+  { id: 'geographie', libelle: '#Géographie', motifs: ['region', 'fleuve', 'riviere', 'montagne', 'volcan', 'ile ', 'lac ', 'departement', 'province', 'territoire', 'detroit', 'mer ', 'ocean', 'desert', 'etat des', 'etat federe', 'districts? (?:de |du |administratif)', 'comtes? des etats-unis', 'comtes? d[eu][^.;(),]{0,40}(?:, dans l\'etat d[^,]{1,30})?, (?:aux |des )?(?:usa|etats-unis)', 'intercommunalite', 'canton ', 'sous-prefecture'] },
   { id: 'pays', libelle: '#Pays', motifs: ['pays', 'etat souverain', 'capitale'], parents: ['geographie'] },
-  { id: 'ville', libelle: '#Ville', motifs: ['ville', 'commune', 'localite', 'village', 'quartier'], parents: ['geographie'] },
+  { id: 'ville', libelle: '#Ville', motifs: ['ville', 'commune', 'localite', 'village', 'quartier', 'etablissement humain', 'census-designated place', 'unite urbaine', 'raion municipal', 'town d[eu] ', 'bourg ', 'freguesia', 'municipalite', 'gmina', 'hameau', 'voies? d(?:e |u |\')(?!fait|communication|droit|garage|acces|recours|circulation)', 'rues? (?:a |de |du |des |d\')', 'avenues? (?:de |du |des |d\')'], parents: ['geographie'] },
 
   // Culture
-  { id: 'arts', libelle: '#Art', motifs: ['peintre', 'sculpt', 'artiste', 'art ', 'musee', 'tableau', 'photograph', 'dessinat'] },
-  { id: 'architecture', libelle: '#Architecture', motifs: ['architect', 'cathedrale', 'chateau', 'pont ', 'gratte-ciel', 'batiment'], parents: ['arts'] },
+  { id: 'arts', libelle: '#Art', motifs: ['peintre', 'sculpt', 'artiste', 'art ', 'musee', 'tableau', 'photograph', 'dessinat', 'peinture d', 'peinture murale'] },
+  { id: 'architecture', libelle: '#Architecture', motifs: ['architect', 'cathedrale', 'chateau', 'pont ', 'gratte-ciel', 'batiment', 'manoir (?:d[eu] |du |a |en |situe)', 'hotel particulier', 'chapelle (?:d[eu] |du |situee|catholique|romane|gothique|a |en )', 'immeuble a '], parents: ['arts'] },
   { id: 'cinema', libelle: '#Cinéma', motifs: ['film', 'acteur', 'actrice', 'realisat', 'cineaste', 'comedien', 'comedienne', 'humoriste'] },
-  { id: 'television', libelle: '#Télévision', motifs: ['serie televisee', 'television', 'animateur', 'animatrice', 'emission'], parents: ['cinema'] },
-  { id: 'litterature', libelle: '#Littérature', motifs: ['ecrivain', 'roman', 'auteur', 'autrice', 'poete', 'poetesse', 'livre', 'theatre', 'dramaturge'] },
+  { id: 'television', libelle: '#Télévision', motifs: ['serie televisee', 'television', 'animateur', 'animatrice', 'emission', 'episodes? (?:de|du|des) (?!la guerre|l\'histoire|la revolution|la bataille|la campagne)'], parents: ['cinema'] },
+  { id: 'litterature', libelle: '#Littérature', motifs: ['ecrivain', 'roman', 'auteur', 'autrice', 'poete', 'poetesse', 'livre', 'theatre', 'dramaturge', 'maison d\'edition', 'revue litteraire'] },
   { id: 'bd', libelle: '#BD et Manga', motifs: ['bande dessinee', 'manga', 'anime ', 'comics', 'one piece'], parents: ['litterature'] },
-  { id: 'langue', libelle: '#Langue', motifs: ['langue', 'linguist', 'terme ', 'mot '] },
+  { id: 'langue', libelle: '#Langue', motifs: ['langue', 'linguist', 'terme ', 'mot ', 'consonne', 'voyelle', 'alphabet', 'dialecte'] },
   { id: 'idees', libelle: '#Philosophie', motifs: ['philosoph', 'theolog', 'orthodoxe'] },
-  { id: 'religion', libelle: '#Religion', motifs: ['religi', 'dieu', 'deesse', 'saint', 'pape', 'eglise', 'mytholog'] },
+  { id: 'religion', libelle: '#Religion', motifs: ['religi', 'dieu', 'deesse', 'saint', 'pape', 'eglise', 'mytholog', 'prelat', 'eparchie', 'diocese', 'abbaye', 'monastere', 'eveque', 'vicaire', 'anglican', 'catholique', 'clerge'] },
 
   // Sport et société
-  { id: 'sport', libelle: '#Sport', motifs: ['athlete', 'sportif', '(?<!motos? )(?<!voitures? )(?<!automobiles? )sportives?', 'joueur de', 'joueuse de', 'championnat', 'tournoi', 'olympique', 'coureur', 'coureuse', 'rugby', 'tennis', 'basket'] },
+  { id: 'sport', libelle: '#Sport', motifs: ['athlete', 'sportif', '(?<!motos? )(?<!voitures? )(?<!automobiles? )sportives?', 'joueur de', 'joueuse de', 'championnat', 'tournoi', 'olympique', 'coureur', 'coureuse', 'rugby', 'tennis', 'basket', 'joueu(?:r|se) (?:[a-z-]+ )?(?:de |d\')?(?:baseball|squash|badminton|volley|handball|cricket|polo|curling|hockey)', 'rameu(?:r|se)', 'compet[a-z]* de patinage', 'etapes? du tour d[eu]', 'saisons? [0-9]{4}-[0-9]{4} d', 'patineu(?:r|se)', 'fondeu(?:r|se)', 'skieu(?:r|se)', 'nageu(?:r|se)', 'gymnaste', 'tir a l\'arc', 'handballeu(?:r|se)', 'lutte professionnelle', 'competition de [a-z-]+ball', 'haltero', 'escrimeu(?:r|se)'] },
   { id: 'football', libelle: '#Football', motifs: ['football', 'club de foot'], parents: ['sport'] },
   { id: 'hockey', libelle: '#Hockey', motifs: ['hockey'], parents: ['sport'] },
-  { id: 'cyclisme', libelle: '#Cyclisme', motifs: ['cyclis'], parents: ['sport'] },
+  { id: 'cyclisme', libelle: '#Cyclisme', motifs: ['cyclis', 'tour de france (?:cycliste|[0-9]{4})', 'tour d\'italie [0-9]{4}', 'tour d\'espagne [0-9]{4}'], parents: ['sport'] },
   { id: 'combat', libelle: '#Arts martiaux', motifs: ['arts martiaux', 'boxeur', 'boxeuse', 'catcheur', 'judoka', 'karate'], parents: ['sport'] },
-  { id: 'societe', libelle: '#Société', motifs: ['sociolog', "homme d'affaires", "femme d'affaires", 'entreprise', 'econom', 'droit', 'adulter', 'habitants'] },
+  { id: 'societe', libelle: '#Société', motifs: ['sociolog', "homme d'affaires", "femme d'affaires", 'entreprise', 'econom', 'droit', 'adulter', 'habitants', 'journaliste'] },
   { id: 'crime', libelle: '#Crime', motifs: ['tueur', 'criminel', 'cartel', 'assassin', 'torture', 'mafia', 'gang ', 'meurtres?(?![a-z0-9])', 'meurtrier ou meurtriere', 'condamnee? pour crime'], parents: ['societe'] },
 
   // Thèmes précis (feature theme-etiquettes). Une lookahead `(?![a-z0-9])` vise le mot entier.

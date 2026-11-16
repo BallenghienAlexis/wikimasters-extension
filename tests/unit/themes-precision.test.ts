@@ -119,3 +119,70 @@ describe('faux positifs des nouveaux motifs', () => {
   });
 });
 
+
+// Cartes sans thème dont seule la courte description du site est connue (descriptions Wikidata publiques, 2026-11-16).
+describe('familles de descriptions courtes', () => {
+  const CAS_DESCRIPTION: [string, string, string][] = [
+    ['Freguesia', 'Vilar de Nantes', 'ville'],
+    ['établissement humain', 'Brooksburg', 'ville'],
+    ['rue de Paris', 'Rue Charras', 'ville'],
+    ['voie de Nantes, en France', 'Passage Bouchaud', 'ville'],
+    ['census-designated place du comté de Kay, dans l’État d’Oklahoma, aux États-Unis', 'Tonkawa Tribal Housing', 'ville'],
+    ['comté des États-Unis', 'Comté de Floyd', 'geographie'],
+    ['district de l’État indien du Gujarat', 'District de Devbhoomi Dwarka', 'geographie'],
+    ['comté de l’Indiana, aux USA', 'Comté de Floyd (Indiana)', 'geographie'],
+    ['prélat catholique († 1361)', 'Pierre Ier de Cros', 'religion'],
+    ['joueur américain de baseball', 'Jarrett Parker', 'sport'],
+    ['handballeuse norvégienne', 'Unni Birkrem', 'sport'],
+    ['entomologiste allemand (1724-1795)', 'Johann Siegfried Hufnagel', 'sciences'],
+    ['ligne de chemin de fer finlandaise', 'Ligne de Raisio à Naantali', 'train'],
+    ['aéroport malaisien', 'Aéroport de Bario', 'avion'],
+    ['mois de 1849', 'Janvier 1849', 'histoire'],
+    ['peinture de Mary Cassatt', 'La Toilette de l’enfant', 'arts'],
+  ];
+  it.each(CAS_DESCRIPTION)('« %s » donne le thème %s', (description, titre, attendu) => {
+    expect(themesPrincipaux({ titre, description })).toEqual([attendu]);
+  });
+
+  it('ne classe pas une homonymie, une date ou un nom de famille', () => {
+    for (const description of ['page d’homonymie', 'date', 'nom de famille', 'prénom masculin']) {
+      expect(themesPrincipaux({ titre: 'Maledon', description })).toEqual([]);
+    }
+  });
+
+  it('un comté nobiliaire n’est pas une zone géographique', () => {
+    expect(themesPrincipaux({ titre: 'Edmund Sheffield (2e comte de Mulgrave)', description: 'pair anglais, 2e comte de Mulgrave' })).toEqual(['royaute']);
+  });
+});
+
+describe('faux positifs des familles de descriptions courtes', () => {
+  const SANS = (titre: string, description: string, interdit: string[]): void => {
+    const themes = themesPrincipaux({ titre, description });
+    for (const t of interdit) expect(themes, `${titre} : ${description}`).not.toContain(t);
+  };
+  it('un comte nobiliaire qui cite les États-Unis n’est pas un comté', () => {
+    SANS('Gilbert du Motier', 'comte de La Fayette, officier aux États-Unis', ['geographie']);
+    SANS('Chavaniac', 'militaire, comte de Chavaniac, héros de l’indépendance des États-Unis', ['geographie']);
+  });
+  it('« chapelle » et « manoir » dans un titre de commune ou de film ne donnent pas d’architecture', () => {
+    SANS('La Chapelle-sur-Erdre', '', ['architecture', 'arts']);
+    expect(themesDeTexte('La Chapelle-sur-Erdre commune française')).not.toContain('architecture');
+    SANS('Le Manoir hanté', '', ['architecture', 'arts']);
+    expect(themesPrincipaux({ titre: 'Manoir d’Azelonde', description: 'manoir à Criquetot-l’Esneval' })).toEqual(['architecture']);
+    expect(themesPrincipaux({ titre: 'Chapelle X', description: 'chapelle à Paris' })).toContain('architecture');
+  });
+  it('un épisode historique n’est pas un épisode de série', () => {
+    SANS('Siège d’Orléans', 'épisode de la guerre de Cent Ans', ['television']);
+    expect(themesPrincipaux({ titre: 'Pilote', description: 'épisode de la série Lost' })).toContain('television');
+    expect(themesPrincipaux({ titre: 'Resurrection of the Daleks', description: 'épisode de Doctor Who' })).toEqual(['television']);
+  });
+  it('rue d’une apostrophe reconnue, voie de fait écartée', () => {
+    expect(themesPrincipaux({ titre: 'Rue d’Alésia', description: 'rue d’Alésia, Paris' })).toContain('ville');
+    SANS('Voie de fait', 'notion de droit', ['ville', 'geographie']);
+  });
+  it('un titre qui contient « archer », « avenue » ou « Tour de France » n’est pas classé pour autant', () => {
+    SANS('Archer', '', ['sport']);
+    SANS('Avenue Q', '', ['ville']);
+    SANS('Le Tour de France par deux enfants', '', ['cyclisme', 'sport']);
+  });
+});
