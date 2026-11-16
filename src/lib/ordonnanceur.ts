@@ -111,6 +111,8 @@ export interface DependancesSynchro {
   annoncerPrix?: (n: number) => void;
   /** Annonce l’attente en cours d’une demande de prix (fin de la pause, code HTTP, vérification anti-bot), ou `null` quand elle réussit. */
   annoncerAttente?: (attente: AttentePrix | null) => void;
+  /** Appelé quand une carte est terminée (prix lu ou carte sans marché), jamais à chaque essai. */
+  prixTermine?: () => void;
   /** Millisecondes ajoutées à l’intervalle minimal entre deux requêtes (délai variable). Absent : 0. */
   gigue?: () => number;
 }
@@ -277,7 +279,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   }
 
   /** Cadence commune : attend l’échéance, puis envoie. `null` = erreur réseau. */
-  async function envoyer(chemin: string, supplement: number): Promise<ReponseApi | null> {
+  async function envoyer(chemin: string, supplement: number): Promise<ReponseApi | { erreur: string }> {
     if (deps.arretDemande?.()) throw new Interruption('manuel', null);
     // Cadence : 0,2 s depuis la dernière requête (budget commun), sans plafond par minute.
     const t = horloge.now();
@@ -292,14 +294,14 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     resultat.requetes += 1;
     try {
       return await deps.transport(chemin);
-    } catch {
-      return null;
+    } catch (e) {
+      return { erreur: e instanceof Error ? e.name : 'erreur inconnue' };
     }
   }
 
   async function requete(chemin: string, tolerant = false): Promise<ReponseApi | null> {
     const reponse = await envoyer(chemin, 0);
-    if (reponse === null) return tolerant ? null : echec('Requête impossible (réseau).');
+    if ('erreur' in reponse) return tolerant ? null : echec(`Requête impossible (réseau : ${reponse.erreur}).`);
     if (reponse.statut === 403 && estVerificationHumaine(reponse.json)) {
       journal('Vérification anti-bot du site requise : la synchro s’arrête (résous-la à la main sur wiki-masters.com).');
       throw new Interruption('code-http', 403);
@@ -323,8 +325,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       let codeHttp: number | null = null;
       let verification = false;
       let motif: string;
-      if (reponse === null) {
-        motif = 'erreur réseau';
+      if ('erreur' in reponse) {
+        motif = `erreur réseau (${reponse.erreur})`;
       } else if (reponse.statut === 200) {
         const sens = sensDuPrix(reponse.json, rarete);
         if (sens !== 'vide') {
@@ -633,12 +635,14 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       if (obtenu === null) {
         // Carte sans route de prix : ignorée, valeur précédente gardée, pas redemandée avant 30 jours.
         etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() };
+        deps.prixTermine?.();
         continue;
       }
       const { reponse: r, sens } = obtenu;
       ralentissementPrix = Math.floor(ralentissementPrix / 2);
       if (sens === 'aucune-vente') journal(`Aucune vente enregistrée pour « ${carte.titre} » : prix inconnu (ce n’est pas une erreur).`);
       echecs = 0;
+      deps.prixTermine?.();
       const valeur = analyserPrix(r.json, carte.rarete as string);
       const courante = parId.get(carte.id) as Carte;
       const saisieMain = courante.valeurMarchande !== null && etat.prix[carte.id]?.valeur !== courante.valeurMarchande;

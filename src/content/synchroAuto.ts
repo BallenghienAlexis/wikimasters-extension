@@ -299,7 +299,6 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         else await noter({ etat: 'en-cours' });
         const reponse = await deps.transport(chemin);
         if (reponse.statut !== 200 && etape !== 'ventes' && etape !== 'prix') etapeFautive ??= etape;
-        if (etape === 'prix') prixFaits += 1;
         if (!page && chemin.startsWith('/api/my-collection/stats')) {
           const stats = reponse.statut === 200 ? analyserStats(reponse.json) : null;
           const total = stats?.total;
@@ -329,8 +328,12 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
           prixPrevus = n;
         },
         annoncerAttente: (a) => {
+          if (a === null && attente === null) return;
           attente = a;
-          if (a !== null) void noter({ etat: 'en-cours', attente: a });
+          void noter({ etat: 'en-cours', attente: a });
+        },
+        prixTermine: () => {
+          prixFaits += 1;
         },
         enregistrer: async (produite, courant) => {
           const stockee = await deps.chargerCollection();

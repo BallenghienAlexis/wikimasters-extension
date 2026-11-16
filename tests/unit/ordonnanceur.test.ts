@@ -5,6 +5,7 @@ import { VERSION_SCHEMA } from '../../src/lib/collection';
 import {
   MAX_PAGES_SANS_TOTAL,
   PAUSE_APRES_ARRET_MS,
+  PAUSE_PRIX_MS,
   ancienneteMaxPrixMs,
   etatInitial,
   synchroniser,
@@ -688,6 +689,33 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.prixReleves).toBe(3);
     expect(b.departs.filter((d) => d.chemin.includes('card-2/sales'))).toHaveLength(1);
     expect(r.etat.prix[idCarte(2)]?.valeur).toBeNull();
+  })
+
+  it('prix : deux demandes de prix sont espacées d’au moins l’intervalle et de la pause de prix', async () => {
+    const b = banc(siteFictif(5));
+    await synchroniser(b.deps);
+    const ventes = b.departs.filter((d) => d.chemin.includes('/sales'));
+    const ecarts = ventes.slice(1).map((d, i) => d.t - (ventes[i]?.t ?? 0));
+    expect(Math.min(...ecarts)).toBeGreaterThanOrEqual(INTERVALLE_MS + PAUSE_PRIX_MS);
+  })
+
+  it('lecture : le nom de l’erreur réseau est journalisé (stats, pages)', async () => {
+    const b = banc(() => {
+      const e = new Error('hors ligne');
+      e.name = 'TypeError';
+      throw e;
+    });
+    await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(b.journal.join('\n')).toContain('réseau : TypeError');
+  })
+
+  it('prix : le compteur de prix terminés ne suit pas les essais', async () => {
+    const site = siteFictif(3);
+    let refus = 2;
+    let termines = 0;
+    const b = banc((chemin) => (chemin.includes('card-2/sales') && refus-- > 0 ? { statut: 429, json: null } : site(chemin)));
+    await synchroniser({ ...b.deps, prixTermine: () => (termines += 1) });
+    expect(termines).toBe(3);
   })
 
   it('prix : plus de lots ni de plafond, toutes les cartes sans prix sont interrogées sans pause', async () => {

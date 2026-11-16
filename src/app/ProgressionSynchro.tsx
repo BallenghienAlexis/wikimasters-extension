@@ -37,7 +37,9 @@ const AttentePrixLigne: React.FC<{ jusqua: number; codeHttp: number | null; veri
     ? 'Vérification anti-bot du site requise : franchis-la à la main sur wiki-masters.com, la synchro reprendra toute seule.'
     : codeHttp === null
       ? 'Erreur de réseau ou réponse vide.'
-      : `Le site a répondu ${codeHttp}.`;
+      : codeHttp === 401
+        ? 'Le site a répondu 401 : session refusée, reconnecte-toi à WikiMasters.'
+        : `Le site a répondu ${codeHttp}.`;
   return (
     <p data-testid="attente-prix" role="status" className="mt-3 text-sm text-defausser">
       {`En attente : ${cause} Nouvel essai dans ${reste} s (essai ${essai}). La synchro ne s’arrête pas toute seule : utilise « Arrêter » pour la couper.`}
