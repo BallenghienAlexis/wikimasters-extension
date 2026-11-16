@@ -285,7 +285,10 @@ async function limiterAuxPlacesLibres(actions: readonly Action[], idLot: string)
   if (ventes === undefined) return actions;
   const { actions: gardees, ecartees, retirees } = limiterEncheres(actions, ventes, CONFIG_PRIX.maxVentesSimultanees);
   if (ecartees > 0 && gardees.length === 0) throw new Error(AUCUNE_PLACE_ENCHERE);
-  if (ecartees > 0) await noterEncheresEcartees(retirees, ventes, idLot);
+  if (ecartees > 0) {
+    // Simple information : un journal illisible ne doit pas bloquer le lot.
+    try { await noterEncheresEcartees(retirees, ventes, idLot); } catch { /* information perdue, le lot continue */ }
+  }
   return gardees;
 }
 

@@ -165,3 +165,4 @@ Un amendement daté est en tête de `spec.md`, `spec.refined.md`, `design.md` et
 ## À reprendre (relecture de marketplace/mine avant un lot d’enchères, 2026-11-15)
 - (PR #160) `src/app/pilotageLots.ts:265-275` : le `throw` est rattrapé par son propre `catch` puis relancé selon le préfixe du message ; sortir la décision d’arrêt du `try`. Le chemin « exception de transport » repart aussi sans l’attente de cadence.
 - (PR #160) `tests/unit/pilotage-lots.test.ts` : la pause de 30 min posée par un 401 ou un 429 de la relecture n’existe qu’en mémoire de la page (perdue au rechargement) ; ajouter un test qui fixe ce comportement.
+- (PR #166) `src/lib/journal.ts:163-166` : `ouvrirEntreePassee` met une information de l’extension dans `diagnostic` (documenté « ligne de diagnostic de refus ») et laisse `lot: null`, donc le filtre par famille ne montre pas ces lignes ; documenter le champ et renseigner `lot`.
