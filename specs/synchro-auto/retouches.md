@@ -16,3 +16,8 @@
 - `src/lib/progression.ts:23` : la durée restante compte 0,25 s par requête ; une demande de prix prend maintenant au moins 0,5 s (`PAUSE_PRIX_MS` + intervalle), davantage avec le ralentissement appris. Séparer le coût d’un prix de celui d’une page.
 - `src/lib/ordonnanceur.ts` (fin de `relevePrix`) : un arrêt de la phase Prix sur réponses vides n’apparaît que dans le journal ; exposer le nombre de prix reportés dans le résultat/statut (onglet Synchro).
 - Relevé à faire : forme exacte de `sales?scope=summary` quand aucune vente n’existe (`summary: {}`, `null` ou corps vide).
+
+## À reprendre : avertissement de l’étape Prix (PR #170)
+
+- `src/app/ProgressionSynchro.tsx` (`AttentePrixLigne`) : aucun test de composant ni e2e pour l’avertissement (affiché dès l’essai 5), le bouton `passer-carte` (appelle `enregistrerPasserCarteSynchro`) et `continuer-attente` (masquage). Pas de captures aux 3 breakpoints.
+- `ProgressionSynchro.tsx` : « Continuer d’attendre » masque par titre ; ajouter la rareté à `AttentePrix` pour distinguer deux cartes de même titre consécutives en échec.

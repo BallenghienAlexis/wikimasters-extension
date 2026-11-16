@@ -19,9 +19,9 @@ import { analyserPage, analyserPrix, sensDuPrix, type SensPrix, decrireForme, di
 
 /** Aucune reprise automatique avant ce délai après un arrêt (401, 403, 429 ou échecs). */
 export const PAUSE_APRES_ARRET_MS = 30 * 60_000;
-/** Une valeur marchande relevée est périmée après 30 jours. */
 /** Une carte passée par le joueur est redemandée dans 1 jour. */
 export const REPORT_CARTE_PASSEE_MS = 86_400_000;
+/** Une valeur marchande relevée est périmée après 30 jours. */
 export const ancienneteMaxPrixMs = 30 * 86_400_000;
 /** Durée d’un bail ; renouvelé avant chaque requête. */
 export const DUREE_BAIL_MS = 2 * 60_000;
