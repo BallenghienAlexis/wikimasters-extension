@@ -150,7 +150,7 @@ describe('SC-019 / SC-002 : statut v2 écrit par synchroAuto', () => {
       if (a.etape === c.etape && a.etat === c.etat) expect(c.le - a.le, `écritures ${i - 1} et ${i}`).toBeGreaterThanOrEqual(1000);
     }
     // Pauses de prix allongées (1,2 s) : une écriture par requête au plus, jamais davantage.
-    expect(b.statuts.length).toBeLessThanOrEqual(b.chemins.length + 5);
+    expect(b.statuts.length).toBeLessThanOrEqual(b.chemins.length + 1);
   });
 
   it('décision n°5 : au plus une écriture par page, et au plus une par seconde dans l’étape des prix', async () => {

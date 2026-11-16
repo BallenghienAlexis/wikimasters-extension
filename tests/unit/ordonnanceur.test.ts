@@ -96,6 +96,8 @@ interface Banc {
   enVolMax: () => number;
 }
 
+const horlogeFin = (b: { horloge: { t: number } }): number => b.horloge.t;
+
 function banc(
   reponse: (chemin: string, n: number) => ReponseApi | Promise<ReponseApi>,
   collection: Collection = collectionDe([]),
@@ -615,6 +617,11 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     // Les cartes refusées sont ignorées, la série déclenche les pauses adaptatives (4 au plus) sans arrêt.
     expect(b.journal.join('\n')).toContain('limitation de débit possible');
     expect(b.journal.filter((l) => l.includes('limitation de débit possible'))).toHaveLength(MAX_PAUSES_403_PRIX);
+    // Coupure de la phase Prix, sans mémoriser toute la file : seules les cartes refusées sont reportées d'un jour.
+    expect(b.journal.join('\n')).toContain('reprendra à la prochaine synchro');
+    const memorisees = Object.values(r.etat.prix);
+    expect(memorisees.length).toBeLessThan(8);
+    for (const m of memorisees) expect(horlogeFin(b) - m.releveLe).toBeGreaterThan(ancienneteMaxPrixMs - JOUR - 1);
   })
 
   it('prix : une rafale de 403 (limitation de débit) passe après une pause, sans arrêt', async () => {

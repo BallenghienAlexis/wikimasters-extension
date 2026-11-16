@@ -49,6 +49,8 @@ export const RALENTISSEMENT_PRIX_MAX_MS = 2_000;
 const CODE_VERIFICATION_HUMAINE = 'human_verification_required';
 /** Refus 403 d’affilée sur les prix à partir desquels on suppose une limitation de débit (pause adaptative avant de conclure). Aucun arrêt (Alexis, 2026-11-16). */
 export const SEUIL_PAUSE_403_PRIX = 2;
+/** Refus d’affilée, pauses 403 épuisées, qui coupent la phase Prix (sans erreur ni pause de 30 min, sans mémoriser la rafale) : le site refuse tout. */
+export const REFUS_FIN_PHASE_PRIX = SEUIL_PAUSE_403_PRIX + 3;
 const PREMIERE_PAGE = 0;
 const CARTES_PAR_PAGE = 50;
 /** Retrait automatique des cartes disparues : au plus ce nombre, ou 10 % de la collection si plus. */
@@ -657,8 +659,14 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       }
       if (r === null) {
         if (refusPrixTotal > refusAvant) journal(`Diagnostic prix : refus pour « ${carte.titre} » (rareté ${carte.rarete ?? '?'}) à la demande n° ${demandes}, ${Math.round((horloge.now() - (premiereDemande)) / 1000)} s après la première.`);
-        // Refus par carte : on ne la redemande pas avant la fin de l’ancienneté (30 jours), sans valeur inventée.
-        if (refusPrixTotal > refusAvant) etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() };
+        if (refusPrixTotal > refusAvant && pauses403Serie >= MAX_PAUSES_403_PRIX && refusPrix >= REFUS_FIN_PHASE_PRIX) {
+          // Le site refuse tout malgré les pauses : on coupe la phase Prix (pas d’erreur ni de pause de 30 min), reprise à la prochaine synchro.
+          journal('Prix : le site refuse toutes les demandes malgré les pauses (limitation probable) ; la lecture des prix reprendra à la prochaine synchro.');
+          await deps.enregistrer(instantane(), etat);
+          return;
+        }
+        // Refus par carte : reportée d’un jour seulement (peut être une limitation de débit), sans valeur inventée.
+        if (refusPrixTotal > refusAvant) etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() - ancienneteMaxPrixMs + REPORT_VIDE_PRIX_MS };
         continue;
       }
       refusPrix = 0;
