@@ -149,8 +149,8 @@ describe('SC-019 / SC-002 : statut v2 écrit par synchroAuto', () => {
       const c = v2(b.statuts[i]);
       if (a.etape === c.etape && a.etat === c.etat) expect(c.le - a.le, `écritures ${i - 1} et ${i}`).toBeGreaterThanOrEqual(1000);
     }
-    // Plus de 40 requêtes de prix à environ 0,5 s : moins d’écritures que de requêtes (une par seconde au plus).
-    expect(b.statuts.length).toBeLessThan(b.chemins.length / 1.5);
+    // Pauses de prix allongées (1,2 s) : une écriture par requête au plus, jamais davantage.
+    expect(b.statuts.length).toBeLessThanOrEqual(b.chemins.length + 5);
   });
 
   it('décision n°5 : au plus une écriture par page, et au plus une par seconde dans l’étape des prix', async () => {
@@ -166,7 +166,7 @@ describe('SC-019 / SC-002 : statut v2 écrit par synchroAuto', () => {
     const prix = b.statuts.filter((s) => v2(s).etape === 'prix');
     expect(prix.length).toBeGreaterThan(1);
     for (let i = 1; i < prix.length; i++) expect((prix[i] as StatutSynchro).le - (prix[i - 1] as StatutSynchro).le, `prix ${i}`).toBeGreaterThanOrEqual(1000);
-    expect(prix.length).toBeLessThan(b.chemins.length / 1.8);
+    expect(prix.length).toBeLessThanOrEqual(b.chemins.length);
   });
 
   it('SC-019 : aucune requête, chemin ni cadence modifié (mêmes chemins que le plan existant)', async () => {

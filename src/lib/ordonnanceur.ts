@@ -13,7 +13,7 @@
  * `decidePar`) ; il met à jour les faits du site (quantité, favori, identifiants, étiquettes) et,
  * au prix, `valeurMarchande` — sans écraser une valeur saisie à la main.
  */
-import { CODES_ARRET, INTERVALLE_MS, MAX_ECHECS, type Horloge } from './file';
+import { CODES_ARRET, INTERVALLE_MS, type Horloge } from './file';
 import { VERSION_SCHEMA, aEditionLocale, type Carte, type Collection } from './collection';
 import { analyserPage, analyserPrix, sensDuPrix, type SensPrix, decrireForme, diagnosticStats, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
 
@@ -25,14 +25,14 @@ export const ancienneteMaxPrixMs = 30 * 86_400_000;
 export const DUREE_BAIL_MS = 2 * 60_000;
 /** Pause initiale sur un vrai 429 de la route des prix ; elle double à chaque 429 d’affilée (reprise adaptative). */
 export const PAUSE_429_PRIX_MS = 30_000;
-/** 403 d’affilée sur les prix : avant d’y voir des cartes sans marché, pause adaptative (30, 60, 120 puis 240 s) puis même carte redemandée, au plus 4 fois par exécution. */
+/** 403 d’affilée sur les prix : avant d’y voir des cartes sans marché, pause adaptative (30, 60, 120 puis 240 s) puis même carte redemandée, au plus 4 fois par série (remise à zéro par un prix lu). */
 export const MAX_PAUSES_403_PRIX = 4;
 /** Pause maximale sur 429. */
 export const PAUSE_429_PRIX_MAX_MS = 240_000;
 /** 429 sur les prix, sur toute l’exécution (qu’un succès ne remet jamais à zéro), après lesquels la synchro s’arrête (pause de 30 min). */
 export const MAX_429_PRIX_PAR_EXECUTION = 5;
 /** Petite pause ajoutée avant chaque demande de prix (en plus de l’intervalle et de la gigue) : ni lots ni longue pause. */
-export const PAUSE_PRIX_MS = 300;
+export const PAUSE_PRIX_MS = 1_200;
 /** Réponse vide ou illisible sur un prix : pause initiale avant de redemander la même carte, doublée à chaque essai. */
 export const PAUSE_VIDE_PRIX_MS = 3_000;
 /** Essais de la même carte après une réponse vide (donc 1 + ce nombre de demandes au plus). */
@@ -47,12 +47,8 @@ export const REPORT_VIDE_PRIX_MS = 86_400_000;
 export const RALENTISSEMENT_PRIX_MAX_MS = 2_000;
 /** Code de la réponse 403 du site qui exige une vérification humaine : arrêt immédiat, jamais contournée. */
 const CODE_VERIFICATION_HUMAINE = 'human_verification_required';
-/** Refus 403 d’affilée sur les prix qui arrêtent la synchro : en dessous, c’est une carte sans route de prix, pas la session. */
-export const MAX_REFUS_PRIX_CONSECUTIFS = 3;
-/** Plafond de refus de prix sur toute une exécution, qu’un succès ou un contrôle réussi ne remet jamais à zéro. */
-export const MAX_REFUS_PRIX_PAR_EXECUTION = 10;
-/** Échecs sautés au plus sur toute une exécution, même séparés par des lectures réussies. */
-export const MAX_ECHECS_PAR_EXECUTION = 10;
+/** Refus 403 d’affilée sur les prix à partir desquels on suppose une limitation de débit (pause adaptative avant de conclure). Aucun arrêt (Alexis, 2026-11-16). */
+export const SEUIL_PAUSE_403_PRIX = 2;
 const PREMIERE_PAGE = 0;
 const CARTES_PAR_PAGE = 50;
 /** Retrait automatique des cartes disparues : au plus ce nombre, ou 10 % de la collection si plus. */
@@ -249,7 +245,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   let limites429 = 0;
   let refusPrixTotal = 0;
   /** Pauses adaptatives déjà prises sur des 403 de prix en série (limitation de débit supposée). */
-  let pauses403 = 0;
+  let pauses403Serie = 0;
   /** Ralentissement appris des réponses vides (ms), réduit de moitié à chaque prix lu. */
   let ralentissementPrix = 0;
 
@@ -295,7 +291,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     // Cadence : 0,2 s depuis la dernière requête (budget commun), sans plafond par minute.
     const t = horloge.now();
     const derniere = etat.requetes.length === 0 ? undefined : Math.max(...etat.requetes);
-    const supplementPrix = prix === false ? 0 : PAUSE_PRIX_MS + ralentissementPrix;
+    const supplementPrix = prix === false ? 0 : PAUSE_PRIX_MS + ralentissementPrix + 4 * gigue();
     const echeance = derniere === undefined ? t : Math.max(t, derniere + INTERVALLE_MS + supplementPrix + gigue());
     await horloge.attendreJusqua(echeance);
     if (deps.arretDemande?.()) throw new Interruption('manuel', null);
@@ -323,32 +319,21 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       return requete(chemin, tolerant, prix);
     }
     if (prix !== false && (reponse.statut === 403 || reponse.statut === 404)) {
-      // Prix d’une seule carte refusé : carte vendue, défaussée ou sans marché. On l’ignore et on journalise son titre.
-      // Après 3 refus d’affilée, un contrôle (stats) départage « session refusée »
-      // (arrêt, pause de 30 min) et « cartes sans marché » (la synchro continue). 401 et 429 arrêtent toujours.
-      if (reponse.statut === 403 && refusPrix >= MAX_REFUS_PRIX_CONSECUTIFS - 1 && pauses403 < MAX_PAUSES_403_PRIX) {
+      // Prix d’une seule carte refusé : carte vendue, défaussée ou sans marché, ou limitation de débit. Aucun arrêt
+      // (Alexis, 2026-11-16 : plus de restriction des 3 erreurs) : seuls 401, 429 répétés et la vérification anti-bot arrêtent.
+      if (reponse.statut === 403 && refusPrix >= SEUIL_PAUSE_403_PRIX && pauses403Serie < MAX_PAUSES_403_PRIX) {
         // Une série de 403 ressemble à une limitation de débit autant qu’à des cartes sans marché : on ralentit,
         // on attend (30 s qui doublent) et on redemande la même carte avant de conclure. Jamais de contournement.
-        const pause = Math.min(PAUSE_429_PRIX_MAX_MS, PAUSE_429_PRIX_MS * 2 ** pauses403);
-        pauses403 += 1;
+        const pause = Math.min(PAUSE_429_PRIX_MAX_MS, PAUSE_429_PRIX_MS * 2 ** pauses403Serie);
+        pauses403Serie += 1;
         ralentissementPrix = Math.min(RALENTISSEMENT_PRIX_MAX_MS, Math.max(500, ralentissementPrix * 2));
-        journal(`Prix : ${refusPrix + 1} refus 403 d’affilée (limitation de débit possible) ; pause de ${pause / 1000} s, rythme ralenti, puis même carte redemandée (${pauses403}/${MAX_PAUSES_403_PRIX}).`);
+        journal(`Prix : ${refusPrix + 1} refus 403 d’affilée (limitation de débit possible) ; pause de ${pause / 1000} s, rythme ralenti, puis même carte redemandée (${pauses403Serie}/${MAX_PAUSES_403_PRIX}).`);
         await pauseInterruptible(pause);
         return requete(chemin, tolerant, prix);
       }
       refusPrix += 1;
       refusPrixTotal += 1;
-      journal(`Prix indisponible (réponse ${reponse.statut}) pour « ${prix} » : carte ignorée (${refusPrix}/${MAX_REFUS_PRIX_CONSECUTIFS} refus d’affilée).`);
-      if (refusPrixTotal >= MAX_REFUS_PRIX_PAR_EXECUTION) throw new Interruption('code-http', reponse.statut);
-      if (refusPrix >= MAX_REFUS_PRIX_CONSECUTIFS) {
-        const controle = await requete(cheminStats(), true);
-        if (controle === null) {
-          journal('Contrôle de session en échec : la synchro s’arrête.');
-          throw new Interruption('code-http', reponse.statut);
-        }
-        journal('Contrôle de session réussi : les refus viennent de ces cartes (sans marché), la synchro continue.');
-        refusPrix = 0;
-      }
+      journal(`Prix indisponible (réponse ${reponse.statut}) pour « ${prix} » : carte ignorée, la synchro continue (${refusPrix} refus d’affilée).`);
       return null;
     }
     if (CODES_ARRET.includes(reponse.statut)) {
@@ -378,8 +363,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   function echec(message: string): null {
     echecs += 1;
     echecsTotal += 1;
-    journal(`Échec ${echecs}/${MAX_ECHECS} d’affilée : ${message} Élément sauté, la synchronisation continue.`);
-    if (echecs >= MAX_ECHECS || echecsTotal >= MAX_ECHECS_PAR_EXECUTION) throw new Interruption('echecs', null);
+    journal(`Échec (${echecs} d’affilée) : ${message} Élément sauté, la synchronisation continue (aucun arrêt sur les échecs).`);
     return null;
   }
 
@@ -678,6 +662,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         continue;
       }
       refusPrix = 0;
+      pauses403Serie = 0;
       echecs = 0;
       const valeur = analyserPrix(r.json, carte.rarete as string);
       const courante = parId.get(carte.id) as Carte;

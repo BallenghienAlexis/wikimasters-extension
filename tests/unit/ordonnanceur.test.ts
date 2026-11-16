@@ -606,22 +606,15 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(b2.departs.some((d) => d.chemin.includes('card-2/sales'))).toBe(false);
   })
 
-  it('prix : 3 refus 403 d’affilée avec session refusée (contrôle en 403) arrêtent la synchro avec pause de 30 min', async () => {
+  it('prix : des 403 en série sans reprise ne coûtent que des cartes ignorées, jamais un arrêt (plus de restriction des 3 erreurs)', async () => {
     const site = siteFictif(8);
-    let apresPrix = false;
-    const b = banc((chemin) => {
-      if (chemin.includes('/sales')) {
-        apresPrix = true;
-        return { statut: 403, json: null };
-      }
-      return apresPrix ? { statut: 403, json: null } : site(chemin);
-    });
+    const b = banc((chemin) => (/card-[0-9]+\/sales/.test(chemin) ? { statut: 403, json: null } : site(chemin)));
     const r = await synchroniser(b.deps);
-    expect(r.issue).toBe('arret');
-    expect(r.codeHttp).toBe(403);
-    // 3 refus, dont le troisième est redemandé après 4 pauses adaptatives avant le contrôle de session.
-    expect(b.departs.filter((d) => d.chemin.includes('/sales'))).toHaveLength(3 + MAX_PAUSES_403_PRIX);
-    expect(r.etat.arretJusqua).toBe(b.horloge.t + PAUSE_APRES_ARRET_MS);
+    expect(r.issue).toBe('termine');
+    expect(r.etat.arretJusqua).toBeNull();
+    // Les cartes refusées sont ignorées, la série déclenche les pauses adaptatives (4 au plus) sans arrêt.
+    expect(b.journal.join('\n')).toContain('limitation de débit possible');
+    expect(b.journal.filter((l) => l.includes('limitation de débit possible'))).toHaveLength(MAX_PAUSES_403_PRIX);
   })
 
   it('prix : une rafale de 403 (limitation de débit) passe après une pause, sans arrêt', async () => {
@@ -641,35 +634,25 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(b.journal.join('\n')).toContain('limitation de débit possible');
   })
 
-  it('prix : 3 refus 403 d’affilée mais session saine (contrôle réussi) : cartes sans marché sautées, la synchro continue', async () => {
+  it('prix : une série de 404 ne déclenche aucune pause', async () => {
     const site = siteFictif(8);
-    const b = banc((chemin) => (/card-[0-3]\/sales/.test(chemin) ? { statut: 403, json: null } : site(chemin)));
+    const b = banc((chemin) => (/card-[0-9]+\/sales/.test(chemin) ? { statut: 404, json: null } : site(chemin)));
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('termine');
-    expect(r.etat.arretJusqua).toBeNull();
-    expect(r.prixReleves).toBeGreaterThan(0);
-    // La carte qui a déclenché le contrôle est mémorisée aussi : pas redemandée à la synchro suivante.
-    for (const id of ['R|Carte 1', 'R|Carte 2', 'R|Carte 3']) {
-      expect(r.etat.prix[id]?.valeur).toBeNull();
-      expect(r.etat.prix[id]?.releveLe).toBeGreaterThan(0);
-    }
-    const chemins = b.departs.map((d) => d.chemin);
-    // La carte 3 est redemandée après les pauses adaptatives, puis le contrôle de session part.
-    const i3 = chemins.map((c, i) => (c.includes('card-3/sales') ? i : -1)).filter((i) => i >= 0).pop() as number;
-    expect(chemins[i3 + 1]).toContain('stats');
-    expect(b.journal.join('\n')).toContain('Carte 1');
-    const b2 = banc(site, r.collection, r.etat);
-    b2.horloge.t += 31 * 60_000;
-    await synchroniser({ ...b2.deps });
-    expect(b2.departs.some((d) => /card-[123]\/sales/.test(d.chemin))).toBe(false);
+    expect(b.journal.join('\n')).not.toContain('limitation de débit possible');
   })
 
-  it('prix : 10 refus 403 sur l’exécution arrêtent même séparés par des succès', async () => {
-    const site = siteFictif(40);
-    const b = banc((chemin) => (/card-(\d+)\/sales/.test(chemin) && Number(/card-(\d+)\//.exec(chemin)![1]) % 2 === 0 ? { statut: 403, json: null } : site(chemin)));
+  it('prix : la vérification anti-bot arrive au 3e refus d’une série : arrêt immédiat, sans pause', async () => {
+    const site = siteFictif(8);
+    const b = banc((chemin) => {
+      const m = /card-([0-9]+)\/sales/.exec(chemin);
+      if (m === null) return site(chemin);
+      return Number(m[1]) >= 3 ? { statut: 403, json: { code: 'human_verification_required' } } : { statut: 403, json: null };
+    });
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('arret');
     expect(r.codeHttp).toBe(403);
+    expect(b.journal.join('\n')).not.toContain('limitation de débit possible');
   })
 
   it('prix : plus de lots ni de plafond, toutes les cartes sans prix sont interrogées sans pause', async () => {
@@ -679,7 +662,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     const ventes = b.departs.filter((d) => d.chemin.includes('/sales'));
     expect(ventes).toHaveLength(150);
     const ecarts = ventes.slice(1).map((d, i) => d.t - (ventes[i]?.t ?? 0));
-    expect(Math.max(...ecarts)).toBeLessThan(1_000);
+    expect(Math.max(...ecarts)).toBeLessThan(2_000);
     expect(b.journal.some((m) => m.startsWith('Pause de'))).toBe(false);
   })
 
@@ -873,7 +856,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     }
   })
 
-  it('arrêt après 3 échecs (statut 500, transport en erreur, forme inattendue)', async () => {
+  it('plusieurs échecs d’affilée (statut 500, transport en erreur, forme inattendue) n’arrêtent plus la synchro', async () => {
     const reponses: Array<() => ReponseApi> = [
       () => ({ statut: 200, json: statsJson(200) }),
       () => ({ statut: 500, json: null }),
@@ -883,13 +866,12 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
       () => ({ statut: 200, json: { inattendu: true } }),
       () => ({ statut: 200, json: { collection: [] } }),
     ];
-    const b = banc((_c, n) => reponses[n - 1]!());
+    const b = banc((_c, n) => (reponses[n - 1] ?? (() => ({ statut: 200, json: { collection: [] } })))());
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(r.issue).toBe('arret');
-    expect(r.raison).toBe('echecs');
-    expect(b.departs.length).toBe(4);
+    expect(r.issue).toBe('termine');
+    expect(r.raison).not.toBe('echecs');
     expect(r.complete).toBe(false);
-    expect(r.etat.arretJusqua).toBe(b.horloge.t + PAUSE_APRES_ARRET_MS);
+    expect(r.etat.arretJusqua).toBeNull();
   });
 
   it('un échec isolé n’arrête pas la synchro mais la rend incomplète', async () => {
@@ -901,7 +883,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.etat.derniereComplete).toBeNull();
   });
 
-  it('des échecs séparés par des lectures réussies sont sautés : seuls 3 échecs d’affilée arrêtent', async () => {
+  it('des échecs sautés, séparés ou non par des lectures réussies, laissent la synchro aller au bout', async () => {
     const site = siteFictif(10);
     const b = banc((chemin, n) => (n === 2 || n === 4 || n === 6 ? { statut: 500, json: null } : site(chemin)));
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });
@@ -910,12 +892,12 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.complete).toBe(false);
   })
 
-  it('plus de 10 échecs sautés sur une exécution arrêtent la synchro même séparés par des succès', async () => {
+  it('plus de 10 échecs sur une exécution n’arrêtent plus la synchro', async () => {
     const site = siteFictif(40);
     const b = banc((chemin) => (/card-(\d+)\/sales/.test(chemin) && Number(/card-(\d+)\//.exec(chemin)![1]) % 2 === 0 ? { statut: 500, json: null } : site(chemin)));
     const r = await synchroniser(b.deps);
-    expect(r.issue).toBe('arret');
-    expect(r.raison).toBe('echecs');
+    expect(r.issue).toBe('termine');
+    
   })
 
   it('s’arrête sur demande manuelle avant la requête suivante', async () => {
