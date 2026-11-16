@@ -4,6 +4,7 @@ import type { Carte, Collection } from '../../src/lib/collection';
 import { VERSION_SCHEMA } from '../../src/lib/collection';
 import {
   MAX_PAGES_SANS_TOTAL,
+  MAX_PAUSES_403_PRIX,
   PAUSE_APRES_ARRET_MS,
   ancienneteMaxPrixMs,
   etatInitial,
@@ -618,8 +619,26 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('arret');
     expect(r.codeHttp).toBe(403);
-    expect(b.departs.filter((d) => d.chemin.includes('/sales'))).toHaveLength(3);
+    // 3 refus, dont le troisième est redemandé après 4 pauses adaptatives avant le contrôle de session.
+    expect(b.departs.filter((d) => d.chemin.includes('/sales'))).toHaveLength(3 + MAX_PAUSES_403_PRIX);
     expect(r.etat.arretJusqua).toBe(b.horloge.t + PAUSE_APRES_ARRET_MS);
+  })
+
+  it('prix : une rafale de 403 (limitation de débit) passe après une pause, sans arrêt', async () => {
+    const site = siteFictif(10);
+    let refus = 0;
+    const b = banc((chemin) => {
+      if (/card-[3-5]\/sales/.test(chemin) && refus < 4) {
+        refus += 1;
+        return { statut: 403, json: null };
+      }
+      return site(chemin);
+    });
+    const r = await synchroniser(b.deps);
+    expect(r.issue).toBe('termine');
+    expect(r.etat.arretJusqua).toBeNull();
+    expect(r.prixReleves).toBe(8);
+    expect(b.journal.join('\n')).toContain('limitation de débit possible');
   })
 
   it('prix : 3 refus 403 d’affilée mais session saine (contrôle réussi) : cartes sans marché sautées, la synchro continue', async () => {
@@ -635,7 +654,8 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
       expect(r.etat.prix[id]?.releveLe).toBeGreaterThan(0);
     }
     const chemins = b.departs.map((d) => d.chemin);
-    const i3 = chemins.findIndex((c) => c.includes('card-3/sales'));
+    // La carte 3 est redemandée après les pauses adaptatives, puis le contrôle de session part.
+    const i3 = chemins.map((c, i) => (c.includes('card-3/sales') ? i : -1)).filter((i) => i >= 0).pop() as number;
     expect(chemins[i3 + 1]).toContain('stats');
     expect(b.journal.join('\n')).toContain('Carte 1');
     const b2 = banc(site, r.collection, r.etat);

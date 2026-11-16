@@ -25,6 +25,8 @@ export const ancienneteMaxPrixMs = 30 * 86_400_000;
 export const DUREE_BAIL_MS = 2 * 60_000;
 /** Pause initiale sur un vrai 429 de la route des prix ; elle double à chaque 429 d’affilée (reprise adaptative). */
 export const PAUSE_429_PRIX_MS = 30_000;
+/** 403 d’affilée sur les prix : avant d’y voir des cartes sans marché, pause adaptative (30, 60, 120 puis 240 s) puis même carte redemandée, au plus 4 fois par exécution. */
+export const MAX_PAUSES_403_PRIX = 4;
 /** Pause maximale sur 429. */
 export const PAUSE_429_PRIX_MAX_MS = 240_000;
 /** 429 sur les prix, sur toute l’exécution (qu’un succès ne remet jamais à zéro), après lesquels la synchro s’arrête (pause de 30 min). */
@@ -246,6 +248,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   let refusPrix = 0;
   let limites429 = 0;
   let refusPrixTotal = 0;
+  /** Pauses adaptatives déjà prises sur des 403 de prix en série (limitation de débit supposée). */
+  let pauses403 = 0;
   /** Ralentissement appris des réponses vides (ms), réduit de moitié à chaque prix lu. */
   let ralentissementPrix = 0;
 
@@ -322,6 +326,16 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       // Prix d’une seule carte refusé : carte vendue, défaussée ou sans marché. On l’ignore et on journalise son titre.
       // Après 3 refus d’affilée, un contrôle (stats) départage « session refusée »
       // (arrêt, pause de 30 min) et « cartes sans marché » (la synchro continue). 401 et 429 arrêtent toujours.
+      if (reponse.statut === 403 && refusPrix >= MAX_REFUS_PRIX_CONSECUTIFS - 1 && pauses403 < MAX_PAUSES_403_PRIX) {
+        // Une série de 403 ressemble à une limitation de débit autant qu’à des cartes sans marché : on ralentit,
+        // on attend (30 s qui doublent) et on redemande la même carte avant de conclure. Jamais de contournement.
+        const pause = Math.min(PAUSE_429_PRIX_MAX_MS, PAUSE_429_PRIX_MS * 2 ** pauses403);
+        pauses403 += 1;
+        ralentissementPrix = Math.min(RALENTISSEMENT_PRIX_MAX_MS, Math.max(500, ralentissementPrix * 2));
+        journal(`Prix : ${refusPrix + 1} refus 403 d’affilée (limitation de débit possible) ; pause de ${pause / 1000} s, rythme ralenti, puis même carte redemandée (${pauses403}/${MAX_PAUSES_403_PRIX}).`);
+        await pauseInterruptible(pause);
+        return requete(chemin, tolerant, prix);
+      }
       refusPrix += 1;
       refusPrixTotal += 1;
       journal(`Prix indisponible (réponse ${reponse.statut}) pour « ${prix} » : carte ignorée (${refusPrix}/${MAX_REFUS_PRIX_CONSECUTIFS} refus d’affilée).`);
