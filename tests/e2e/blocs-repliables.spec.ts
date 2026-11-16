@@ -55,10 +55,13 @@ test('synchro : tâches, prix, historique repliés avec résumé, dépliés au c
   await expect(prix).toHaveAttribute('aria-expanded', 'true');
 });
 
-test('lots : écarts avec le site et cadence repliés dans l’aperçu', async ({ pageCollection: page }) => {
+test('lots : écarts avec le site en carte propre, cadence repliée dans l’aperçu', async ({ pageCollection: page }) => {
   await ecrireJeuRiche(page);
   await allerA(page, 'lots');
+  await expect(page.getByTestId('etapes-lots').locator('[aria-current="step"]')).toContainText('1. Choisir');
+  await expect(page.getByRole('button', { name: /^Écarts avec le site/ })).toHaveAttribute('aria-expanded', 'false');
   await page.getByRole('button', { name: 'Voir l’aperçu du lot' }).click();
+  await expect(page.getByTestId('etapes-lots').locator('[aria-current="step"]')).toContainText('2. Aperçu');
   for (const nom of [/^Écarts avec le site/, /^Cadence d’envoi/]) {
     await expect(page.getByRole('button', { name: nom })).toHaveAttribute('aria-expanded', 'false');
   }
