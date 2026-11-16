@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import type { EntreeJournal, Registre, TypeAction } from '../lib/actions';
 import { dernierePoseParCouple, libelleHistorique } from '../lib/journal';
+import SectionRepliable from './SectionRepliable';
 import DialogueVider from './DialogueVider';
 import FiltresHistorique, { CRITERES_VIDES, type CriteresHistorique } from './FiltresHistorique';
 
@@ -186,11 +187,17 @@ const Journal: React.FC<Props> = ({ entrees, registre, retraitDisponible, onglet
   };
 
   return (
-    <section aria-labelledby="titre-journal" className="mt-4 rounded border border-line bg-ink-2 p-4" data-testid={idTest}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="titre-journal" ref={titre} tabIndex={-1} className="font-semibold">
+    <SectionRepliable
+      id={`journal-${idTest}`}
+      testId={idTest}
+      className="mt-4"
+      titre={titreSection}
+      resume={illisible ? 'Illisible' : vide ? 'Vide' : `${entrees.length} entrée${entrees.length > 1 ? 's' : ''} · dernière : ${libelleHistorique(entrees.reduce((a, b) => (b.horodatage > a.horodatage ? b : a)))}`}
+    >
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <span id="titre-journal" ref={titre} tabIndex={-1} className="sr-only">
           {titreSection}
-        </h2>
+        </span>
         <div className="flex flex-col items-end gap-1">
           <button
             ref={boutonVider}
@@ -305,7 +312,7 @@ const Journal: React.FC<Props> = ({ entrees, registre, retraitDisponible, onglet
           }}
         />
       )}
-    </section>
+    </SectionRepliable>
   );
 };
 

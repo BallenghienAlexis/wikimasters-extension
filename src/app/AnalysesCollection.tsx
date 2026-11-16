@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import type { Carte } from '../lib/collection';
 import { doublons, plusCheres, themesFrequents } from '../lib/analyses';
 import { LIBELLES_THEMES } from '../lib/themes';
+import SectionRepliable from './SectionRepliable';
 
 interface Props {
   cartes: readonly Carte[];
@@ -13,14 +14,13 @@ const AFFICHEES = 10;
 const nombre = new Intl.NumberFormat('fr-FR');
 
 const Bloc: React.FC<{ id: string; titre: string; vide: string; children: React.ReactNode[] }> = ({ id, titre, vide, children }) => (
-  <section data-testid={`analyse-${id}`} className="rounded border border-line bg-ink-2 p-4 shadow-carte">
-    <h3 className="text-lg font-semibold">{titre}</h3>
+  <SectionRepliable id={`analyse-${id}`} testId={`analyse-${id}`} titre={titre} resume={children.length === 0 ? 'Aucun' : `${children.length} ligne${children.length > 1 ? 's' : ''}`}>
     {children.length === 0 ? (
       <p className="mt-2 text-muted">{vide}</p>
     ) : (
       <ul className="mt-2 space-y-1">{children}</ul>
     )}
-  </section>
+  </SectionRepliable>
 );
 
 const Ligne: React.FC<{ carte: Carte; suffixe?: string }> = ({ carte, suffixe }) => (
@@ -54,7 +54,7 @@ const AnalysesCollection: React.FC<Props> = ({ cartes, cacheWiki }) => {
   return (
     <section aria-labelledby="titre-analyses" className="mt-8">
       <h2 id="titre-analyses" className="text-xl font-semibold">Analyses</h2>
-      <div className="mt-4 grid gap-4 min-[600px]:grid-cols-2 min-[1000px]:grid-cols-3">
+      <div className="mt-4 grid items-start gap-4 min-[600px]:grid-cols-2 min-[1000px]:grid-cols-3">
         <Bloc id="doublons" titre={`Doublons (${a.doublons.length})`} vide="Aucun doublon.">
           {liste(a.doublons, (c) => `${c.quantite} exemplaires`)}
         </Bloc>

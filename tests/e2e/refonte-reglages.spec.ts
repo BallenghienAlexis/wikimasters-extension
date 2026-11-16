@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { allerA, chargerCartes, expect, test } from './extension';
+import { allerA, deplierTout, chargerCartes, expect, test } from './extension';
 
 // T-309 : onglet Réglages repliable (SC-028, SC-026 réglage). Données uniquement fictives.
 
@@ -45,6 +45,7 @@ test.describe('SC-028 : sections repliables', () => {
     await expect(reglage).toBeChecked();
     await reglage.uncheck();
     await allerA(page, 'synchro');
+    await deplierTout(page);
     await expect(page.getByRole('switch', { name: 'Synchronisation automatique' })).toHaveAttribute('aria-checked', 'false');
     await page.getByRole('switch', { name: 'Synchronisation automatique' }).click();
     await allerA(page, 'reglages');

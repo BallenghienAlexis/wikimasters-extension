@@ -160,8 +160,8 @@ describe('T-206 D-02 : écarts avec le site', () => {
     expect(html).toContain('Statut · Garder');
     expect(html).toContain('Ancienne');
     expect(html).not.toContain('Aucun écart.');
-    // Aucun bouton ni champ qui écrive : seul l’interrupteur (et jamais « Arrêter » ici) existe.
-    expect(html.match(/<button/g)).toHaveLength(1);
+    // Aucun bouton ni champ qui écrive : seuls l’en-tête repliable et l’interrupteur (jamais « Arrêter » ici) existent.
+    expect(html.match(/<button/g)).toHaveLength(2);
     expect(html).not.toContain('<input');
   });
 

@@ -19,3 +19,7 @@ Choix assumés (fonctions réelles absentes de la maquette) : panneau d’erreur
 Éléments de maquette sans objet depuis #140 : onglet Ventes, tableau de tri, répartition par décision et tableau par rareté (colonnes Garder / Échanger / Vendre), « valeur par décision », places d’enchères et chiffre « Enchères », plafond de défausse, interrupteur de lot « défausses » et « enchères ». La maquette comporte donc six onglets contre cinq dans l’extension.
 
 Non-régression : `tests/e2e/refonte-conformite-maquette.spec.ts` mesure en-tête, onglets, encadré de risque, cartes de la Collection et résumés de Réglages (3 largeurs, 2 thèmes) ; il échoue si l’extension s’éloigne de nouveau de la maquette.
+
+## Blocs dépliables et épuration (Alexis, 2026-11-16)
+
+Demande : pages trop chargées ; chaque bloc doit être dépliable et, replié, ne montrer que la dernière information ou un résumé. Fait : `SectionRepliable` (replié par défaut, `ouvertParDefaut` réservé à l’opération en cours) appliqué à Tâches, Prix du marché, Synchronisation automatique, Historique et Journal, Analyses (3 blocs), Évolution sur 30 jours, Enchères et défausses (ouvert seulement si des cartes sont choisies) et Progression (ouverte seulement pendant une synchro). Onglet Synchro réordonné : titre, pastille et durée restante sur une ligne, puis l’erreur, la progression, les tâches, les ignorées, les prix, la synchro auto, l’historique. Les tests e2e utilisent `deplierTout` (`tests/e2e/extension.ts`) quand ils lisent le contenu d’un bloc.

@@ -3,6 +3,7 @@ import { observations, type EvenementVente } from '../lib/affluence';
 import { normaliser, type Carte } from '../lib/collection';
 import { conseilLancement, estProposable, type Choix, type ChoixCarte } from '../lib/selectionLot';
 import { NB, CLASSE_BOUTON } from './apercuLot';
+import SectionRepliable from './SectionRepliable';
 import HeuresFortes from './HeuresFortes';
 
 interface Props {
@@ -81,10 +82,14 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, onCho
   };
 
   return (
-    <section aria-labelledby="titre-selection" className="mt-4 rounded border border-line bg-ink-2 p-4" data-testid="selection-vente-defausse">
-      <h2 id="titre-selection" className="font-semibold">
-        Cartes à mettre aux enchères ou à défausser
-      </h2>
+    <SectionRepliable
+      id="selection-vente-defausse"
+      testId="selection-vente-defausse"
+      className="mt-4"
+      titre="Enchères et défausses"
+      ouvertParDefaut={choisies.length > 0}
+      resume={choisies.length === 0 ? 'Aucune carte choisie' : `${nbVendre} enchère${nbVendre > 1 ? 's' : ''} · ${nbDefausser} défausse${nbDefausser > 1 ? 's' : ''}`}
+    >
       <p className="mt-1 text-sm text-muted">
         Choisissez les cartes ici, puis voyez l’aperçu du lot. Les cartes portant l’étiquette « Statut · Vendre » sur le site sont déjà choisies pour les enchères ; la défausse se choisit à la main. Un favori n’est jamais proposé. Rien n’est envoyé avant « Lancer ».
       </p>
@@ -120,7 +125,7 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, onCho
       </label>
       {trouvees.length > 0 && <ul className="mt-2">{trouvees.slice(0, MAX_AFFICHEES).map(ligne)}</ul>}
       {trouvees.length > MAX_AFFICHEES && <p className="mt-1 text-sm text-muted">… et {trouvees.length - MAX_AFFICHEES} autres : précisez la recherche.</p>}
-    </section>
+    </SectionRepliable>
   );
 };
 

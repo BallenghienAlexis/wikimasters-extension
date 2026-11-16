@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { allerA, carteComplete as carteCompleteDefaut, expect, test } from './extension';
+import { allerA, carteComplete as carteCompleteDefaut, deplierTout, expect, test } from './extension';
 
 // Tout est fictif et le site n’est jamais contacté : toute requête http(s) est bloquée et comptée.
 const FIXTURE = JSON.parse(fs.readFileSync(path.resolve('tests/e2e/fixtures/collection-etiquettes.json'), 'utf8')) as {
@@ -50,6 +50,8 @@ const amorcerFixture = (page: Page, amis = FIXTURE.preferences.amis): Promise<vo
 const ouvrirApercu = async (page: Page): Promise<void> => {
   await allerA(page, 'lots');
   await page.getByRole('button', { name: 'Voir l’aperçu du lot' }).click();
+  await expect(page.getByTestId('etiquettes-prevues')).toBeAttached();
+  await deplierTout(page);
   await expect(page.getByTestId('etiquettes-prevues')).toBeVisible();
 };
 
@@ -110,6 +112,8 @@ test('liste les étiquettes prévues avec leurs nombres, sans requête ni lectur
   await expect(page.getByTestId('total-etiquettes')).toContainText(`Total prévu${NB}:`);
   await page.getByRole('button', { name: 'Annuler' }).click();
   await page.getByRole('button', { name: 'Voir l’aperçu du lot' }).click();
+  await expect(section).toBeAttached();
+  await deplierTout(page);
   await expect(section).toBeVisible();
 
   expect(externes).toEqual([]);

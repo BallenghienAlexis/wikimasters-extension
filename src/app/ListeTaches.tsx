@@ -3,6 +3,7 @@ import type { EntreeJournal, FamilleLot } from '../lib/actions';
 import type { ListesTaches, Tache } from '../lib/progression';
 import { formaterHorodatage, libelleParametre, libelleResultat, libelleType } from './Journal';
 import { LIBELLES_ETAPE } from './ProgressionSynchro';
+import SectionRepliable from './SectionRepliable';
 
 interface Props {
   listes: ListesTaches;
@@ -34,11 +35,25 @@ const ListeTaches: React.FC<Props> = ({ listes }) => {
   const defiler = (e: React.MouseEvent<HTMLAnchorElement>): void => {
     e.preventDefault();
     const cible = document.getElementById('historique');
+    // Le Journal est repliable : le lien le déplie avant d’y mener.
+    cible?.querySelector<HTMLElement>('button[aria-expanded="false"]')?.click();
     cible?.scrollIntoView();
     cible?.focus();
   };
   return (
-    <section aria-label="Tâches" className="mt-4 grid grid-cols-1 gap-4 rounded border border-line bg-ink-2 p-4">
+    <SectionRepliable
+      id="taches"
+      testId="taches"
+      className="mt-4"
+      titre="Tâches"
+      ouvertParDefaut={!listes.aucuneActivite}
+      resume={
+        listes.aucuneActivite
+          ? `Aucune activité · ${listes.terminees.length} terminée${listes.terminees.length > 1 ? 's' : ''}`
+          : `${listes.enCours.length} en cours · ${listes.aVenir.length} à venir`
+      }
+    >
+      <div className="grid grid-cols-1 gap-4 pt-1">
       {listes.aucuneActivite ? (
         <p data-testid="aucune-activite" className="font-medium">
           Aucune activité en cours
@@ -76,7 +91,8 @@ const ListeTaches: React.FC<Props> = ({ listes }) => {
           Voir l’historique complet
         </a>
       </div>
-    </section>
+      </div>
+    </SectionRepliable>
   );
 };
 

@@ -14,6 +14,7 @@ import {
 } from '../lib/stockage';
 import type { CacheWikipedia } from '../lib/wikipedia';
 import type { Preferences } from '../lib/tri';
+import SectionRepliable from './SectionRepliable';
 
 /** Espace insécable : typographie française avant « : » et autour de « h ». */
 const NB = ' ';
@@ -122,10 +123,18 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
   const enCours = synchroEnCours(entree);
 
   return (
-    <section aria-labelledby="titre-synchro-auto" className="mt-4 rounded border border-line bg-ink-2 p-4" data-testid="synchro-auto">
-      <h2 id="titre-synchro-auto" className="font-semibold">
+    <>
+    <SectionRepliable
+      id="synchro-auto"
+      testId="synchro-auto"
+      className="mt-4"
+      titre="Synchronisation automatique"
+      ouvertParDefaut={enCours || erreur !== null || relancePossible(entree) || relanceRefusee(entree)}
+      resume={`${texteEtatSynchro(entree)} · ${ecarts.length === 0 ? 'aucun écart' : `${ecarts.length} écart${ecarts.length > 1 ? 's' : ''}`}`}
+    >
+      <span id="titre-synchro-auto" className="sr-only">
         Synchronisation automatique
-      </h2>
+      </span>
       <p className="mt-1 text-sm text-muted">
         Lit votre collection sur WikiMasters pendant qu’un onglet du site est ouvert : une requête toutes les 0,2 à 0,3 s, arrêt immédiat si le site refuse. Rien n’est modifié sur le site.
       </p>
@@ -164,7 +173,7 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
         )}
       </div>
 
-      <p id="etat-synchro-auto" aria-live="polite" className="mt-3 font-medium" data-testid="etat-synchro-auto">
+      <p id="etat-synchro-auto" className="mt-3 font-medium" data-testid="etat-synchro-auto">
         {texteEtatSynchro(entree)}
       </p>
       {relancePossible(entree) && <p className="mt-1 text-sm text-muted">{texteRelance(statut)}</p>}
@@ -179,9 +188,7 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
         </p>
       )}
       {erreur !== null && (
-        <p role="alert" className="mt-2 font-semibold text-defausser">
-          {erreur}
-        </p>
+        <p className="mt-2 font-semibold text-defausser">{erreur}</p>
       )}
 
       <p className="mt-2 text-sm" data-testid="derniere-synchro">
@@ -222,7 +229,17 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
           )}
         </>
       )}
-    </section>
+    </SectionRepliable>
+    {/* Annonces hors du bloc repliable : un contenu replié sort de l’arbre d’accessibilité. */}
+    <p aria-live="polite" className="sr-only">
+      {texteEtatSynchro(entree)}
+    </p>
+    {erreur !== null && (
+      <p role="alert" className="sr-only">
+        {erreur}
+      </p>
+    )}
+    </>
   );
 };
 

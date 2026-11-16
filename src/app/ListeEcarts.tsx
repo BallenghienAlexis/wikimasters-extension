@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { EcartCarte } from '../lib/ecarts';
 import { NB } from './apercuLot';
+import SectionRepliable from './SectionRepliable';
 
 const PAS = 50;
 
@@ -12,10 +13,13 @@ interface Props {
 const ListeEcarts: React.FC<Props> = ({ ecarts }) => {
   const [limite, setLimite] = useState(PAS);
   return (
-    <section aria-labelledby="titre-ecarts-lots" className="mt-4" data-testid="ecarts-lots">
-      <h3 id="titre-ecarts-lots" className="font-semibold">
-        Écarts avec le site
-      </h3>
+    <SectionRepliable
+      id="ecarts-lots"
+      testId="ecarts-lots"
+      className="mt-4"
+      titre="Écarts avec le site"
+      resume={ecarts.length === 0 ? 'Aucun écart' : `${ecarts.length} carte${ecarts.length > 1 ? 's' : ''} avec écart`}
+    >
       {ecarts.length === 0 ? (
         <p className="mt-1 text-sm text-muted">Aucun écart.</p>
       ) : (
@@ -50,7 +54,7 @@ const ListeEcarts: React.FC<Props> = ({ ecarts }) => {
           )}
         </>
       )}
-    </section>
+    </SectionRepliable>
   );
 };
 

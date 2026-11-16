@@ -10,6 +10,10 @@ const ETATS: Record<EtatSynchro, { mot: string; symbole: string; couleur: string
   erreur: { mot: 'Erreur', symbole: '✕', couleur: 'border-defausser' },
 };
 
+/** Mot affiché de chaque état (réutilisé en résumé de bloc replié). */
+export const MOT_PASTILLE = (etat: EtatSynchro): string => ETATS[etat].mot;
+export const SYMBOLE_PASTILLE = (etat: EtatSynchro): string => ETATS[etat].symbole;
+
 /** Pastille de statut de synchro (D-40) : symbole + mot, jamais la couleur seule. */
 const PastilleStatut: React.FC<{ etat: EtatSynchro }> = ({ etat }) => {
   const mouvement = useMouvement();

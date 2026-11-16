@@ -1,4 +1,4 @@
-import { allerA, chargerCartes, expect, test } from './extension';
+import { allerA, deplierTout, chargerCartes, expect, test } from './extension';
 import type { Page } from '@playwright/test';
 
 // T-306 : onglet Synchro (SC-002, SC-003, SC-028 interrupteur, SC-009). Données uniquement fictives, aucune requête vers le site.
@@ -85,6 +85,15 @@ const entreeJournal = (n: number): Record<string, unknown> => ({
 });
 
 async function poser(page: Page, valeurs: Record<string, unknown>): Promise<void> {
+  await chargerCartes(page, CARTES);
+  await page.evaluate((v) => chrome.storage.local.set(v), valeurs);
+  await page.reload();
+  await allerA(page, 'synchro');
+  await deplierTout(page);
+}
+
+/** Comme `poser`, sans déplier les blocs : vérifie l’état replié par défaut. */
+async function poserReplie(page: Page, valeurs: Record<string, unknown>): Promise<void> {
   await chargerCartes(page, CARTES);
   await page.evaluate((v) => chrome.storage.local.set(v), valeurs);
   await page.reload();
@@ -355,6 +364,7 @@ test.describe('SC-028 : interrupteur et relance dans l’onglet Synchro, règles
       derniereSynchro: Date.now() - 3_600_000,
       statutSynchro: statut({ etat: 'arret', etape: 'pages', raison: 'code-http', codeHttp: 403, page: 5, pages: 40 }),
     });
+    await deplierTout(pageCollection);
     await expect(pageCollection.getByRole('button', { name: 'Relancer la synchro' })).toBeVisible();
     await expect(pageCollection.getByTestId('synchro-auto')).toContainText(/Relancer ignore la pause de 30\s?min/);
     await maj(pageCollection, { statutSynchro: statut({ etat: 'arret', etape: 'pages', raison: 'code-http', codeHttp: 429, page: 5, pages: 40 }) });
@@ -505,5 +515,37 @@ test.describe('Revue T-306 : couleur par état, bail expiré, pastille D-40', ()
     await pageCollection.waitForTimeout(300);
     await expect(zone).toContainText('Étape 2 / 4 · 31 %');
     await expect(zone).toContainText('100 %', { timeout: 2500 });
+  });
+});
+
+test.describe('Blocs dépliables (2026-11-16)', () => {
+  test('repliés par défaut avec un résumé, dépliables au clavier', async ({ pageCollection }) => {
+    await poserReplie(pageCollection, {
+      derniereSynchro: Date.now() - 600_000,
+      statutSynchro: statut({ etat: 'termine', etape: null, page: 40, pages: 40 }),
+      journal: { version: 2, entrees: [entreeJournal(1), entreeJournal(2)] },
+    });
+    const taches = pageCollection.getByTestId('taches').getByRole('button', { name: /^Tâches/ });
+    await expect(taches).toHaveAttribute('aria-expanded', 'false');
+    await expect(taches).toContainText('Aucune activité');
+    const journal = pageCollection.getByTestId('historique').getByRole('button', { name: /^Historique/ });
+    await expect(journal).toHaveAttribute('aria-expanded', 'false');
+    await expect(journal).toContainText('2 entrées');
+    await journal.focus();
+    await pageCollection.keyboard.press('Enter');
+    await expect(journal).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  test('un arrêt posé après le montage ouvre la synchro auto et montre « Relancer la synchro »', async ({ pageCollection }) => {
+    await poserReplie(pageCollection, { derniereSynchro: Date.now() - 3_600_000 });
+    await maj(pageCollection, { statutSynchro: statut({ etat: 'arret', etape: 'pages', raison: 'code-http', codeHttp: 403, page: 5, pages: 40 }) });
+    await expect(pageCollection.getByRole('button', { name: 'Relancer la synchro' })).toBeVisible();
+  });
+
+  test('« Voir l’historique complet » déplie l’historique', async ({ pageCollection }) => {
+    await poserReplie(pageCollection, { derniereSynchro: Date.now() - 600_000, statutSynchro: statut({ etat: 'termine', etape: null, page: 40, pages: 40 }), journal: { version: 2, entrees: [entreeJournal(1)] } });
+    await pageCollection.getByTestId('taches').getByRole('button', { name: /^Tâches/ }).click();
+    await pageCollection.getByRole('link', { name: /historique/i }).click();
+    await expect(pageCollection.getByTestId('historique').getByRole('button', { name: /^Historique/ })).toHaveAttribute('aria-expanded', 'true');
   });
 });

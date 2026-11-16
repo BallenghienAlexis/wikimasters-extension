@@ -1,4 +1,5 @@
 import React from 'react';
+import SectionRepliable from './SectionRepliable';
 
 interface Props {
   /** Dates (ms) de relevé de chaque prix connu. */
@@ -27,8 +28,13 @@ const FraicheurPrix: React.FC<Props> = ({ releves, maintenant }) => {
     { nom: 'Plus de 30 jours', fond: 'bg-defausser', n: valides.filter((d) => maintenant - d >= 30 * JOUR).length },
   ];
   return (
-    <section aria-label="Fraîcheur des prix" data-testid="fraicheur-prix" className="mt-4 rounded border border-line bg-ink-2 p-4">
-      <h3 className="font-semibold">Prix du marché</h3>
+    <SectionRepliable
+      id="fraicheur-prix"
+      testId="fraicheur-prix"
+      className="mt-4"
+      titre="Prix du marché"
+      resume={valides.length === 0 ? 'Aucun prix relevé' : `${valides.length} prix · le plus récent ${ageDe(recent ?? 0, maintenant)}`}
+    >
       <p className="mt-1">{`Prix relevés\u00a0: ${valides.length}`}</p>
       <p className="text-sm text-muted">{`Le plus récent\u00a0: ${recent === null ? '—' : ageDe(recent, maintenant)}`}</p>
       <p className="text-sm text-muted">{`Le plus ancien\u00a0: ${ancien === null ? '—' : ageDe(ancien, maintenant)}`}</p>
@@ -51,7 +57,7 @@ const FraicheurPrix: React.FC<Props> = ({ releves, maintenant }) => {
           </div>
         </>
       )}
-    </section>
+    </SectionRepliable>
   );
 };
 
