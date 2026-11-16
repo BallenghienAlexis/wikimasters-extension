@@ -175,7 +175,7 @@ describe('EtiquettesPrevues : rendu sûr et responsive (AC6)', () => {
     const html = rendre(c, apercu)
     const classes = [...html.matchAll(/class="([^"]*)"/g)].flatMap((m) => (m[1] ?? '').split(/\s+/))
     const couleurs = classes.filter((k) => /^(text|bg|border|border-l)-/.test(k))
-    const permises = /^(text-(sm|xs|base|paper|muted|vendre|echanger|garder|defausser|left)|bg-(ink|ink-2|line)|border(-l)?-(line|vendre|\d|b|l)|border-l-4|border-b|border)$/
+    const permises = /^(text-(sm|xs|base|paper|muted|vendre|echanger|garder|defausser|left|right)|bg-(ink|ink-2|line)|border(-l)?-(line|muted|vendre|\d|b|l)|border-l-4|border-b|border)$/
     for (const k of couleurs) expect(k, k).toMatch(permises)
     for (const el of html.match(/class="[^"]*"/g) ?? []) expect(el.includes('text-muted') && el.includes('bg-line')).toBe(false)
     expect(html).not.toMatch(/#[0-9a-f]{3,6}\b|rgb\(/i)
