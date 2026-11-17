@@ -353,7 +353,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
           await deps.enregistrerEtat(courant);
         },
       });
-      if (resultat.complete) await deps.noterDerniereSynchro(deps.horloge.now());
+      if (resultat.complete || (resultat.issue === 'termine' && resultat.sautes > 0)) await deps.noterDerniereSynchro(deps.horloge.now());
       if (resultat.requetes > 0) {
         const ajoutees = resultat.collection.cartes.filter((c) => !depart.has(c.id)).length;
         const comptes = { ajoutees, etiquettes: compterEtiquettes(resultat.collection), prix: resultat.prixReleves };
@@ -434,8 +434,13 @@ const horlogeReelle: Horloge = {
 // Même origine que la page ; ni méthode, ni corps, ni en-tête : un simple GET.
 const transportSite = async (chemin: string): Promise<ReponseApi> => {
   const reponse = await fetch(chemin, { credentials: 'same-origin' });
-  const json: unknown = await reponse.json().catch(() => null);
-  return { statut: reponse.status, json };
+  const texte = await reponse.text().catch(() => '');
+  try {
+    return { statut: reponse.status, json: JSON.parse(texte) as unknown };
+  } catch {
+    // Pas du JSON : on garde le début du corps (sans caractère de contrôle) pour le diagnostic.
+    return { statut: reponse.status, json: null, extrait: texte.replace(/[^\x20-\x7E\u00A0-\uFFFF]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200) };
+  }
 };
 
 /** Messages de diagnostic des prix gardés dans le journal (titre, rang et délai seulement : ni identifiant, ni corps de réponse, ni jeton). */

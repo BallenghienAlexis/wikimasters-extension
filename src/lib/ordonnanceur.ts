@@ -52,6 +52,8 @@ export const MAX_PASSES = 3;
 export interface ReponseApi {
   statut: number;
   json: unknown;
+  /** Début du corps brut (200 caractères au plus, espaces réduits), seulement quand il n’est pas du JSON (page HTML, réponse vide) : diagnostic des stats. */
+  extrait?: string;
 }
 
 export interface PrixReleve {
@@ -308,8 +310,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     }
   }
 
-  async function requete(chemin: string, tolerant = false): Promise<ReponseApi | null> {
-    const reponse = await envoyer(chemin, 0);
+  async function requete(chemin: string, tolerant = false, supplement = 0): Promise<ReponseApi | null> {
+    const reponse = await envoyer(chemin, supplement);
     if ('erreur' in reponse) return tolerant ? null : echec(`Requête impossible (réseau : ${reponse.erreur}).`);
     if (reponse.statut === 403 && estVerificationHumaine(reponse.json)) {
       journal('Vérification anti-bot du site requise : la synchro s’arrête (résous-la à la main sur wiki-masters.com).');
@@ -473,11 +475,17 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   }
 
   async function lireStats(): Promise<StatsLues | null> {
-    const r = await requete(cheminStats());
-    if (r === null) return null;
-    const stats = analyserStats(r.json);
-    if (stats === null) return echec(`Réponse « stats » de forme inattendue (${diagnosticStats(r.json)}).`);
-    return stats;
+    // Réponse « stats » inexploitable (vide, HTML, forme changée) : souvent un rythme trop rapide. Pauses de 5 s puis 10 s et
+    // jusqu’à 3 essais ; si elle reste inexploitable, l’élément est sauté et les pages sont lues quand même (jamais d’arrêt).
+    for (let essai = 1; ; essai++) {
+      const r = await requete(cheminStats(), false, essai === 1 ? 0 : 5000 * (essai - 1));
+      if (r === null) return null;
+      const stats = analyserStats(r.json);
+      if (stats !== null) return stats;
+      const corps = r.extrait === undefined || r.extrait === '' ? '' : ` Début du corps : « ${r.extrait} ».`;
+      if (essai >= 3) return echec(`Réponse « stats » de forme inattendue (${diagnosticStats(r.json)}).${corps}`);
+      journal(`Échec de lecture des stats (essai ${essai}/3) : ${diagnosticStats(r.json)}.${corps} Nouvel essai après une pause.`);
+    }
   }
 
   /**

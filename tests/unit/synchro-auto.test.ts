@@ -642,8 +642,8 @@ describe('T-206 D-03 : événements dans le journal', () => {
     expect(b.statuts.at(-1)?.etape).not.toBe('ventes');
   });
 
-  it('un échec isolé (stats illisible une fois) : journalisé comme une fin avec éléments sautés, pas comme un arrêt', async () => {
-    const b = banc({ reponse: (c, n) => (n === 1 ? { statut: 200, json: { total: 'x' } } : siteFictif(2)(c)) });
+  it('stats toujours illisibles (3 essais) : journalisé comme une fin avec éléments sautés, pas comme un arrêt', async () => {
+    const b = banc({ reponse: (c) => (c.startsWith('/api/my-collection/stats') ? { statut: 200, json: { total: 'x' } } : siteFictif(2)(c)) });
     await creerSynchroAuto(b.deps).declencher();
     expect(b.evenements.at(-1)).toMatchObject({ titre: 'Synchronisation automatique : fin', parametre: '1 élément(s) sauté(s) sur erreur', resultat: 'reussie' });
   });
@@ -843,5 +843,35 @@ describe('fusionner : cartes retirées par la synchro', () => {
     const editee = { ...b, note: 'à voir' };
     const r = fusionner(col([editee]), col([]), depart);
     expect(r.cartes.map((c) => c.id)).toEqual(['R|b']);
+  });
+});
+
+describe('stats inexploitables : pauses, réessais, jamais d’arrêt', () => {
+  const variantes: Array<[string, unknown]> = [
+    ['totalUnique null', { total: 2, totalUnique: null, tagOptions: [] }],
+    ['totalUnique chaîne', { total: 2, totalUnique: 'x', tagOptions: [] }],
+    ['totalUnique négatif', { total: 2, totalUnique: -1, tagOptions: [] }],
+  ];
+  for (const [nom, json] of variantes) {
+    it(`${nom} : synchro terminée sans arrêt`, async () => {
+      const b = banc({ reponse: (c) => (c.startsWith('/api/my-collection/stats') ? { statut: 200, json } : siteFictif(2)(c)) });
+      const resultat = await creerSynchroAuto(b.deps).declencher();
+      expect(resultat?.issue).toBe('termine');
+      expect((b.statuts.at(-1) as StatutSynchro).etat).toBe('termine');
+    });
+  }
+
+  it('réponse HTML : 3 essais, début du corps au journal, pages lues, « Dernière synchro » renseignée, aucun arrêt', async () => {
+    const messages: string[] = [];
+    const b = banc({
+      reponse: (c) => (c.startsWith('/api/my-collection/stats') ? { statut: 200, json: null, extrait: '<html>Verification</html>' } : siteFictif(2)(c)),
+    });
+    const resultat = await creerSynchroAuto({ ...b.deps, journal: (m: string) => messages.push(m) }).declencher();
+    expect(resultat?.issue).toBe('termine');
+    expect(b.chemins.filter((c) => c.startsWith('/api/my-collection/stats')).length).toBeGreaterThanOrEqual(3);
+    expect(messages.join('\n')).toContain('<html>Verification</html>');
+    expect(b.stockage.collection.cartes).toHaveLength(2);
+    expect(b.stockage.derniere).not.toBeNull();
+    expect((b.statuts.at(-1) as StatutSynchro).etat).toBe('termine');
   });
 });
