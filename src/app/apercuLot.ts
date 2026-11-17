@@ -6,7 +6,7 @@ import { raisonPause } from '../lib/reprise';
 import { LIBELLE_LIMITE_ENCHERES, LIBELLE_VERIFICATION_HUMAINE } from '../lib/journal';
 import { CODES_ARRET, CODE_CONFLIT, type EtatFile, type RaisonArret } from '../lib/file';
 import { construireLot, type Config, type LotConstruit } from '../lib/lot';
-import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
+import { modeEtiquettes, plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
 
 /** Secondes par action en moyenne : 0,2 s minimale plus un supplément de 0 à 0,1 s (moyenne 0,05 s). */
 const SECONDES_PAR_ACTION = 0.25;
@@ -248,6 +248,7 @@ export function configDuLot(preferences: Preferences, ventesSite: { enCours: num
     maxVentesSimultanees: CONFIG_PRIX.maxVentesSimultanees,
     plafondDefausse: plafondDefausse(preferences),
     mesThemes: preferences.mesThemes,
+    modeEtiquettes: modeEtiquettes(preferences),
     longueurMaxEtiquette: null,
     nomsExistants: [],
     amis: preferences.amis,

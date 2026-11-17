@@ -49,7 +49,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'jazz', libelle: '#Jazz', motifs: ['jazz'], parents: ['musique'] },
   { id: 'techno', libelle: '#Techno', motifs: ['techno ', 'musique electronique'], parents: ['musique'] },
   { id: 'rap', libelle: '#Rap', motifs: ['rap ', 'rappeur', 'rappeuse', 'hip-hop', 'hip hop'], parents: ['musique'] },
-  { id: 'classique', libelle: '#Musique classique', motifs: ['opera', 'symphonie', 'musique classique', 'chef d\'orchestre'], parents: ['musique'] },
+  { id: 'classique', libelle: '#Musique classique', motifs: ['operas?(?![a-z0-9])', 'symphonie', 'musique classique', 'chef d\'orchestre'], parents: ['musique'] },
 
   // Histoire et politique
   { id: 'histoire', libelle: '#Histoire', motifs: ['histoire', 'histori', 'antique', 'medieval', 'prehistor', 'siecle', 'dynastie', 'monument', 'cite inca', 'av. j.-c', 'passe du', 'chronologie', 'mois de [0-9]{4}', 'evenements lies'] },
@@ -96,7 +96,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'hockey', libelle: '#Hockey', motifs: ['hockey'], parents: ['sport'] },
   { id: 'cyclisme', libelle: '#Cyclisme', motifs: ['cyclis', 'tour de france (?:cycliste|[0-9]{4})', 'tour d\'italie [0-9]{4}', 'tour d\'espagne [0-9]{4}'], parents: ['sport', 'course'] },
   { id: 'combat', libelle: '#Arts martiaux', motifs: ['arts martiaux', 'boxeur', 'boxeuse', 'catcheur', 'judoka', 'karate'], parents: ['sport'] },
-  { id: 'societe', libelle: '#Société', motifs: ['sociolog', "homme d'affaires", "femme d'affaires", 'entreprise', 'econom', 'droit', 'adulter', 'habitants', 'journaliste'] },
+  { id: 'societe', libelle: '#Société', motifs: ['sociolog', "homme d'affaires", "femme d'affaires", 'econom', 'droit', 'adulter', 'habitants', 'journaliste'] },
   { id: 'crime', libelle: '#Crime', motifs: ['tueur', 'criminel', 'cartel', 'assassin', 'torture', 'mafia', 'gang ', 'meurtres?(?![a-z0-9])', 'meurtrier ou meurtriere', 'condamnee? pour crime'], parents: ['societe'] },
 
   // Thèmes précis (feature theme-etiquettes). Une lookahead `(?![a-z0-9])` vise le mot entier.

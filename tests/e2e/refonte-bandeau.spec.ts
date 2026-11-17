@@ -294,7 +294,7 @@ test.describe('SC-014, SC-013 : Pause, Reprendre, Arrêter appellent le pilotage
       async (cartes) => {
         await chrome.storage.local.set({
           collection: { version: 2, cartes },
-          preferences: { version: 2, mesThemes: [], amis: [] },
+          preferences: { version: 2, mesThemes: [], amis: [], modeEtiquettes: 'poser' },
           amisInitiaux: 999,
           syncAuto: false,
         });
