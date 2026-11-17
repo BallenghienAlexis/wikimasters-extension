@@ -69,7 +69,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
 
   // Nature et cuisine
   { id: 'nature', libelle: '#Nature', motifs: ['espece', 'genre de', 'parc national', 'reserve naturelle', 'espace naturel', 'grottes?', 'ilots? '] },
-  { id: 'animaux', libelle: '#Animaux', motifs: ['(?<!humains et )(?<!humains et des )(?<!hommes et )(?<!hommes et des )(?<!personnes et )(?<!personnes et des )(?<!etres humains et des )animal(?![a-z0-9])', '(?<!humains et )(?<!humains et des )(?<!hommes et )(?<!hommes et des )(?<!personnes et )(?<!personnes et des )(?<!etres humains et des )animaux', 'mammifere', 'oiseau', 'insecte', 'poisson', 'reptile', 'amphibien', 'felide', 'canide', 'strigide', 'octopode', 'dinosaure', 'araignee', 'papillon'], parents: ['nature'] },
+  { id: 'animaux', libelle: '#Animaux', motifs: ['(?<!humains et )(?<!humains et des )(?<!hommes et )(?<!hommes et des )(?<!personnes et )(?<!personnes et des )(?<!etres humains et des )(?<!hommes et les )(?<!humains et les )(?<!humains comme )(?<!hommes comme )(?<!comme les )animal', '(?<!humains et )(?<!humains et des )(?<!hommes et )(?<!hommes et des )(?<!personnes et )(?<!personnes et des )(?<!etres humains et des )(?<!hommes et les )(?<!humains et les )(?<!humains comme )(?<!hommes comme )(?<!comme les )animaux', 'mammifere', 'oiseau', 'insecte', 'poisson', 'reptile', 'amphibien', 'felide', 'canide', 'strigide', 'octopode', 'dinosaure', 'araignee', 'papillon'], parents: ['nature'] },
   { id: 'plantes', libelle: '#Plantes', motifs: ['plante', 'arbre', 'fleur', 'champignon', 'graminee', 'tribu d[eu] [a-z]+aceae', 'algues?'], parents: ['nature'] },
   { id: 'gastronomie', libelle: '#Gastronomie', motifs: ['agrume', 'fruit', 'legume', 'cereale', 'plat ', 'cuisine', 'culinaire', 'charcuterie', 'boisson', 'fromage', 'vin ', 'patisserie', 'epice', 'lait '] },
 
@@ -408,7 +408,7 @@ export function themesDeCarte(carte: CarteThemes): string[] {
 /**
  * Libellés affichés dans la Collection : exactement les thèmes qui seront posés comme étiquettes (4 au plus, les mieux établis,
  * sans parents ni « Autres »), pour que la ligne d’une carte corresponde à l’appli. `themesDeCarte`, qui ajoute les parents,
- * reste réservé aux filtres, aux amis et à « Mes thèmes ».
+ * sert aux amis et à « Mes thèmes » ; le filtre de la Collection suit les étiquettes du site (`tagsCarte.ts`).
  */
 export function libellesThemesAffiches(carte: CarteThemes): string[] {
   return themesPrincipaux(carte).map((id) => LIBELLES_THEMES[id] ?? id);

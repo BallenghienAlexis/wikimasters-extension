@@ -35,3 +35,11 @@ describe('révision des entrées en cache', () => {
     expect(titresAVerifier(['A'], ancien, maintenant)).toEqual(['A']);
   });
 });
+
+describe('animaux : cas limites', () => {
+  it('« animalier » reste #Animaux ; « les hommes et les animaux » non', () => {
+    expect(themesDeTexte('Un peintre animalier.')).toContain('animaux');
+    expect(themesDeTexte('Le sort des hommes et les animaux.')).not.toContain('animaux');
+    expect(themesDeTexte('Les humains comme animaux.')).not.toContain('animaux');
+  });
+});

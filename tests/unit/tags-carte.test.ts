@@ -32,3 +32,19 @@ describe('tags de carte', () => {
     expect(correspondAuTheme(carte([], 'Xyzzy'), 'autres')).toBe(true);
   });
 });
+
+describe('cohérence compteur / filtre / étiquettes non thématiques', () => {
+  it('le compteur d’un thème égale le nombre de cartes filtrées', async () => {
+    const { compterParTheme } = await import('../../src/lib/tagsCarte');
+    const cartes = [carte(['#Nazis']), carte(['#Nazis', '#Guerre']), carte(['#Guerre']), carte([], 'X', '', ['nazis'])];
+    const n = compterParTheme(cartes, ['nazis', 'guerre'])['nazis'];
+    expect(n).toBe(cartes.filter((c) => correspondAuTheme(c, 'nazis')).length);
+    expect(n).toBe(3);
+  });
+
+  it('une carte qui ne porte que « #À échanger » garde ses thèmes prévus', () => {
+    const c = carte(['#À échanger Quentin'], 'Carte', '', ['nazis']);
+    expect(tagsDeCarte(c).poses).toEqual([]);
+    expect(correspondAuTheme(c, 'nazis')).toBe(true);
+  });
+});
