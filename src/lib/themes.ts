@@ -25,7 +25,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   // Transports
   { id: 'vehicule', libelle: '#Véhicule', motifs: ['vehicule'] },
   { id: 'automobile', libelle: '#Automobile', motifs: ['automobile', 'constructeur auto', 'modele de voiture'], parents: ['vehicule'] },
-  { id: 'voiture', libelle: '#Voiture', motifs: ['voiture', 'berline', 'cabriolet', 'roadster', 'monospace'], parents: ['automobile', 'vehicule'] },
+  { id: 'voiture', libelle: '#Voiture', motifs: ["voitures?(?!s? (?:de |d')?(?:chemin de fer|train|trains|queue|tete|metro|tramway|voyageurs|bagages|restaurant|lit|salon))(?!s?-(?:lit|salon|bar|restaurant))", 'berline', 'cabriolet', 'roadster', 'monospace'], parents: ['automobile', 'vehicule'] },
   { id: 'moto', libelle: '#Moto', motifs: ['moto ', 'motos ', 'motocycl'], parents: ['vehicule'] },
   { id: 'camion', libelle: '#Camion', motifs: ['camion', 'poids lourd'], parents: ['vehicule'] },
   { id: 'bus', libelle: '#Bus', motifs: ['autobus', 'autocar', 'bus '], parents: ['vehicule'] },
@@ -69,7 +69,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
 
   // Nature et cuisine
   { id: 'nature', libelle: '#Nature', motifs: ['espece', 'genre de', 'parc national', 'reserve naturelle', 'espace naturel', 'grottes?', 'ilots? '] },
-  { id: 'animaux', libelle: '#Animaux', motifs: ['animal', 'animaux', 'mammifere', 'oiseau', 'insecte', 'poisson', 'reptile', 'amphibien', 'felide', 'canide', 'strigide', 'octopode', 'dinosaure', 'araignee', 'papillon'], parents: ['nature'] },
+  { id: 'animaux', libelle: '#Animaux', motifs: ['(?<!humains et )(?<!humains et des )(?<!hommes et )(?<!hommes et des )(?<!personnes et )(?<!personnes et des )(?<!etres humains et des )animal(?![a-z0-9])', '(?<!humains et )(?<!humains et des )(?<!hommes et )(?<!hommes et des )(?<!personnes et )(?<!personnes et des )(?<!etres humains et des )animaux', 'mammifere', 'oiseau', 'insecte', 'poisson', 'reptile', 'amphibien', 'felide', 'canide', 'strigide', 'octopode', 'dinosaure', 'araignee', 'papillon'], parents: ['nature'] },
   { id: 'plantes', libelle: '#Plantes', motifs: ['plante', 'arbre', 'fleur', 'champignon', 'graminee', 'tribu d[eu] [a-z]+aceae', 'algues?'], parents: ['nature'] },
   { id: 'gastronomie', libelle: '#Gastronomie', motifs: ['agrume', 'fruit', 'legume', 'cereale', 'plat ', 'cuisine', 'culinaire', 'charcuterie', 'boisson', 'fromage', 'vin ', 'patisserie', 'epice', 'lait '] },
 
