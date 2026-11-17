@@ -426,7 +426,8 @@ function themesPrincipauxLocaux(carte: Pick<Carte, 'titre' | 'description'>): st
   let genre = genreDe(description, defSite);
   if (genre === 'autre' && page) genre = page.genre;
   const faible = (ids: Iterable<string>, valeur: number): void => {
-    ajouter([...ids].filter((id) => !(GENRES_HUMAINS.has(genre) && estPhysique(id))), valeur);
+    // « Noms et prénoms » ne vient jamais d'un canal faible pour une personne (« né sous le patronyme de… »).
+    ajouter([...ids].filter((id) => !(GENRES_HUMAINS.has(genre) && estPhysique(id)) && !(id === 'noms' && genre === 'personne')), valeur);
   };
   ajouter(themesDirectsDeTexte(defSite), 5);
   ajouter(page?.fortes ?? [], 5);

@@ -25,6 +25,8 @@ export interface EntreeWikipedia {
   signaux?: SignauxPage;
   /** Vrai quand la lecture des entrées d'une page d'homonymie a été prévue (entrées plus anciennes sans thème : relues une fois, 2026-11-17). */
   avecHomonymie?: true;
+  /** Vrai quand le thème « Noms et prénoms » existait au moment de la lecture ; sans lui, une entrée sans thème est relue une fois (2026-11-17). */
+  avecNoms?: true;
   /** Vrai quand les thèmes ont été calculés sans compter les noms propres composés (« Bee Train ») ; sinon relue une fois (2026-11-14). */
   nomsPropres?: true;
 }
@@ -109,7 +111,7 @@ export function themesDepuisHomonymie(texte: string): string[] {
 }
 
 /** Aucun domaine ne domine : une page qui parle d'un patronyme ou d'un prénom relève du thème « Noms et prénoms » (Alexis, 2026-11-17). */
-const nomOuPrenom = (texte: string): string[] => (/patronyme|nom de famille|prenom/.test(cle(texte)) ? ['noms'] : []);
+const nomOuPrenom = (texte: string): string[] => (/patronyme|nom de famille|(?:^|[^a-z])prenoms?(?![a-z])/.test(cle(texte)) ? ['noms'] : []);
 
 /** GET en lecture seule : recherche d'une entité par son titre ; seuls l'étiquette et la courte description sont lues. */
 export function urlRequeteWikidata(titre: string): string {
@@ -260,6 +262,7 @@ export function validerCache(brut: unknown): CacheWikipedia | null {
       ...(e.avecWikidata === true ? { avecWikidata: true as const } : {}),
       ...(lireSignaux(e.signaux, connus) ? { signaux: lireSignaux(e.signaux, connus) as SignauxPage } : {}),
       ...(e.avecHomonymie === true ? { avecHomonymie: true as const } : {}),
+      ...(e.avecNoms === true ? { avecNoms: true as const } : {}),
       ...(e.nomsPropres === true ? { nomsPropres: true as const } : {}),
     };
   }
@@ -267,7 +270,7 @@ export function validerCache(brut: unknown): CacheWikipedia | null {
 }
 
 export function ajouterEntree(cache: CacheWikipedia, titre: string, themes: string[], maintenant: number, wikidata = false, signaux?: SignauxPage): CacheWikipedia {
-  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, avecHomonymie: true, nomsPropres: true, ...(wikidata ? { avecWikidata: true as const } : {}), ...(signaux ? { signaux } : {}) };
+  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, avecHomonymie: true, avecNoms: true, nomsPropres: true, ...(wikidata ? { avecWikidata: true as const } : {}), ...(signaux ? { signaux } : {}) };
   return { version: 1, entrees: { ...cache.entrees, [titre]: entree } };
 }
 
@@ -282,7 +285,7 @@ export function titresAVerifier(titres: string[], cache: CacheWikipedia, mainten
     // Une entrée calculée avant le filtre des noms propres est relue une fois.
     if (entree !== undefined && entree.nomsPropres !== true) { resultat.push(titre); continue }
     // Une entrée sans thème et sans résumé (ancienne version) est relue une fois pour profiter du résumé.
-    if (entree === undefined || entree.signaux === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS || (entree.themes.length === 0 && (entree.avecResume !== true || entree.avecWikidata !== true || entree.avecHomonymie !== true))) resultat.push(titre);
+    if (entree === undefined || entree.signaux === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS || (entree.themes.length === 0 && (entree.avecResume !== true || entree.avecWikidata !== true || entree.avecHomonymie !== true || entree.avecNoms !== true))) resultat.push(titre);
   }
   return resultat;
 }
