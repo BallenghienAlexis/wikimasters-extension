@@ -106,9 +106,9 @@ describe('fins d’enchères simultanées', () => {
       cartes,
     })
     await m.suivi.cycle()
-    // Quatre enchères en cours sur cinq : une seule place, prise par la fin la plus ancienne (vendue S).
+    // Quatre enchères en cours sur cinq : une seule place, prise par la non vendue U (retentée en priorité).
     expect(m.etat.ordres).toHaveLength(1)
-    expect(m.etat.suivi.aTraiter).toEqual(['v-U', 'v-K'])
+    expect(m.etat.suivi.aTraiter).toEqual(['v-S', 'v-K'])
     m.avancer(400_000)
     await m.suivi.cycle()
     // Deux places libres de plus : les fins restantes sont traitées, la non vendue retentée.
@@ -125,7 +125,7 @@ describe('fins d’enchères simultanées', () => {
     })
     await m.suivi.cycle()
     expect(m.etat.ordres).toHaveLength(2)
-    expect(m.etat.suivi.aTraiter).toEqual(['v-U', 'v-K'])
+    expect(m.etat.suivi.aTraiter).toEqual(['v-S', 'v-K'])
     expect(m.etat.statut).toMatchObject({ etat: 'pause' })
     expect(m.etat.statut?.jusqua).toBe(T0 + 1_800_000)
   })
