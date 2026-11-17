@@ -313,7 +313,7 @@ export function detailsDuLot(actions: readonly Action[], cartes: ReadonlyMap<str
         return valeur == null ? `départ ${a.prix}` : `départ ${a.prix} · valeur marchande ${valeur}`;
       }
       case 'favori':
-        return a.valeur === undefined ? 'mise en favori (thème gardé)' : a.valeur ? 'mise en favori (votre choix)' : 'retrait du favori (votre choix)';
+        return a.valeur === undefined ? 'mise en favori (thème gardé)' : a.valeur ? 'mise en favori (votre choix)' : 'retrait du favori sur un exemplaire (votre choix)';
       case 'retrait-etiquette':
         return `retrait${NB}: ${a.nomEtiquette}`;
       case 'creation-etiquette':

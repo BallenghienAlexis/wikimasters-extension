@@ -205,7 +205,8 @@ export function fusionnerCartesLues(collection: Collection, lues: CarteLueSite[]
     parId.set(lue.id, {
       favori: existante?.favori ?? false,
       // Champs facultatifs : absents tant que le joueur n'a rien choisi (le stockage existant reste identique).
-      ...(existante?.choixFavori == null ? {} : { choixFavori: existante.choixFavori }),
+      // Le choix est effacé dès que le site est aligné dessus (Alexis, 2026-11-17 : la source de vérité est l'extension tant qu'il n'est pas appliqué).
+      ...(existante?.choixFavori == null || existante.choixFavori === lue.favori ? {} : { choixFavori: existante.choixFavori }),
       ...(existante?.themesChoisis == null ? {} : { themesChoisis: existante.themesChoisis }),
       idsSite: existante?.idsSite ?? null,
       etiquettesSite: existante?.etiquettesSite ?? [],
