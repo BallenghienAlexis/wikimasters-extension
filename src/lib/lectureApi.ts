@@ -1,6 +1,7 @@
 // Validation et conversion des réponses de l'API du site (lecture seule).
 // Fonctions pures : ni chrome.*, ni fetch. Liste blanche des champs : rien n'est copié hors de celle-ci.
 import { RARETES, identifiantCarte } from './lecteur';
+import { estEntier, estObjet } from './valider';
 
 const MAX_TEXTE = 300;
 const MAX_ID = 200;
@@ -42,10 +43,7 @@ export interface PageLue {
   recentDabord: boolean;
 }
 
-type Objet = Record<string, unknown>;
 
-const estObjet = (v: unknown): v is Objet => typeof v === 'object' && v !== null && !Array.isArray(v);
-const estEntier = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) >= 0;
 const estTexte = (v: unknown, max = MAX_TEXTE): v is string => typeof v === 'string' && v.length > 0 && v.length <= max;
 
 /** Forme d’une réponse pour le journal : types et noms de champs seulement, jamais de valeur (ni titre, ni identifiant, ni jeton). */

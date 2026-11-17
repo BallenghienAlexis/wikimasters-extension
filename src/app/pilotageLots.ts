@@ -39,6 +39,9 @@ import { AUCUNE_PLACE_ENCHERE, ECHEC_LECTURE_ENCHERES, SYNCHRO_EN_COURS, bilanVi
 /** Poses et retraits en vol en même temps. */
 const CONCURRENCE_PAR_DEFAUT = 3;
 
+/** Supplément aléatoire de 0 à `SUPPLEMENT_MAX_MS` ajouté à l’intervalle minimal (file et relecture des enchères). */
+const supplementAleatoire = (): number => Math.floor(Math.random() * (SUPPLEMENT_MAX_MS + 1));
+
 interface Pont {
   idLot: string;
   bilan: Bilan;
@@ -113,7 +116,7 @@ export function contexteExecution(): ContexteExecution {
   const file = creerFile({
     horloge: horlogeReelle,
     // Délai variable entre les requêtes (décision d’Alexis du 2026-11-11), en plus de la seconde minimale.
-    delaiSupplementaire: () => Math.floor(Math.random() * (SUPPLEMENT_MAX_MS + 1)),
+    delaiSupplementaire: supplementAleatoire,
     // Poses et retraits d’étiquettes en parallèle, par défaut (Alexis, 2026-11-12).
     concurrence: CONCURRENCE_PAR_DEFAUT,
     transport: async (ordre) => {
@@ -281,7 +284,7 @@ async function limiterAuxPlacesLibres(actions: readonly Action[], idLot: string)
     return actions;
   }
   // Même cadence que la file : 0,2 s au minimum plus la gigue entre cette lecture et la première requête du lot.
-  await horlogeReelle.attendreJusqua(horlogeReelle.now() + INTERVALLE_MS + Math.floor(Math.random() * (SUPPLEMENT_MAX_MS + 1)));
+  await horlogeReelle.attendreJusqua(horlogeReelle.now() + INTERVALLE_MS + supplementAleatoire());
   if (ventes === undefined) return actions;
   const { actions: gardees, ecartees, retirees } = limiterEncheres(actions, ventes, CONFIG_PRIX.maxVentesSimultanees);
   if (ecartees > 0 && gardees.length === 0) throw new Error(AUCUNE_PLACE_ENCHERE);

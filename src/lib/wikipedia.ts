@@ -2,6 +2,7 @@
 // Logique pure (URL, lecture de la réponse, cache) : l'appel réseau est dans `src/app/verifierWikipedia.ts`.
 import { definition, genreDe, type Genre } from './sens';
 import { IDS_THEMES, themesDeTexte, themesDirectsDeTexte, type SignauxPage } from './themes';
+import { estObjet } from './valider';
 
 export const HOTE_WIKIPEDIA = 'https://fr.wikipedia.org';
 export const HOTE_WIKIDATA = 'https://www.wikidata.org';
@@ -136,7 +137,6 @@ export function lireReponseWikidata(brut: unknown, titre: string): LectureWikida
 /** Thèmes déduits des courtes descriptions Wikidata (« barrage en France »), avec les mots-clés ordinaires. */
 export const themesDepuisWikidata = (descriptions: string[]): string[] => themesDeTexte(descriptions.join(' . '));
 
-const estObjet = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
 /** Liste blanche : seuls les titres de catégories sont retenus, tout le reste de la réponse est ignoré. */
 export function lireReponse(brut: unknown): LectureWikipedia {

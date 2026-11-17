@@ -1,3 +1,4 @@
+import { estObjet } from './valider';
 // Modèle de la collection et logique pure, sans dépendance à chrome.*.
 
 // Schéma de stockage (v2 : identifiants d’exemplaires du site ; v3 : étiquettes lues sur le site ; v4 : plus de statut ni de décision,
@@ -50,7 +51,6 @@ export type ResultatStockage = { ok: true; collection: Collection } | { ok: fals
 
 export const collectionVide = (): Collection => ({ version: VERSION_SCHEMA, cartes: [] });
 
-const estObjet = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
 export const estPrixValide = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) >= 0;
 

@@ -4,6 +4,7 @@
 import { analyserStockage, meilleureDescription, MAX_CARTES, type Carte, type Collection } from './collection';
 import { MAX_EVENEMENTS, validerEvenements, type EvenementVente } from './affluence';
 import { fusionnerAmisInitiaux, plafondDefausse, type Ami, type Preferences } from './tri';
+import { estObjet } from './valider';
 
 export const FORMAT_SAUVEGARDE = 'wm-collection-sauvegarde';
 export const VERSION_SAUVEGARDE = 1;
@@ -39,7 +40,6 @@ export interface Donnees {
   ventes: EvenementVente[];
 }
 
-const estObjet = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
 const garderChamps = (c: Carte): CarteSauvegardee => ({
   id: c.id,

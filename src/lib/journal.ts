@@ -11,6 +11,7 @@ import {
   CAUSES_JOURNAL, FAMILLES_LOT, estLimiteEncheres, estVerificationHumaine, TYPES_ACTION,
   type CauseJournal, type EntreeJournal, type FamilleLot, type ResultatAction, type TypeAction,
 } from './actions'
+import { estEntier as entierPositif, tronquer } from './valider'
 
 export type Journal = EntreeJournal[]
 
@@ -61,9 +62,7 @@ const resultatDeClasse = (classe: unknown): Resultat =>
     ? RESULTAT_PAR_CLASSE[classe as ResultatAction['classe']]
     : 'inconnu'
 
-const tronquer = (s: string, max: number): string => Array.from(s).slice(0, max).join('')
 
-const entierPositif = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0
 
 const codeValide = (c: unknown): c is number | null =>
   c === null || (typeof c === 'number' && Number.isInteger(c) && c >= 100 && c <= 599)

@@ -13,12 +13,13 @@
  * `decidePar`) ; il met à jour les faits du site (quantité, favori, identifiants, étiquettes) et,
  * au prix, `valeurMarchande` — sans écraser une valeur saisie à la main.
  */
+import { PAUSE_LOTS_MS } from './reprise';
 import { CODES_ARRET, INTERVALLE_MS, type Horloge } from './file';
 import { VERSION_SCHEMA, aEditionLocale, type Carte, type Collection } from './collection';
 import { analyserPage, analyserPrix, sensDuPrix, type SensPrix, decrireForme, diagnosticStats, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
 
-/** Aucune reprise automatique avant ce délai après un arrêt (401, 403, 429 ou échecs). */
-export const PAUSE_APRES_ARRET_MS = 30 * 60_000;
+/** Aucune reprise automatique avant ce délai après un arrêt (401, 403 ou 429 des pages et stats). Même durée que la pause des lots (`PAUSE_LOTS_MS`). */
+export const PAUSE_APRES_ARRET_MS = PAUSE_LOTS_MS;
 /** Une carte passée par le joueur est redemandée dans 1 jour. */
 export const REPORT_CARTE_PASSEE_MS = 86_400_000;
 /** Une valeur marchande relevée est périmée après 30 jours. */
