@@ -56,7 +56,7 @@ function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relan
     enregistrerEtat: async (e) => void (globalEtat = e),
     bail: { lire: async () => bailValeur, ecrire: async (v) => void (bailValeur = v) },
   }
-  return { suivi: creerSuiviVentes(deps), etat, global: () => globalEtat, bail: (v: number | null) => void (bailValeur = v), avancer: (ms: number) => void (t += ms), maintenant: () => t }
+  return { suivi: creerSuiviVentes(deps), etat, global: () => globalEtat, bail: (v: number | null) => void (bailValeur = v), bailValeur: () => bailValeur, avancer: (ms: number) => void (t += ms), maintenant: () => t }
 }
 
 const ok = (selling: unknown[]) => ({ statut: 200, json: { selling, history: [], maxConcurrentAuctions: 5 } })
@@ -189,11 +189,28 @@ describe('cycle de suivi des mises en vente', () => {
     expect(m.etat.lectures).toBe(1)
     expect(m.etat.verrous).toBe(1)
   })
-  it('autonome : la lecture ne touche jamais au bail de la synchro et libère le sien', async () => {
+  it('autonome : la lecture libère son propre bail', async () => {
     const m = monde({ reponses: [ok([])] })
     await m.suivi.cycle()
-    m.bail(null)
     expect(m.etat.lectures).toBe(1)
+    expect(m.bailValeur()).toBeNull()
+  })
+  it('un lot d’écriture en cours : la lecture attend sa fin (jamais celle de la synchro) et « Forcer » le dit', async () => {
+    const m = monde({ reponses: [ok([])], lotEnCours: true })
+    expect(await m.suivi.cycle()).toBe(5000)
+    await m.suivi.forcer()
+    expect(m.etat.lectures).toBe(0)
+    expect(m.etat.suiviEtat?.message).toContain('lot d’écriture')
+  })
+  it('« Forcer » ignoré : bail tenu ailleurs ou déjà demandé, le message l’explique', async () => {
+    const m = monde({ reponses: [ok([]), ok([])] })
+    m.bail(T0 + 60_000)
+    await m.suivi.forcer()
+    expect(m.etat.suiviEtat?.message).toContain('déjà en cours')
+    m.bail(null)
+    await m.suivi.forcer()
+    await m.suivi.forcer()
+    expect(m.etat.suiviEtat?.message).toContain('moins d’une minute')
   })
   it('bail propre tenu par un autre onglet : aucune lecture', async () => {
     const m = monde({ reponses: [ok([])] })
@@ -239,10 +256,18 @@ describe('cycle de suivi des mises en vente', () => {
     expect(m.etat.suiviEtat?.etat).toBe('ok')
     expect(m.etat.verrous).toBe(2)
   })
-  it('un lot d’écriture en cours : la lecture continue, la relance laisse la place', async () => {
-    const m = monde({ reponses: [ok([])], relance: true, lotEnCours: true })
+  it('pause du site (401/403/429 de la synchro) : la lecture continue, aucun envoi de relance', async () => {
+    const m = monde({ reponses: [ok([])], relance: true, synchroRecente: false })
     await m.suivi.cycle()
     expect(m.etat.lectures).toBe(1)
+    expect(m.etat.ordres).toHaveLength(0)
+  })
+  it('429 en lecture puis « Forcer » : la lecture forcée passe, mais aucun envoi pendant la pause', async () => {
+    const m = monde({ reponses: [{ statut: 429, json: null }, ok([])], relance: true })
+    await m.suivi.cycle()
+    m.avancer(61_000)
+    await m.suivi.forcer()
+    expect(m.etat.lectures).toBe(2)
     expect(m.etat.ordres).toHaveLength(0)
   })
   it('la relance (écriture) passe aussi par le verrou de requête', async () => {

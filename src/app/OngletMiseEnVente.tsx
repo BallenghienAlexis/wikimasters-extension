@@ -79,7 +79,7 @@ const OngletMiseEnVente: React.FC = () => {
           <button type="button" className={CLASSE_BOUTON} onClick={() => e.forcerSuivi()} disabled={!suiviActif} data-testid="forcer-suivi">
             Forcer le suivi
           </button>
-          <span className="ml-2 text-sm text-muted">Une lecture tout de suite, sans attendre l’échéance ; une par minute au plus. N’outrepasse ni la vérification anti-bot ni le verrou de requête.</span>
+          <span className="ml-2 text-sm text-muted">Une lecture tout de suite, sans attendre l’échéance ni l’attente en cours ; elle passe aussi outre la pause de 30 min après un 401 ou un 429 du suivi (le site vient de demander de ralentir : risque assumé). Une par minute au plus ; ni l’anti-bot, ni le verrou de requête, ni la pause des envois ne sont contournés.</span>
         </div>
       </div>
 

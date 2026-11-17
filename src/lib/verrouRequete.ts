@@ -8,6 +8,8 @@
 export const DUREE_VERROU_REQUETE_MS = 20_000;
 /** Intervalle de sondage quand le verrou est tenu par un autre onglet. */
 export const SONDAGE_VERROU_MS = 100;
+/** Attente avant de confirmer la prise du verrou (limite la double prise par deux onglets simultanés). */
+export const CONFIRMATION_VERROU_MS = 50;
 
 export interface EtatVerrouRequete {
   /** Propriétaire courant (identifiant aléatoire de l’appelant), `null` si libre. */
@@ -47,7 +49,9 @@ export function creerVerrouRequete(deps: DependancesVerrouRequete): AvecVerrouRe
       if (libre) {
         const derniere = actuel?.derniere ?? 0;
         await deps.ecrire({ proprio: moi, jusqua: maintenant + DUREE_VERROU_REQUETE_MS, derniere });
-        // Relu : si un autre onglet a écrit entre-temps, on recommence.
+        // Relu après une courte attente (la lecture puis l'écriture du stockage ne sont pas atomiques entre onglets) :
+        // si un autre onglet a écrit entre-temps, on recommence.
+        await deps.attendre(CONFIRMATION_VERROU_MS);
         const relu = await deps.lire().catch(() => null);
         if (relu !== null && relu.proprio === moi) return;
       }

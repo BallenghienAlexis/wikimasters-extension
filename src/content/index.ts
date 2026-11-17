@@ -80,7 +80,7 @@ const suivi = creerSuiviVentes({
   enregistrerEtat: enregistrerEtatSynchro,
   bail: { lire: chargerBailSuivi, ecrire: enregistrerBailSuivi },
 });
-// Lecture automatique de la collection par l'API du site : activée par défaut, 0 requête si le joueur coupe l'option.
+// Synchro globale : activée par défaut, 0 requête si le joueur coupe l'option. Le suivi des ventes a son propre interrupteur.
 demarrerSynchroAuto({ surReponseMarche: suivi.integrer, transport: (chemin) => verrou(() => transportSite(chemin)) });
 // Suivi des mises en vente (lecture toutes les 5 min, puis 10 s dans la dernière minute) et relance automatique si activée.
 demarrerSuiviVentes({

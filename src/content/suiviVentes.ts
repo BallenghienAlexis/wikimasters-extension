@@ -131,7 +131,10 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     const stocke = await deps.chargerStatut();
     const jusquaStocke = stocke?.etat === 'pause' && stocke.jusqua !== null ? stocke.jusqua : 0;
     const pauseLots = (await deps.pauseLots().catch(() => null)) ?? 0;
-    if (deps.horloge.now() < Math.max(attenteEcritureJusqua, jusquaStocke, pauseLots) || suivi.max === null) return false;
+    // Les écritures respectent aussi la pause demandée par le site (401, 403, 429 de la synchro ou du suivi) : un « Forcer » ou
+    // une lecture réussie n’autorise jamais un envoi pendant cette pause.
+    const pauseSite = (await deps.chargerEtat().catch(() => null))?.arretJusqua ?? 0;
+    if (deps.horloge.now() < Math.max(attenteEcritureJusqua, jusquaStocke, pauseLots, pauseSite) || suivi.max === null) return false;
     const maintenant = deps.horloge.now();
     // Un lot d’écriture en cours garde la main sur les enchères (le 409 reste le garde-fou) ; la synchro globale, elle, ne gêne pas.
     if (await deps.lotEnCours().catch(() => false)) return false;
@@ -235,7 +238,10 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     try {
       const maintenant = deps.horloge.now();
       const tenu = await deps.bail.lire();
-      if (tenu !== null && tenu > maintenant) return PAS_ATTENTE_MS;
+      if (tenu !== null && tenu > maintenant) {
+        if (forcer) await ecrireEtat(base0, { message: 'Forcer : un passage du suivi est déjà en cours' });
+        return PAS_ATTENTE_MS;
+      }
       echeanceBail = maintenant + DUREE_BAIL_MS;
       await deps.bail.ecrire(echeanceBail);
       if ((await deps.bail.lire()) !== echeanceBail) {
@@ -243,10 +249,18 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
         return PAS_ATTENTE_MS;
       }
       let base = (await deps.chargerEtatSuivi().catch(() => null)) ?? ETAT_SUIVI_INITIAL;
+      // Un lot d’écriture (jusqu’à 3 requêtes en vol, hors verrou) garde la main : la lecture attend sa fin, pas celle de la synchro globale.
+      if (await deps.lotEnCours().catch(() => false)) {
+        if (forcer) await ecrireEtat(base, { message: 'Forcer : un lot d’écriture est en cours, nouvel essai à sa fin' });
+        return PAS_ATTENTE_MS;
+      }
       if (base.etat === 'inactif') base = await ecrireEtat(base, { etat: 'ok', message: 'Suivi réactivé', jusqua: null });
       if (forcer) {
         // Une demande par minute au plus, commune aux onglets ; le bail et le verrou de requête restent respectés.
-        if (base.forceLe !== null && maintenant - base.forceLe < 60_000) return PAS_ATTENTE_MS;
+        if (base.forceLe !== null && maintenant - base.forceLe < 60_000) {
+          await ecrireEtat(base, { message: 'Forcer : déjà demandé il y a moins d’une minute' });
+          return PAS_ATTENTE_MS;
+        }
         base = await ecrireEtat(base, { forceLe: maintenant });
       } else if ((base.etat === 'attente' || base.etat === 'pause') && base.jusqua !== null && maintenant < base.jusqua) {
         // Attente enregistrée (échec de lecture, pause 401/429 de 30 min) : valable aussi après un rechargement ou dans un autre onglet.
