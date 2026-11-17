@@ -61,25 +61,6 @@ const CarteLigne: React.FC<Props> = ({ carte, onEdition, refLigne }) => {
       ref={refLigne}
       className="block border-b border-line py-2 hover:bg-(--surface-survol) min-[600px]:table-row min-[600px]:py-0"
     >
-      <td className={CELLULE}>
-        <Etiquette texte="Favori" />
-        <button
-          type="button"
-          aria-pressed={favori}
-          aria-label={favori ? `Retirer ${carte.titre} des favoris` : `Mettre ${carte.titre} en favori`}
-          title={favori ? 'Retirer des favoris' : 'Mettre en favori'}
-          onClick={() => onEdition({ choixFavori: !favori })}
-          className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded text-2xl focus-visible:shadow-(--halo-focus)"
-        >
-          <span aria-hidden="true">{favori ? '★' : '☆'}</span>
-        </button>
-        {enAttente && <span className="block text-sm text-muted">À envoyer au site (lot Favoris)</span>}
-        {choix !== null && (
-          <button type="button" className="block cursor-pointer text-sm underline" onClick={() => onEdition({ choixFavori: null })}>
-            Revenir aux règles
-          </button>
-        )}
-      </td>
       <td className={`${CELLULE} min-w-0 break-words`}>
         <p className="font-medium break-words">
           {carte.url ? (
@@ -106,6 +87,25 @@ const CarteLigne: React.FC<Props> = ({ carte, onEdition, refLigne }) => {
             onValider={(themes) => onEdition({ themesChoisis: themes })}
             onFermer={() => setThemesOuverts(false)}
           />
+        )}
+      </td>
+      <td className={CELLULE}>
+        <Etiquette texte="Favori" />
+        <button
+          type="button"
+          aria-pressed={favori}
+          aria-label={favori ? `Retirer ${carte.titre} des favoris` : `Mettre ${carte.titre} en favori`}
+          title={favori ? 'Retirer des favoris' : 'Mettre en favori'}
+          onClick={() => onEdition({ choixFavori: !favori })}
+          className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded text-2xl focus-visible:shadow-(--halo-focus)"
+        >
+          <span aria-hidden="true">{favori ? '★' : '☆'}</span>
+        </button>
+        {enAttente && <span className="block text-sm text-muted">À envoyer au site (lot Favoris)</span>}
+        {choix !== null && (
+          <button type="button" className="block cursor-pointer text-sm underline" onClick={() => onEdition({ choixFavori: null })}>
+            Revenir aux règles
+          </button>
         )}
       </td>
       <td className={CELLULE}>

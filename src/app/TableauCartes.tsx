@@ -13,8 +13,8 @@ export interface EtatTri {
 }
 
 export const COLONNES: { cle: CleTri; libelle: string }[] = [
-  { cle: 'favori', libelle: 'Favori' },
   { cle: 'titre', libelle: 'Titre' },
+  { cle: 'favori', libelle: 'Favori' },
   { cle: 'rarete', libelle: 'Rareté' },
   { cle: 'quantite', libelle: 'Quantité' },
   { cle: 'valeur', libelle: 'Valeur' },
@@ -113,8 +113,8 @@ const TableauCartes: React.FC<Props> = ({ cartes, tri, revision, cleFiltre, onTr
         <table data-testid="tableau-cartes" className="block w-full border-y border-line min-[600px]:table">
           <caption className="sr-only">Cartes de la collection, triables par colonne</caption>
           <colgroup className="hidden min-[600px]:table-column-group">
-            <col className="w-24" />
             <col />
+            <col className="w-24" />
             <col className="w-28" />
             <col className="w-26" />
             <col className="w-26" />
