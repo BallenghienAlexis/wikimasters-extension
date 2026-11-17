@@ -37,7 +37,7 @@ export interface EntreeWikipedia {
 }
 
 /** À incrémenter quand une règle de mots-clés change : les entrées en cache sont alors relues par la lecture de fond. */
-export const VERSION_REGLES = 2;
+export const VERSION_REGLES = 3;
 
 export interface CacheWikipedia {
   version: 1;
