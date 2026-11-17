@@ -456,7 +456,10 @@ export async function chargerSuiviVentes(): Promise<SuiviVentes> {
   const nonVentes: Record<string, number> = {};
   if (estObjet(suivi.nonVentes)) for (const [t, n] of Object.entries(suivi.nonVentes)) if (typeof n === 'number' && Number.isSafeInteger(n) && n > 0 && n < 1000) nonVentes[t] = n;
   const finsVues = Array.isArray(suivi.finsVues) ? suivi.finsVues.filter((i): i is string => typeof i === 'string').slice(0, 200) : undefined;
-  return { ...suivi, nonVentes, finsVues };
+  const aTraiter = Array.isArray(suivi.aTraiter) ? suivi.aTraiter.filter((i): i is string => typeof i === 'string').slice(-50) : undefined;
+  const sansVerdict: Record<string, number> = {};
+  if (estObjet(suivi.sansVerdict)) for (const [id, le] of Object.entries(suivi.sansVerdict)) if (typeof le === 'number' && Number.isSafeInteger(le) && le > 0) sansVerdict[id] = le;
+  return { ...suivi, nonVentes, finsVues, aTraiter, sansVerdict };
 }
 
 export async function enregistrerSuiviVentes(suivi: SuiviVentes): Promise<void> {
