@@ -26,7 +26,7 @@ export const PROMPT_SYSTEME = [
   'Tu classes des cartes d’un jeu de collection dont chaque carte porte le titre d’un article de Wikipédia (personne, œuvre, lieu, objet, notion, animal…).',
   `Pour chaque carte, choisis de 1 à ${MAX_THEMES_PAR_CARTE} thèmes parmi le catalogue ci-dessous, du plus caractéristique au moins caractéristique.`,
   'Règles : réponds d’après le sens du sujet (ce qu’il est, ce qu’il fait), pas d’après les mots du titre ; choisis le thème le plus précis qui existe (« Moto » plutôt que « Véhicule ») ;',
-  'n’ajoute pas un thème parent en plus de son thème précis ; n’invente aucun identifiant ; si tu ne reconnais pas le sujet, réponds une liste vide pour cette carte.',
+  'n’ajoute pas un thème parent en plus de son thème précis ; n’invente aucun identifiant ; si tu ne reconnais pas le sujet, réponds une liste vide pour cette carte. Pour une page d’homonymie, un nom de famille ou un prénom, donne les thèmes des sens les plus connus s’ils dominent, sinon une liste vide.',
   'Format de réponse : uniquement un objet JSON, sans texte autour, dont les clés sont les numéros des cartes et les valeurs des listes d’identifiants. Exemple : {"1":["moto"],"2":["litterature","histoire"],"3":[]}',
   `Catalogue (identifiant : libellé) :\n${DEFINITIONS_THEMES.map((t) => `${t.id} : ${t.libelle.replace(/^#/, '')}`).join('\n')}`,
 ].join('\n');
@@ -265,7 +265,7 @@ export function lireImportThemes(texte: string, titresConnus: ReadonlySet<string
 }
 
 /**
- * Prompt à coller dans un abonnement Claude pour classer le fichier exporté : le même catalogue que `PROMPT_SYSTEME`, des règles propres à l’export : les clés de la réponse sont les titres exacts et une carte non reconnue est omise (jamais de liste vide ni de thème deviné).
+ * Prompt à coller dans un abonnement Claude pour classer le fichier exporté : le même catalogue que `PROMPT_SYSTEME`, des règles propres à l’export : les clés de la réponse sont les titres exacts et une carte non reconnue ou sans domaine dominant est omise (jamais de liste vide).
  * `docs/classement-par-ia.md` en contient le texte exact (test de synchronisation).
  */
 export const PROMPT_EXPORT = [
@@ -273,7 +273,7 @@ export const PROMPT_EXPORT = [
   `Pour chaque carte, choisis de 1 à ${MAX_THEMES_PAR_CARTE} thèmes parmi le catalogue ci-dessous, du plus caractéristique au moins caractéristique.`,
   'Règles : appuie-toi sur la description quand il y en a une, puis sur ce que le sujet est réellement (pas sur les mots du titre) ; choisis le thème le plus précis qui existe (« Moto » plutôt que « Véhicule ») ;',
   'n’ajoute pas un thème parent en plus de son thème précis ; n’invente aucun identifiant ; une liste, une année (« 2013 en Bulgarie »), une résolution, une commune ou un établissement ont un sujet : classe-les.',
-  'À omettre (ne les écris pas dans la réponse) : pages d’homonymie, noms de famille, prénoms, et sujets que tu ne reconnais pas avec certitude. Ces cartes restent « à classer » dans l’extension, c’est voulu. Jamais de liste vide, jamais de thème deviné, jamais de thème « À classer » ni « Autres ».',
+  'Pages d’homonymie (« Zidane (homonymie) », « Renault », « B612 », « BMS »), noms de famille et prénoms : classe-les aussi, d’après les sens ou les personnes les plus connus qui portent ce nom (« Zidane » : football ; « Renault » : automobile) ; ne choisis que les thèmes dont dépendent la plupart des sens importants, 1 à 3 au plus. À omettre seulement (ne les écris pas dans la réponse) : les sujets que tu ne reconnais pas avec certitude, et les noms dont aucun domaine ne domine. Ces cartes restent « à classer » dans l’extension, c’est voulu. Jamais de liste vide, jamais de thème « À classer » ni « Autres ».',
   'Format de réponse : ta réponse entière est UN SEUL bloc de code JSON (```json … ```), sans aucune phrase avant ou après, sans explication ni liste des cartes omises. Si tu peux créer un fichier téléchargeable, donne-le sous le nom classement.json avec le même contenu.',
   'Ce bloc est un unique objet dont les clés sont les TITRES EXACTS des cartes (champ "titre", recopié caractère pour caractère) et les valeurs des listes de 1 à 4 identifiants. Exemple : {"Honda CB 900":["moto"],"Morcilla":["gastronomie"]}.',
   'Traite toutes les cartes du fichier dans cette seule réponse (il en contient 150 au plus), sans la couper en plusieurs messages.',

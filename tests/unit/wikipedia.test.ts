@@ -3,7 +3,7 @@ import type { SignauxPage } from '../../src/lib/themes';
 import { verifierTitres, type Transport } from '../../src/app/verifierWikipedia';
 import { themesDeCarte, definirThemesWikipedia } from '../../src/lib/themes';
 import { creerPlanificateur } from '../../src/app/verifierWikipedia';
-import { cacheVide, lireEntiteWikidata, lireLibellesWikidata, signauxWikipedia, urlEntiteWikidata, lireReponse, lireReponseWikidata, themesDepuisWikidata, urlRequeteWikidata, themesDepuisCategories, titresAVerifier, urlRequete, validerCache, ajouterEntree, DUREE_CACHE_MS } from '../../src/lib/wikipedia';
+import { cacheVide, lireEntiteWikidata, lireLibellesWikidata, signauxWikipedia, urlEntiteWikidata, lireReponse, lireReponseWikidata, themesDepuisWikidata, urlRequeteWikidata, themesDepuisCategories, titresAVerifier, urlRequete, urlRequeteHomonymie, lireHomonymie, themesDepuisHomonymie, validerCache, ajouterEntree, DUREE_CACHE_MS } from '../../src/lib/wikipedia';
 
 const page = (extra: object) => ({ query: { pages: [{ title: 'X', ...extra }] } });
 
@@ -402,5 +402,89 @@ describe('règles par catégories et classes Wikidata (classement automatique)',
     expect(themesDepuisCategories(['Motocyclette Honda'])).toContain('moto');
     expect(themesDepuisCategories(['Camion électrique'])).toContain('camion');
     expect(themesDepuisCategories(['Romancier français du XIXe siècle'])).toContain('litterature');
+  });
+});
+
+describe('pages d’homonymie', () => {
+  const TEXTE_ZIDANE = [
+    'Zidane peut désigner :',
+    '',
+    '== Patronyme ==',
+    'Zinédine Zidane (né en 1972), footballeur international français ;',
+    'Elyaz Zidane (né en 2005), footballeur français, fils du précédent ;',
+    'Luca Zidane (né en 1998), footballeur et gardien de but français ;',
+    'Yazid Zidane, acteur algérien.',
+    '',
+    '== Voir aussi ==',
+    'Bataille de Zidane, bataille imaginaire de la guerre ancienne.',
+  ].join('\n');
+
+  it('construit une requête de texte complet sur la même route, sans donnée du compte', () => {
+    const url = urlRequeteHomonymie('Zidane (homonymie)');
+    expect(url.startsWith('https://fr.wikipedia.org/w/api.php?')).toBe(true);
+    expect(url).toContain('prop=extracts');
+    expect(url).toContain('explaintext=1');
+    expect(url).not.toContain('exintro');
+  });
+  it('lit le texte de la page (borné) et refuse une forme inattendue', () => {
+    expect(lireHomonymie(page({ extract: 'abc' }))).toBe('abc');
+    expect(lireHomonymie(page({ extract: 'x'.repeat(50_000) }))?.length).toBe(20_000);
+    expect(lireHomonymie(page({}))).toBeNull();
+    expect(lireHomonymie({})).toBeNull();
+  });
+  it('retient les thèmes dominants des entrées, pas ceux d’une seule', () => {
+    const themes = themesDepuisHomonymie(TEXTE_ZIDANE);
+    expect(themes).toContain('football');
+    expect(themes).not.toContain('guerre');
+    expect(themes.length).toBeLessThanOrEqual(3);
+  });
+  it('s’arrête avant « Voir aussi » et ne retient rien quand aucun thème ne domine', () => {
+    const texte = ['X peut désigner :', 'Un film réalisé par Jean Dupont en 1990 ;', 'Un cheval de course célèbre ;', 'Un joueur de rugby français du XIXe siècle ;', 'Un cuisinier réputé du Second Empire.'].join('\n');
+    expect(themesDepuisHomonymie(texte)).toEqual([]);
+    expect(themesDepuisHomonymie('')).toEqual([]);
+  });
+  it('ignore les entrées après « Voir aussi »', () => {
+    const texte = ['X peut désigner :', 'Une ville du nord de la France, commune de la Somme ;', 'Un film réalisé par Jean Dupont en 1990 ;', '== Voir aussi ==', 'Zinédine Zidane, footballeur international français ;', 'Elyaz Zidane, footballeur international français ;', 'Luca Zidane, footballeur international français.'].join('\n');
+    expect(themesDepuisHomonymie(texte)).not.toContain('football');
+  });
+  it('classe la carte d’une page d’homonymie grâce à ses entrées (un GET de plus, thèmes dominants en signaux fiables)', async () => {
+    const vus: string[] = [];
+    const transport: Transport = async (url) => {
+      vus.push(url);
+      return { status: 200, json: async () => (url.includes('explaintext=1') && !url.includes('exintro') ? page({ extract: TEXTE_ZIDANE }) : page({ pageprops: { disambiguation: '' } })) };
+    };
+    let cache = cacheVide();
+    const r = await verifierTitres({ titres: ['Zidane (homonymie)'], cache, signal: new AbortController().signal, surProgres: (c) => { cache = c; }, attendre: async () => undefined, transport });
+    expect(r.verifiees).toBe(1);
+    expect(vus).toHaveLength(2);
+    expect(vus.some((u) => u.includes('wikidata'))).toBe(false);
+    const entree = cache.entrees['Zidane (homonymie)'];
+    expect(entree?.themes).toContain('football');
+    expect(entree?.signaux?.fortes).toContain('football');
+    expect(entree?.avecHomonymie).toBe(true);
+  });
+  it('sans entrée exploitable, retombe sur Wikidata comme avant', async () => {
+    const reponse = (search: object[]) => ({ search });
+    const vus: string[] = [];
+    const transport: Transport = async (url) => {
+      vus.push(url);
+      if (url.includes('wikidata')) return { status: 200, json: async () => reponse([{ label: 'BMS', description: 'page d’homonymie de Wikimédia' }]) };
+      return { status: 200, json: async () => (url.includes('exintro') ? page({ pageprops: { disambiguation: '' } }) : page({ extract: 'BMS peut désigner :' })) };
+    };
+    let cache = cacheVide();
+    await verifierTitres({ titres: ['BMS'], cache, signal: new AbortController().signal, surProgres: (c) => { cache = c; }, attendre: async () => undefined, transport });
+    expect(vus.some((u) => u.includes('wikidata'))).toBe(true);
+    expect(cache.entrees.BMS?.themes).toEqual([]);
+  });
+  it('un 429 en lisant les entrées arrête la vérification', async () => {
+    const transport: Transport = async (url) => (url.includes('exintro') ? { status: 200, json: async () => page({ pageprops: { disambiguation: '' } }) } : { status: 429, json: async () => ({}) });
+    const r = await verifierTitres({ titres: ['Zidane'], cache: cacheVide(), signal: new AbortController().signal, surProgres: () => undefined, attendre: async () => undefined, transport });
+    expect(r.arret).toBe('code-http');
+    expect(r.codeHttp).toBe(429);
+  });
+  it('relit une fois une entrée sans thème enregistrée avant la lecture des homonymies', () => {
+    const ancien = validerCache({ version: 1, entrees: { Z: { themes: [], verifieLe: 1000, avecResume: true, avecWikidata: true, nomsPropres: true, signaux: SIG } } })!;
+    expect(titresAVerifier(['Z'], ancien, 2000)).toEqual(['Z']);
+    expect(titresAVerifier(['Z'], ajouterEntree(ancien, 'Z', [], 2000, true, SIG), 3000)).toEqual([]);
   });
 });
