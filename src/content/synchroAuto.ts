@@ -150,7 +150,7 @@ export async function ecrireEvenementJournal(evenement: EvenementSynchro, mainte
 /** Étiquettes distinctes lues sur le site (noms seulement, comptés, jamais conservés). */
 const compterEtiquettes = (collection: Collection): number => new Set(collection.cartes.flatMap((c) => c.etiquettesSite)).size;
 
-/** Fin ou arrêt, avec sa cause en libellé fixe (401/403/429, 3 échecs, arrêt manuel, plafond de pages). */
+/** Fin ou arrêt, avec sa cause en libellé fixe (401/403/429, arrêt manuel) ou la cause exacte d’une lecture non propre. */
 function evenementFinal(resultat: ResultatSynchro, pages: number | null): EvenementSynchro {
   const arret = (parametre: string, codeHttp: number | null = null): EvenementSynchro => ({
     titre: 'Synchronisation automatique : arrêt',
@@ -163,11 +163,15 @@ function evenementFinal(resultat: ResultatSynchro, pages: number | null): Evenem
     if (resultat.raison === 'echecs') return arret('3 échecs consécutifs');
     return arret('arrêt demandé');
   }
-  // Éléments sautés sans arrêt : la synchro est allée au bout (aucun arrêt automatique sur les échecs, 2026-11-16), ce n’est pas un arrêt.
-  if (!resultat.complete && resultat.sautes > 0 && !(pages !== null && resultat.pagesLues >= pages + PAGES_DE_MARGE)) {
-    return { titre: 'Synchronisation automatique : fin', parametre: `${resultat.sautes} élément(s) sauté(s) sur erreur`, resultat: 'reussie', codeHttp: null };
+  // Aucun arrêt automatique sur échec ou lecture non propre (2026-11-16, 2026-11-17) : la synchro est allée au bout, la cause exacte est au journal.
+  if (!resultat.complete) {
+    const details = [
+      resultat.sautes > 0 ? `${resultat.sautes} élément(s) sauté(s) sur erreur` : null,
+      resultat.causeIncomplete,
+      resultat.causeIncomplete === null && pages !== null && resultat.pagesLues >= pages + PAGES_DE_MARGE ? 'plafond de pages atteint' : null,
+    ].filter((d): d is string => d !== null);
+    return { titre: 'Synchronisation automatique : fin', parametre: details.length > 0 ? details.join(' · ') : 'lecture incomplète (cause inconnue)', resultat: 'reussie', codeHttp: null };
   }
-  if (!resultat.complete) return arret(pages !== null && resultat.pagesLues >= pages + PAGES_DE_MARGE ? 'plafond de pages' : resultat.sautes > 0 ? 'terminée avec des éléments sautés' : 'lecture incomplète');
   return { titre: 'Synchronisation automatique : fin', parametre: null, resultat: 'reussie', codeHttp: null };
 }
 
@@ -289,7 +293,6 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         }) ?? Promise.resolve()).catch(() => undefined);
       };
       let demarree = false;
-      let etapeFautive: EtapeSynchro | null = null;
       const journaliser = (e: EvenementSynchro): Promise<void> => (deps.journaliser?.(e) ?? Promise.resolve()).catch(() => undefined);
       const transport = async (chemin: string): Promise<ReponseApi> => {
         if (!demarree) {
@@ -304,7 +307,6 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         if (page) await noter({ etat: 'en-cours', page: pages === null ? Number(page[1]) + 1 : Math.min(Number(page[1]) + 1, pages) });
         else await noter({ etat: 'en-cours' });
         const reponse = await deps.transport(chemin);
-        if (reponse.statut !== 200 && etape !== 'ventes' && etape !== 'prix') etapeFautive ??= etape;
         if (!page && chemin.startsWith('/api/my-collection/stats')) {
           const stats = reponse.statut === 200 ? analyserStats(reponse.json) : null;
           const total = stats?.total;
@@ -353,13 +355,12 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
           await deps.enregistrerEtat(courant);
         },
       });
-      if (resultat.complete || (resultat.issue === 'termine' && resultat.sautes > 0)) await deps.noterDerniereSynchro(deps.horloge.now());
+      if (resultat.issue === 'termine') await deps.noterDerniereSynchro(deps.horloge.now());
       if (resultat.requetes > 0) {
         const ajoutees = resultat.collection.cartes.filter((c) => !depart.has(c.id)).length;
         const comptes = { ajoutees, etiquettes: compterEtiquettes(resultat.collection), prix: resultat.prixReleves };
         if (resultat.issue === 'arret') await noter({ etat: 'arret', raison: resultat.raison, codeHttp: resultat.codeHttp, ...comptes });
-        else if (resultat.complete || resultat.sautes > 0) await noter({ etat: 'termine', ...comptes });
-        else await noter({ etat: 'arret', raison: 'echecs', etape: etapeFautive ?? (etape === 'ventes' ? 'pages' : etape), ...comptes }); // la lecture des ventes est tolérante : elle n’est jamais la cause d’un échec
+        else await noter({ etat: 'termine', ...comptes });
         await journaliser(evenementFinal(resultat, pages));
       }
       if (resultat.issue === 'termine') await releverMarche();
@@ -382,9 +383,8 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         const commune = (await deps.derniereRelance?.lire()) ?? null;
         const derniere = Math.max(derniereRelance ?? 0, commune ?? 0);
         if (derniere > 0 && maintenant - derniere < DELAI_RELANCE_MS) return null;
-        // Seuls un arrêt manuel et un 403 se relancent : 401, 429 et échecs gardent la pause de 30 min.
-        const statut = (await deps.chargerStatut?.()) ?? null;
-        if (statut?.etat === 'arret' && statut.raison !== 'manuel' && !(statut.raison === 'code-http' && statut.codeHttp === 403)) return null;
+        // Forçage explicite (Alexis, 2026-11-17) : passe outre le délai de 30 min et la pause après 401, 403 ou 429, quel que soit
+        // le statut précédent. Ni la vérification anti-bot ni le bail ne sont contournés (une synchro à la fois).
         derniereRelance = maintenant;
         await deps.derniereRelance?.ecrire(maintenant);
       } catch {

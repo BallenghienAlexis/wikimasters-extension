@@ -23,7 +23,7 @@ import type { Page } from '@playwright/test';
 //  - `data-testid="fraicheur-prix"` (`FraicheurPrix.tsx`) : « Prix relevés : N », puis « Le plus récent : … » et
 //    « Le plus ancien : … » ; durée restante dans `data-testid="duree-restante"` (« moins d’une minute » ou « environ N min »).
 //  - inchangés : `data-testid="synchro-auto"`, `data-testid="etat-synchro-auto"`, interrupteur `role="switch"` nommé
-//    « Synchronisation automatique », boutons « Arrêter » et « Relancer la synchro ».
+//    « Synchronisation automatique », boutons « Arrêter » et « Forcer la synchro ».
 
 const BREAKPOINTS = [
   { name: 'mobile', width: 375, height: 812 },
@@ -357,7 +357,7 @@ test.describe('SC-028 : interrupteur et relance dans l’onglet Synchro, règles
     await expect(pageCollection.getByTestId('etat-synchro-auto')).toHaveText('Désactivée');
   });
 
-  test('SC-028 : « Relancer la synchro » proposé après un 403 avec son avertissement, absent après un 429', async ({
+  test('SC-028 : « Forcer la synchro » toujours proposé avec son avertissement, même après un 429', async ({
     pageCollection,
   }) => {
     await poser(pageCollection, {
@@ -365,11 +365,10 @@ test.describe('SC-028 : interrupteur et relance dans l’onglet Synchro, règles
       statutSynchro: statut({ etat: 'arret', etape: 'pages', raison: 'code-http', codeHttp: 403, page: 5, pages: 40 }),
     });
     await deplierTout(pageCollection);
-    await expect(pageCollection.getByRole('button', { name: 'Relancer la synchro' })).toBeVisible();
-    await expect(pageCollection.getByTestId('synchro-auto')).toContainText(/Relancer ignore la pause de 30\s?min/);
+    await expect(pageCollection.getByRole('button', { name: 'Forcer la synchro' })).toBeVisible();
+    await expect(pageCollection.getByTestId('synchro-auto')).toContainText(/sans attendre le délai de 30\s?min/);
     await maj(pageCollection, { statutSynchro: statut({ etat: 'arret', etape: 'pages', raison: 'code-http', codeHttp: 429, page: 5, pages: 40 }) });
-    await expect(pageCollection.getByRole('button', { name: 'Relancer la synchro' })).toHaveCount(0);
-    await expect(pageCollection.getByTestId('synchro-auto')).toContainText('Le site limite les requêtes.');
+    await expect(pageCollection.getByRole('button', { name: 'Forcer la synchro' })).toBeVisible();
   });
 
   test('SC-028 : « Arrêter » écrit la demande d’arrêt pendant une synchro', async ({ pageCollection }) => {
@@ -536,10 +535,10 @@ test.describe('Blocs dépliables (2026-11-16)', () => {
     await expect(journal).toHaveAttribute('aria-expanded', 'true');
   });
 
-  test('un arrêt posé après le montage ouvre la synchro auto et montre « Relancer la synchro »', async ({ pageCollection }) => {
+  test('un arrêt posé après le montage ouvre la synchro auto et montre « Forcer la synchro »', async ({ pageCollection }) => {
     await poserReplie(pageCollection, { derniereSynchro: Date.now() - 3_600_000 });
     await maj(pageCollection, { statutSynchro: statut({ etat: 'arret', etape: 'pages', raison: 'code-http', codeHttp: 403, page: 5, pages: 40 }) });
-    await expect(pageCollection.getByRole('button', { name: 'Relancer la synchro' })).toBeVisible();
+    await expect(pageCollection.getByRole('button', { name: 'Forcer la synchro' })).toBeVisible();
   });
 
   test('« Voir l’historique complet » déplie l’historique', async ({ pageCollection }) => {

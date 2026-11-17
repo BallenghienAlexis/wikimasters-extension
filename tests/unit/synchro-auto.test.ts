@@ -322,11 +322,27 @@ describe('relance explicite du joueur', () => {
     ['429', { etat: 'arret', raison: 'code-http', codeHttp: 429 }],
     ['401', { etat: 'arret', raison: 'code-http', codeHttp: 401 }],
     ['échecs', { etat: 'arret', raison: 'echecs', codeHttp: null }],
-  ] as const)('après %s : relancer() ne fait aucune requête (pause gardée)', async (_nom, partiel) => {
+  ] as const)('après %s : le forçage explicite passe la pause de 30 min', async (_nom, partiel) => {
     const b = banc();
     b.deps.chargerStatut = async () => ({ version: 1, page: null, pages: null, le: T0, ajoutees: 0, etiquettes: 0, prix: 0, ...partiel });
     b.stockage.etat = { ...etatInitial(), arretJusqua: T0 + 10 * MIN };
-    expect(await creerSynchroAuto(b.deps).relancer()).toBeNull();
+    const r = await creerSynchroAuto(b.deps).relancer();
+    expect(r).not.toBeNull();
+    expect(b.chemins.length).toBeGreaterThan(0);
+  });
+
+  it('le forçage ne contourne pas la vérification anti-bot : arrêt immédiat', async () => {
+    const b = banc({ reponse: () => ({ statut: 403, json: { error: 'Vérification anti-bot requise.', code: 'human_verification_required' } }) });
+    const r = await creerSynchroAuto(b.deps).relancer();
+    expect(r?.issue).toBe('arret');
+    expect(b.chemins).toHaveLength(1);
+  });
+
+  it('le forçage respecte le verrou : un bail tenu empêche la synchro', async () => {
+    const b = banc();
+    b.stockage.bail = T0 + 10 * MIN;
+    const r = await creerSynchroAuto(b.deps).relancer();
+    expect(r?.issue).toBe('bail-occupe');
     expect(b.chemins).toEqual([]);
   });
 
@@ -627,7 +643,7 @@ describe('T-206 D-03 : événements dans le journal', () => {
     expect(b.evenements.at(-1)).toMatchObject({ resultat: 'interrompue', parametre: 'arrêt demandé', codeHttp: null });
   });
 
-  it('page courte avec moins d’exemplaires qu’annoncé : cause « lecture incomplète »', async () => {
+  it('page courte avec moins d’exemplaires qu’annoncé : fin (pas un arrêt) avec la cause exacte', async () => {
     // Le site annonce 2 exemplaires mais n’en livre qu’un sur une page courte : la lecture est incomplète.
     const reponse = (chemin: string): ReponseApi => {
       if (chemin.startsWith('/api/my-collection/stats')) return { statut: 200, json: { total: 2, totalUnique: 2, tagOptions: [] } };
@@ -636,10 +652,9 @@ describe('T-206 D-03 : événements dans le journal', () => {
     };
     const b = banc({ reponse });
     await creerSynchroAuto(b.deps).declencher();
-    expect(b.evenements.at(-1)).toMatchObject({ titre: 'Synchronisation automatique : arrêt', parametre: 'lecture incomplète' });
-    // La lecture des ventes (tolérante) n’est jamais présentée comme l’étape en cause.
-    expect(b.statuts.at(-1)).toMatchObject({ etat: 'arret', raison: 'echecs' });
-    expect(b.statuts.at(-1)?.etape).not.toBe('ventes');
+    expect(b.evenements.at(-1)).toMatchObject({ titre: 'Synchronisation automatique : fin', resultat: 'reussie', parametre: '1 exemplaire(s) lu(s) pour 2 annoncé(s) par le site' });
+    // Plus de « 3 erreurs » trompeur : la synchro est terminée, la cause est au journal.
+    expect(b.statuts.at(-1)).toMatchObject({ etat: 'termine' });
   });
 
   it('stats toujours illisibles (3 essais) : journalisé comme une fin avec éléments sautés, pas comme un arrêt', async () => {
