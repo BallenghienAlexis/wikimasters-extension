@@ -8,8 +8,11 @@ import { creerEmetteur } from '../lib/reseau';
 import {
   ajouterLancementVente,
   chargerBailSynchro,
+  chargerDerniereSynchro,
+  chargerReleveMarche,
   chargerCollection,
   chargerEcartesVentes,
+  chargerExecution,
   chargerEtatSynchro,
   chargerLancementsVentes,
   chargerPreferences,
@@ -32,32 +35,38 @@ const emettre = creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: location.or
 // Pilotage depuis la page de gestion : aucune requête tant qu'aucune action n'est branchée.
 demarrerExecutant({ emettre });
 // Lecture automatique de la collection par l'API du site : activée par défaut, 0 requête si le joueur coupe l'option.
-demarrerSynchroAuto();
+// Le suivi est créé d’abord : la synchro lui confie la réponse du listing du marché qu’elle relève déjà.
+const suivi = creerSuiviVentes({
+  horloge: horlogeReelle,
+  gigue: gigueAleatoire,
+  transport: transportSite,
+  emettre,
+  visible: () => document.visibilityState === 'visible',
+  actif: chargerSyncAuto,
+  route: CONFIG_AFFLUENCE.routeMarche,
+  relanceActive: chargerRelanceVentes,
+  chargerSuivi: chargerSuiviVentes,
+  enregistrerSuivi: enregistrerSuiviVentes,
+  chargerStatut: chargerStatutRelanceVentes,
+  enregistrerStatut: enregistrerStatutRelanceVentes,
+  chargerCollection,
+  chargerPreferences,
+  chargerLancements: chargerLancementsVentes,
+  ajouterLancement: ajouterLancementVente,
+  chargerEcartes: chargerEcartesVentes,
+  enregistrerEcartes: enregistrerEcartesVentes,
+  pauseLots: async () => (await chargerExecution().catch(() => null))?.pauseJusqua ?? null,
+  derniereSynchro: chargerDerniereSynchro,
+  derniereReleve: async () => (await chargerReleveMarche()).le,
+  chargerEtat: chargerEtatSynchro,
+  enregistrerEtat: enregistrerEtatSynchro,
+  bail: { lire: chargerBailSynchro, ecrire: enregistrerBailSynchro },
+});
+// Lecture automatique de la collection par l'API du site : activée par défaut, 0 requête si le joueur coupe l'option.
+demarrerSynchroAuto({ surReponseMarche: suivi.integrer });
 // Suivi des mises en vente (lecture toutes les 5 min, puis 10 s dans la dernière minute) et relance automatique si activée.
 demarrerSuiviVentes({
-  suivi: creerSuiviVentes({
-    horloge: horlogeReelle,
-    gigue: gigueAleatoire,
-    transport: transportSite,
-    emettre,
-    visible: () => document.visibilityState === 'visible',
-    actif: chargerSyncAuto,
-    route: CONFIG_AFFLUENCE.routeMarche,
-    relanceActive: chargerRelanceVentes,
-    chargerSuivi: chargerSuiviVentes,
-    enregistrerSuivi: enregistrerSuiviVentes,
-    chargerStatut: chargerStatutRelanceVentes,
-    enregistrerStatut: enregistrerStatutRelanceVentes,
-    chargerCollection,
-    chargerPreferences,
-    chargerLancements: chargerLancementsVentes,
-    ajouterLancement: ajouterLancementVente,
-    chargerEcartes: chargerEcartesVentes,
-    enregistrerEcartes: enregistrerEcartesVentes,
-    chargerEtat: chargerEtatSynchro,
-    enregistrerEtat: enregistrerEtatSynchro,
-    bail: { lire: chargerBailSynchro, ecrire: enregistrerBailSynchro },
-  }),
+  suivi,
   visible: () => document.visibilityState === 'visible',
   ecouterVisibilite: (rappel) => {
     document.addEventListener('visibilitychange', rappel);

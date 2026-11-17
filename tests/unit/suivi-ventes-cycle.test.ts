@@ -14,7 +14,7 @@ const carte: Carte = {
 }
 const vente = (id: string, finDans: number) => ({ id, card_id: `ex-${id}`, base_amount: 50, current_bid: null, effective_bid: 50, created_at: iso(T0), end_at: iso(T0 + finDans), card: { wikipedia_title: `T${id}` } })
 
-function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relance?: boolean; resultat?: ResultatAction; visible?: boolean; actif?: boolean }) {
+function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relance?: boolean; resultat?: ResultatAction; visible?: boolean; actif?: boolean; synchroRecente?: boolean; pauseLots?: number }) {
   let t = T0
   const etat = { suivi: suiviVide() as SuiviVentes, statut: null as StatutRelanceVentes | null, lancements: [] as LancementVente[], ecartes: {} as Record<string, number>, lectures: 0, ordres: [] as Action[] }
   const reponses = [...opts.reponses]
@@ -40,6 +40,9 @@ function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relan
     ajouterLancement: async (l) => void etat.lancements.push(l),
     chargerEcartes: async () => etat.ecartes,
     enregistrerEcartes: async (e) => void (etat.ecartes = e),
+    pauseLots: async () => opts.pauseLots ?? null,
+    derniereSynchro: async () => (opts.synchroRecente === false ? null : T0),
+    derniereReleve: async () => (opts.synchroRecente === false ? null : T0),
     chargerEtat: async () => null,
     enregistrerEtat: async () => undefined,
     bail: { lire: async () => null, ecrire: async () => undefined },
@@ -72,8 +75,13 @@ describe('cycle de suivi des mises en vente', () => {
     await m.suivi.cycle()
     expect(m.etat.lectures).toBe(0)
   })
+  it('401/429 en lecture : pause de 30 min, comme le relevé d’affluence', async () => {
+    const m = monde({ reponses: [{ statut: 429, json: null }, ok([])] })
+    expect(await m.suivi.cycle()).toBe(1_800_000)
+    expect(m.etat.statut).toMatchObject({ etat: 'pause', jusqua: T0 + 1_800_000 })
+  })
   it('échecs : 5 s, 10 s, 15 s, jamais d’arrêt, puis reprise normale', async () => {
-    const m = monde({ reponses: [{ statut: 403, json: { code: 'human_verification_required' } }, { statut: 429, json: null }, { statut: 500, json: null }, ok([])] })
+    const m = monde({ reponses: [{ statut: 403, json: { code: 'human_verification_required' } }, { statut: 502, json: null }, { statut: 500, json: null }, ok([])] })
     const attentes: number[] = []
     for (let i = 0; i < 4; i += 1) {
       attentes.push(await m.suivi.cycle())
@@ -99,17 +107,55 @@ describe('cycle de suivi des mises en vente', () => {
     await pleine.suivi.cycle()
     expect(pleine.etat.ordres).toHaveLength(0)
   })
-  it('anti-bot sur l’écriture : attente progressive sans contournement, jamais d’arrêt, même après un échec de lecture', async () => {
-    const m = monde({ reponses: [ok([]), { statut: 500, json: null }, ok([]), ok([])], relance: true, resultat: { classe: 'arret', codeHttp: 403, cause: 'vérification anti-bot requise' } })
+  it('anti-bot sur l’écriture : attente progressive de 5 s puis nouvel essai, sans contournement ni arrêt', async () => {
+    const m = monde({ reponses: [ok([]), ok([]), ok([])], relance: true, resultat: { classe: 'arret', codeHttp: 403, cause: 'vérification anti-bot requise' } })
     await m.suivi.cycle()
-    expect(m.etat.statut?.etat).toBe('pause')
     expect(m.etat.ordres).toHaveLength(1)
-    m.avancer(1000)
-    await m.suivi.cycle() // lecture en échec
-    m.avancer(20_000)
-    await m.suivi.cycle() // lecture réussie, mais l’attente de 5 s est échue : nouvel essai
-    expect(m.etat.ordres.length).toBeGreaterThanOrEqual(1)
-    expect(m.etat.statut?.etat).not.toBe('arret' as never)
+    expect(m.etat.statut).toMatchObject({ etat: 'pause', jusqua: T0 + 5000 })
+    m.avancer(300_000)
+    await m.suivi.cycle()
+    expect(m.etat.ordres).toHaveLength(2)
+    expect(m.etat.statut).toMatchObject({ etat: 'pause' })
+    expect(m.etat.statut?.jusqua).toBe(m.maintenant() + 10_000)
+  })
+  it('pause 401/429 : une lecture réussie ne la lève pas, même après rechargement de l’onglet', async () => {
+    const m = monde({ reponses: [ok([]), ok([]), ok([])], relance: true, resultat: { classe: 'arret', codeHttp: 429, cause: 'réponse hors contrat' } })
+    await m.suivi.cycle()
+    const fin = m.etat.statut!.jusqua!
+    expect(fin).toBe(T0 + 1_800_000)
+    const apres = monde({ reponses: [ok([])], relance: true })
+    apres.etat.statut = m.etat.statut
+    apres.etat.suivi = suiviVide()
+    await apres.suivi.cycle()
+    expect(apres.etat.ordres).toHaveLength(0)
+    expect(apres.etat.statut?.jusqua).toBe(fin)
+  })
+  it('pause des autres process (lots) : aucune relance', async () => {
+    const m = monde({ reponses: [ok([])], relance: true, pauseLots: T0 + 600_000 })
+    await m.suivi.cycle()
+    expect(m.etat.ordres).toHaveLength(0)
+  })
+  it('refus 403 de suite : au-delà de 2, attente progressive au lieu d’une rafale', async () => {
+    const m = monde({ reponses: Array.from({ length: 6 }, () => ok([])), relance: true, resultat: { classe: 'echec', codeHttp: 403, cause: 'réponse hors contrat' } })
+    for (let i = 0; i < 3; i += 1) {
+      await m.suivi.cycle()
+      m.avancer(400_000)
+      m.etat.ecartes = {}
+    }
+    expect(m.etat.statut).toMatchObject({ etat: 'pause', jusqua: m.maintenant() - 400_000 + 5000 })
+  })
+  it('la synchro passe d’abord : aucune lecture tant qu’elle est due', async () => {
+    const m = monde({ reponses: [ok([])], synchroRecente: false })
+    expect(await m.suivi.cycle()).toBe(5000)
+    expect(m.etat.lectures).toBe(0)
+  })
+  it('la réponse du listing lue par la synchro met le suivi à jour sans requête', async () => {
+    const m = monde({ reponses: [] })
+    await m.suivi.integrer({ selling: [vente('a', 3_600_000)], history: [], maxConcurrentAuctions: 5 })
+    expect(m.etat.suivi.actives).toHaveLength(1)
+    expect(m.etat.lectures).toBe(0)
+    expect(await m.suivi.cycle()).toBeGreaterThan(200_000)
+    expect(m.etat.lectures).toBe(0)
   })
   it('synchro automatique coupée : aucune lecture', async () => {
     const m = monde({ reponses: [ok([])], actif: false })

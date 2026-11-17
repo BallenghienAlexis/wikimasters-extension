@@ -269,3 +269,7 @@ export function etatTerminee(v: VenteTerminee, lancements: readonly LancementVen
   const relancee = lancements.some((l) => l.resultat === 'reussie' && l.titre === v.titre && l.le >= v.finLe - 60_000 && l.le <= v.finLe + FENETRE_RELANCE_MS)
   return relancee ? 'non-vendue-relancee' : 'non-vendue'
 }
+
+/** Retire les écarts d’exemplaire échus ; les choix du joueur (`carte:`, `vu:`, `attend:`) restent. */
+export const purgerEcartes = (e: Record<string, number>, maintenant: number): Record<string, number> =>
+  Object.fromEntries(Object.entries(e).filter(([cle, t]) => /^(carte|vu|attend):/.test(cle) || t > maintenant))

@@ -17,7 +17,7 @@ import {
   enregistrerStatutRelanceVentes,
   type StatutRelanceVentes,
 } from '../lib/stockage';
-import { cleVuCarte, clePasserCarte, suiviVide, type LancementVente, type SuiviVentes } from '../lib/ventes';
+import { cleVuCarte, clePasserCarte, purgerEcartes, suiviVide, type LancementVente, type SuiviVentes } from '../lib/ventes';
 
 export interface LotJournal {
   titre: string;
@@ -97,7 +97,7 @@ export function useMiseEnVente(): EtatMiseEnVente {
   const ecrireEcartes = useCallback(
     (suite: (e: Record<string, number>) => Record<string, number>): void => {
       void chargerEcartesVentes()
-        .then((e) => enregistrerEcartesVentes(suite(e)))
+        .then((e) => enregistrerEcartesVentes(purgerEcartes(suite(e), Date.now())))
         .catch(echec);
     },
     [echec],
