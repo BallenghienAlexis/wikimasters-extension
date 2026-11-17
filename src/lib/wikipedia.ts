@@ -32,7 +32,12 @@ export interface EntreeWikipedia {
   categories?: string[];
   /** Vrai quand les thèmes ont été calculés sans compter les noms propres composés (« Bee Train ») ; sinon relue une fois (2026-11-14). */
   nomsPropres?: true;
+  /** Version des règles de mots-clés au moment de la lecture ; une autre version relit l’entrée (révision des thèmes faux, 2026-11-17). */
+  regles?: number;
 }
+
+/** À incrémenter quand une règle de mots-clés change : les entrées en cache sont alors relues par la lecture de fond. */
+export const VERSION_REGLES = 2;
 
 export interface CacheWikipedia {
   version: 1;
@@ -267,6 +272,7 @@ export function validerCache(brut: unknown): CacheWikipedia | null {
       ...(e.avecHomonymie === true ? { avecHomonymie: true as const } : {}),
       ...(e.avecNoms === true ? { avecNoms: true as const } : {}),
       ...(e.nomsPropres === true ? { nomsPropres: true as const } : {}),
+      ...(typeof e.regles === 'number' ? { regles: e.regles } : {}),
       ...(Array.isArray(e.categories) ? { categories: e.categories.filter((c): c is string => typeof c === 'string' && c.length <= 120).slice(0, MAX_CATEGORIES_GARDEES) } : {}),
     };
   }
@@ -284,7 +290,7 @@ export function categoriesUtiles(categories: readonly string[]): string[] {
 }
 
 export function ajouterEntree(cache: CacheWikipedia, titre: string, themes: string[], maintenant: number, wikidata = false, signaux?: SignauxPage, categories: readonly string[] = []): CacheWikipedia {
-  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, avecHomonymie: true, avecNoms: true, nomsPropres: true, categories: categoriesUtiles(categories), ...(wikidata ? { avecWikidata: true as const } : {}), ...(signaux ? { signaux } : {}) };
+  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, avecHomonymie: true, avecNoms: true, nomsPropres: true, regles: VERSION_REGLES, categories: categoriesUtiles(categories), ...(wikidata ? { avecWikidata: true as const } : {}), ...(signaux ? { signaux } : {}) };
   return { version: 1, entrees: { ...cache.entrees, [titre]: entree } };
 }
 
@@ -297,7 +303,7 @@ export function titresAVerifier(titres: string[], cache: CacheWikipedia, mainten
     vus.add(titre);
     const entree = Object.hasOwn(cache.entrees, titre) ? cache.entrees[titre] : undefined;
     // Une entrée calculée avant le filtre des noms propres est relue une fois.
-    if (entree !== undefined && (entree.nomsPropres !== true || entree.categories === undefined)) { resultat.push(titre); continue }
+    if (entree !== undefined && (entree.nomsPropres !== true || entree.categories === undefined || entree.regles !== VERSION_REGLES)) { resultat.push(titre); continue }
     // Une entrée sans thème et sans résumé (ancienne version) est relue une fois pour profiter du résumé.
     if (entree === undefined || entree.signaux === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS || (entree.themes.length === 0 && (entree.avecResume !== true || entree.avecWikidata !== true || entree.avecHomonymie !== true || entree.avecNoms !== true))) resultat.push(titre);
   }

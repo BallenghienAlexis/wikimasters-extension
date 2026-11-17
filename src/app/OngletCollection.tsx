@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { filtrerCartes, resumer, type Filtres } from '../lib/collection';
-import { themesDeCarte, versionThemes } from '../lib/themes';
+import { versionThemes } from '../lib/themes';
+import { correspondAuTheme } from '../lib/tagsCarte';
 import { trierLignes } from '../lib/ordreTableau';
 import AnalysesCollection from './AnalysesCollection';
 import SectionRepliable from './SectionRepliable';
@@ -33,8 +34,8 @@ const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded 
 const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, revision, onFiltres, onTheme, onLimite }) => {
   const { collection, cacheWiki, appliquerCacheWiki, editer } = donnees;
   const visibles = useMemo(
-    () => filtrerCartes(collection.cartes, filtres).filter((c) => theme === 'tous' || themesDeCarte(c).includes(theme)),
-    // `cacheWiki` change les thèmes lus par `themesDeCarte` (surcouche Wikipédia).
+    () => filtrerCartes(collection.cartes, filtres).filter((c) => theme === 'tous' || correspondAuTheme(c, theme)),
+    // `cacheWiki` change les thèmes lus par `correspondAuTheme` (surcouche Wikipédia).
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [collection.cartes, filtres, theme, cacheWiki],
   );
