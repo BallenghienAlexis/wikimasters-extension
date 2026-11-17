@@ -418,7 +418,7 @@ export interface OptionsDemarrage {
   ecouterPasserCarte: (rappel: () => void) => () => void;
 }
 
-const horlogeReelle: Horloge = {
+export const horlogeReelle: Horloge = {
   now: () => Date.now(),
   attendreJusqua: (echeance) =>
     new Promise<void>((resolve) => {
@@ -432,7 +432,7 @@ const horlogeReelle: Horloge = {
 };
 
 // Même origine que la page ; ni méthode, ni corps, ni en-tête : un simple GET.
-const transportSite = async (chemin: string): Promise<ReponseApi> => {
+export const transportSite = async (chemin: string): Promise<ReponseApi> => {
   const reponse = await fetch(chemin, { credentials: 'same-origin' });
   const texte = await reponse.text().catch(() => '');
   try {

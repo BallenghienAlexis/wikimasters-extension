@@ -16,6 +16,7 @@ import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../config/amis';
 import { ajouterEvenement, validerEvenements, VERSION_VENTES, type EvenementVente } from './affluence';
 import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, type Preferences } from './tri';
 import { estObjet } from './valider';
+import { VERSION_SUIVI, suiviVide, validerLancements, type LancementVente, type SuiviVentes } from './ventes';
 
 const CLE = 'collection';
 const CLE_PREFERENCES = 'preferences';
@@ -43,6 +44,11 @@ const CLE_ETIQUETTES_SITE = 'etiquettesSite';
 const CLE_IGNOREES = 'ignorees';
 const CLE_HISTORIQUE = 'historique';
 const CLE_AFFICHAGE = 'affichage';
+const CLE_SUIVI_VENTES = 'suiviVentes';
+const CLE_LANCEMENTS_VENTES = 'lancementsVentes';
+const CLE_RELANCE_VENTES = 'relanceVentes';
+const CLE_STATUT_RELANCE = 'statutRelanceVentes';
+const CLE_ECARTES_VENTES = 'ecartesVentes';
 
 export type { StatutSynchro };
 
@@ -76,6 +82,11 @@ export const CLES_STOCKAGE = {
   ignorees: CLE_IGNOREES,
   historique: CLE_HISTORIQUE,
   affichage: CLE_AFFICHAGE,
+  suiviVentes: CLE_SUIVI_VENTES,
+  lancementsVentes: CLE_LANCEMENTS_VENTES,
+  relanceVentes: CLE_RELANCE_VENTES,
+  statutRelanceVentes: CLE_STATUT_RELANCE,
+  ecartesVentes: CLE_ECARTES_VENTES,
 } as const;
 
 function illisible(detail: string): Error {
@@ -407,6 +418,89 @@ export function ecouterSynchroAuto(rappel: () => void): () => void {
   };
   chrome.storage.onChanged.addListener(ecouteur);
   return () => chrome.storage.onChanged.removeListener(ecouteur);
+}
+
+// ---- Mise en vente : suivi, relance automatique (Alexis, 2026-11-17) ----
+
+/** Dernier suivi lu sur le site ; absent ou illisible : suivi vide (sans rien écraser). */
+export async function chargerSuiviVentes(): Promise<SuiviVentes> {
+  const contenu = await chrome.storage.local.get(CLE_SUIVI_VENTES);
+  const brut = contenu[CLE_SUIVI_VENTES];
+  if (!estObjet(brut) || brut.version !== VERSION_SUIVI || !Array.isArray(brut.actives) || !Array.isArray(brut.terminees)) return suiviVide();
+  return brut as unknown as SuiviVentes;
+}
+
+export async function enregistrerSuiviVentes(suivi: SuiviVentes): Promise<void> {
+  await chrome.storage.local.set({ [CLE_SUIVI_VENTES]: suivi });
+}
+
+export const ecouterSuiviVentes = (rappel: () => void): (() => void) => ecouterCle(CLE_SUIVI_VENTES, rappel);
+
+/** Journal des lancements automatiques (100 au plus, les plus récents gardés). */
+export async function chargerLancementsVentes(): Promise<LancementVente[]> {
+  const contenu = await chrome.storage.local.get(CLE_LANCEMENTS_VENTES);
+  return validerLancements(contenu[CLE_LANCEMENTS_VENTES]);
+}
+
+export async function ajouterLancementVente(lancement: LancementVente): Promise<void> {
+  const actuels = await chargerLancementsVentes();
+  await chrome.storage.local.set({ [CLE_LANCEMENTS_VENTES]: validerLancements([...actuels, lancement]) });
+}
+
+export const ecouterLancementsVentes = (rappel: () => void): (() => void) => ecouterCle(CLE_LANCEMENTS_VENTES, rappel);
+
+/** Interrupteur de la relance automatique : désactivé par défaut, seule la valeur `true` l’active. */
+export async function chargerRelanceVentes(): Promise<boolean> {
+  const contenu = await chrome.storage.local.get(CLE_RELANCE_VENTES);
+  return contenu[CLE_RELANCE_VENTES] === true;
+}
+
+export async function enregistrerRelanceVentes(actif: boolean): Promise<void> {
+  if (typeof actif !== 'boolean') throw new Error('Réglage de relance invalide.');
+  await chrome.storage.local.set({ [CLE_RELANCE_VENTES]: actif });
+}
+
+export const ecouterRelanceVentes = (rappel: () => void): (() => void) => ecouterCle(CLE_RELANCE_VENTES, rappel);
+
+/** État affiché de la relance automatique et du suivi (libellés fixes, jamais un corps de réponse). */
+export interface StatutRelanceVentes {
+  /** `lecture` : suivi en cours ; `attente` : relance prête ; `pause` : pause jusqu’à `jusqua` ; `arret` : à reprendre par le joueur. */
+  etat: 'lecture' | 'attente' | 'pause' | 'arret'
+  message: string
+  jusqua: number | null
+  /** Échecs de lecture de suite (attente 5 s, +5 s à chaque échec). */
+  echecs: number
+  maj: number
+}
+
+export async function chargerStatutRelanceVentes(): Promise<StatutRelanceVentes | null> {
+  const contenu = await chrome.storage.local.get(CLE_STATUT_RELANCE);
+  const b = contenu[CLE_STATUT_RELANCE];
+  if (!estObjet(b) || typeof b.message !== 'string' || !['lecture', 'attente', 'pause', 'arret'].includes(String(b.etat))) return null;
+  if (!nullOuHorodatage(b.jusqua) || !horodatageValide(b.maj) || !horodatageValide(b.echecs)) return null;
+  return { etat: b.etat as StatutRelanceVentes['etat'], message: b.message.slice(0, 300), jusqua: b.jusqua, echecs: b.echecs, maj: b.maj };
+}
+
+export async function enregistrerStatutRelanceVentes(statut: StatutRelanceVentes): Promise<void> {
+  await chrome.storage.local.set({ [CLE_STATUT_RELANCE]: { ...statut, message: statut.message.slice(0, 300) } });
+}
+
+export const ecouterStatutRelanceVentes = (rappel: () => void): (() => void) => ecouterCle(CLE_STATUT_RELANCE, rappel);
+
+/** Exemplaires écartés après un refus : identifiant → date avant laquelle on ne les retente pas. */
+export async function chargerEcartesVentes(): Promise<Record<string, number>> {
+  const contenu = await chrome.storage.local.get(CLE_ECARTES_VENTES);
+  const b = contenu[CLE_ECARTES_VENTES];
+  if (!estObjet(b)) return {};
+  const sortie: Record<string, number> = {};
+  for (const [id, t] of Object.entries(b).slice(0, 1000)) if (horodatageValide(t)) sortie[id] = t;
+  return sortie;
+}
+
+export const ecouterEcartesVentes = (rappel: () => void): (() => void) => ecouterCle(CLE_ECARTES_VENTES, rappel);
+
+export async function enregistrerEcartesVentes(ecartes: Record<string, number>): Promise<void> {
+  await chrome.storage.local.set({ [CLE_ECARTES_VENTES]: ecartes });
 }
 
 function lireContenu(brut: unknown): Collection {

@@ -1,0 +1,126 @@
+import { describe, expect, it } from 'vitest'
+import type { Action, ResultatAction } from '../../src/lib/actions'
+import { collectionVide, type Carte } from '../../src/lib/collection'
+import { creerSuiviVentes, type DependancesSuiviVentes } from '../../src/content/suiviVentes'
+import type { StatutRelanceVentes } from '../../src/lib/stockage'
+import { preferencesParDefaut } from '../../src/lib/tri'
+import { suiviVide, type LancementVente, type SuiviVentes } from '../../src/lib/ventes'
+
+const T0 = Date.parse('2026-11-17T10:00:00Z')
+const iso = (ms: number): string => new Date(ms).toISOString()
+const carte: Carte = {
+  id: 'c', titre: 'Berger allemand', description: 'race de chien', rarete: 'commune', quantite: 1, url: null, favori: false,
+  idsSite: ['ex-c'], etiquettesSite: [], prixCible: null, note: '', ami: null, valeurMarchande: 100,
+}
+const vente = (id: string, finDans: number) => ({ id, card_id: `ex-${id}`, base_amount: 50, current_bid: null, effective_bid: 50, created_at: iso(T0), end_at: iso(T0 + finDans), card: { wikipedia_title: `T${id}` } })
+
+function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relance?: boolean; resultat?: ResultatAction; visible?: boolean }) {
+  let t = T0
+  const etat = { suivi: suiviVide() as SuiviVentes, statut: null as StatutRelanceVentes | null, lancements: [] as LancementVente[], ecartes: {} as Record<string, number>, lectures: 0, ordres: [] as Action[] }
+  const reponses = [...opts.reponses]
+  const deps: DependancesSuiviVentes = {
+    horloge: { now: () => t, attendreJusqua: async (e) => void (t = Math.max(t, e)) },
+    gigue: () => 0,
+    transport: async () => {
+      etat.lectures += 1
+      return reponses.shift() ?? { statut: 200, json: { selling: [], history: [], maxConcurrentAuctions: 5 } }
+    },
+    emettre: async (o) => (etat.ordres.push(o), opts.resultat ?? { classe: 'reussie', codeHttp: 201, cause: 'action réussie' }),
+    visible: () => opts.visible ?? true,
+    route: '/api/marketplace?page=1&limit=50&sort=recent&mine=1',
+    relanceActive: async () => opts.relance ?? false,
+    chargerSuivi: async () => etat.suivi,
+    enregistrerSuivi: async (s) => void (etat.suivi = s),
+    chargerStatut: async () => etat.statut,
+    enregistrerStatut: async (s) => void (etat.statut = s),
+    chargerCollection: async () => ({ ...collectionVide(), cartes: [carte] }),
+    chargerPreferences: async () => preferencesParDefaut(),
+    chargerLancements: async () => etat.lancements,
+    ajouterLancement: async (l) => void etat.lancements.push(l),
+    chargerEcartes: async () => etat.ecartes,
+    enregistrerEcartes: async (e) => void (etat.ecartes = e),
+    chargerEtat: async () => null,
+    enregistrerEtat: async () => undefined,
+    bail: { lire: async () => null, ecrire: async () => undefined },
+  }
+  return { suivi: creerSuiviVentes(deps), etat, avancer: (ms: number) => void (t += ms), maintenant: () => t }
+}
+
+const ok = (selling: unknown[]) => ({ statut: 200, json: { selling, history: [], maxConcurrentAuctions: 5 } })
+
+describe('cycle de suivi des mises en vente', () => {
+  it('lit, enregistre et rend 5 min sans enchère proche', async () => {
+    const m = monde({ reponses: [ok([vente('a', 3_600_000)])] })
+    expect(await m.suivi.cycle()).toBe(300_000)
+    expect(m.etat.suivi.actives).toHaveLength(1)
+  })
+  it('10 s dans la dernière minute', async () => {
+    const m = monde({ reponses: [ok([vente('a', 40_000)])] })
+    expect(await m.suivi.cycle()).toBe(10_000)
+  })
+  it('n’ajoute aucune requête avant l’échéance', async () => {
+    const m = monde({ reponses: [ok([vente('a', 3_600_000)])] })
+    await m.suivi.cycle()
+    m.avancer(60_000)
+    const reste = await m.suivi.cycle()
+    expect(m.etat.lectures).toBe(1)
+    expect(reste).toBeLessThanOrEqual(240_000)
+  })
+  it('onglet caché : aucune requête', async () => {
+    const m = monde({ reponses: [], visible: false })
+    await m.suivi.cycle()
+    expect(m.etat.lectures).toBe(0)
+  })
+  it('échecs : 5 s, 10 s, 15 s, jamais d’arrêt, puis reprise normale', async () => {
+    const m = monde({ reponses: [{ statut: 403, json: { code: 'human_verification_required' } }, { statut: 429, json: null }, { statut: 500, json: null }, ok([])] })
+    const attentes: number[] = []
+    for (let i = 0; i < 4; i += 1) {
+      attentes.push(await m.suivi.cycle())
+      m.avancer(attentes.at(-1)!)
+    }
+    expect(attentes.slice(0, 3)).toEqual([5000, 10_000, 15_000])
+    expect(attentes[3]).toBe(300_000)
+    expect(m.etat.statut?.etat).toBe('lecture')
+  })
+  it('relance : une carte éligible est mise en vente quand une place est libre, sans clic', async () => {
+    const m = monde({ reponses: [ok([])], relance: true })
+    const delai = await m.suivi.cycle()
+    expect(m.etat.ordres).toHaveLength(1)
+    expect(m.etat.ordres[0]).toMatchObject({ type: 'enchere', idExemplaire: 'ex-c' })
+    expect(m.etat.lancements[0]).toMatchObject({ resultat: 'reussie', titre: 'Berger allemand' })
+    expect(delai).toBe(2000)
+  })
+  it('relance désactivée ou limite atteinte : aucun ordre', async () => {
+    const off = monde({ reponses: [ok([])], relance: false })
+    await off.suivi.cycle()
+    expect(off.etat.ordres).toHaveLength(0)
+    const pleine = monde({ reponses: [ok([1, 2, 3, 4, 5].map((i) => vente(String(i), 3_600_000)))], relance: true })
+    await pleine.suivi.cycle()
+    expect(pleine.etat.ordres).toHaveLength(0)
+  })
+  it('anti-bot sur l’écriture : arrêt immédiat, aucun contournement, reprise par le joueur', async () => {
+    const m = monde({ reponses: [ok([]), ok([])], relance: true, resultat: { classe: 'arret', codeHttp: 403, cause: 'vérification anti-bot requise' } })
+    await m.suivi.cycle()
+    expect(m.etat.statut?.etat).toBe('arret')
+    m.avancer(300_000)
+    await m.suivi.cycle()
+    expect(m.etat.ordres).toHaveLength(1)
+  })
+  it('429 : relance en pause 30 min ; 403 : l’exemplaire est écarté', async () => {
+    const m = monde({ reponses: [ok([])], relance: true, resultat: { classe: 'arret', codeHttp: 429, cause: 'réponse hors contrat' } })
+    await m.suivi.cycle()
+    expect(m.etat.statut).toMatchObject({ etat: 'pause', jusqua: T0 + 1_800_000 })
+    const r = monde({ reponses: [ok([])], relance: true, resultat: { classe: 'echec', codeHttp: 403, cause: 'réponse hors contrat' } })
+    await r.suivi.cycle()
+    expect(r.etat.ecartes['ex-c']).toBeGreaterThan(T0)
+  })
+  it('3 échecs d’écriture de suite : attente du choix du joueur', async () => {
+    const m = monde({ reponses: [ok([]), ok([]), ok([])], relance: true, resultat: { classe: 'echec', codeHttp: 500, cause: 'erreur réseau' } })
+    for (let i = 0; i < 3; i += 1) {
+      await m.suivi.cycle()
+      m.avancer(300_000)
+      m.etat.ecartes = {}
+    }
+    expect(m.etat.statut?.etat).toBe('arret')
+  })
+})
