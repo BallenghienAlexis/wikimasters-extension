@@ -127,7 +127,10 @@ export function useMiseEnVente(): EtatMiseEnVente {
     // « Passer cette carte » : l’exemplaire n’est plus retenté avant un jour ; l’avertissement disparaît avec le prochain statut.
     passerExemplaire: (idExemplaire) => {
       ecrireEcartes((e) => ({ ...e, [idExemplaire]: Date.now() + 24 * 3600_000 }));
-      void enregistrerStatutRelanceVentes({ etat: 'attente', message: 'Carte passée par le joueur', jusqua: null, echecs: 0, maj: Date.now(), carte: null }).catch(echec);
+      // Le statut garde son état et son échéance : « Passer » ne lève jamais une pause (401, 429) en cours.
+      void chargerStatutRelanceVentes()
+        .then((actuel) => enregistrerStatutRelanceVentes(actuel === null ? { etat: 'attente', message: 'Carte passée par le joueur', jusqua: null, echecs: 0, maj: Date.now(), carte: null } : { ...actuel, message: 'Carte passée par le joueur', maj: Date.now(), carte: null }))
+        .catch(echec);
     },
     // « Continuer d’attendre » : masque l’avertissement jusqu’à 5 nouveaux échecs de la même carte.
     continuerAttendre: (idExemplaire, essais) => ecrireEcartes((e) => ({ ...e, [`attend:${idExemplaire}`]: essais })),

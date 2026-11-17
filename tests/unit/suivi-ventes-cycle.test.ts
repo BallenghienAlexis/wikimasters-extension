@@ -16,6 +16,7 @@ const vente = (id: string, finDans: number) => ({ id, card_id: `ex-${id}`, base_
 
 function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relance?: boolean; resultat?: ResultatAction; visible?: boolean; actif?: boolean; synchroRecente?: boolean; pauseLots?: number }) {
   let t = T0
+  let bailValeur: number | null = null
   const etat = { suivi: suiviVide() as SuiviVentes, statut: null as StatutRelanceVentes | null, lancements: [] as LancementVente[], ecartes: {} as Record<string, number>, lectures: 0, ordres: [] as Action[] }
   const reponses = [...opts.reponses]
   const deps: DependancesSuiviVentes = {
@@ -45,7 +46,7 @@ function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relan
     derniereReleve: async () => (opts.synchroRecente === false ? null : T0),
     chargerEtat: async () => null,
     enregistrerEtat: async () => undefined,
-    bail: { lire: async () => null, ecrire: async () => undefined },
+    bail: { lire: async () => bailValeur, ecrire: async (v) => void (bailValeur = v) },
   }
   return { suivi: creerSuiviVentes(deps), etat, avancer: (ms: number) => void (t += ms), maintenant: () => t }
 }
@@ -99,6 +100,16 @@ describe('cycle de suivi des mises en vente', () => {
     expect(m.etat.lancements[0]).toMatchObject({ resultat: 'reussie', titre: 'Berger allemand' })
     expect(delai).toBe(2000)
   })
+  it('relance : le prix de départ est divisé par deux autant de fois que la carte est restée non vendue', async () => {
+    const m = monde({ reponses: [ok([])], relance: true })
+    await m.suivi.cycle()
+    const normal = (m.etat.ordres[0] as { prix: number }).prix
+    const n = monde({ reponses: [ok([])], relance: true })
+    n.etat.suivi = { ...suiviVide(), nonVentes: { 'Berger allemand': 2 }, finsVues: [] }
+    await n.suivi.cycle()
+    expect(n.etat.ordres[0]).toMatchObject({ type: 'enchere', prix: Math.max(1, Math.floor(normal / 4)) })
+    expect(n.etat.lancements[0]?.prix).toBe(Math.max(1, Math.floor(normal / 4)))
+  })
   it('relance désactivée ou limite atteinte : aucun ordre', async () => {
     const off = monde({ reponses: [ok([])], relance: false })
     await off.suivi.cycle()
@@ -129,6 +140,13 @@ describe('cycle de suivi des mises en vente', () => {
     await apres.suivi.cycle()
     expect(apres.etat.ordres).toHaveLength(0)
     expect(apres.etat.statut?.jusqua).toBe(fin)
+  })
+  it('« Passer cette carte » pendant une pause 429 : la pause reste, aucune requête avant son échéance', async () => {
+    const m = monde({ reponses: [ok([]), { statut: 429, json: null }, ok([])], relance: true, resultat: { classe: 'echec', codeHttp: 500, cause: 'erreur réseau' } })
+    m.etat.statut = { etat: 'pause', message: 'x', jusqua: T0 + 1_800_000, echecs: 0, maj: T0, carte: { titre: 'Berger allemand', idExemplaire: 'ex-c', essais: 5 } }
+    const attente = await m.suivi.cycle()
+    expect(attente).toBe(1_800_000)
+    expect(m.etat.lectures).toBe(0)
   })
   it('pause des autres process (lots) : aucune relance', async () => {
     const m = monde({ reponses: [ok([])], relance: true, pauseLots: T0 + 600_000 })

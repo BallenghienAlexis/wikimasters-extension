@@ -15,6 +15,9 @@ import {
   etatTerminee,
   formaterDecompte,
   fusionnerSuivi,
+  nonVentesDe,
+  PRIX_DEPART_PLANCHER,
+  prixDepartAjuste,
   origineDe,
   prolongations,
   suiviVide,
@@ -148,5 +151,37 @@ describe('choix de la carte suivante (règle de pré-cochage, plus chères d’a
   it('prend l’exemplaire suivant quand le premier est en vente', () => {
     const r = choisirProchaineEnchere(entree([carte('a', { quantite: 2, idsSite: ['e1', 'e2'] })], { exemplairesEnVente: new Set(['e1']) }))
     expect(r?.action.idExemplaire).toBe('e2')
+  })
+})
+
+describe('non-ventes et prix de départ divisé par deux', () => {
+  const fin = (id: string, titre: string, finLe: number, prixFinal: number | null) => ({ id, titre, rarete: 'commune', prixDepart: 40, prixFinal, creeLe: finLe - 3_600_000, finLe })
+  const lecture = (terminees: ReturnType<typeof fin>[]) => ({ actives: [], terminees, max: 5 })
+
+  it('divise par deux à chaque non-vente, avec plancher de 1', () => {
+    expect(prixDepartAjuste(40, 0)).toBe(40)
+    expect(prixDepartAjuste(40, 1)).toBe(20)
+    expect(prixDepartAjuste(40, 2)).toBe(10)
+    expect(prixDepartAjuste(40, 9)).toBe(PRIX_DEPART_PLANCHER)
+    expect(prixDepartAjuste(1, 3)).toBe(1)
+  })
+
+  it('ne compte pas l’historique existant à la première lecture, puis compte les nouvelles fins une seule fois', () => {
+    const v0 = fusionnerSuivi(suiviVide(), lecture([fin('a', 'X', 1000, null)]), 1)
+    expect(nonVentesDe(v0, 'X')).toBe(0)
+    const l1 = lecture([fin('b', 'X', 2000, null), fin('a', 'X', 1000, null)])
+    const v1 = fusionnerSuivi(v0, l1, 2)
+    expect(nonVentesDe(v1, 'X')).toBe(1)
+    expect(nonVentesDe(fusionnerSuivi(v1, l1, 3), 'X')).toBe(1)
+    const v2 = fusionnerSuivi(v1, lecture([fin('c', 'X', 3000, null), ...l1.terminees]), 4)
+    expect(nonVentesDe(v2, 'X')).toBe(2)
+  })
+
+  it('une vente remet le compte à zéro', () => {
+    const v0 = fusionnerSuivi(suiviVide(), lecture([]), 1)
+    const v1 = fusionnerSuivi(v0, lecture([fin('b', 'X', 2000, null), fin('a', 'X', 1000, null)]), 2)
+    expect(nonVentesDe(v1, 'X')).toBe(2)
+    const v2 = fusionnerSuivi(v1, lecture([fin('c', 'X', 3000, 60), ...lecture([fin('b', 'X', 2000, null), fin('a', 'X', 1000, null)]).terminees]), 3)
+    expect(nonVentesDe(v2, 'X')).toBe(0)
   })
 })

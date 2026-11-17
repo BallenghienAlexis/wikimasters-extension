@@ -7,3 +7,7 @@ Décisions d’Alexis (chat du projet, 2026-11-17), risque de bannissement rappe
 - Règle du 16/11 : aucun process ne s’arrête seul sur des échecs ; attente progressive de 5 s, +5 s à chaque échec ; avertissement avec choix « Passer cette carte » / « Continuer d’attendre ». Seuls l’anti-bot (attente, jamais contourné) et 401/429 (pause 30 min) mettent en pause.
 
 Critères : tests `tests/unit/mise-en-vente.test.ts`, `tests/unit/suivi-ventes-cycle.test.ts`, `tests/e2e/mise-en-vente.spec.ts`. Cadre complet dans `AGENTS.md` § « Mise en vente : suivi et relance automatique ».
+
+## Non-ventes et prix de départ (Alexis, 2026-11-17)
+
+Une enchère non vendue est mémorisée par carte (`nonVentes`, `finsVues` dans `suiviVentes`) : la relance divise le prix de départ de la matrice par deux autant de fois que la carte est restée non vendue de suite (÷2, ÷4…), plancher de 1 wikibidou (minimum du site **non vérifié**). Une vente remet le compte à zéro. À la première lecture, l’historique existant n’est pas compté. L’onglet affiche les non-ventes de suite et le prochain prix de départ.

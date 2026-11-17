@@ -6,6 +6,9 @@ import {
   etatTerminee,
   formaterDecompte,
   nombreRelances,
+  nonVentesDe,
+  prixDepartAjuste,
+  PRIX_DEPART_PLANCHER,
   origineDe,
   prolongations,
   resteMs,
@@ -172,7 +175,7 @@ const OngletMiseEnVente: React.FC = () => {
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="text-sm text-muted">
-                  {['Carte', 'Résultat', 'Origine', 'Départ', 'Prix final', 'Relances de la carte'].map((c) => (
+                  {['Carte', 'Résultat', 'Origine', 'Départ', 'Prix final', 'Relances de la carte', 'Non-ventes de suite', 'Prochain départ'].map((c) => (
                     <th key={c} scope="col" className="px-2 py-1 font-normal">
                       {c}
                     </th>
@@ -190,6 +193,8 @@ const OngletMiseEnVente: React.FC = () => {
                       <td className="px-2 py-2">{v.prixDepart}</td>
                       <td className="px-2 py-2">{v.prixFinal ?? '–'}</td>
                       <td className="px-2 py-2">{nombreRelances(lancements, v.titre)}</td>
+                      <td className="px-2 py-2">{nonVentesDe(suivi, v.titre)}</td>
+                      <td className="px-2 py-2">{prixDepartAjuste(v.prixDepart, nonVentesDe(suivi, v.titre))}</td>
                     </tr>
                   );
                 })}
@@ -197,6 +202,9 @@ const OngletMiseEnVente: React.FC = () => {
             </table>
           </div>
         )}
+        <p className="mt-2 text-sm text-muted">
+          Une enchère non vendue est gardée en mémoire : à chaque non-vente de suite, le prix de départ de sa prochaine relance est divisé par deux (1re = ÷2, 2e = ÷4…), jamais sous {PRIX_DEPART_PLANCHER} (minimum du site non vérifié). Une vente remet le compte à zéro. Les non-ventes antérieures à cette fonction ne sont pas comptées.
+        </p>
       </SectionRepliable>
 
       <SectionRepliable id="lancements-auto" titre="Lancements automatiques" resume={`${lancements.length} ${lancements.length > 1 ? 'lancements' : 'lancement'}`} testId="lancements-auto">

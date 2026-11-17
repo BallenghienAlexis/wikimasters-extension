@@ -427,7 +427,11 @@ export async function chargerSuiviVentes(): Promise<SuiviVentes> {
   const contenu = await chrome.storage.local.get(CLE_SUIVI_VENTES);
   const brut = contenu[CLE_SUIVI_VENTES];
   if (!estObjet(brut) || brut.version !== VERSION_SUIVI || !Array.isArray(brut.actives) || !Array.isArray(brut.terminees)) return suiviVide();
-  return brut as unknown as SuiviVentes;
+  const suivi = brut as unknown as SuiviVentes;
+  const nonVentes: Record<string, number> = {};
+  if (estObjet(suivi.nonVentes)) for (const [t, n] of Object.entries(suivi.nonVentes)) if (typeof n === 'number' && Number.isSafeInteger(n) && n > 0 && n < 1000) nonVentes[t] = n;
+  const finsVues = Array.isArray(suivi.finsVues) ? suivi.finsVues.filter((i): i is string => typeof i === 'string').slice(0, 200) : undefined;
+  return { ...suivi, nonVentes, finsVues };
 }
 
 export async function enregistrerSuiviVentes(suivi: SuiviVentes): Promise<void> {

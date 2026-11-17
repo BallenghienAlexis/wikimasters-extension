@@ -21,6 +21,8 @@ import {
   attenteApresEchec,
   delaiSuivant,
   fusionnerSuivi,
+  nonVentesDe,
+  prixDepartAjuste,
   purgerEcartes,
   type LancementVente,
   type SuiviVentes,
@@ -138,8 +140,19 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       titresRetires: new Set(titresRetires),
     });
     if (choix === null) return false;
+    // Non vendue : prix de départ divisé par deux autant de fois que la carte est restée sans vente (Alexis, 2026-11-17).
+    const nonVentes = nonVentesDe(suivi, choix.titre);
+    if (nonVentes > 0) choix.action = { ...choix.action, prix: prixDepartAjuste(choix.action.prix, nonVentes) };
 
-    await deps.bail.ecrire(maintenant + DUREE_BAIL_MS);
+    // Les essais déjà faits sur cette carte survivent à un rechargement de l’onglet (lus dans le statut enregistré).
+    if (stocke?.carte?.idExemplaire === choix.action.idExemplaire && stocke.carte.essais > echecsEcriture) {
+      echecsEcriture = stocke.carte.essais;
+      exemplaireEnEchec = choix.action.idExemplaire;
+    }
+    // Bail pris puis relu : si un autre process l’a pris entre-temps, la relance renonce.
+    const echeanceBail = maintenant + DUREE_BAIL_MS;
+    await deps.bail.ecrire(echeanceBail);
+    if ((await deps.bail.lire()) !== echeanceBail) return false;
     let resultat: ResultatAction;
     try {
       await cadencer();
@@ -147,7 +160,8 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     } catch {
       resultat = { classe: 'inconnu', codeHttp: null, cause: 'erreur d’émission' };
     } finally {
-      await deps.bail.ecrire(null).catch(() => undefined);
+      // Le bail n’est libéré que s’il est encore le nôtre.
+      if ((await deps.bail.lire().catch(() => null)) === echeanceBail) await deps.bail.ecrire(null).catch(() => undefined);
     }
     const lancement = (resultat: 'reussie' | 'echec', cause: string | null): LancementVente => ({ le: deps.horloge.now(), source: 'auto', titre: choix.titre, prix: choix.action.prix, resultat, cause });
 
@@ -240,10 +254,15 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
         // 401 et 429 : règle de sécurité existante, pause de 30 min ; toute autre erreur : attente progressive sans arrêt.
         const longue = reponse.statut === 401 || reponse.statut === 429;
         const attente = longue ? PAUSE_ECRITURE_MS : attenteApresEchec(echecsLecture);
+        if (longue) {
+          // Le site demande de ralentir : la synchro et les lots le voient aussi (même pause de 30 min que le relevé d’affluence).
+          const etat = (await deps.chargerEtat()) ?? etatInitial();
+          await deps.enregistrerEtat({ ...etat, arretJusqua: deps.horloge.now() + PAUSE_ECRITURE_MS }).catch(() => undefined);
+        }
         const message = reponse.statut === 0 ? 'Erreur réseau' : libelleLecture(reponse);
         // Une pause d’écriture plus longue (401, 429) reste affichée : la lecture ne l’écrase jamais.
         if (!(etat0?.etat === 'pause' && etat0.jusqua !== null && etat0.jusqua > deps.horloge.now() + attente)) {
-          await statut({ etat: 'pause', message: `${message} : ${longue ? 'pause de 30 min' : `nouvel essai dans ${Math.round(attente / 1000)} s`}`, jusqua: deps.horloge.now() + attente, carte: etat0?.carte ?? null });
+          await statut({ etat: 'pause', message: `${message} : ${longue ? 'pause de 30 min' : `nouvel essai dans ${Math.round(attente / 1000)} s`}`, jusqua: deps.horloge.now() + attente, carte: longue ? null : etat0?.carte ?? null });
         }
         return attente;
       }

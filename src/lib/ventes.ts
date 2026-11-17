@@ -71,9 +71,48 @@ export interface SuiviVentes {
   max: number | null
   actives: VenteActive[]
   terminees: VenteTerminee[]
+  /**
+   * Non-ventes de suite par carte (titre → nombre), gardées d’une lecture à l’autre (Alexis, 2026-11-17) : le prix de
+   * départ de la prochaine relance est divisé par deux autant de fois. Une vente remet le compte à zéro.
+   */
+  nonVentes?: Record<string, number>
+  /** Identifiants des enchères terminées déjà comptées (200 au plus) ; absent : jamais lu, l’historique existant n’est pas compté. */
+  finsVues?: string[]
 }
 
 export const suiviVide = (): SuiviVentes => ({ version: VERSION_SUIVI, releveLe: 0, max: null, actives: [], terminees: [] })
+
+/**
+ * Plancher du prix de départ ajusté : 1 wikibidou, le plus petit prix de la matrice. Le minimum exact du site n’est pas
+ * relevé (non vérifié) ; un prix refusé suivrait le traitement habituel d’un échec d’écriture.
+ */
+export const PRIX_DEPART_PLANCHER = 1
+const MAX_FINS_VUES = 200
+const MAX_NON_VENTES = 500
+
+/** Prix de départ divisé par deux autant de fois que la carte est restée non vendue, jamais sous le plancher. */
+export function prixDepartAjuste(base: number, nonVentes: number): number {
+  if (!Number.isFinite(base) || base <= PRIX_DEPART_PLANCHER || nonVentes <= 0) return base
+  return Math.max(PRIX_DEPART_PLANCHER, Math.floor(base / 2 ** Math.min(nonVentes, 30)))
+}
+
+/** Compte des non-ventes de suite pour une carte (0 si aucune). */
+export const nonVentesDe = (suivi: Pick<SuiviVentes, 'nonVentes'>, titre: string): number => suivi.nonVentes?.[titre] ?? 0
+
+function compterNonVentes(precedent: SuiviVentes, terminees: readonly VenteTerminee[]): Pick<SuiviVentes, 'nonVentes' | 'finsVues'> {
+  const vues = precedent.finsVues
+  const nouvelles = terminees.map((v) => v.id)
+  if (vues === undefined) return { nonVentes: precedent.nonVentes ?? {}, finsVues: nouvelles.slice(0, MAX_FINS_VUES) }
+  const connues = new Set(vues)
+  const comptes = { ...(precedent.nonVentes ?? {}) }
+  // Les plus anciennes d’abord : une vente remet le compte à zéro, une non-vente l’augmente.
+  for (const v of terminees.filter((t) => !connues.has(t.id)).sort((a, b) => a.finLe - b.finLe)) {
+    if (v.prixFinal !== null && v.prixFinal > 0) delete comptes[v.titre]
+    else comptes[v.titre] = (comptes[v.titre] ?? 0) + 1
+  }
+  const garde = Object.entries(comptes).slice(-MAX_NON_VENTES)
+  return { nonVentes: Object.fromEntries(garde), finsVues: [...nouvelles, ...vues.filter((i) => !nouvelles.includes(i))].slice(0, MAX_FINS_VUES) }
+}
 
 const dateMs = (v: unknown): number | null => {
   if (typeof v !== 'string') return null
@@ -148,7 +187,7 @@ export function analyserListeVentes(json: unknown): LectureVentes | null {
 export function fusionnerSuivi(precedent: SuiviVentes, lecture: LectureVentes, maintenant: number): SuiviVentes {
   const anciennes = new Map(precedent.actives.map((v) => [v.id, v]))
   const actives: VenteActive[] = lecture.actives.map((v) => ({ ...v, finInitiale: anciennes.get(v.id)?.finInitiale ?? v.finLe }))
-  return { version: VERSION_SUIVI, releveLe: maintenant, max: lecture.max ?? precedent.max, actives, terminees: lecture.terminees }
+  return { version: VERSION_SUIVI, releveLe: maintenant, max: lecture.max ?? precedent.max, actives, terminees: lecture.terminees, ...compterNonVentes(precedent, lecture.terminees) }
 }
 
 /** Nombre de prolongations de 60 s déjà subies (0 si aucune). */
