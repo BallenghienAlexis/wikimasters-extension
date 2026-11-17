@@ -175,7 +175,7 @@ const OngletMiseEnVente: React.FC = () => {
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="text-sm text-muted">
-                  {['Carte', 'Résultat', 'Origine', 'Départ', 'Prix final', 'Relances de la carte', 'Non-ventes de suite', 'Division du prochain départ'].map((c) => (
+                  {['Carte', 'Résultat', 'Origine', 'Départ', 'Prix final', 'Relances de la carte', 'Non-ventes de suite', 'Division du prochain départ (état actuel de la carte)'].map((c) => (
                     <th key={c} scope="col" className="px-2 py-1 font-normal">
                       {c}
                     </th>
@@ -185,6 +185,7 @@ const OngletMiseEnVente: React.FC = () => {
               <tbody>
                 {terminees.map((v) => {
                   const etat = etatTerminee(v, lancements);
+                  const nv = nonVentesDe(suivi, cleNonVente(v.rarete, v.titre));
                   return (
                     <tr key={v.id} className="border-t border-line">
                       <td className="px-2 py-2">{v.titre}</td>
@@ -193,8 +194,8 @@ const OngletMiseEnVente: React.FC = () => {
                       <td className="px-2 py-2">{v.prixDepart}</td>
                       <td className="px-2 py-2">{v.prixFinal ?? '–'}</td>
                       <td className="px-2 py-2">{nombreRelances(lancements, v.titre)}</td>
-                      <td className="px-2 py-2">{nonVentesDe(suivi, cleNonVente(v.rarete, v.titre))}</td>
-                      <td className="px-2 py-2">{nonVentesDe(suivi, cleNonVente(v.rarete, v.titre)) > 0 ? `÷${2 ** nonVentesDe(suivi, cleNonVente(v.rarete, v.titre))}` : '–'}</td>
+                      <td className="px-2 py-2">{nv}</td>
+                      <td className="px-2 py-2">{nv > 0 ? `÷${2 ** nv}` : '–'}</td>
                     </tr>
                   );
                 })}

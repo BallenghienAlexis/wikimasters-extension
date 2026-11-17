@@ -155,7 +155,7 @@ describe('choix de la carte suivante (règle de pré-cochage, plus chères d’a
 })
 
 describe('non-ventes et prix de départ divisé par deux', () => {
-  const fin = (id: string, titre: string, finLe: number, prixFinal: number | null) => ({ id, titre, rarete: 'commune', prixDepart: 40, prixFinal, creeLe: finLe - 3_600_000, finLe })
+  const fin = (id: string, titre: string, finLe: number, prixFinal: number | null) => ({ id, titre, rarete: 'C', prixDepart: 40, prixFinal, creeLe: finLe - 3_600_000, finLe })
   const lecture = (terminees: ReturnType<typeof fin>[]) => ({ actives: [], terminees, max: 5 })
 
   it('divise par deux à chaque non-vente, avec plancher de 1', () => {
@@ -168,13 +168,13 @@ describe('non-ventes et prix de départ divisé par deux', () => {
 
   it('ne compte pas l’historique existant à la première lecture, puis compte les nouvelles fins une seule fois', () => {
     const v0 = fusionnerSuivi(suiviVide(), lecture([fin('a', 'X', 1000, null)]), 1)
-    expect(nonVentesDe(v0, 'commune|X')).toBe(0)
+    expect(nonVentesDe(v0, 'C|X')).toBe(0)
     const l1 = lecture([fin('b', 'X', 2000, null), fin('a', 'X', 1000, null)])
     const v1 = fusionnerSuivi(v0, l1, 2)
-    expect(nonVentesDe(v1, 'commune|X')).toBe(1)
-    expect(nonVentesDe(fusionnerSuivi(v1, l1, 3), 'commune|X')).toBe(1)
+    expect(nonVentesDe(v1, 'C|X')).toBe(1)
+    expect(nonVentesDe(fusionnerSuivi(v1, l1, 3), 'C|X')).toBe(1)
     const v2 = fusionnerSuivi(v1, lecture([fin('c', 'X', 3000, null), ...l1.terminees]), 4)
-    expect(nonVentesDe(v2, 'commune|X')).toBe(2)
+    expect(nonVentesDe(v2, 'C|X')).toBe(2)
   })
 
   it('le statut explicite du site prime sur le prix final ; une annulation ne compte pas', () => {
@@ -182,17 +182,17 @@ describe('non-ventes et prix de départ divisé par deux', () => {
     const a = { ...fin('a', 'X', 1000, null), statut: 'non-vendue' as const }
     const b = { ...fin('b', 'X', 2000, null), statut: 'annulee' as const }
     const v1 = fusionnerSuivi(v0, lecture([b, a]), 2)
-    expect(nonVentesDe(v1, 'commune|X')).toBe(1)
+    expect(nonVentesDe(v1, 'C|X')).toBe(1)
     const c = { ...fin('c', 'X', 3000, null), statut: 'vendue' as const }
-    expect(nonVentesDe(fusionnerSuivi(v1, lecture([c, b, a]), 3), 'commune|X')).toBe(0)
+    expect(nonVentesDe(fusionnerSuivi(v1, lecture([c, b, a]), 3), 'C|X')).toBe(0)
     expect(analyserListeVentes({ selling: [], history: [{ id: 'h', base_amount: 5, created_at: iso(T0), settled_at: iso(T0 + 1), status: 'settled_unsold', final_price: null }] })?.terminees[0]?.statut).toBe('non-vendue')
   })
 
   it('une vente remet le compte à zéro', () => {
     const v0 = fusionnerSuivi(suiviVide(), lecture([]), 1)
     const v1 = fusionnerSuivi(v0, lecture([fin('b', 'X', 2000, null), fin('a', 'X', 1000, null)]), 2)
-    expect(nonVentesDe(v1, 'commune|X')).toBe(2)
+    expect(nonVentesDe(v1, 'C|X')).toBe(2)
     const v2 = fusionnerSuivi(v1, lecture([fin('c', 'X', 3000, 60), ...lecture([fin('b', 'X', 2000, null), fin('a', 'X', 1000, null)]).terminees]), 3)
-    expect(nonVentesDe(v2, 'commune|X')).toBe(0)
+    expect(nonVentesDe(v2, 'C|X')).toBe(0)
   })
 })

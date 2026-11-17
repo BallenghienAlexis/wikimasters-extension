@@ -9,7 +9,7 @@ import { suiviVide, type LancementVente, type SuiviVentes } from '../../src/lib/
 const T0 = Date.parse('2026-11-17T10:00:00Z')
 const iso = (ms: number): string => new Date(ms).toISOString()
 const carte: Carte = {
-  id: 'c', titre: 'Berger allemand', description: 'race de chien', rarete: 'commune', quantite: 1, url: null, favori: false,
+  id: 'c', titre: 'Berger allemand', description: 'race de chien', rarete: 'C', quantite: 1, url: null, favori: false,
   idsSite: ['ex-c'], etiquettesSite: [], prixCible: null, note: '', ami: null, valeurMarchande: 100,
 }
 const vente = (id: string, finDans: number) => ({ id, card_id: `ex-${id}`, base_amount: 50, current_bid: null, effective_bid: 50, created_at: iso(T0), end_at: iso(T0 + finDans), card: { wikipedia_title: `T${id}` } })
@@ -105,10 +105,20 @@ describe('cycle de suivi des mises en vente', () => {
     await m.suivi.cycle()
     const normal = (m.etat.ordres[0] as { prix: number }).prix
     const n = monde({ reponses: [ok([])], relance: true })
-    n.etat.suivi = { ...suiviVide(), nonVentes: { 'commune|Berger allemand': 2 }, finsVues: [] }
+    n.etat.suivi = { ...suiviVide(), nonVentes: { 'C|Berger allemand': 2 }, finsVues: [] }
     await n.suivi.cycle()
     expect(n.etat.ordres[0]).toMatchObject({ type: 'enchere', prix: Math.max(1, Math.floor(normal / 4)) })
     expect(n.etat.lancements[0]?.prix).toBe(Math.max(1, Math.floor(normal / 4)))
+  })
+  it('de bout en bout : deux non-ventes lues dans l’historique du site divisent le prix de la relance (rareté en code du site)', async () => {
+    const fin = (id: string, dans: number) => ({ id, card_id: 'ex-x', base_amount: 10, current_bid: null, effective_bid: 10, final_price: null, status: 'settled_unsold', snapshot_rarity: 'C', created_at: iso(T0 - 7_200_000), settled_at: iso(T0 + dans), end_at: iso(T0 + dans), card: { wikipedia_title: 'Berger allemand' } })
+    const sans = monde({ reponses: [ok([])], relance: true })
+    await sans.suivi.cycle()
+    const normal = (sans.etat.ordres[0] as { prix: number }).prix
+    const m = monde({ reponses: [{ statut: 200, json: { selling: [], history: [fin('h1', -2000), fin('h2', -1000)], maxConcurrentAuctions: 5 } }], relance: true })
+    m.etat.suivi = { ...suiviVide(), finsVues: [] }
+    await m.suivi.cycle()
+    expect(m.etat.ordres[0]).toMatchObject({ type: 'enchere', prix: Math.max(1, Math.floor(normal / 4)) })
   })
   it('relance désactivée ou limite atteinte : aucun ordre', async () => {
     const off = monde({ reponses: [ok([])], relance: false })

@@ -15,3 +15,5 @@ Une enchère non vendue est mémorisée par carte (`nonVentes`, `finsVues` dans 
 Le compte est tenu par `rareté|titre`. **Non vérifié** : la forme de `history` pour une vente réelle (`final_price`) ; une vente sans `final_price` serait comptée non vendue (point à relever, `retouches.md`). Un seul onglet WikiMasters visible évite l’entrelacement du bail.
 
 **Relevé du 2026-11-17 (lecture de `mine=1`, 55 enchères du joueur)** : `history` porte un `status` explicite (`settled_sold`, `settled_unsold`, `cancelled`) et `final_price` (nombre ou `null`). Le compte des non-ventes se fonde sur ce statut (repli sur `final_price` s’il manque) ; une annulation n’est ni vente ni non-vente. Prix de départ minimum observé : 1 (plancher conservé ; le minimum imposé n’est pas documenté). Le site peut aussi réajuster un prix de départ (`base_repriced_at`, `listing_base_amount`, 4 cas sur 55).
+
+Relevé du 2026-11-17 : `snapshot_rarity` du listing et `rarity` de `my-collection` utilisent les mêmes codes (`PC`, `C`, `R`, `SR`, `UR`, `L`) ; titres de 52 caractères au plus (sous la coupe à 200). Le compte `rareté|titre` concorde donc des deux côtés.
