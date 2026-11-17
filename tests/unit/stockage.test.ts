@@ -178,7 +178,7 @@ describe('affluenceSite', () => {
 describe('CLES_STOCKAGE', () => {
   it('AC4 : énumère exactement les clés locales de l’extension', () => {
     expect([...cles()].sort()).toEqual([
-      'affichage', 'affluenceSite', 'amisInitiaux', 'arretSynchro', 'bailSynchro', 'classementIA', 'collection', 'derniereRelance', 'derniereSynchro', 'etatSynchro', 'etiquettesSite', 'execution', 'historique', 'ignorees', 'journal', 'passerCarteSynchro', 'preferences', 'registre', 'relanceSynchro', 'releveMarche', 'signalSynchro', 'statutSynchro', 'syncAuto', 'ventes', 'wikipedia',
+      'affichage', 'affluenceSite', 'amisInitiaux', 'arretSynchro', 'bailSynchro', 'classementIA', 'collection', 'derniereRelance', 'derniereSynchro', 'ecartesVentes', 'etatSynchro', 'etiquettesSite', 'execution', 'historique', 'ignorees', 'journal', 'lancementsVentes', 'passerCarteSynchro', 'preferences', 'registre', 'relanceSynchro', 'relanceVentes', 'releveMarche', 'signalSynchro', 'statutRelanceVentes', 'statutSynchro', 'suiviVentes', 'syncAuto', 'ventes', 'wikipedia',
     ]);
   });
 

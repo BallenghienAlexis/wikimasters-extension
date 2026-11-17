@@ -8,6 +8,7 @@ import MessageStockage from './MessageStockage';
 import Onglets from './Onglets';
 import OngletCollection, { TAILLE_PAGE } from './OngletCollection';
 import OngletLots from './OngletLots';
+import OngletMiseEnVente from './OngletMiseEnVente';
 import OngletReglages from './OngletReglages';
 import OngletSynchro from './OngletSynchro';
 import OngletTableauDeBord from './OngletTableauDeBord';
@@ -46,6 +47,9 @@ const App: React.FC = () => {
         break;
       case 'lots':
         panneau = <OngletLots donnees={donnees} />;
+        break;
+      case 'mise-en-vente':
+        panneau = <OngletMiseEnVente />;
         break;
       case 'collection':
         panneau = (

@@ -13,17 +13,17 @@ const THEMES = ['light', 'dark'] as const;
 const nomOnglet = (i: number): RegExp => new RegExp(`^${ONGLETS[i]?.nom ?? ''}`);
 
 test.describe('SC-012 : onglets', () => {
-  test('SC-012 : cinq onglets dans l’ordre, motif tablist/tab/tabpanel', async ({ pageCollection }) => {
+  test('SC-012 : six onglets dans l’ordre, motif tablist/tab/tabpanel', async ({ pageCollection }) => {
     const liste = pageCollection.getByRole('tablist', { name: 'Sections' });
     await expect(liste).toBeVisible();
     const onglets = liste.getByRole('tab');
-    await expect(onglets).toHaveCount(5);
-    for (let i = 0; i < 5; i++) {
+    await expect(onglets).toHaveCount(ONGLETS.length);
+    for (let i = 0; i < ONGLETS.length; i++) {
       await expect(onglets.nth(i)).toHaveText(nomOnglet(i));
     }
     // Défaut : Tableau de bord, un seul onglet dans l’ordre de tabulation (tabindex itinérant).
     await expect(onglets.nth(0)).toHaveAttribute('aria-selected', 'true');
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < ONGLETS.length; i++) {
       await expect(onglets.nth(i)).toHaveAttribute('tabindex', i === 0 ? '0' : '-1');
       if (i > 0) await expect(onglets.nth(i)).toHaveAttribute('aria-selected', 'false');
     }
@@ -55,8 +55,8 @@ test.describe('SC-012 : onglets', () => {
     await expect(onglets.nth(1)).toBeFocused();
     await expect(onglets.nth(1)).toHaveAttribute('aria-selected', 'true');
     await pageCollection.keyboard.press('End');
-    await expect(onglets.nth(4)).toBeFocused();
-    await expect(onglets.nth(4)).toHaveAttribute('aria-selected', 'true');
+    await expect(onglets.nth(ONGLETS.length - 1)).toBeFocused();
+    await expect(onglets.nth(ONGLETS.length - 1)).toHaveAttribute('aria-selected', 'true');
     await expect(pageCollection).toHaveURL(/#reglages$/);
     await pageCollection.keyboard.press('Home');
     await expect(onglets.nth(0)).toBeFocused();

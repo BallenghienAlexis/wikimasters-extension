@@ -72,6 +72,8 @@ export interface DependancesSynchroAuto {
   routeMarche?: string | null;
   champsHorodatage?: readonly string[];
   noterAffluence?: (horodatages: number[]) => Promise<void>;
+  /** Même réponse du listing du marché, confiée au suivi des mises en vente (aucune requête de plus). */
+  surReponseMarche?: (json: unknown) => Promise<void>;
   /** Dernier relevé et échecs consécutifs, partagés entre onglets. */
   releve?: { lire: () => Promise<{ le: number | null; echecs: number }>; ecrire: (r: { le: number | null; echecs: number }) => Promise<void> };
 }
@@ -227,7 +229,10 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
           codeHttp: refus ? reponse.statut : null,
         });
       }
-      if (reponse.statut === 200) await deps.noterAffluence(extraireHorodatages(reponse.json, deps.champsHorodatage));
+      if (reponse.statut === 200) {
+        await deps.noterAffluence(extraireHorodatages(reponse.json, deps.champsHorodatage));
+        await deps.surReponseMarche?.(reponse.json).catch(() => undefined);
+      }
     } catch {
       deps.journal?.('Relevé d’affluence interrompu.');
     } finally {
@@ -409,6 +414,8 @@ export interface SourceVisibilite {
 
 export interface OptionsDemarrage {
   synchro: SynchroAuto;
+  /** Réponse du listing du marché relevée par la synchro : confiée au suivi des mises en vente. */
+  surReponseMarche: (json: unknown) => Promise<void>;
   visibilite: SourceVisibilite;
   /** Demande d'arrêt venue de l'interface. */
   ecouterArret: (rappel: () => void) => () => void;
@@ -418,7 +425,7 @@ export interface OptionsDemarrage {
   ecouterPasserCarte: (rappel: () => void) => () => void;
 }
 
-const horlogeReelle: Horloge = {
+export const horlogeReelle: Horloge = {
   now: () => Date.now(),
   attendreJusqua: (echeance) =>
     new Promise<void>((resolve) => {
@@ -432,7 +439,7 @@ const horlogeReelle: Horloge = {
 };
 
 // Même origine que la page ; ni méthode, ni corps, ni en-tête : un simple GET.
-const transportSite = async (chemin: string): Promise<ReponseApi> => {
+export const transportSite = async (chemin: string): Promise<ReponseApi> => {
   const reponse = await fetch(chemin, { credentials: 'same-origin' });
   const texte = await reponse.text().catch(() => '');
   try {
@@ -460,7 +467,7 @@ function ecrireEnSerie(evenement: EvenementSynchro): Promise<void> {
   return fileJournal;
 }
 
-const synchroDuNavigateur = (): SynchroAuto =>
+const synchroDuNavigateur = (surReponseMarche?: (json: unknown) => Promise<void>): SynchroAuto =>
   creerSynchroAuto({
     horloge: horlogeReelle,
     gigue: gigueAleatoire,
@@ -479,6 +486,7 @@ const synchroDuNavigateur = (): SynchroAuto =>
     derniereRelance: { lire: chargerDerniereRelance, ecrire: enregistrerDerniereRelance },
     journaliser: (evenement) => ecrireEnSerie(evenement),
     journal: (message) => journaliserDiagnostic(message),
+    surReponseMarche,
     routeMarche: CONFIG_AFFLUENCE.routeMarche,
     champsHorodatage: CONFIG_AFFLUENCE.champsHorodatage,
     releve: { lire: chargerReleveMarche, ecrire: enregistrerReleveMarche },
@@ -501,7 +509,7 @@ const visibiliteDuNavigateur = (): SourceVisibilite => ({
  * Renvoie la fonction qui retire minuteur et écouteurs.
  */
 export function demarrerSynchroAuto(options: Partial<OptionsDemarrage> = {}): () => void {
-  const synchro = options.synchro ?? synchroDuNavigateur();
+  const synchro = options.synchro ?? synchroDuNavigateur(options.surReponseMarche);
   const visibilite = options.visibilite ?? visibiliteDuNavigateur();
   const ecouterArret = options.ecouterArret ?? ecouterArretSynchro;
   const ecouterRelance = options.ecouterRelance ?? ecouterRelanceSynchro;
