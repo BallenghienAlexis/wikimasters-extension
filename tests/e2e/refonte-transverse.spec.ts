@@ -11,6 +11,7 @@ import {
   fixerHorloge,
   MAINTENANT,
   ONGLETS,
+  ouvrirBloc,
   ouvrirIgnorees,
   ouvrirSectionsReglages,
   pieger,
@@ -105,6 +106,7 @@ test.describe('SC-011 : aucune requête hors extension', () => {
     const banc = await preparer(context, page);
     banc.phase.nom = 'liste';
     await allerA(page, 'collection');
+    await ouvrirBloc(page, 'liste-cartes');
     await expect(page.getByText(/titres des cartes affichées sont vérifiés/)).toBeVisible();
     await page.getByTestId('tableau-cartes').getByRole('columnheader', { name: 'Titre' }).getByRole('button').click();
     await expect.poll(() => banc.vues.length, { timeout: 15_000 }).toBeGreaterThan(0);
@@ -400,6 +402,7 @@ for (const mode of ['reduce', 'reglage'] as const) {
     test('SC-026 : chiffres clés à leur valeur finale dès le premier affichage', async ({ pageCollection: page }) => {
       await page.reload();
       await allerA(page, 'tableau-de-bord');
+      await ouvrirBloc(page, 'chiffres-cles');
       const kpis = page.getByTestId('kpi');
       await expect(kpis).toHaveCount(3);
       const lire = (): Promise<string[]> => kpis.evaluateAll((els) => els.map((e) => (e.textContent ?? '').replace(/\s+/g, ' ').trim()));
@@ -469,6 +472,7 @@ test.describe('SC-007 : stockage piégé, rien de sensible dans le DOM', () => {
         await ouvrirIgnorees(page);
       }
       if (o.id === 'collection') {
+        await ouvrirBloc(page, 'liste-cartes');
         const lignes = page.getByTestId('tableau-cartes').locator('tbody tr');
         await expect(lignes.first()).toBeVisible();
         await lignes.first().click();

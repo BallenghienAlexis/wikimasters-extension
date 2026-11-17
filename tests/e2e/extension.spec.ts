@@ -1,4 +1,4 @@
-import { allerA, chargerCollectionFictive, expect, test } from './extension';
+import { allerA, chargerCollectionFictive, expect, test, ouvrirBloc } from './extension';
 
 test.describe('extension chargée', () => {
   test('le manifeste reste minimal : stockage seulement, script limité à WikiMasters', async ({ serviceWorker }) => {
@@ -20,12 +20,14 @@ test.describe('extension chargée', () => {
 test.describe('page de collection', () => {
   test('affiche l’état vide', async ({ pageCollection }) => {
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     await expect(pageCollection.getByText('Votre collection est vide')).toBeVisible();
   });
 
   test('charge des cartes fictives et affiche le résumé', async ({ pageCollection }) => {
     await chargerCollectionFictive(pageCollection);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     await expect(pageCollection.getByTestId('resume')).toContainText('7 exemplaires · 3 doublons');
   });
 
@@ -43,6 +45,7 @@ test.describe('page de collection', () => {
   test('affiche un titre hostile en texte, sans l’interpréter', async ({ pageCollection }) => {
     await chargerCollectionFictive(pageCollection);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     await expect(pageCollection.getByTestId('tableau-cartes').getByText('<img src=x onerror=alert(1)>')).toBeVisible();
     await expect(pageCollection.locator('main img')).toHaveCount(0);
   });
@@ -50,6 +53,7 @@ test.describe('page de collection', () => {
   test('l’édition survit au rechargement', async ({ pageCollection }) => {
     await chargerCollectionFictive(pageCollection);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     const prix = pageCollection.getByLabel('Prix cible de Loutre de démonstration, en wikibidous');
     await prix.fill('120');
     await prix.blur();
@@ -75,6 +79,7 @@ test.describe('page de collection', () => {
   test('un prix invalide est rétabli sans être enregistré', async ({ pageCollection }) => {
     await chargerCollectionFictive(pageCollection);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     const prix = pageCollection.getByLabel('Prix cible de Loutre de démonstration, en wikibidous');
     await prix.fill('-5');
     await prix.blur();
@@ -84,6 +89,7 @@ test.describe('page de collection', () => {
   test('filtre par recherche et par doublons', async ({ pageCollection }) => {
     await chargerCollectionFictive(pageCollection);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     await pageCollection.getByLabel('Rechercher une carte').fill('ecureuil');
     await expect(pageCollection.getByTestId('tableau-cartes').locator('tbody tr')).toHaveCount(1);
     await pageCollection.getByLabel('Rechercher une carte').fill('');
@@ -107,6 +113,7 @@ test.describe('captures responsive', () => {
         await pageCollection.setViewportSize({ width, height });
         await chargerCollectionFictive(pageCollection);
         await allerA(pageCollection, 'collection');
+        await ouvrirBloc(pageCollection, 'liste-cartes');
         const debordement = await pageCollection.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
         expect(debordement).toBeLessThanOrEqual(0);
         await pageCollection.screenshot({ path: `test-results/captures/collection-${colorScheme}-${name}.png`, fullPage: true });
@@ -119,6 +126,7 @@ test.describe('collection illisible', () => {
   test('propose de sauvegarder puis de réinitialiser, sans impasse', async ({ pageCollection }) => {
     const contenu = { version: 99, cartes: [{ id: 'Rare|Loutre de démonstration' }] };
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     await pageCollection.evaluate((v) => chrome.storage.local.set({ collection: v }), contenu);
     await pageCollection.reload();
     await expect(pageCollection.getByRole('alert')).toContainText('Données stockées illisibles');

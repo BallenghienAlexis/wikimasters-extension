@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { allerA, deplierTout, chargerCartes, expect, test } from './extension';
+import { allerA, deplierTout, chargerCartes, expect, test, ouvrirBloc } from './extension';
 
 // T-308 : onglet Collection (SC-021, SC-020, SC-024, SC-011, SC-009). Données uniquement fictives.
 //
@@ -38,6 +38,7 @@ test.describe('SC-024 : tableau triable', () => {
   test.beforeEach(async ({ pageCollection }) => {
     await chargerCartes(pageCollection, CARTES);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
   });
 
   test('SC-024 : colonnes du tableau et aria-sort initial à none', async ({ pageCollection }) => {
@@ -134,6 +135,7 @@ test.describe('SC-011 : 200 lignes et vérification Wikipédia', () => {
   test('SC-011 : 5 000 cartes, 200 lignes au premier affichage puis « Afficher plus »', async ({ pageCollection }) => {
     await chargerCartes(pageCollection, beaucoup);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     await expect(lignes(pageCollection)).toHaveCount(200);
     await pageCollection.getByRole('button', { name: /Afficher plus/ }).click();
     await expect(lignes(pageCollection)).toHaveCount(400);
@@ -147,6 +149,7 @@ test.describe('SC-011 : 200 lignes et vérification Wikipédia', () => {
     });
     await chargerCartes(pageCollection, beaucoup);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     await expect(pageCollection.getByText(/titres des cartes affichées sont vérifiés/)).toBeVisible();
     await expect(lignes(pageCollection)).toHaveCount(200);
     await expect.poll(() => requetes.length, { timeout: 15_000 }).toBeGreaterThan(0);
@@ -166,6 +169,7 @@ test.describe('SC-021 : analyses', () => {
       { id: 'd', titre: 'Trop chère fictive', quantite: 1, valeurMarchande: 90, },
     ]);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     await deplierTout(pageCollection);
     for (const a of ANALYSES) await expect(pageCollection.getByTestId(`analyse-${a}`)).toBeVisible();
     await expect(pageCollection.getByTestId('analyse-doublons')).toContainText('Doublon fictif');
@@ -177,6 +181,7 @@ test.describe('SC-021 : analyses', () => {
   test('SC-021 : états vides écrits (aucune carte qui correspond)', async ({ pageCollection }) => {
     await chargerCartes(pageCollection, [{ id: 'a', titre: 'Seule fictive', quantite: 1, }]);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     for (const a of ['doublons', 'plus-cheres'] as const) {
       const bloc = pageCollection.getByTestId(`analyse-${a}`);
       await expect(bloc).toBeVisible();
@@ -191,6 +196,7 @@ test.describe('SC-021 : analyses', () => {
       { id: 'b', titre: 'Volcan fictif', quantite: 1, },
     ]);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     const lignesThemes = pageCollection.getByTestId('analyse-themes').locator('li');
     const n = await lignesThemes.count();
     expect(n).toBeGreaterThan(0);
@@ -208,6 +214,7 @@ test.describe('SC-021 : analyses', () => {
     }));
     await chargerCartes(pageCollection, cartes);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     await expect(pageCollection.getByTestId('analyse-plus-cheres').locator('li, tbody tr')).toHaveCount(10);
     expect(await pageCollection.getByTestId('analyse-themes').locator('li, tbody tr').count()).toBeLessThanOrEqual(10);
   });
@@ -215,6 +222,7 @@ test.describe('SC-021 : analyses', () => {
   test('SC-021 : titres affichés en texte, jamais interprétés', async ({ pageCollection }) => {
     await chargerCartes(pageCollection, [{ id: 'x', titre: '<img src=x onerror=alert(1)>', quantite: 2 }]);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     await expect(pageCollection.getByTestId('analyse-doublons')).toContainText('<img src=x onerror=alert(1)>');
     await expect(pageCollection.getByTestId('analyse-doublons').locator('img')).toHaveCount(0);
   });
@@ -231,6 +239,7 @@ test.describe('SC-020 : évolution sur 30 jours', () => {
   test('SC-020 : moins de 2 points, message de constitution', async ({ pageCollection }) => {
     await chargerCartes(pageCollection, CARTES);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     await expect(pageCollection.getByTestId('evolution')).toContainText('Historique en cours de constitution (1 jour)');
     await expect(pageCollection.getByTestId('evolution-colonne')).toHaveCount(0);
   });
@@ -246,6 +255,7 @@ test.describe('SC-020 : évolution sur 30 jours', () => {
     );
     await chargerCartes(pageCollection, CARTES);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     await deplierTout(pageCollection);
     const evo = pageCollection.getByTestId('evolution');
     await expect(evo.getByTestId('evolution-colonne')).toHaveCount(4); // 3 points + aujourd’hui
@@ -269,6 +279,7 @@ test.describe('SC-020 : évolution sur 30 jours', () => {
     );
     await chargerCartes(pageCollection, CARTES);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     const evo = pageCollection.getByTestId('evolution');
     // Un seul point dans la fenêtre (aujourd’hui) : message de constitution, pas de colonnes.
     await expect(evo).toContainText('Historique en cours de constitution (1 jour)');
@@ -298,6 +309,7 @@ test.describe('SC-020 : édition inchangée', () => {
   test('SC-024 : éditer le prix cible d’une ligne du tableau écrit toujours la carte', async ({ pageCollection }) => {
     await chargerCartes(pageCollection, CARTES);
     await allerA(pageCollection, 'collection');
+    await ouvrirBloc(pageCollection, 'liste-cartes');
     const prix = pageCollection.getByLabel('Prix cible de Zèbre fictif, en wikibidous');
     await prix.fill('42');
     await prix.blur();
@@ -320,6 +332,7 @@ test.describe('SC-009 : largeurs et captures', () => {
         await pageCollection.emulateMedia({ colorScheme: theme });
         await pageCollection.setViewportSize({ width: bp.width, height: bp.height });
         await allerA(pageCollection, 'collection');
+        await ouvrirBloc(pageCollection, 'liste-cartes');
         await expect(pageCollection.getByTestId('tableau-cartes')).toBeVisible();
         const ok = await pageCollection.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
         expect(ok).toBe(true);

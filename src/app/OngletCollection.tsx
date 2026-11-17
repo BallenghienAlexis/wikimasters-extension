@@ -3,6 +3,7 @@ import { filtrerCartes, resumer, type Filtres } from '../lib/collection';
 import { themesDeCarte } from '../lib/themes';
 import { trierLignes } from '../lib/ordreTableau';
 import AnalysesCollection from './AnalysesCollection';
+import SectionRepliable from './SectionRepliable';
 import GraphiqueEvolution from './GraphiqueEvolution';
 import TableauCartes, { valeurDeTri, type EtatTri } from './TableauCartes';
 import FiltresCollection from './FiltresCollection';
@@ -63,10 +64,14 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
 
       <VerificationWikipedia titres={titresConsultes} onCache={appliquerCacheWiki} />
 
-      <section aria-labelledby="titre-liste-cartes" className="mt-4 rounded border border-line bg-ink-2 p-4" data-testid="liste-cartes">
-        <h2 id="titre-liste-cartes" className="font-semibold">
-          Cartes
-        </h2>
+      <SectionRepliable
+        id="liste-cartes"
+        testId="liste-cartes"
+        niveau={2}
+        className="mt-4"
+        titre="Cartes"
+        resume={`${visibles.length} ${visibles.length > 1 ? 'cartes' : 'carte'}`}
+      >
         <FiltresCollection filtres={filtres} theme={theme} onFiltres={onFiltres} onTheme={onTheme} />
 
         {visibles.length === 0 ? (
@@ -87,7 +92,7 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
             Afficher plus ({visibles.length - limite} restantes)
           </button>
         )}
-      </section>
+      </SectionRepliable>
 
       <AnalysesCollection cartes={collection.cartes} cacheWiki={cacheWiki} />
       <GraphiqueEvolution />

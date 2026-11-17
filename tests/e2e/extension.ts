@@ -236,6 +236,14 @@ export async function deplierTout(page: Page): Promise<void> {
   });
 }
 
+/** Déplie un bloc repliable par son repère de test s'il est replié (tout est replié par défaut). */
+export async function ouvrirBloc(page: Page, testId: string): Promise<void> {
+  const bouton = page.getByTestId(testId).getByRole('button').first();
+  // Absent (collection vide, par exemple) : rien à déplier.
+  if (!(await bouton.waitFor({ timeout: 3000 }).then(() => true, () => false))) return;
+  if ((await bouton.getAttribute('aria-expanded')) === 'false') await bouton.click();
+}
+
 /** Déplie la section « Ignorées » de l'onglet Synchro si elle est repliée. */
 export async function ouvrirIgnorees(page: Page): Promise<void> {
   const titre = page.getByTestId('ignorees').getByRole('button', { name: /^Ignorées/ });
