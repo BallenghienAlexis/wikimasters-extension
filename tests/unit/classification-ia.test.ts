@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Carte } from '../../src/lib/collection';
 import {
-  ajouterAuCache, cacheIAVide, cartesAClasser, corpsRequete, decouperEnLotsIA, estimerCout, exporterCartesAClasser, lireImportThemes, PROMPT_EXPORT, IDS_CATALOGUE_IA, lireReponseIA, PROMPT_SYSTEME, TAILLE_LOT_IA, themesIAParTitre, validerCacheIA,
+  ajouterAuCache, cacheIAVide, cartesAClasser, corpsRequete, decouperEnLotsIA, estimerCout, exporterCartesAClasser, exporterEnFichiers, lireImportThemes, PROMPT_EXPORT, IDS_CATALOGUE_IA, lireReponseIA, PROMPT_SYSTEME, TAILLE_LOT_IA, themesIAParTitre, validerCacheIA,
 } from '../../src/lib/classificationIA';
 import { definirThemesIA, sansThemeLocal, themesDeCarte, themesPrincipaux, versionThemes } from '../../src/lib/themes';
 import { classerCartes, type TransportIA } from '../../src/app/classerIA';
@@ -200,6 +200,8 @@ describe('export / import sans clé', () => {
     expect(brut.prompt).toBe(PROMPT_EXPORT);
     expect(brut.prompt).toContain('TITRES EXACTS');
     expect(brut.prompt).toContain('de 1 à 4 thèmes');
+    expect(brut.prompt).toContain('UN SEUL bloc de code JSON');
+    expect(brut.prompt).toContain('noms de famille');
     expect(brut.prompt).toContain('Autres');
     expect(brut.prompt).not.toMatch(/^autres : /m);
     for (const id of IDS_CATALOGUE_IA) expect(brut.prompt).toContain(`${id} : `);
@@ -217,8 +219,8 @@ describe('export / import sans clé', () => {
     const r = lireImportThemes('{"Honda CB 900":["moto"],"Morcilla":["gastronomie","gastronomie"],"Zzz":[],"Inconnue":["moto"],"__proto__":["moto"]}', connus);
     expect(r.type).toBe('ok');
     if (r.type !== 'ok') return;
-    expect([...r.resultats.keys()]).toEqual(['Honda CB 900']);
-    expect(r.ignores).toBe(4);
+    expect([...r.resultats.entries()]).toEqual([['Honda CB 900', ['moto']], ['Morcilla', ['gastronomie']]]);
+    expect(r.ignores).toBe(3);
   });
   it('compte un lot tronqué comme ignoré sans perdre le lot valide', () => {
     const r = lireImportThemes('{"A":["moto"]}\n{"B":["jazz"', new Set(['A', 'B']));
@@ -234,6 +236,43 @@ describe('export / import sans clé', () => {
     expect(lireImportThemes('pas du json', connus).type).toBe('invalide');
     expect(lireImportThemes('{"A":["moto"', connus).type).toBe('invalide');
     expect(lireImportThemes('[]', connus).type).toBe('invalide');
+  });
+  it('retrouve le titre malgré apostrophe typographique, casse, espaces et coupe à 120 caractères', () => {
+    const long = `${'Très long titre '.repeat(10)}fin`;
+    const connus = new Set(['Frontière entre la Côte d\'Ivoire et le Mali', 'Concile d\'Avignon (1326)', long]);
+    const r = lireImportThemes(`{"Frontière entre la Côte d’Ivoire et le Mali":["geographie"],"concile  d’avignon (1326)":["Religion "],"${long.slice(0, 120)}":"histoire"}`, connus);
+    expect(r.type).toBe('ok');
+    if (r.type !== 'ok') return;
+    expect(r.resultats.get('Frontière entre la Côte d\'Ivoire et le Mali')).toEqual(['geographie']);
+    expect(r.resultats.get('Concile d\'Avignon (1326)')).toEqual(['religion']);
+    expect(r.resultats.get(long)).toEqual(['histoire']);
+    expect(r.ignores).toBe(0);
+  });
+  it('ignore une clé qui correspond à deux cartes au lieu de deviner', () => {
+    const r = lireImportThemes('{"l’odyssée":["litterature"],"Autre":["jazz"]}', new Set(['L\'Odyssée', 'L’odyssée', 'Autre']));
+    expect(r.type).toBe('ok');
+    if (r.type !== 'ok') return;
+    expect([...r.resultats.keys()]).toEqual(['Autre']);
+    expect(r.ignores).toBe(1);
+  });
+  it('fusionne quatre blocs de code de lots successifs avec texte autour', () => {
+    const connus = new Set(['A', 'B', 'C', 'D']);
+    const texte = ['Lot 1', '```json', '{"A":["moto"]}', '```', 'Lot 2', 'json', '```json', '{"B":["jazz"]}', '```', 'Lot 3 {"C":["rock"]}', 'Lot 4 ```json\n{"D":["pop"],"Zzz":["pop"]}\n```'].join('\n');
+    const r = lireImportThemes(texte, connus);
+    expect(r.type).toBe('ok');
+    if (r.type !== 'ok') return;
+    expect([...r.resultats.keys()].sort()).toEqual(['A', 'B', 'C', 'D']);
+    expect(r.ignores).toBe(1);
+  });
+  it('découpe l’export en fichiers de 150 cartes au plus, avec le prompt dans chacun et des id continus', () => {
+    const cartes = Array.from({ length: 320 }, (_, i) => ({ titre: `Carte ${i}`, description: '' }));
+    const f = exporterEnFichiers(cartes);
+    expect(f.map((x) => x.nom)).toEqual(['cartes-sans-theme-1-sur-3.json', 'cartes-sans-theme-2-sur-3.json', 'cartes-sans-theme-3-sur-3.json']);
+    const lots = f.map((x) => JSON.parse(x.contenu));
+    expect(lots.map((l) => l.cartes.length)).toEqual([150, 150, 20]);
+    expect(lots[2].cartes[0].id).toBe(301);
+    for (const l of lots) expect(l.prompt).toBe(PROMPT_EXPORT);
+    expect(exporterEnFichiers(cartes.slice(0, 150)).map((x) => x.nom)).toEqual(['cartes-sans-theme.json']);
   });
   it('le prompt de docs/classement-par-ia.md cite tout le catalogue', () => {
     const doc = fs.readFileSync('docs/classement-par-ia.md', 'utf8');
