@@ -163,6 +163,10 @@ function evenementFinal(resultat: ResultatSynchro, pages: number | null): Evenem
     if (resultat.raison === 'echecs') return arret('3 échecs consécutifs');
     return arret('arrêt demandé');
   }
+  // Éléments sautés sans arrêt : la synchro est allée au bout (aucun arrêt automatique sur les échecs, 2026-11-16), ce n’est pas un arrêt.
+  if (!resultat.complete && resultat.sautes > 0 && !(pages !== null && resultat.pagesLues >= pages + PAGES_DE_MARGE)) {
+    return { titre: 'Synchronisation automatique : fin', parametre: `${resultat.sautes} élément(s) sauté(s) sur erreur`, resultat: 'reussie', codeHttp: null };
+  }
   if (!resultat.complete) return arret(pages !== null && resultat.pagesLues >= pages + PAGES_DE_MARGE ? 'plafond de pages' : resultat.sautes > 0 ? 'terminée avec des éléments sautés' : 'lecture incomplète');
   return { titre: 'Synchronisation automatique : fin', parametre: null, resultat: 'reussie', codeHttp: null };
 }
@@ -354,7 +358,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         const ajoutees = resultat.collection.cartes.filter((c) => !depart.has(c.id)).length;
         const comptes = { ajoutees, etiquettes: compterEtiquettes(resultat.collection), prix: resultat.prixReleves };
         if (resultat.issue === 'arret') await noter({ etat: 'arret', raison: resultat.raison, codeHttp: resultat.codeHttp, ...comptes });
-        else if (resultat.complete) await noter({ etat: 'termine', ...comptes });
+        else if (resultat.complete || resultat.sautes > 0) await noter({ etat: 'termine', ...comptes });
         else await noter({ etat: 'arret', raison: 'echecs', etape: etapeFautive ?? (etape === 'ventes' ? 'pages' : etape), ...comptes }); // la lecture des ventes est tolérante : elle n’est jamais la cause d’un échec
         await journaliser(evenementFinal(resultat, pages));
       }

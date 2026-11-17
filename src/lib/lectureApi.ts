@@ -18,7 +18,8 @@ export interface EtiquetteStats {
 
 export interface StatsLues {
   total: number;
-  totalUnique: number;
+  /** Cartes distinctes ; `null` si le site ne le donne pas (champ facultatif : son absence n’est pas une erreur). */
+  totalUnique: number | null;
   etiquettes: EtiquetteStats[];
 }
 
@@ -59,23 +60,21 @@ export function decrireForme(json: unknown): string {
 export function diagnosticStats(json: unknown): string {
   if (!estObjet(json)) return `réponse ${decrireForme(json)}`;
   if (!estEntier(json.total)) return 'champ « total » absent ou invalide';
-  if (!estEntier(json.totalUnique)) return 'champ « totalUnique » absent ou invalide';
-  if (!Array.isArray(json.tagOptions)) return 'champ « tagOptions » absent ou invalide';
   return `réponse ${decrireForme(json)}`;
 }
 
 // Lecture de `/api/my-collection/stats`.
 export function analyserStats(json: unknown): StatsLues | null {
-  if (!estObjet(json) || !estEntier(json.total) || !estEntier(json.totalUnique)) return null;
+  if (!estObjet(json) || !estEntier(json.total)) return null;
   const options = json.tagOptions;
   // Étiquettes du compte : une option illisible (couleur absente, nom vide…) est ignorée au lieu de faire échouer toute la lecture.
-  if (!Array.isArray(options)) return null;
+  // `tagOptions` ou `totalUnique` absents (réponse allégée du site) : valeurs de repli, la lecture des pages continue.
   const etiquettes: EtiquetteStats[] = [];
-  for (const o of options.slice(0, MAX_ETIQUETTES_COMPTE)) {
+  for (const o of (Array.isArray(options) ? options : []).slice(0, MAX_ETIQUETTES_COMPTE)) {
     if (!estObjet(o) || !estTexte(o.id, MAX_ID) || !estTexte(o.name) || !estEntier(o.cardCount)) continue;
     etiquettes.push({ id: o.id, nom: o.name, couleur: estTexte(o.color, 50) ? o.color : '', nbCartes: o.cardCount });
   }
-  return { total: json.total, totalUnique: json.totalUnique, etiquettes };
+  return { total: json.total, totalUnique: estEntier(json.totalUnique) ? json.totalUnique : null, etiquettes };
 }
 
 // Un exemplaire de `collection`, converti ; null si sa forme est inattendue.
