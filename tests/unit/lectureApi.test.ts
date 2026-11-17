@@ -52,7 +52,13 @@ describe('analyserStats', () => {
     expect(analyserStats(null)).toBeNull();
     expect(analyserStats({ total: '12', totalUnique: 1, tagOptions: [] })).toBeNull();
     expect(analyserStats({ total: -1, totalUnique: 1, tagOptions: [] })).toBeNull();
-    expect(analyserStats({ total: 1, totalUnique: 1 })).toBeNull();
+    expect(analyserStats({ total: 1, totalUnique: 1 })).toEqual({ total: 1, totalUnique: 1, etiquettes: [] });
+  });
+
+  it('totalUnique ou tagOptions absents (réponse allégée du site) : repli, pas de rejet', () => {
+    expect(analyserStats({ total: 5, tagOptions: [] })).toEqual({ total: 5, totalUnique: null, etiquettes: [] });
+    expect(analyserStats({ total: 5, totalUnique: 'x', tagOptions: 3 })).toEqual({ total: 5, totalUnique: null, etiquettes: [] });
+    expect(analyserStats({ totalUnique: 5 })).toBeNull();
   });
 
   it('une étiquette illisible est ignorée, une couleur absente devient vide, plus de 200 étiquettes sont acceptées', () => {
@@ -169,7 +175,6 @@ describe('diagnostics de forme', () => {
 
   it('nomme le champ de stats fautif', () => {
     expect(diagnosticStats({ total: 'x', totalUnique: 1, tagOptions: [] })).toContain('total');
-    expect(diagnosticStats({ total: 1, totalUnique: 1 })).toContain('tagOptions');
     expect(diagnosticStats('html')).toContain('string');
   });
 });

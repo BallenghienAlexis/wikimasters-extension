@@ -512,6 +512,34 @@ describe('T-206 : statut détaillé pour l’interface', () => {
     expect((b.statuts.at(-1) as StatutSynchro).etiquettes).toBe(2);
   });
 
+  it('stats sans « totalUnique » : la synchro va au bout, sans arrêt ni « 3 erreurs »', async () => {
+    const b = banc({
+      reponse: (chemin) => {
+        const r = siteFictif(2)(chemin);
+        if (chemin.startsWith('/api/my-collection/stats')) return { statut: 200, json: { total: 2, tagOptions: [] } };
+        return r;
+      },
+    });
+    const resultat = await creerSynchroAuto(b.deps).declencher();
+    expect(resultat?.issue).toBe('termine');
+    expect(resultat?.complete).toBe(true);
+    expect(b.stockage.collection.cartes).toHaveLength(2);
+    const dernier = b.statuts.at(-1) as StatutSynchro;
+    expect(dernier.etat).toBe('termine');
+  });
+
+  it('stats illisibles (réponse vide) : les pages sont lues, l’élément sauté n’est pas un arrêt', async () => {
+    const b = banc({
+      reponse: (chemin) => (chemin.startsWith('/api/my-collection/stats') ? { statut: 200, json: null } : siteFictif(2)(chemin)),
+    });
+    const resultat = await creerSynchroAuto(b.deps).declencher();
+    expect(resultat?.issue).toBe('termine');
+    expect(b.stockage.collection.cartes).toHaveLength(2);
+    const dernier = b.statuts.at(-1) as StatutSynchro;
+    expect(dernier.etat).toBe('termine');
+    expect(dernier.raison).toBeNull();
+  });
+
   it('un 403 écrit « arrêt » avec le code et la raison', async () => {
     const b = banc({ reponse: () => ({ statut: 403, json: null }) });
     await creerSynchroAuto(b.deps).declencher();
@@ -614,10 +642,10 @@ describe('T-206 D-03 : événements dans le journal', () => {
     expect(b.statuts.at(-1)?.etape).not.toBe('ventes');
   });
 
-  it('un échec isolé (stats illisible une fois) : cause « terminée avec des éléments sautés »', async () => {
+  it('un échec isolé (stats illisible une fois) : journalisé comme une fin avec éléments sautés, pas comme un arrêt', async () => {
     const b = banc({ reponse: (c, n) => (n === 1 ? { statut: 200, json: { total: 'x' } } : siteFictif(2)(c)) });
     await creerSynchroAuto(b.deps).declencher();
-    expect(b.evenements.at(-1)).toMatchObject({ titre: 'Synchronisation automatique : arrêt', parametre: 'terminée avec des éléments sautés' });
+    expect(b.evenements.at(-1)).toMatchObject({ titre: 'Synchronisation automatique : fin', parametre: '1 élément(s) sauté(s) sur erreur', resultat: 'reussie' });
   });
 
   it('une erreur d’écriture du journal n’interrompt pas la synchro', async () => {
