@@ -249,7 +249,7 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
    * simultanées donnent plusieurs mises en vente dans la même passe, dans la limite des places libres. Un identifiant ne sort de la
    * file qu’une fois traité : une attente, un 401/429, un 409 ou un échec le laissent en place pour le passage suivant.
    */
-  async function relancer(suivi0: SuiviVentes): Promise<boolean> {
+  async function relancer(suivi0: SuiviVentes, bailToujoursNotre: () => Promise<boolean>): Promise<boolean> {
     let suivi = suivi0;
     // Une enchère disparue sans verdict : on attend son statut (10 s entre deux lectures, 2 min au plus), jamais d’arrêt.
     if (verdictEnAttente(suivi, deps.horloge.now())) return false;
@@ -268,7 +268,7 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     };
     let arret = false;
     for (const fin of fins) {
-      if (lancees >= MAX_PAR_PASSE) break;
+      if (lancees >= MAX_PAR_PASSE || !(await bailToujoursNotre())) break;
       const issue = issueDe(fin);
       let r: ResultatRelance = issue === 'non-vendue' && fin.idExemplaire !== undefined ? await relancerUne(suivi, fin.idExemplaire, issue) : { etat: 'rien' };
       if (r.etat === 'rien') r = await relancerUne(suivi, undefined, issue);
@@ -285,7 +285,7 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       }
     }
     // Places encore libres sans fin à traiter (relance qu’on vient d’activer, place libérée à la main) : comme avant, par la règle.
-    while (!arret && lancees < MAX_PAR_PASSE) {
+    while (!arret && lancees < MAX_PAR_PASSE && (await bailToujoursNotre())) {
       const r = await relancerUne(suivi, undefined, undefined);
       if (r.etat !== 'lancee') break;
       poser(r.active);
@@ -370,7 +370,14 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       const suivi = fusionnerSuivi(stocke, lecture, passage);
       await deps.enregistrerSuivi(suivi);
       await ecrireEtat(base, { etat: 'ok', message: 'Suivi à jour', jusqua: null, echecs: 0, dernierPassage: passage, dernierSucces: passage });
-      const lancee = await relancer(suivi);
+      // Avant chaque envoi : le bail est prolongé s'il est toujours le nôtre, sinon le passage s'arrête (un autre onglet a pris la main).
+      const bailToujoursNotre = async (): Promise<boolean> => {
+        if (echeanceBail === null || (await deps.bail.lire().catch(() => null)) !== echeanceBail) return false;
+        echeanceBail = deps.horloge.now() + DUREE_BAIL_MS;
+        await deps.bail.ecrire(echeanceBail).catch(() => undefined);
+        return true;
+      };
+      const lancee = await relancer(suivi, bailToujoursNotre);
       if (lancee) return DELAI_APRES_LANCEMENT_MS + deps.gigue();
       return Math.max(1_000, delaiSuivant(suivi.actives, deps.horloge.now(), verdictEnAttente(suivi, deps.horloge.now()))) + deps.gigue();
     } catch {

@@ -244,14 +244,14 @@ function fileDesFins(precedent: SuiviVentes, lecture: LectureVentes, maintenant:
   const file = [...(precedent.aTraiter ?? []).filter((id) => presentes.has(id)), ...nouvelles.filter((id) => !(precedent.aTraiter ?? []).includes(id))].slice(-MAX_A_TRAITER)
   const encore = new Set(lecture.actives.map((v) => v.id))
   const sansVerdict: Record<string, number> = {}
-  for (const [id, le] of Object.entries(precedent.sansVerdict ?? {})) if (!presentes.has(id) && !encore.has(id) && maintenant - le < VERDICT_ATTENTE_MS) sansVerdict[id] = le
+  for (const [id, le] of Object.entries(precedent.sansVerdict ?? {})) if (!presentes.has(id) && !encore.has(id) && le <= maintenant && maintenant - le < VERDICT_ATTENTE_MS && Object.keys(sansVerdict).length < MAX_A_TRAITER) sansVerdict[id] = le
   for (const v of precedent.actives) if (!encore.has(v.id) && !presentes.has(v.id) && sansVerdict[v.id] === undefined) sansVerdict[v.id] = maintenant
   return { aTraiter: file, sansVerdict }
 }
 
 /** Vrai tant qu’une enchère disparue attend son verdict : la relance patiente (10 s) au lieu de choisir à l’aveugle. */
 export const verdictEnAttente = (suivi: Pick<SuiviVentes, 'sansVerdict'>, maintenant: number): boolean =>
-  Object.values(suivi.sansVerdict ?? {}).some((le) => maintenant - le < VERDICT_ATTENTE_MS)
+  Object.values(suivi.sansVerdict ?? {}).some((le) => le <= maintenant && maintenant - le < VERDICT_ATTENTE_MS)
 
 /** Nombre de prolongations de 60 s déjà subies (0 si aucune). */
 export const prolongations = (v: Pick<VenteActive, 'finLe' | 'finInitiale'>): number => Math.max(0, Math.round((v.finLe - v.finInitiale) / PROLONGATION_MS))
