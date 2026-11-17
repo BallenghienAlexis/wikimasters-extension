@@ -81,3 +81,17 @@ test('tableau de bord : santé en quatre lignes Lecture, Étiquettes, Prix, Igno
   await expect(lignes.nth(3)).toContainText('2 actions ignorées');
   await expect(lignes.nth(3).getByRole('link', { name: 'Gérer les actions ignorées' })).toBeVisible();
 });
+
+test('collection : lignes repliées par défaut, détails au clavier', async ({ pageCollection: page }) => {
+  await chargerCollectionFictive(page);
+  await allerA(page, 'collection');
+  const bouton = page.getByRole('button', { name: /^Détails de / }).first();
+  await expect(bouton).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByLabel(/^Prix cible de /)).toHaveCount(0);
+  await bouton.focus();
+  await page.keyboard.press('Enter');
+  await expect(bouton).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByLabel(/^Prix cible de /)).toHaveCount(1);
+  await page.keyboard.press('Space');
+  await expect(bouton).toHaveAttribute('aria-expanded', 'false');
+});

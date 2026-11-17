@@ -50,6 +50,7 @@ test.describe('page de collection', () => {
   test('l’édition survit au rechargement', async ({ pageCollection }) => {
     await chargerCollectionFictive(pageCollection);
     await allerA(pageCollection, 'collection');
+    await pageCollection.getByRole('button', { name: 'Détails de Loutre de démonstration' }).click();
     const prix = pageCollection.getByLabel('Prix cible de Loutre de démonstration, en wikibidous');
     await prix.fill('120');
     await prix.blur();
@@ -67,7 +68,8 @@ test.describe('page de collection', () => {
       .toBe('Attendre une bonne offre');
 
     await pageCollection.reload();
-
+    await pageCollection.getByRole('button', { name: 'Détails de Loutre de démonstration' }).click();
+    
     await expect(pageCollection.getByLabel('Prix cible de Loutre de démonstration, en wikibidous')).toHaveValue('120');
     await expect(pageCollection.getByLabel('Note sur Loutre de démonstration')).toHaveValue('Attendre une bonne offre');
   });
@@ -75,6 +77,7 @@ test.describe('page de collection', () => {
   test('un prix invalide est rétabli sans être enregistré', async ({ pageCollection }) => {
     await chargerCollectionFictive(pageCollection);
     await allerA(pageCollection, 'collection');
+    await pageCollection.getByRole('button', { name: 'Détails de Loutre de démonstration' }).click();
     const prix = pageCollection.getByLabel('Prix cible de Loutre de démonstration, en wikibidous');
     await prix.fill('-5');
     await prix.blur();

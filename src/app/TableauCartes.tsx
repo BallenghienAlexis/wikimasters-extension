@@ -120,7 +120,7 @@ const TableauCartes: React.FC<Props> = ({ cartes, tri, revision, cleFiltre, onTr
               {COLONNES.map((c) => (
                 <EnTeteTriable key={c.cle} colonne={c} etat={tri.cle === c.cle ? tri.sens : null} onBasculer={() => basculer(c.cle)} />
               ))}
-              <th scope="col" className="px-3 text-left font-normal">Prix cible et note</th>
+              <th scope="col" className="px-3 text-left font-normal">Détails</th>
             </tr>
           </thead>
           <tbody ref={corps} className="block min-[600px]:table-row-group">

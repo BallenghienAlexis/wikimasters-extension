@@ -298,6 +298,7 @@ test.describe('SC-020 : édition inchangée', () => {
   test('SC-024 : éditer le prix cible d’une ligne du tableau écrit toujours la carte', async ({ pageCollection }) => {
     await chargerCartes(pageCollection, CARTES);
     await allerA(pageCollection, 'collection');
+    await pageCollection.getByRole('button', { name: 'Détails de Zèbre fictif' }).click();
     const prix = pageCollection.getByLabel('Prix cible de Zèbre fictif, en wikibidous');
     await prix.fill('42');
     await prix.blur();
