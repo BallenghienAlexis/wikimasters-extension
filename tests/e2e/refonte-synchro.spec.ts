@@ -331,16 +331,16 @@ test.describe('H4 : fraîcheur des prix et durée restante', () => {
     expect(await bloc.innerText()).not.toMatch(/NaN|Infinity|undefined/);
   });
 
-  test('H4 : durée restante (pages restantes + prix restants + 1) × 0,25 s', async ({ pageCollection }) => {
+  test('H4 : durée restante ((pages restantes + 1) × 0,25 s + prix restants × 1,65 s)', async ({ pageCollection }) => {
     // Étape pages, page 11 sur 40 : 30 pages restantes, prix inconnus : (30 + 0 + 1) × 0,25 s = 8 s.
     await poser(pageCollection, {
       bailSynchro: Date.now() + 120_000,
       statutSynchro: statut({ etape: 'pages', page: 11, pages: 40 }),
     });
     await expect(pageCollection.getByTestId('duree-restante')).toContainText('moins d’une minute');
-    // Étape prix : 400 restants + 1 = 100,25 s, soit environ 2 min.
+    // Étape prix : 400 restants × 1,65 s + 0,25 s = 660,25 s, soit environ 12 min.
     await maj(pageCollection, { statutSynchro: statut({ etape: 'prix', page: 40, pages: 40, prixFaits: 0, prixPrevus: 400 }) });
-    await expect(pageCollection.getByTestId('duree-restante')).toContainText('environ 2 min');
+    await expect(pageCollection.getByTestId('duree-restante')).toContainText('environ 12 min');
   });
 });
 
