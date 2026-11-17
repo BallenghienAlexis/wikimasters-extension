@@ -16,6 +16,7 @@ import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../config/amis';
 import { ajouterEvenement, validerEvenements, VERSION_VENTES, type EvenementVente } from './affluence';
 import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, type Preferences } from './tri';
 import { estObjet } from './valider';
+import type { EtatVerrouRequete } from './verrouRequete';
 import { VERSION_SUIVI, suiviVide, validerLancements, type LancementVente, type SuiviVentes } from './ventes';
 
 const CLE = 'collection';
@@ -49,6 +50,11 @@ const CLE_LANCEMENTS_VENTES = 'lancementsVentes';
 const CLE_RELANCE_VENTES = 'relanceVentes';
 const CLE_STATUT_RELANCE = 'statutRelanceVentes';
 const CLE_ECARTES_VENTES = 'ecartesVentes';
+const CLE_SUIVI_ACTIF = 'suiviVentesActif';
+const CLE_ETAT_SUIVI = 'etatSuiviVentes';
+const CLE_SIGNAL_SUIVI = 'signalSuiviVentes';
+const CLE_BAIL_SUIVI = 'bailSuiviVentes';
+const CLE_VERROU_REQUETE = 'verrouRequete';
 
 export type { StatutSynchro };
 
@@ -87,6 +93,11 @@ export const CLES_STOCKAGE = {
   relanceVentes: CLE_RELANCE_VENTES,
   statutRelanceVentes: CLE_STATUT_RELANCE,
   ecartesVentes: CLE_ECARTES_VENTES,
+  suiviVentesActif: CLE_SUIVI_ACTIF,
+  etatSuiviVentes: CLE_ETAT_SUIVI,
+  signalSuiviVentes: CLE_SIGNAL_SUIVI,
+  bailSuiviVentes: CLE_BAIL_SUIVI,
+  verrouRequete: CLE_VERROU_REQUETE,
 } as const;
 
 function illisible(detail: string): Error {
@@ -664,4 +675,78 @@ export async function ecrireDonneesSauvegarde(donnees: Donnees): Promise<void> {
   await enregistrerPreferences(donnees.preferences);
   await enregistrerVentes(donnees.ventes);
   await enregistrerSyncAuto(donnees.syncAuto);
+}
+
+// ---- Synchro autonome du suivi des ventes en cours (Alexis, 2026-11-17) ----
+// Minuteur, état, bail, interrupteur et signal « Forcer » propres : aucune dépendance à la synchro globale.
+
+/** Interrupteur du suivi : activé par défaut (comme la synchro), seule la valeur `false` le coupe. */
+export async function chargerSuiviVentesActif(): Promise<boolean> {
+  const contenu = await chrome.storage.local.get(CLE_SUIVI_ACTIF);
+  const valeur = contenu[CLE_SUIVI_ACTIF];
+  return valeur === undefined || valeur === true;
+}
+
+export async function enregistrerSuiviVentesActif(actif: boolean): Promise<void> {
+  if (typeof actif !== 'boolean') throw new Error('Réglage du suivi invalide.');
+  await chrome.storage.local.set({ [CLE_SUIVI_ACTIF]: actif });
+}
+
+export const ecouterSuiviVentesActif = (rappel: () => void): (() => void) => ecouterCle(CLE_SUIVI_ACTIF, rappel);
+
+/** État affiché du suivi (santé) : dernier passage, dernier succès, attente éventuelle. Libellés fixes. */
+export interface EtatSuiviVentes {
+  /** `ok` : à jour ; `attente` : nouvel essai après un échec ; `pause` : 401/429, pause de 30 min ; `inactif` : interrupteur coupé. */
+  etat: 'ok' | 'attente' | 'pause' | 'inactif';
+  message: string;
+  /** Fin de l’attente ou de la pause en cours. */
+  jusqua: number | null;
+  /** Échecs de lecture de suite (attente 5 s, +5 s à chaque échec). */
+  echecs: number;
+  /** Dernière tentative de lecture (réussie ou non). */
+  dernierPassage: number | null;
+  /** Dernière lecture réussie. */
+  dernierSucces: number | null;
+  /** Dernier « Forcer » pris en compte (une demande par minute au plus, commune aux onglets). */
+  forceLe: number | null;
+}
+
+export const ETAT_SUIVI_INITIAL: EtatSuiviVentes = { etat: 'ok', message: 'Suivi en attente du premier passage.', jusqua: null, echecs: 0, dernierPassage: null, dernierSucces: null, forceLe: null };
+
+export async function chargerEtatSuiviVentes(): Promise<EtatSuiviVentes | null> {
+  const contenu = await chrome.storage.local.get(CLE_ETAT_SUIVI);
+  const b = contenu[CLE_ETAT_SUIVI];
+  if (!estObjet(b) || typeof b.message !== 'string' || !['ok', 'attente', 'pause', 'inactif'].includes(String(b.etat))) return null;
+  if (!nullOuHorodatage(b.jusqua) || !horodatageValide(b.echecs) || !nullOuHorodatage(b.dernierPassage) || !nullOuHorodatage(b.dernierSucces)) return null;
+  const forceLe = nullOuHorodatage(b.forceLe) ? b.forceLe : null;
+  return { etat: b.etat as EtatSuiviVentes['etat'], message: b.message.slice(0, 300), jusqua: b.jusqua, echecs: b.echecs, dernierPassage: b.dernierPassage, dernierSucces: b.dernierSucces, forceLe };
+}
+
+export async function enregistrerEtatSuiviVentes(etat: EtatSuiviVentes): Promise<void> {
+  await chrome.storage.local.set({ [CLE_ETAT_SUIVI]: { ...etat, message: etat.message.slice(0, 300) } });
+}
+
+export const ecouterEtatSuiviVentes = (rappel: () => void): (() => void) => ecouterCle(CLE_ETAT_SUIVI, rappel);
+
+/** Signal du bouton « Forcer » du suivi : un horodatage, simple déclencheur (illisible = pas de signal). */
+export async function enregistrerSignalSuiviVentes(horodatage: number): Promise<void> {
+  await chrome.storage.local.set({ [CLE_SIGNAL_SUIVI]: horodatage });
+}
+
+export const ecouterSignalSuiviVentes = (rappel: () => void): (() => void) => ecouterCle(CLE_SIGNAL_SUIVI, rappel);
+
+/** Bail propre du suivi : un seul passage à la fois entre onglets, sans rapport avec le bail de la synchro globale. */
+export const chargerBailSuivi = (): Promise<number | null> => chargerHorodatage(CLE_BAIL_SUIVI);
+export const enregistrerBailSuivi = (expiration: number | null): Promise<void> => enregistrerHorodatage(CLE_BAIL_SUIVI, expiration);
+
+/** Verrou de requête (une seule requête en vol vers le site, toutes fonctions confondues) : voir `verrouRequete.ts`. */
+export async function chargerVerrouRequete(): Promise<EtatVerrouRequete | null> {
+  const contenu = await chrome.storage.local.get(CLE_VERROU_REQUETE);
+  const b = contenu[CLE_VERROU_REQUETE];
+  if (!estObjet(b) || !(b.proprio === null || typeof b.proprio === 'string') || !horodatageValide(b.jusqua) || !horodatageValide(b.derniere)) return null;
+  return { proprio: b.proprio === null ? null : b.proprio.slice(0, 64), jusqua: b.jusqua, derniere: b.derniere };
+}
+
+export async function enregistrerVerrouRequete(etat: EtatVerrouRequete): Promise<void> {
+  await chrome.storage.local.set({ [CLE_VERROU_REQUETE]: etat });
 }
