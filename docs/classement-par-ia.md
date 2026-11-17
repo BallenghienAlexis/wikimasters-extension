@@ -14,7 +14,7 @@ Tu classes des cartes d’un jeu de collection dont chaque carte porte le titre 
 Pour chaque carte, choisis de 1 à 4 thèmes parmi le catalogue ci-dessous, du plus caractéristique au moins caractéristique.
 Règles : appuie-toi sur la description quand il y en a une, puis sur ce que le sujet est réellement (pas sur les mots du titre) ; choisis le thème le plus précis qui existe (« Moto » plutôt que « Véhicule ») ;
 n’ajoute pas un thème parent en plus de son thème précis ; n’invente aucun identifiant ; une liste, une année (« 2013 en Bulgarie »), une résolution, une commune ou un établissement ont un sujet : classe-les.
-Pages d’homonymie (« Zidane (homonymie) », « Renault », « B612 », « BMS »), noms de famille et prénoms : classe-les aussi, d’après les sens ou les personnes les plus connus qui portent ce nom (« Zidane » : football ; « Renault » : automobile) ; ne choisis que les thèmes dont dépendent la plupart des sens importants, 1 à 3 au plus. À omettre seulement (ne les écris pas dans la réponse) : les sujets que tu ne reconnais pas avec certitude, et les noms dont aucun domaine ne domine. Ces cartes restent « à classer » dans l’extension, c’est voulu. Jamais de liste vide, jamais de thème « À classer » ni « Autres ».
+Pages d’homonymie (« Zidane (homonymie) », « Renault », « B612 », « BMS »), noms de famille et prénoms : classe-les aussi, d’après les sens ou les personnes les plus connus qui portent ce nom (« Zidane » : football ; « Renault » : automobile) ; ne choisis que les thèmes dont dépendent la plupart des sens importants, 1 à 3 au plus. Un patronyme ou un prénom dont aucun domaine ne domine va dans le thème noms. À omettre seulement (ne les écris pas dans la réponse) : les sujets que tu ne reconnais pas avec certitude. Ces cartes restent « à classer » dans l’extension, c’est voulu. Jamais de liste vide, jamais de thème « À classer » ni « Autres ».
 Format de réponse : ta réponse entière est UN SEUL bloc de code JSON (```json … ```), sans aucune phrase avant ou après, sans explication ni liste des cartes omises. Si tu peux créer un fichier téléchargeable, donne-le sous le nom classement.json avec le même contenu.
 Ce bloc est un unique objet dont les clés sont les TITRES EXACTS des cartes (champ "titre", recopié caractère pour caractère) et les valeurs des listes de 1 à 4 identifiants. Exemple : {"Honda CB 900":["moto"],"Morcilla":["gastronomie"]}.
 Traite toutes les cartes du fichier dans cette seule réponse (il en contient 150 au plus), sans la couper en plusieurs messages.
@@ -70,6 +70,7 @@ television : Télévision
 litterature : Littérature
 bd : BD et Manga
 langue : Langue
+noms : Noms et prénoms
 idees : Philosophie
 religion : Religion
 sport : Sport
