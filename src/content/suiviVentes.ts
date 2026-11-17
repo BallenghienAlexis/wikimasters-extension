@@ -15,6 +15,7 @@ import { choisirProchaineEnchere } from '../lib/relanceVentes';
 import type { StatutRelanceVentes } from '../lib/stockage';
 import type { Preferences } from '../lib/tri';
 import {
+  DELAI_NORMAL_MS,
   PAS_ATTENTE_MS,
   analyserListeVentes,
   attenteApresEchec,
@@ -24,15 +25,17 @@ import {
   type SuiviVentes,
 } from '../lib/ventes';
 
-/** Pause de la relance après un 401 ou un 429 (comme les lots d’écriture). */
+/** Pause de la relance après un 401 ou un 429 (règle de sécurité des lots d’écriture). */
 export const PAUSE_ECRITURE_MS = 30 * 60_000;
 /** Un exemplaire refusé (403 ou 404 : vendu, défaussé) n’est pas retenté avant 1 jour ; une autre erreur, avant 10 min. */
 export const ECART_REFUS_MS = 24 * 3600_000;
 export const ECART_ERREUR_MS = 10 * 60_000;
-/** Échecs d’écriture de suite qui mettent la relance en attente d’un choix du joueur (« Reprendre »). */
-export const ECHECS_ECRITURE_MAX = 3;
+/** Échecs de suite d’une même carte à partir desquels l’onglet affiche un avertissement avec choix (jamais d’arrêt automatique). */
+export const SEUIL_AVERTISSEMENT_ECRITURE = 5;
 /** Relecture après une mise en vente réussie : confirme la place prise et laisse lancer la suivante. */
 export const DELAI_APRES_LANCEMENT_MS = 2_000;
+/** Attente après un 409 (limite d’enchères) avant un nouvel essai. */
+export const DELAI_APRES_409_MS = 60_000;
 
 export interface DependancesSuiviVentes {
   horloge: Horloge;
@@ -42,6 +45,8 @@ export interface DependancesSuiviVentes {
   /** Émetteur d’écriture des lots (contrat `enchere`). */
   emettre: (ordre: Action) => Promise<ResultatAction>;
   visible: () => boolean;
+  /** Synchronisation automatique activée : le suivi (lecture du marché) n’a lieu que si elle l’est (AGENTS.md). */
+  actif: () => Promise<boolean>;
   route: string | null;
   relanceActive: () => Promise<boolean>;
   chargerSuivi: () => Promise<SuiviVentes>;
@@ -77,9 +82,16 @@ const libelleLecture = (r: ReponseApi): string => {
   return `Le site répond ${r.statut}`;
 };
 
+/** Retire les écarts échus (les choix du joueur `carte:`, `vu:` et `attend:` restent). */
+const purger = (e: Record<string, number>, maintenant: number): Record<string, number> =>
+  Object.fromEntries(Object.entries(e).filter(([cle, t]) => /^(carte|vu|attend):/.test(cle) || t > maintenant));
+
 export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto {
   let echecsLecture = 0;
   let echecsEcriture = 0;
+  /** Attente en mémoire de la relance (échec d’envoi, 401, 429) : pas de requête d’écriture avant cette date. */
+  let attenteEcritureJusqua = 0;
+  let exemplaireEnEchec: string | null = null;
   let enCours = false;
 
   const statut = async (s: Omit<StatutRelanceVentes, 'maj' | 'echecs'> & { echecs?: number }): Promise<void> => {
@@ -98,15 +110,15 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
   /** Mise en vente d’une carte si une place est libre. Renvoie vrai quand une enchère est partie. */
   async function relancer(suivi: SuiviVentes): Promise<boolean> {
     if (!(await deps.relanceActive())) return false;
-    const etat = await deps.chargerStatut();
-    if (etat?.etat === 'arret') return false;
-    if (etat?.etat === 'pause' && etat.jusqua !== null && deps.horloge.now() < etat.jusqua && echecsLecture === 0) return false;
-    if (suivi.max === null) return false;
+    // L’attente d’écriture survit à un rechargement de l’onglet : elle est aussi lue dans le statut enregistré.
+    const stocke = await deps.chargerStatut();
+    const jusquaStocke = stocke?.etat === 'pause' && stocke.jusqua !== null ? stocke.jusqua : 0;
+    if (deps.horloge.now() < Math.max(attenteEcritureJusqua, jusquaStocke) || suivi.max === null) return false;
     const maintenant = deps.horloge.now();
     const tenu = await deps.bail.lire();
     if (tenu !== null && tenu > maintenant) return false;
     const [collection, preferences, ecartes] = await Promise.all([deps.chargerCollection(), deps.chargerPreferences(), deps.chargerEcartes()]);
-    const ecartesActifs = Object.entries(ecartes).filter(([cle, t]) => !cle.startsWith('carte:') && !cle.startsWith('vu:') && t > maintenant).map(([cle]) => cle);
+    const ecartesActifs = Object.entries(ecartes).filter(([cle, t]) => !cle.startsWith('carte:') && !cle.startsWith('vu:') && !cle.startsWith('attend:') && t > maintenant).map(([cle]) => cle);
     const titresRetires = Object.keys(ecartes).filter((c) => c.startsWith('carte:')).map((c) => c.slice('carte:'.length));
     const choix = choisirProchaineEnchere({
       collection,
@@ -133,41 +145,51 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
 
     if (resultat.classe === 'reussie') {
       echecsEcriture = 0;
+      exemplaireEnEchec = null;
       await deps.ajouterLancement(lancement('reussie', null)).catch(() => undefined);
-      await statut({ etat: 'attente', message: `Mise en vente lancée : ${choix.titre}`, jusqua: null });
+      await statut({ etat: 'attente', message: `Mise en vente lancée : ${choix.titre}`, jusqua: null, carte: null });
       return true;
     }
     const cause = resultat.cause;
     await deps.ajouterLancement(lancement('echec', cause)).catch(() => undefined);
     const diagnostic = resultat.diagnostic ?? '';
-    if (cause === CAUSE_VERIFICATION_HUMAINE) {
-      await statut({ etat: 'arret', message: 'Vérification anti-bot du site requise : mets une carte aux enchères à la main sur wiki-masters.com, résous la vérification, puis reprends la relance', jusqua: null });
-      return false;
-    }
+    const pause = async (ms: number, message: string, carte: StatutRelanceVentes['carte'] = null): Promise<void> => {
+      attenteEcritureJusqua = deps.horloge.now() + ms;
+      await statut({ etat: 'pause', message, jusqua: attenteEcritureJusqua, carte });
+    };
     if (resultat.codeHttp === 401 || resultat.codeHttp === 429) {
-      await statut({ etat: 'pause', message: resultat.codeHttp === 401 ? 'Session du site expirée (401) : relance en pause 30 min' : 'Le site demande de ralentir (429) : relance en pause 30 min', jusqua: deps.horloge.now() + PAUSE_ECRITURE_MS });
+      await pause(PAUSE_ECRITURE_MS, resultat.codeHttp === 401 ? 'Session du site expirée (401) : relance en pause 30 min' : 'Le site demande de ralentir (429) : relance en pause 30 min');
       return false;
     }
     if (resultat.codeHttp === 409 || estLimiteEncheres(diagnostic)) {
-      await statut({ etat: 'attente', message: 'Limite d’enchères actives atteinte : la relance attend une place', jusqua: null });
+      // Le listing sous-compte peut-être : au plus un essai par minute tant qu’une lecture ne montre pas une place libre.
+      await pause(DELAI_APRES_409_MS, 'Limite d’enchères actives atteinte : la relance attend une place', null);
       return false;
     }
-    // Un exemplaire refusé n’est pas retenté tout de suite ; les échecs de suite mettent la relance en attente d’un choix.
-    const ecart = resultat.codeHttp === 403 || resultat.codeHttp === 404 ? ECART_REFUS_MS : ECART_ERREUR_MS;
-    await deps.enregistrerEcartes({ ...ecartes, [choix.action.idExemplaire]: deps.horloge.now() + ecart }).catch(() => undefined);
-    echecsEcriture += 1;
-    if (echecsEcriture >= ECHECS_ECRITURE_MAX) {
-      await statut({ etat: 'arret', message: `${ECHECS_ECRITURE_MAX} échecs de mise en vente de suite : vérifie le journal des lancements, puis reprends la relance`, jusqua: null });
-      echecsEcriture = 0;
+    // Exemplaire vendu, défaussé ou introuvable : la carte est écartée un jour, la relance passe à la suivante (aucune attente).
+    if (cause !== CAUSE_VERIFICATION_HUMAINE && (resultat.codeHttp === 403 || resultat.codeHttp === 404)) {
+      await deps.enregistrerEcartes(purger({ ...ecartes, [choix.action.idExemplaire]: deps.horloge.now() + ECART_REFUS_MS }, deps.horloge.now())).catch(() => undefined);
+      await statut({ etat: 'attente', message: `Carte refusée par le site : ${choix.titre} est écartée un jour`, jusqua: null, carte: null });
       return false;
     }
-    await statut({ etat: 'attente', message: `Mise en vente refusée pour ${choix.titre} (${cause}) : carte suivante au prochain passage`, jusqua: null });
+    // Toute autre erreur (anti-bot compris, jamais contourné) : attente progressive de 5 s, +5 s à chaque échec de suite de la
+    // même carte, sans plafond ni arrêt automatique ; à partir de 5 échecs, avertissement avec choix pour le joueur.
+    echecsEcriture = exemplaireEnEchec === choix.action.idExemplaire ? echecsEcriture + 1 : 1;
+    exemplaireEnEchec = choix.action.idExemplaire;
+    const attente = attenteApresEchec(echecsEcriture);
+    const raison = cause === CAUSE_VERIFICATION_HUMAINE ? 'Vérification anti-bot du site requise : résous-la à la main sur wiki-masters.com' : `Mise en vente refusée (${cause})`;
+    await pause(
+      attente,
+      `${raison} pour ${choix.titre} : essai ${echecsEcriture}, nouvel essai dans ${Math.round(attente / 1000)} s`,
+      echecsEcriture >= SEUIL_AVERTISSEMENT_ECRITURE ? { titre: choix.titre, idExemplaire: choix.action.idExemplaire, essais: echecsEcriture } : null,
+    );
     return false;
   }
 
   async function cycle(): Promise<number> {
     const route = deps.route;
     if (!routeMarcheValide(route) || !deps.visible() || enCours) return PAS_ATTENTE_MS * 6;
+    if (!(await deps.actif().catch(() => false))) return DELAI_NORMAL_MS;
     enCours = true;
     try {
       const maintenant = deps.horloge.now();
@@ -188,18 +210,22 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       const lecture = reponse.statut === 200 ? analyserListeVentes(reponse.json) : null;
       if (lecture === null) {
         echecsLecture += 1;
+        const etat0 = await deps.chargerStatut();
         const attente = attenteApresEchec(echecsLecture);
         const message = reponse.statut === 0 ? 'Erreur réseau' : libelleLecture(reponse);
-        await statut({ etat: 'pause', message: `${message} : nouvel essai dans ${Math.round(attente / 1000)} s`, jusqua: deps.horloge.now() + attente });
+        // Une pause d’écriture plus longue (401, 429) reste affichée : la lecture ne l’écrase jamais.
+        if (!(etat0?.etat === 'pause' && etat0.jusqua !== null && etat0.jusqua > deps.horloge.now() + attente)) {
+          await statut({ etat: 'pause', message: `${message} : nouvel essai dans ${Math.round(attente / 1000)} s`, jusqua: deps.horloge.now() + attente, carte: etat0?.carte ?? null });
+        }
         return attente;
       }
       echecsLecture = 0;
       const suivi = fusionnerSuivi(stocke, lecture, deps.horloge.now());
       await deps.enregistrerSuivi(suivi);
       const etat = await deps.chargerStatut();
-      if (etat === null || etat.etat === 'pause' || etat.etat === 'lecture') {
-        const enPause = etat?.etat === 'pause' && etat.jusqua !== null && etat.jusqua > deps.horloge.now() && etat.message.includes('30 min');
-        if (!enPause) await statut({ etat: 'lecture', message: 'Suivi à jour', jusqua: null, echecs: 0 });
+      // Le statut de la relance (attente, avertissement) n’est écrasé que s’il n’est plus d’actualité.
+      if (etat === null || etat.etat === 'lecture' || (etat.etat === 'pause' && deps.horloge.now() >= attenteEcritureJusqua && etat.carte === null)) {
+        await statut({ etat: 'lecture', message: 'Suivi à jour', jusqua: null, echecs: 0, carte: null });
       }
       const lancee = await relancer(suivi);
       if (lancee) return DELAI_APRES_LANCEMENT_MS + deps.gigue();

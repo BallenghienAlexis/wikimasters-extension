@@ -464,21 +464,25 @@ export const ecouterRelanceVentes = (rappel: () => void): (() => void) => ecoute
 
 /** État affiché de la relance automatique et du suivi (libellés fixes, jamais un corps de réponse). */
 export interface StatutRelanceVentes {
-  /** `lecture` : suivi en cours ; `attente` : relance prête ; `pause` : pause jusqu’à `jusqua` ; `arret` : à reprendre par le joueur. */
-  etat: 'lecture' | 'attente' | 'pause' | 'arret'
+  /** `lecture` : suivi en cours ; `attente` : relance prête ; `pause` : attente jusqu’à `jusqua` (jamais d’arrêt automatique). */
+  etat: 'lecture' | 'attente' | 'pause'
   message: string
   jusqua: number | null
   /** Échecs de lecture de suite (attente 5 s, +5 s à chaque échec). */
   echecs: number
   maj: number
+  /** Carte en échec depuis plusieurs essais : avertissement avec choix « Passer cette carte » ou « Continuer d’attendre ». */
+  carte?: { titre: string; idExemplaire: string; essais: number } | null
 }
 
 export async function chargerStatutRelanceVentes(): Promise<StatutRelanceVentes | null> {
   const contenu = await chrome.storage.local.get(CLE_STATUT_RELANCE);
   const b = contenu[CLE_STATUT_RELANCE];
-  if (!estObjet(b) || typeof b.message !== 'string' || !['lecture', 'attente', 'pause', 'arret'].includes(String(b.etat))) return null;
+  if (!estObjet(b) || typeof b.message !== 'string' || !['lecture', 'attente', 'pause'].includes(String(b.etat))) return null;
   if (!nullOuHorodatage(b.jusqua) || !horodatageValide(b.maj) || !horodatageValide(b.echecs)) return null;
-  return { etat: b.etat as StatutRelanceVentes['etat'], message: b.message.slice(0, 300), jusqua: b.jusqua, echecs: b.echecs, maj: b.maj };
+  const c = b.carte;
+  const carte = estObjet(c) && typeof c.titre === 'string' && typeof c.idExemplaire === 'string' && horodatageValide(c.essais) ? { titre: c.titre.slice(0, 200), idExemplaire: c.idExemplaire.slice(0, 80), essais: c.essais } : null;
+  return { etat: b.etat as StatutRelanceVentes['etat'], message: b.message.slice(0, 300), jusqua: b.jusqua, echecs: b.echecs, maj: b.maj, carte };
 }
 
 export async function enregistrerStatutRelanceVentes(statut: StatutRelanceVentes): Promise<void> {
@@ -493,7 +497,8 @@ export async function chargerEcartesVentes(): Promise<Record<string, number>> {
   const b = contenu[CLE_ECARTES_VENTES];
   if (!estObjet(b)) return {};
   const sortie: Record<string, number> = {};
-  for (const [id, t] of Object.entries(b).slice(0, 1000)) if (horodatageValide(t)) sortie[id] = t;
+  // Les 1 000 entrées les plus récentes (échéance la plus lointaine) : un écart récent n’est jamais jeté.
+  for (const [id, t] of Object.entries(b).filter(([, v]) => horodatageValide(v)).sort((x, y) => (y[1] as number) - (x[1] as number)).slice(0, 1000)) sortie[id] = t as number;
   return sortie;
 }
 

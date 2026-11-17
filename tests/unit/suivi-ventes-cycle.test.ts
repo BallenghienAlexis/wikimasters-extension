@@ -14,7 +14,7 @@ const carte: Carte = {
 }
 const vente = (id: string, finDans: number) => ({ id, card_id: `ex-${id}`, base_amount: 50, current_bid: null, effective_bid: 50, created_at: iso(T0), end_at: iso(T0 + finDans), card: { wikipedia_title: `T${id}` } })
 
-function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relance?: boolean; resultat?: ResultatAction; visible?: boolean }) {
+function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relance?: boolean; resultat?: ResultatAction; visible?: boolean; actif?: boolean }) {
   let t = T0
   const etat = { suivi: suiviVide() as SuiviVentes, statut: null as StatutRelanceVentes | null, lancements: [] as LancementVente[], ecartes: {} as Record<string, number>, lectures: 0, ordres: [] as Action[] }
   const reponses = [...opts.reponses]
@@ -27,6 +27,7 @@ function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relan
     },
     emettre: async (o) => (etat.ordres.push(o), opts.resultat ?? { classe: 'reussie', codeHttp: 201, cause: 'action réussie' }),
     visible: () => opts.visible ?? true,
+    actif: async () => opts.actif ?? true,
     route: '/api/marketplace?page=1&limit=50&sort=recent&mine=1',
     relanceActive: async () => opts.relance ?? false,
     chargerSuivi: async () => etat.suivi,
@@ -98,13 +99,31 @@ describe('cycle de suivi des mises en vente', () => {
     await pleine.suivi.cycle()
     expect(pleine.etat.ordres).toHaveLength(0)
   })
-  it('anti-bot sur l’écriture : arrêt immédiat, aucun contournement, reprise par le joueur', async () => {
-    const m = monde({ reponses: [ok([]), ok([])], relance: true, resultat: { classe: 'arret', codeHttp: 403, cause: 'vérification anti-bot requise' } })
+  it('anti-bot sur l’écriture : attente progressive sans contournement, jamais d’arrêt, même après un échec de lecture', async () => {
+    const m = monde({ reponses: [ok([]), { statut: 500, json: null }, ok([]), ok([])], relance: true, resultat: { classe: 'arret', codeHttp: 403, cause: 'vérification anti-bot requise' } })
     await m.suivi.cycle()
-    expect(m.etat.statut?.etat).toBe('arret')
-    m.avancer(300_000)
-    await m.suivi.cycle()
+    expect(m.etat.statut?.etat).toBe('pause')
     expect(m.etat.ordres).toHaveLength(1)
+    m.avancer(1000)
+    await m.suivi.cycle() // lecture en échec
+    m.avancer(20_000)
+    await m.suivi.cycle() // lecture réussie, mais l’attente de 5 s est échue : nouvel essai
+    expect(m.etat.ordres.length).toBeGreaterThanOrEqual(1)
+    expect(m.etat.statut?.etat).not.toBe('arret' as never)
+  })
+  it('synchro automatique coupée : aucune lecture', async () => {
+    const m = monde({ reponses: [ok([])], actif: false })
+    await m.suivi.cycle()
+    expect(m.etat.lectures).toBe(0)
+  })
+  it('5 échecs d’une même carte : avertissement avec choix, attente toujours en cours', async () => {
+    const m = monde({ reponses: Array.from({ length: 8 }, () => ok([])), relance: true, resultat: { classe: 'echec', codeHttp: 500, cause: 'erreur réseau' } })
+    for (let i = 0; i < 5; i += 1) {
+      await m.suivi.cycle()
+      m.avancer(400_000)
+    }
+    expect(m.etat.ordres).toHaveLength(5)
+    expect(m.etat.statut).toMatchObject({ etat: 'pause', carte: { idExemplaire: 'ex-c', essais: 5 } })
   })
   it('429 : relance en pause 30 min ; 403 : l’exemplaire est écarté', async () => {
     const m = monde({ reponses: [ok([])], relance: true, resultat: { classe: 'arret', codeHttp: 429, cause: 'réponse hors contrat' } })
@@ -113,14 +132,5 @@ describe('cycle de suivi des mises en vente', () => {
     const r = monde({ reponses: [ok([])], relance: true, resultat: { classe: 'echec', codeHttp: 403, cause: 'réponse hors contrat' } })
     await r.suivi.cycle()
     expect(r.etat.ecartes['ex-c']).toBeGreaterThan(T0)
-  })
-  it('3 échecs d’écriture de suite : attente du choix du joueur', async () => {
-    const m = monde({ reponses: [ok([]), ok([]), ok([])], relance: true, resultat: { classe: 'echec', codeHttp: 500, cause: 'erreur réseau' } })
-    for (let i = 0; i < 3; i += 1) {
-      await m.suivi.cycle()
-      m.avancer(300_000)
-      m.etat.ecartes = {}
-    }
-    expect(m.etat.statut?.etat).toBe('arret')
   })
 })

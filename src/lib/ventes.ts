@@ -242,10 +242,17 @@ export const cleVuCarte = (titre: string): string => `vu:${titre}`
 export const nombreRelances = (lancements: readonly LancementVente[], titre: string): number =>
   lancements.filter((l) => l.resultat === 'reussie' && l.titre === titre).length
 
-/** Cartes relancées au moins `SEUIL` fois depuis le dernier choix du joueur : avertissement et choix, jamais d’arrêt caché. */
-export function cartesAAvertir(lancements: readonly LancementVente[], ecartes: Readonly<Record<string, number>>): Array<{ titre: string; relances: number }> {
+/**
+ * Cartes remises en vente au moins `SEUIL` fois après une enchère terminée non vendue, depuis le dernier choix du joueur :
+ * avertissement et choix, jamais d’arrêt caché. Seules comptent les remises qui suivent une fin sans vente.
+ */
+export function cartesAAvertir(
+  lancements: readonly LancementVente[],
+  ecartes: Readonly<Record<string, number>>,
+  terminees: readonly VenteTerminee[],
+): Array<{ titre: string; relances: number }> {
   const comptes = new Map<string, number>()
-  for (const l of lancements) if (l.resultat === 'reussie') comptes.set(l.titre, (comptes.get(l.titre) ?? 0) + 1)
+  for (const v of terminees) if (etatTerminee(v, lancements) === 'non-vendue-relancee') comptes.set(v.titre, (comptes.get(v.titre) ?? 0) + 1)
   const sortie: Array<{ titre: string; relances: number }> = []
   for (const [titre, n] of comptes) {
     if (ecartes[clePasserCarte(titre)] !== undefined) continue

@@ -36,7 +36,8 @@ export interface EtatMiseEnVente {
   maintenant: number;
   erreur: string | null;
   basculerRelance: (actif: boolean) => void;
-  reprendre: () => void;
+  passerExemplaire: (idExemplaire: string) => void;
+  continuerAttendre: (idExemplaire: string, essais: number) => void;
   continuerCarte: (titre: string, relances: number) => void;
   retirerCarte: (titre: string) => void;
   remettreCarte: (titre: string) => void;
@@ -115,12 +116,21 @@ export function useMiseEnVente(): EtatMiseEnVente {
       setErreur(null);
       void enregistrerRelanceVentes(actif)
         // Activer ou couper la relance repart d’un état propre : un arrêt ou une pause précédente est levé par le joueur.
-        .then(() => enregistrerStatutRelanceVentes({ etat: 'attente', message: actif ? 'Relance activée' : 'Relance désactivée', jusqua: null, echecs: 0, maj: Date.now() }))
+        .then(async () => {
+          // Une pause en cours (401, 429, attente après échec) n’est jamais levée par le basculement de l’interrupteur.
+          const actuel = await chargerStatutRelanceVentes();
+          if (actuel?.etat === 'pause' && actuel.jusqua !== null && actuel.jusqua > Date.now()) return;
+          await enregistrerStatutRelanceVentes({ etat: 'attente', message: actif ? 'Relance activée' : 'Relance désactivée', jusqua: null, echecs: 0, maj: Date.now(), carte: null });
+        })
         .catch(echec);
     },
-    reprendre: () => {
-      void enregistrerStatutRelanceVentes({ etat: 'attente', message: 'Relance reprise par le joueur', jusqua: null, echecs: 0, maj: Date.now() }).catch(echec);
+    // « Passer cette carte » : l’exemplaire n’est plus retenté avant un jour ; l’avertissement disparaît avec le prochain statut.
+    passerExemplaire: (idExemplaire) => {
+      ecrireEcartes((e) => ({ ...e, [idExemplaire]: Date.now() + 24 * 3600_000 }));
+      void enregistrerStatutRelanceVentes({ etat: 'attente', message: 'Carte passée par le joueur', jusqua: null, echecs: 0, maj: Date.now(), carte: null }).catch(echec);
     },
+    // « Continuer d’attendre » : masque l’avertissement jusqu’à 5 nouveaux échecs de la même carte.
+    continuerAttendre: (idExemplaire, essais) => ecrireEcartes((e) => ({ ...e, [`attend:${idExemplaire}`]: essais })),
     continuerCarte: (titre, relances) => ecrireEcartes((e) => ({ ...e, [cleVuCarte(titre)]: relances })),
     retirerCarte: (titre) => ecrireEcartes((e) => ({ ...e, [clePasserCarte(titre)]: Date.now() })),
     remettreCarte: (titre) =>

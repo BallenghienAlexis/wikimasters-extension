@@ -37,7 +37,7 @@ const OngletMiseEnVente: React.FC = () => {
   const e = useMiseEnVente();
   const { suivi, lancements, lots, ecartes, relance, statut, maintenant } = e;
   const max = suivi.max ?? CONFIG_PRIX.maxVentesSimultanees;
-  const avertissements = cartesAAvertir(lancements, ecartes);
+  const avertissements = cartesAAvertir(lancements, ecartes, suivi.terminees);
   const retirees = Object.keys(ecartes)
     .filter((c) => c.startsWith('carte:'))
     .map((c) => c.slice('carte:'.length));
@@ -67,10 +67,20 @@ const OngletMiseEnVente: React.FC = () => {
           {statut === null ? 'Suivi en attente du premier relevé.' : statut.message}
           {statut?.etat === 'pause' && statut.jusqua !== null && statut.jusqua > maintenant ? ` (reprise dans ${formaterDecompte(statut.jusqua - maintenant)})` : ''}
         </p>
-        {statut?.etat === 'arret' && (
-          <button type="button" className={`${CLASSE_BOUTON} mt-2`} onClick={e.reprendre}>
-            Reprendre la relance
-          </button>
+        {statut?.carte != null && statut.carte.essais - (ecartes[`attend:${statut.carte.idExemplaire}`] ?? 0) >= 5 && (
+          <div role="alert" className="mt-2 rounded border border-vendre p-2" data-testid="avertissement-ecriture">
+            <p className="font-bold">
+              La mise en vente de {statut.carte.titre} échoue depuis {statut.carte.essais} essais. Rien n’est arrêté : la relance continue d’attendre.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button type="button" className={CLASSE_BOUTON} onClick={() => e.passerExemplaire(statut.carte!.idExemplaire)}>
+                Passer cette carte
+              </button>
+              <button type="button" className={CLASSE_BOUTON} onClick={() => e.continuerAttendre(statut.carte!.idExemplaire, statut.carte!.essais)}>
+                Continuer d’attendre
+              </button>
+            </div>
+          </div>
         )}
         <p className="mt-2 text-sm text-muted">
           Dernier relevé : {heureFr(suivi.releveLe)}. Relecture toutes les 5 min, puis toutes les 10 s dans la dernière minute d’une enchère

@@ -6,8 +6,7 @@ import { preferencesParDefaut } from '../../src/lib/tri'
 import {
   DELAI_FINAL_MS,
   DELAI_NORMAL_MS,
-  SEUIL_AVERTISSEMENT_RELANCES,
-  analyserListeVentes,
+    analyserListeVentes,
   attenteApresEchec,
   cartesAAvertir,
   clePasserCarte,
@@ -100,12 +99,17 @@ describe('origine, vendue ou non, avertissement', () => {
     expect(etatTerminee({ ...base, prixFinal: null }, [lancement('Carte a', base.finLe + 5000)])).toBe('non-vendue-relancee')
     expect(etatTerminee({ ...base, prixFinal: null }, [])).toBe('non-vendue')
   })
-  it('avertit à partir de 3 relances, jamais d’arrêt : « Continuer » et « Retirer » sont des choix', () => {
-    const l = Array.from({ length: SEUIL_AVERTISSEMENT_RELANCES }, (_, i) => lancement('Carte a', T0 + i)).concat([lancement('Carte b', T0), lancement('Carte c', T0, 'echec')])
-    expect(cartesAAvertir(l, {})).toEqual([{ titre: 'Carte a', relances: 3 }])
-    expect(cartesAAvertir(l, { [cleVuCarte('Carte a')]: 3 })).toEqual([])
-    expect(cartesAAvertir([...l, lancement('Carte a', T0 + 9), lancement('Carte a', T0 + 10), lancement('Carte a', T0 + 11)], { [cleVuCarte('Carte a')]: 3 })).toEqual([{ titre: 'Carte a', relances: 6 }])
-    expect(cartesAAvertir(l, { [clePasserCarte('Carte a')]: 1 })).toEqual([])
+  it('avertit dès 3 remises en vente après une fin sans vente ; « Continuer » et « Retirer » sont des choix, jamais un arrêt', () => {
+    const fin = (i: number) => ({ id: `t${i}`, titre: 'Carte a', rarete: '', prixDepart: 10, prixFinal: null, creeLe: T0 + i * 7_200_000, finLe: T0 + i * 7_200_000 + 3_600_000 })
+    const terminees = [0, 1, 2].map(fin)
+    const l = terminees.map((t) => lancement('Carte a', t.finLe + 2000))
+    expect(cartesAAvertir(l, {}, terminees)).toEqual([{ titre: 'Carte a', relances: 3 }])
+    expect(cartesAAvertir(l, { [cleVuCarte('Carte a')]: 3 }, terminees)).toEqual([])
+    expect(cartesAAvertir(l, { [clePasserCarte('Carte a')]: 1 }, terminees)).toEqual([])
+    // Des ventes réussies ne comptent jamais.
+    expect(cartesAAvertir(l, {}, terminees.map((t) => ({ ...t, prixFinal: 50 })))).toEqual([])
+    // Trois mises en vente sans fin sans vente : pas d’avertissement.
+    expect(cartesAAvertir([lancement('Carte b', T0), lancement('Carte b', T0 + 1), lancement('Carte b', T0 + 2)], {}, [])).toEqual([])
   })
 })
 
