@@ -164,7 +164,7 @@ async function preparerLot(page: Page): Promise<void> {
   await page.evaluate(async (c) => {
     await chrome.storage.local.set({
       collection: { version: 3, cartes: c.map((x) => ({ description: 'race de chien', url: null, favori: false, etiquettesSite: [], prixCible: null, note: '', ami: null, valeurMarchande: null, ...x })) },
-      preferences: { version: 2, mesThemes: [], amis: [] },
+      preferences: { version: 2, mesThemes: [], amis: [], modeEtiquettes: 'poser' },
       amisInitiaux: 999,
       syncAuto: false,
     });

@@ -98,7 +98,7 @@ async function amorcer(page: Page): Promise<void> {
   await page.evaluate(async (carte) => {
     await chrome.storage.local.set({
       collection: { version: 2, cartes: [carte] },
-      preferences: { version: 2, mesThemes: [], amis: [] },
+      preferences: { version: 2, mesThemes: [], amis: [], modeEtiquettes: 'poser' },
       amisInitiaux: 999,
       // Le lot refuse de démarrer tant que la synchro automatique tient le bail : elle est coupée ici.
       syncAuto: false,

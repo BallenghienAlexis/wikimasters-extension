@@ -1,9 +1,11 @@
 import React from 'react';
 import { enregistrerAffichage } from '../lib/stockage';
-import { plafondDefausse } from '../lib/tri';
+import { modeEtiquettes, plafondDefausse } from '../lib/tri';
+import { copieDesEtiquettes } from '../lib/sauvegardeEtiquettes';
 import type { Donnees } from '../lib/sauvegarde';
 import ClassementIA from './ClassementIA';
 import EtiquettesPreexistantes from './EtiquettesPreexistantes';
+import ModeEtiquettes from './ModeEtiquettes';
 import PlafondDefausse from './PlafondDefausse';
 import { lancerSuppressionEtiquettes } from './pilotageLots';
 import ReglageAnimations from './ReglageAnimations';
@@ -21,6 +23,17 @@ interface Props {
 
 const NB = ' ';
 
+const LIBELLES_MODES = { suspendre: 'Pose suspendue', 'retirer-tout': 'Retrait général', poser: 'Pose selon les règles' } as const;
+
+function telechargerCopie(contenu: string, nom: string): void {
+  const url = URL.createObjectURL(new Blob([contenu], { type: 'application/json' }));
+  const lien = document.createElement('a');
+  lien.href = url;
+  lien.download = nom;
+  lien.click();
+  URL.revokeObjectURL(url);
+}
+
 /** Onglet Réglages (D-50) : sept sections repliées par défaut, titre et résumé visibles. */
 const OngletReglages: React.FC<Props> = ({ donnees, onImportee }) => {
   const { collection, registre, preferences, preferencesLues, etiquettesSite, executionEnCours, enregistrerLesPreferences, setMessage } = donnees;
@@ -28,6 +41,7 @@ const OngletReglages: React.FC<Props> = ({ donnees, onImportee }) => {
   const syncAuto = useSyncAuto();
   const plafond = plafondDefausse(preferences);
   const avecCartes = collection.cartes.length > 0;
+  const mode = modeEtiquettes(preferences);
   return (
     <div className="mt-4 flex flex-col gap-3">
       <SectionRepliable id="reglage-synchro" titre="Synchronisation automatique" resume={syncAuto.actif === null ? (syncAuto.erreur !== null ? 'Lecture impossible' : 'Lecture…') : syncAuto.actif ? 'Activée' : 'Désactivée'}>
@@ -46,6 +60,22 @@ const OngletReglages: React.FC<Props> = ({ donnees, onImportee }) => {
           />
         ) : (
           <p className="py-2 text-sm text-muted">Le plafond se règle une fois la collection lue.</p>
+        )}
+      </SectionRepliable>
+
+      <SectionRepliable id="reglage-mode-etiquettes" titre="Étiquettes sur le site" resume={LIBELLES_MODES[mode]}>
+        {preferencesLues ? (
+          <ModeEtiquettes
+            mode={mode}
+            posees={registre.couples.length}
+            onChange={(m) => enregistrerLesPreferences({ ...preferences, modeEtiquettes: m }, 'Enregistrement du mode des étiquettes impossible.')}
+            onCopie={() => {
+              const maintenant = new Date();
+              telechargerCopie(JSON.stringify(copieDesEtiquettes(collection, registre, maintenant), null, 2), `etiquettes-posees-${maintenant.toISOString().slice(0, 10)}.json`);
+            }}
+          />
+        ) : (
+          <p className="py-2 text-sm text-muted">Le mode se règle une fois les préférences lues.</p>
         )}
       </SectionRepliable>
 
