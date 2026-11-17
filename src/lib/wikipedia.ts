@@ -11,6 +11,7 @@ export const DUREE_CACHE_MS = 30 * 24 * 3600 * 1000;
 const MAX_ENTREES = 20_000;
 const MAX_CATEGORIES = 500;
 const MAX_RESUME = 2000;
+const cle = (texte: string): string => texte.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
 
 export interface EntreeWikipedia {
   /** Identifiants de thèmes (parents compris) ; liste vide = page lue, aucun thème reconnu. */
@@ -22,6 +23,8 @@ export interface EntreeWikipedia {
   avecWikidata?: true;
   /** Signaux lus par le sens (définition, catégories, nature du sujet) ; absents des entrées plus anciennes. */
   signaux?: SignauxPage;
+  /** Vrai quand la lecture des entrées d'une page d'homonymie a été prévue (entrées plus anciennes sans thème : relues une fois, 2026-11-17). */
+  avecHomonymie?: true;
   /** Vrai quand les thèmes ont été calculés sans compter les noms propres composés (« Bee Train ») ; sinon relue une fois (2026-11-14). */
   nomsPropres?: true;
 }
@@ -57,6 +60,51 @@ export function urlRequete(titre: string): string {
     titles: titre,
   });
   return `${HOTE_WIKIPEDIA}/w/api.php?${params.toString()}`;
+}
+
+/** GET en lecture seule : texte complet d'une page d'homonymie (liste de ses entrées), même route que la requête principale. */
+export function urlRequeteHomonymie(titre: string): string {
+  const params = new URLSearchParams({ action: 'query', format: 'json', formatversion: '2', redirects: '1', prop: 'extracts', explaintext: '1', titles: titre });
+  return `${HOTE_WIKIPEDIA}/w/api.php?${params.toString()}`;
+}
+
+/** Liste blanche : seul le texte brut de la page est retenu (borné) ; null si la forme est inattendue. */
+export function lireHomonymie(brut: unknown): string | null {
+  if (!estObjet(brut) || !estObjet(brut.query) || !Array.isArray(brut.query.pages) || brut.query.pages.length !== 1) return null;
+  const page: unknown = brut.query.pages[0];
+  if (!estObjet(page) || typeof page.extract !== 'string') return null;
+  return page.extract.slice(0, MAX_HOMONYMIE);
+}
+
+const MAX_HOMONYMIE = 20_000;
+const MAX_ENTREES_HOMONYMIE = 60;
+const FIN_ENTREES = /^={2,}\s*(voir aussi|notes? et references?|articles? connexes?|liens? externes?)\b/;
+
+/**
+ * Thèmes dominants des entrées listées par une page d'homonymie (« Zidane peut désigner : … footballeur … »).
+ * Une entrée = une ligne assez longue ; un thème est retenu s'il apparaît dans au moins 2 entrées (ou l'unique entrée)
+ * et dans 30 % des entrées au moins. Au plus 3 thèmes, les plus fréquents d'abord ; liste vide si rien ne domine.
+ * Seuls des identifiants du catalogue sortent ; les parents ne sont pas ajoutés.
+ */
+export function themesDepuisHomonymie(texte: string): string[] {
+  const entrees: string[] = [];
+  for (const brute of texte.split('\n')) {
+    const ligne = brute.trim();
+    if (FIN_ENTREES.test(cle(ligne))) break;
+    // Les titres de section (« == Patronyme == »), les phrases d'introduction et les lignes très courtes ne sont pas des entrées.
+    if (ligne.length < 25 || ligne.startsWith('=') || /peut (?:aussi )?(?:designer|faire reference)/.test(cle(ligne))) continue;
+    entrees.push(ligne);
+    if (entrees.length >= MAX_ENTREES_HOMONYMIE) break;
+  }
+  if (entrees.length === 0) return [];
+  const compte = new Map<string, number>();
+  for (const ligne of entrees) for (const id of themesDirectsDeTexte(ligne)) compte.set(id, (compte.get(id) ?? 0) + 1);
+  const minimum = Math.max(entrees.length === 1 ? 1 : 2, Math.ceil(entrees.length * 0.3));
+  return [...compte.entries()]
+    .filter(([, n]) => n >= minimum)
+    .sort(([a, na], [b, nb]) => nb - na || a.localeCompare(b))
+    .slice(0, 3)
+    .map(([id]) => id);
 }
 
 /** GET en lecture seule : recherche d'une entité par son titre ; seuls l'étiquette et la courte description sont lues. */
@@ -120,7 +168,6 @@ export function lireLibellesWikidata(brut: unknown): string[] | null {
 
 export type LectureWikidata = { type: 'ok'; descriptions: string[] } | { type: 'invalide' };
 
-const cle = (texte: string): string => texte.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
 
 /** Liste blanche : seules les descriptions des entités dont l'étiquette est exactement le titre sont retenues. */
 export function lireReponseWikidata(brut: unknown, titre: string): LectureWikidata {
@@ -208,6 +255,7 @@ export function validerCache(brut: unknown): CacheWikipedia | null {
       ...(e.avecResume === true ? { avecResume: true as const } : {}),
       ...(e.avecWikidata === true ? { avecWikidata: true as const } : {}),
       ...(lireSignaux(e.signaux, connus) ? { signaux: lireSignaux(e.signaux, connus) as SignauxPage } : {}),
+      ...(e.avecHomonymie === true ? { avecHomonymie: true as const } : {}),
       ...(e.nomsPropres === true ? { nomsPropres: true as const } : {}),
     };
   }
@@ -215,7 +263,7 @@ export function validerCache(brut: unknown): CacheWikipedia | null {
 }
 
 export function ajouterEntree(cache: CacheWikipedia, titre: string, themes: string[], maintenant: number, wikidata = false, signaux?: SignauxPage): CacheWikipedia {
-  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, nomsPropres: true, ...(wikidata ? { avecWikidata: true as const } : {}), ...(signaux ? { signaux } : {}) };
+  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, avecHomonymie: true, nomsPropres: true, ...(wikidata ? { avecWikidata: true as const } : {}), ...(signaux ? { signaux } : {}) };
   return { version: 1, entrees: { ...cache.entrees, [titre]: entree } };
 }
 
@@ -230,7 +278,7 @@ export function titresAVerifier(titres: string[], cache: CacheWikipedia, mainten
     // Une entrée calculée avant le filtre des noms propres est relue une fois.
     if (entree !== undefined && entree.nomsPropres !== true) { resultat.push(titre); continue }
     // Une entrée sans thème et sans résumé (ancienne version) est relue une fois pour profiter du résumé.
-    if (entree === undefined || entree.signaux === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS || (entree.themes.length === 0 && (entree.avecResume !== true || entree.avecWikidata !== true))) resultat.push(titre);
+    if (entree === undefined || entree.signaux === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS || (entree.themes.length === 0 && (entree.avecResume !== true || entree.avecWikidata !== true || entree.avecHomonymie !== true))) resultat.push(titre);
   }
   return resultat;
 }
