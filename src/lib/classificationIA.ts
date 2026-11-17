@@ -265,8 +265,7 @@ export function lireImportThemes(texte: string, titresConnus: ReadonlySet<string
 }
 
 /**
- * Prompt à coller dans un abonnement Claude pour classer le fichier exporté : le même catalogue et les mêmes règles que `PROMPT_SYSTEME`,
- * mais les clés de la réponse sont les titres exacts et une carte non reconnue est omise (jamais de liste vide ni de thème deviné).
+ * Prompt à coller dans un abonnement Claude pour classer le fichier exporté : le même catalogue que `PROMPT_SYSTEME`, des règles propres à l’export : les clés de la réponse sont les titres exacts et une carte non reconnue est omise (jamais de liste vide ni de thème deviné).
  * `docs/classement-par-ia.md` en contient le texte exact (test de synchronisation).
  */
 export const PROMPT_EXPORT = [

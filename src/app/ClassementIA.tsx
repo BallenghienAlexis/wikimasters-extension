@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import type { Carte } from '../lib/collection';
-import { ajouterAuCache, cartesAClasser, estimerCout, exporterEnFichiers, lireImportThemes, MODELE_IA, type CacheIA } from '../lib/classificationIA';
+import { ajouterAuCache, cartesAClasser, estimerCout, CARTES_PAR_FICHIER_EXPORT, exporterEnFichiers, lireImportThemes, MODELE_IA, type CacheIA } from '../lib/classificationIA';
 import { sansThemeLocal } from '../lib/themes';
 import { enregistrerCacheIA } from '../lib/stockage';
 import { classerCartes } from './classerIA';
@@ -50,7 +50,7 @@ const ClassementIA: React.FC<Props> = ({ cartes, cache, onCache }) => {
       URL.revokeObjectURL(url);
     }
     setEtat(
-      `${format(aClasser.length)} cartes exportées${fichiers.length > 1 ? ` en ${fichiers.length} fichiers de 150 cartes au plus` : ''}. Chaque fichier contient son prompt : transfère-le tel quel dans un chat IA (un fichier par message), puis colle ici sa réponse.`,
+      `${format(aClasser.length)} cartes exportées${fichiers.length > 1 ? ` en ${fichiers.length} fichiers de ${CARTES_PAR_FICHIER_EXPORT} cartes au plus` : ''}. Chaque fichier contient son prompt : transfère-le tel quel dans un chat IA (un fichier par message), puis colle ici sa réponse.`,
     );
   };
 
