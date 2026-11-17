@@ -166,8 +166,11 @@ export function validerOrdre(brut: unknown): Action | null {
     }
     case 'favori': {
       const idExemplaire = texte(ordre.idExemplaire)
-      if (!cles(ordre, ['type', 'idCarte', 'idExemplaire']) || idExemplaire === null) return null
-      return { type: 'favori', idCarte, idExemplaire }
+      const avecValeur = 'valeur' in ordre
+      if (!cles(ordre, avecValeur ? ['type', 'idCarte', 'idExemplaire', 'valeur'] : ['type', 'idCarte', 'idExemplaire']) || idExemplaire === null) return null
+      if (!avecValeur) return { type: 'favori', idCarte, idExemplaire }
+      if (typeof ordre.valeur !== 'boolean') return null
+      return { type: 'favori', idCarte, idExemplaire, valeur: ordre.valeur }
     }
     case 'defausse': {
       const idExemplaire = texte(ordre.idExemplaire)

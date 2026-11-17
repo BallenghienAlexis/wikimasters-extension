@@ -2,6 +2,7 @@
 // Calcul local par mots-clés, complété par les catégories Wikipédia mises en cache (voir wikipedia.ts) ; le résultat n'est jamais stocké.
 // Le libellé de chaque thème est l'étiquette à poser dans le jeu : c'est ici qu'on en ajoute.
 import { normaliser, type Carte } from './collection';
+import { definirThemesAutorises, MAX_THEMES_CHOISIS } from './themesChoisis';
 import { definition, genreDe, type Genre } from './sens';
 
 export const THEME_AUTRES = 'autres';
@@ -197,6 +198,15 @@ const parLibelle = (a: string, b: string): number => (LIBELLES_THEMES[a] ?? a).l
 
 export const IDS_THEMES: string[] = [...DEFINITIONS_THEMES.map((t) => t.id).sort(parLibelle), THEME_AUTRES];
 
+/** Thèmes que le joueur peut choisir à la main : tout le catalogue sauf « autres ». */
+export const IDS_THEMES_CHOISISSABLES: string[] = IDS_THEMES.filter((id) => id !== THEME_AUTRES);
+definirThemesAutorises(IDS_THEMES_CHOISISSABLES);
+
+/** Carte lue pour ses thèmes : les thèmes choisis à la main (facultatifs) priment sur toute déduction. */
+export type CarteThemes = Pick<Carte, 'titre' | 'description'> & { themesChoisis?: readonly string[] | null };
+
+const choisis = (carte: CarteThemes): readonly string[] | null => (carte.themesChoisis && carte.themesChoisis.length > 0 ? carte.themesChoisis : null);
+
 // Un motif doit commencer un mot : « art » ne doit pas trouver « partie ».
 const REGLES = DEFINITIONS_THEMES.map(({ id, motifs, parents = [] }) => ({
   id,
@@ -303,7 +313,9 @@ export function definirThemesWikipedia(themes: ReadonlyMap<string, readonly stri
   versionSurcouches++;
 }
 
-export function themesDeCarte(carte: Pick<Carte, 'titre' | 'description'>): string[] {
+export function themesDeCarte(carte: CarteThemes): string[] {
+  const manuels = choisis(carte);
+  if (manuels) return avecParents(manuels);
   const themes = new Set(themesDeTexte(`${carte.titre} ${carte.description}`));
   for (const id of themesWikipedia.get(carte.titre) ?? []) themes.add(id);
   // Thèmes fiables lus par le sens (définition, classes Wikidata) : ce sont ceux des étiquettes, ils ne doivent jamais laisser la carte en « autres ».
@@ -387,7 +399,8 @@ export function definirThemesIA(themes: ReadonlyMap<string, readonly string[]>):
 }
 
 /** La carte n’a aucun thème par les moyens locaux (mots-clés, Wikipédia, Wikidata), sans la surcouche IA. */
-export function sansThemeLocal(carte: Pick<Carte, 'titre' | 'description'>): boolean {
+export function sansThemeLocal(carte: CarteThemes): boolean {
+  if (choisis(carte)) return false;
   return themesPrincipauxLocaux(carte).length === 0;
 }
 
@@ -409,7 +422,9 @@ const GENRES_HUMAINS: ReadonlySet<Genre> = new Set(['personne', 'oeuvre', 'organ
  * canal faible est écarté pour une personne, une œuvre ou une organisation. Un thème dont le poids est inférieur à 40 % du
  * meilleur est écarté ; à poids égal, le plus précis passe avant. Les parents ne sont pas ajoutés (`themesDeCarte` les donne aux amis).
  */
-export function themesPrincipaux(carte: Pick<Carte, 'titre' | 'description'>): string[] {
+export function themesPrincipaux(carte: CarteThemes): string[] {
+  const manuels = choisis(carte);
+  if (manuels) return manuels.slice(0, MAX_THEMES_CHOISIS);
   const locaux = themesPrincipauxLocaux(carte);
   return locaux.length > 0 ? locaux : (themesIA.get(carte.titre) ?? []).slice(0, MAX_THEMES_PAR_CARTE);
 }

@@ -1,4 +1,5 @@
 import { estObjet } from './valider';
+import { themesChoisisValides } from './themesChoisis';
 // Modèle de la collection et logique pure, sans dépendance à chrome.*.
 
 // Schéma de stockage (v2 : identifiants d’exemplaires du site ; v3 : étiquettes lues sur le site ; v4 : plus de statut ni de décision,
@@ -20,6 +21,11 @@ export interface Carte {
   url: string | null;
   // Sur le site, un favori est verrouillé : ni défausse, ni vente, ni échange.
   favori: boolean;
+  // Choix manuel du joueur (étoile de la Collection, Alexis 2026-11-17) : il prime sur toute règle, dans les deux sens.
+  // null = aucun choix (le site et les règles décident). true/false = favori voulu, jamais remis en cause par une règle.
+  choixFavori?: boolean | null;
+  // Thèmes choisis à la main (1 à 4, du catalogue, jamais « autres ») : ils remplacent les thèmes déduits. null = automatique.
+  themesChoisis?: string[] | null;
   // Identifiants d’exemplaires sur le site (`user_card_id`) ; null = inconnu, jamais un tableau vide.
   idsSite: string[] | null;
   // Noms des étiquettes posées sur la carte sur le site (lecture seule, jamais envoyée) ; [] = aucune ou inconnu.
@@ -34,17 +40,23 @@ export interface Carte {
 
 /** Vrai si la carte porte une édition locale du joueur (jamais à perdre en silence). */
 export const aEditionLocale = (c: Carte): boolean =>
-  c.note !== '' || c.prixCible !== null || c.ami !== null;
+  c.note !== '' || c.prixCible !== null || c.ami !== null || (c.choixFavori ?? null) !== null || (c.themesChoisis ?? null) !== null;
+
+/** Favori effectif : le choix manuel du joueur, sinon l’état lu sur le site. */
+export const estFavori = (c: Pick<Carte, 'favori' | 'choixFavori'>): boolean => c.choixFavori ?? c.favori;
+
+/** Favori verrouillé pour la vente et la défausse : favori sur le site, ou voulu à la main (le site le sera après le lot). */
+export const estFavoriVerrouille = (c: Pick<Carte, 'favori' | 'choixFavori'>): boolean => c.favori || c.choixFavori === true;
 
 export interface Collection {
   version: typeof VERSION_SCHEMA;
   cartes: Carte[];
 }
 
-export type EditionCarte = Partial<Pick<Carte, 'prixCible' | 'note' | 'ami' | 'valeurMarchande'>>;
+export type EditionCarte = Partial<Pick<Carte, 'prixCible' | 'note' | 'ami' | 'valeurMarchande' | 'choixFavori' | 'themesChoisis'>>;
 
 // Une carte lue sur le site : l'édition locale n'est présente que si la lecture la fournit.
-export type CarteLueSite = Omit<Carte, 'idsSite' | 'etiquettesSite' | 'prixCible' | 'note' | 'favori' | 'description' | 'ami' | 'valeurMarchande'> &
+export type CarteLueSite = Omit<Carte, 'idsSite' | 'etiquettesSite' | 'prixCible' | 'note' | 'favori' | 'description' | 'ami' | 'valeurMarchande' | 'choixFavori' | 'themesChoisis'> &
   EditionCarte & { favori?: boolean; description?: string };
 
 export type ResultatStockage = { ok: true; collection: Collection } | { ok: false; erreur: string };
@@ -71,7 +83,7 @@ function analyserCarte(brut: unknown, rang: number): CarteLue | string {
   const position = `Carte n° ${rang + 1}`;
   if (!estObjet(brut)) return `${position} : format invalide.`;
 
-  const { id, titre, rarete, description, quantite, url, favori, prixCible, note, ami, valeurMarchande, idsSite, etiquettesSite } = brut;
+  const { id, titre, rarete, description, quantite, url, favori, prixCible, note, ami, valeurMarchande, idsSite, etiquettesSite, choixFavori, themesChoisis } = brut;
   if (typeof id !== 'string' || id.trim() === '') return `${position} : identifiant manquant.`;
   if (typeof titre !== 'string' || titre.trim() === '') return `${position} : titre manquant.`;
   if (titre.length > MAX_TITRE) return `${position} : titre trop long.`;
@@ -85,6 +97,8 @@ function analyserCarte(brut: unknown, rang: number): CarteLue | string {
     return `${position} : seul un lien https:// est accepté.`;
   }
   if (favori !== undefined && typeof favori !== 'boolean') return `${position} : favori invalide.`;
+  if (choixFavori !== undefined && choixFavori !== null && typeof choixFavori !== 'boolean') return `${position} : choix de favori invalide.`;
+  if (themesChoisis !== undefined && themesChoisis !== null && !themesChoisisValides(themesChoisis)) return `${position} : thèmes choisis invalides.`;
   if (prixCible !== undefined && prixCible !== null && !estPrixValide(prixCible)) return `${position} : prix cible invalide.`;
   if (note !== undefined && (typeof note !== 'string' || note.length > MAX_NOTE)) return `${position} : note invalide.`;
   if (valeurMarchande !== undefined && valeurMarchande !== null && !estPrixValide(valeurMarchande)) return `${position} : valeur marchande invalide.`;
@@ -110,6 +124,8 @@ function analyserCarte(brut: unknown, rang: number): CarteLue | string {
     url: (url as string | null | undefined) ?? null,
   };
   if (favori !== undefined) carte.favori = favori as boolean;
+  if (choixFavori !== undefined) carte.choixFavori = choixFavori as boolean | null;
+  if (themesChoisis !== undefined) carte.themesChoisis = themesChoisis as string[] | null;
   if (prixCible !== undefined) carte.prixCible = prixCible as number | null;
   if (note !== undefined) carte.note = note as string;
   if (description !== undefined) carte.description = description as string;
@@ -184,6 +200,9 @@ export function fusionnerCartesLues(collection: Collection, lues: CarteLueSite[]
     const existante = parId.get(lue.id);
     parId.set(lue.id, {
       favori: existante?.favori ?? false,
+      // Champs facultatifs : absents tant que le joueur n'a rien choisi (le stockage existant reste identique).
+      ...(existante?.choixFavori == null ? {} : { choixFavori: existante.choixFavori }),
+      ...(existante?.themesChoisis == null ? {} : { themesChoisis: existante.themesChoisis }),
       idsSite: existante?.idsSite ?? null,
       etiquettesSite: existante?.etiquettesSite ?? [],
       ami: existante?.ami ?? null,
