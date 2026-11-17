@@ -85,21 +85,14 @@ export function texteDerniereSynchro(derniere: number | null, statut: StatutSync
 
 const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded border border-line bg-ink px-4';
 
-/** « Relancer la synchro » : proposé seulement quand la dernière synchro s’est arrêtée (par le joueur, refus du site ou échecs). */
-export const relancePossible = (entree: EntreeEtat): boolean =>
-  entree.actif && !synchroEnCours(entree) && entree.statut?.etat === 'arret' && (entree.statut.raison === 'manuel' || (entree.statut.raison === 'code-http' && entree.statut.codeHttp === 403));
+/** « Forcer la synchro » : toujours proposé quand la fonction est activée et qu’aucune synchro ne tourne (clic explicite du joueur). */
+export const relancePossible = (entree: EntreeEtat): boolean => entree.actif && !synchroEnCours(entree);
 
-/** Après un 401, un 429 ou des échecs, la pause de 30 min est gardée : pas de bouton, un texte explique pourquoi. */
-export const relanceRefusee = (entree: EntreeEtat): boolean =>
-  entree.actif && !synchroEnCours(entree) && entree.statut?.etat === 'arret' && !(entree.statut.raison === 'manuel' || (entree.statut.raison === 'code-http' && entree.statut.codeHttp === 403));
-
-/** Avertissement affiché près du bouton quand le site a refusé : la relance passe outre la pause de 30 min. */
+/** Avertissement affiché près du bouton : le forçage passe outre le délai et les pauses, jamais la vérification anti-bot. */
 export function texteRelance(statut: StatutSynchro | null): string {
-  if (statut?.etat !== 'arret') return '';
-  if (statut.raison === 'code-http') {
-    return `Relancer ignore la pause de 30${NB}min qui suit un refus du site${statut.codeHttp !== null ? ` (${statut.codeHttp})` : ''} : il peut refuser de nouveau. La lecture reprend avec les cartes déjà enregistrées, dans un onglet WikiMasters ouvert.`;
-  }
-  return 'La lecture reprend avec les cartes déjà enregistrées, dans un onglet WikiMasters ouvert.';
+  const base = `Lance une synchro tout de suite, dans un onglet WikiMasters ouvert, sans attendre le délai de 30${NB}min ni la pause qui suit un refus du site (401, 403 ou 429), qui peut alors refuser de nouveau. La vérification anti-bot reste à franchir à la main sur le site, et une seule synchro tourne à la fois (une demande par minute au plus).`;
+  if (statut?.etat === 'arret' && statut.raison === 'code-http' && statut.codeHttp !== null) return `${base} Dernier refus du site${NB}: ${statut.codeHttp}.`;
+  return base;
 }
 
 export interface VueSynchroAutoProps {
@@ -129,7 +122,7 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
       testId="synchro-auto"
       className="mt-4"
       titre="Synchronisation automatique"
-      ouvertParDefaut={enCours || erreur !== null || relancePossible(entree) || relanceRefusee(entree)}
+      ouvertParDefaut={enCours || erreur !== null || (entree.actif && statut?.etat === 'arret')}
       resume={`${texteEtatSynchro(entree)} · ${ecarts.length === 0 ? 'aucun écart' : `${ecarts.length} écart${ecarts.length > 1 ? 's' : ''}`}`}
     >
       <span id="titre-synchro-auto" className="sr-only">
@@ -168,7 +161,7 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
         )}
         {relancePossible(entree) && (
           <button type="button" className={CLASSE_BOUTON} onClick={onRelancer}>
-            Relancer la synchro
+            Forcer la synchro
           </button>
         )}
       </div>
@@ -177,11 +170,6 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
         {texteEtatSynchro(entree)}
       </p>
       {relancePossible(entree) && <p className="mt-1 text-sm text-muted">{texteRelance(statut)}</p>}
-      {relanceRefusee(entree) && (
-        <p className="mt-1 text-sm text-muted">
-          {statut?.codeHttp === 401 ? 'Session expirée : reconnectez-vous sur WikiMasters.' : statut?.codeHttp === 429 ? 'Le site limite les requêtes.' : 'La lecture a échoué plusieurs fois.'} Reprise automatique après 30{NB}min de pause.
-        </p>
-      )}
       {enCours && (
         <p aria-hidden="true" className="mt-1 text-muted motion-safe:animate-pulse">
           …

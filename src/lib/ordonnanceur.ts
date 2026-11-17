@@ -150,6 +150,8 @@ export interface ResultatSynchro {
   codeHttp: number | null;
   /** Vrai si la collection a été lue en entier (ou jugée inchangée) sans échec. */
   complete: boolean;
+  /** Cause exacte d’une lecture non propre (sans échec ni arrêt) ; `null` si complète. */
+  causeIncomplete: string | null;
   /** Éléments (pages, prix…) sautés sur erreur pendant l’exécution. */
   sautes: number;
   collection: Collection;
@@ -233,6 +235,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     raison: null,
     codeHttp: null,
     complete: false,
+    causeIncomplete: null,
     sautes: 0,
     collection: deps.collection,
     etat,
@@ -410,33 +413,46 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       // nombre de cartes distinctes ou les comptes par étiquette ont bougé, ou si les exemplaires lus ne correspondent pas
       // au total, la passe est refaite (3 au plus). Aucun retrait local tant qu’une passe n’est pas propre.
       let propre = false;
-      let lecture: { ok: boolean; vus: Set<string> | null; tete?: string | null } = { ok: true, vus: null };
+      let cause: string | null = null;
+      let lecture: { ok: boolean; vus: Set<string> | null; tete?: string | null; lus?: number } = { ok: true, vus: null };
       for (let passe = 1; passe <= MAX_PASSES; passe++) {
         lecture = await lirePages(stats?.total ?? null, null);
-        if (!lecture.ok || stats === null) break;
+        if (!lecture.ok) {
+          if (echecsTotal === 0) cause = 'la lecture des pages n’a pas abouti (plafond de pages atteint)';
+          break;
+        }
+        if (stats === null) break;
         const fin = await lireStats();
-        if (fin === null) break;
+        if (fin === null) {
+          cause = 'relecture des statistiques impossible (requête en échec)';
+          break;
+        }
         // Contrôle de la tête (plus récents d’abord) : une carte ajoutée ou un favori basculé sur la première page pendant la
         // lecture, à total égal (remplacement), passe sinon inaperçu.
         const teteFin = lecture.tete == null ? null : await lireTete();
         // Contrôle impossible (requête en échec) : abandon sans nouvelle passe ni retrait local.
         if (lecture.tete != null && teteFin === null) {
+          cause = 'contrôle de la première page impossible (requête en échec)';
           stats = fin;
           break;
         }
         const teteStable = lecture.tete == null || teteFin === lecture.tete;
-        if (lecture.vus !== null && teteStable && memesStats(stats, fin)) {
+        const stable = teteStable && memesStats(stats, fin);
+        if (lecture.vus !== null && stable) {
           propre = true;
+          cause = null;
           stats = fin;
           break;
         }
-        // Rien n’a bougé côté site mais les exemplaires lus ne correspondent pas au total, et la tête de liste est stable : une nouvelle passe n’y changerait rien.
-        if (lecture.vus === null && teteStable && memesStats(stats, fin)) {
-          stats = fin;
-          break;
-        }
-        journal(`La collection a changé pendant la lecture (passe ${passe}/${MAX_PASSES}) : ${passe < MAX_PASSES ? 'nouvelle lecture.' : 'abandon, aucun retrait local.'}`);
+        // Une lecture non propre est relue (3 passes au plus), jamais un arrêt : cause exacte gardée pour le journal.
+        cause = !stable
+          ? 'la collection a changé pendant la lecture'
+          : `${lecture.lus ?? 0} exemplaire(s) lu(s) pour ${stats.total} annoncé(s) par le site`;
+        // Rien n’a bougé côté site : une nouvelle passe n’y changerait rien, la cause exacte est gardée sans relire.
+        const derniere = passe === MAX_PASSES || stable;
+        journal(`Lecture non propre (passe ${passe}/${MAX_PASSES}) : ${cause} ; ${derniere ? 'abandon, aucun retrait local.' : 'nouvelle lecture.'}`);
         stats = fin;
+        if (derniere) break;
       }
       complet = lecture.ok && complet && (stats === null || propre);
       if (propre && lecture.vus !== null && echecsTotal === 0 && resultat.ignorees === 0) retirerDisparues(lecture.vus);
@@ -450,7 +466,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       }
       resultat.complete = complet && echecsTotal === 0;
       resultat.sautes = echecsTotal;
-      if (!resultat.complete) journal(`Synchro incomplète : ${echecsTotal} élément(s) sauté(s) sur erreur.`);
+      resultat.causeIncomplete = resultat.complete ? null : cause;
+      if (!resultat.complete) journal(`Synchro incomplète : ${echecsTotal} élément(s) sauté(s) sur erreur${cause !== null ? ` (${cause})` : ''}.`);
       await deps.enregistrer(instantane(), etat);
       // Prix seulement après une lecture des pages menée à terme : sinon rien ne garantit que les cartes sont encore présentes.
       if (lecture.ok) await relevePrix();
@@ -523,7 +540,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   async function lirePages(
     total: number | null,
     gain: { exemplaires: number; cartes: number } | null,
-  ): Promise<{ ok: boolean; vus: Set<string> | null; tete: string | null }> {
+  ): Promise<{ ok: boolean; vus: Set<string> | null; tete: string | null; lus: number }> {
     let ok = true;
     let tete: string | null = null;
     const vus = new Set<string>();
@@ -531,7 +548,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     let exemplairesLus = 0;
     // Identifiants d’exemplaires déjà comptés : un décalage de pagination peut répéter une ligne.
     const idsComptes = new Set<string>();
-    const fini = (): { ok: boolean; vus: Set<string> | null; tete: string | null } => ({ ok, vus: ok && total !== null && exemplairesLus === total ? vus : null, tete });
+    const fini = (): { ok: boolean; vus: Set<string> | null; tete: string | null; lus: number } => ({ ok, vus: ok && total !== null && exemplairesLus === total ? vus : null, tete, lus: exemplairesLus });
     let tri: TriSite = 'added';
     // Tant que l’ordre « plus récent d’abord » n’est pas confirmé par la page 0, aucun arrêt anticipé.
     let ordreConfirme = false;
@@ -543,7 +560,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     for (let page = PREMIERE_PAGE; ; page++) {
       if (page - PREMIERE_PAGE >= maxPages) {
         journal(total === null ? `Arrêt de la lecture : plus de ${maxPages} pages (total inconnu).` : `Arrêt de la lecture : plus de ${maxPages} pages pour ${total} exemplaires.`);
-        return { ok: false, vus: null, tete: null };
+        return { ok: false, vus: null, tete: null, lus: exemplairesLus };
       }
       const r = await requete(cheminPage(page, tri));
       if (r === null) {
@@ -594,7 +611,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       }
       await deps.enregistrer(instantane(), etat);
       // Une page identique au local ne suffit pas : tout l’écart de total doit être expliqué par ce qui a été lu.
-      if (gain !== null && ordreConfirme && toutIdentique && exemplairesGagnes === gain.exemplaires && cartesGagnees === gain.cartes) return { ok, vus: null, tete };
+      if (gain !== null && ordreConfirme && toutIdentique && exemplairesGagnes === gain.exemplaires && cartesGagnees === gain.cartes) return { ok, vus: null, tete, lus: exemplairesLus };
       // Fin atteinte sans demander la page suivante (le site la refuse parfois en 403) : page incomplète,
       // ou tous les exemplaires annoncés par `stats` sont lus.
       if (lue.lignes < CARTES_PAR_PAGE) {

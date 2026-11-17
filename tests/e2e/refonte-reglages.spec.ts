@@ -89,7 +89,7 @@ test.describe('SC-028 : sections repliables', () => {
     for (const titre of SECTIONS) await bouton(page, titre).click();
     const panneau = page.getByRole('tabpanel');
     await expect(panneau.getByRole('switch', { name: /synchronisation automatique/i })).toHaveCount(1);
-    await expect(panneau.getByRole('button', { name: /Relancer la synchro/ })).toHaveCount(0);
+    await expect(panneau.getByRole('button', { name: /Forcer la synchro/ })).toHaveCount(0);
   });
 });
 
