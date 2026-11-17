@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { filtrerCartes, resumer, type Filtres } from '../lib/collection';
-import { themesDeCarte } from '../lib/themes';
+import { themesDeCarte, versionThemes } from '../lib/themes';
 import { trierLignes } from '../lib/ordreTableau';
 import AnalysesCollection from './AnalysesCollection';
 import SectionRepliable from './SectionRepliable';
@@ -84,7 +84,7 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
             cleFiltre={`${filtres.recherche}|${filtres.doublonsSeulement}|${theme}`}
             onTri={setTri}
             onEdition={editer}
-            versionThemes={cacheWiki}
+            versionThemes={versionThemes()}
           />
         )}
 
