@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ancetresDe, chercherThemes, couvertPar, enfantsDe, parentsDirects, RACINES, selectionMinimale } from '../../src/lib/arbreThemes';
+import { ancetresDe, chercherThemes, couvertPar, enfantsDe, parentsDirects, racinesArbre, selectionMinimale } from '../../src/lib/arbreThemes';
 import { DEFINITIONS_THEMES } from '../../src/lib/themes';
 
 describe('arbre des thèmes', () => {
@@ -23,7 +23,7 @@ describe('arbre des thèmes', () => {
       vus.add(id);
       enfantsDe(id).forEach(visite);
     };
-    RACINES.forEach(visite);
+    racinesArbre().forEach(visite);
     expect([...vus].sort()).toEqual(DEFINITIONS_THEMES.map((t) => t.id).sort());
   });
   it('cocher un parent couvre ses enfants', () => {

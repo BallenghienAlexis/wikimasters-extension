@@ -5,6 +5,8 @@ import { cleEtiquetteSite, ETIQUETTE_A_CLASSER } from '../lib/lot';
 import { selectionMinimale } from '../lib/arbreThemes';
 import { LIBELLES_THEMES, themesDeCarte } from '../lib/themes';
 import { themesAimesDesFavoris } from '../lib/tri';
+import SectionRepliable from './SectionRepliable';
+import ThemesAppris from './ThemesAppris';
 import type { DonneesPage } from './useDonneesPage';
 
 const CLASSE_CHAMP = 'min-h-11 rounded border border-line bg-ink px-3';
@@ -20,7 +22,7 @@ interface Props {
  * et les mêmes gestes. Cocher une famille couvre ses sous-thèmes ; une carte ne reçoit que son thème le plus précis.
  */
 const OngletThemes: React.FC<Props> = ({ donnees }) => {
-  const { collection, preferences, etiquettesSite, enregistrerLesPreferences } = donnees;
+  const { collection, preferences, etiquettesSite, enregistrerLesPreferences, apprisEtat, appliquerApprisEtat } = donnees;
   const [profil, setProfil] = useState<string>(MOI);
   const [nomAmi, setNomAmi] = useState('');
   const comptes = useMemo(() => {
@@ -133,6 +135,10 @@ const OngletThemes: React.FC<Props> = ({ donnees }) => {
           )
         )}
       </section>
+
+      <SectionRepliable id="themes-appris" titre="Thèmes appris" resume={`${apprisEtat.themes.filter((t) => t.etat === 'actif').length} thèmes`} className="mt-4">
+        <ThemesAppris etat={apprisEtat} onChange={(e) => appliquerApprisEtat(e)} />
+      </SectionRepliable>
     </div>
   );
 };

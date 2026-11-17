@@ -8,6 +8,7 @@ import { validerIgnorees, type Ignoree } from './ignorees';
 import { validerHistorique, type PointHistorique } from './historique';
 import { AFFICHAGE_DEFAUT, validerAffichage, type Affichage } from './affichage';
 import { cacheVide, validerCache, type CacheWikipedia } from './wikipedia';
+import { etatApprisVide, validerEtatAppris, type EtatAppris } from './themesAppris';
 import { cacheIAVide, validerCacheIA, type CacheIA } from './classificationIA';
 import { registreVide, validerRegistre } from './registre';
 import { validerEtiquettesSite, type EtiquetteSite } from './etiquettesPreexistantes';
@@ -35,6 +36,7 @@ const CLE_DERNIERE_RELANCE = 'derniereRelance';
 const CLE_STATUT_SYNCHRO = 'statutSynchro';
 const CLE_WIKIPEDIA = 'wikipedia';
 const CLE_CLASSEMENT_IA = 'classementIA';
+const CLE_THEMES_APPRIS = 'themesAppris';
 const CLE_VENTES = 'ventes';
 const CLE_AFFLUENCE_SITE = 'affluenceSite';
 const MAX_RELEVES_SITE = 2000;
@@ -69,6 +71,7 @@ export const CLES_STOCKAGE = {
   statutSynchro: CLE_STATUT_SYNCHRO,
   wikipedia: CLE_WIKIPEDIA,
   classementIA: CLE_CLASSEMENT_IA,
+  themesAppris: CLE_THEMES_APPRIS,
   ventes: CLE_VENTES,
   affluenceSite: CLE_AFFLUENCE_SITE,
   releveMarche: CLE_RELEVE_MARCHE,
@@ -121,6 +124,17 @@ export async function chargerCacheIA(): Promise<CacheIA> {
 export async function enregistrerCacheIA(cache: CacheIA): Promise<void> {
   if (validerCacheIA(cache) === null) throw new Error('Cache du classement invalide.');
   await chrome.storage.local.set({ [CLE_CLASSEMENT_IA]: cache });
+}
+
+/** Thèmes appris des catégories Wikipédia (Alexis, 2026-11-17) : illisible vaut « vide » (ils se reconstruisent depuis le cache). */
+export async function chargerThemesAppris(): Promise<EtatAppris> {
+  const contenu = await chrome.storage.local.get(CLE_THEMES_APPRIS);
+  return validerEtatAppris(contenu[CLE_THEMES_APPRIS]) ?? etatApprisVide();
+}
+
+export async function enregistrerThemesAppris(etat: EtatAppris): Promise<void> {
+  if (validerEtatAppris(etat) === null) throw new Error('Thèmes appris invalides.');
+  await chrome.storage.local.set({ [CLE_THEMES_APPRIS]: etat });
 }
 
 export async function chargerRegistre(): Promise<Registre> {

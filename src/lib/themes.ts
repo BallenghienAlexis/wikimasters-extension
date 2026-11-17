@@ -3,6 +3,7 @@
 // Le libellé de chaque thème est l'étiquette à poser dans le jeu : c'est ici qu'on en ajoute.
 import { normaliser, type Carte } from './collection';
 import { definition, genreDe, type Genre } from './sens';
+import type { ThemeAppris } from './themesAppris';
 
 export const THEME_AUTRES = 'autres';
 
@@ -331,6 +332,9 @@ function nomPropre(texte: string, debut: number): boolean {
 
 const PARENTS = new Map(DEFINITIONS_THEMES.map((t) => [t.id, t.parents ?? []] as const));
 
+/** Parents (tous les ancêtres) d’un thème du catalogue ou appris ; vide s’il n’en a pas. */
+export const parentsDe = (id: string): readonly string[] => PARENTS.get(id) ?? [];
+
 /** Identifiants de thèmes complétés de leurs parents directs (sans doublon). */
 export function avecParents(ids: readonly string[]): string[] {
   const themes = new Set<string>();
@@ -367,6 +371,10 @@ export function definirThemesWikipedia(themes: ReadonlyMap<string, readonly stri
 export function themesDeCarte(carte: Pick<Carte, 'titre' | 'description'>): string[] {
   const themes = new Set(themesDeTexte(`${carte.titre} ${carte.description}`));
   for (const id of themesWikipedia.get(carte.titre) ?? []) themes.add(id);
+  for (const id of themesApprisDe(carte.titre)) {
+    themes.add(id);
+    for (const parent of PARENTS.get(id) ?? []) themes.add(parent);
+  }
   // Thèmes fiables lus par le sens (définition, classes Wikidata) : ce sont ceux des étiquettes, ils ne doivent jamais laisser la carte en « autres ».
   const locaux = themesPrincipauxLocaux(carte);
   if (themes.size === 0) {
@@ -412,7 +420,7 @@ function ancetres(id: string, vus: Set<string> = new Set()): Set<string> {
   return vus;
 }
 
-const NB_ANCETRES_THEME = (() => {
+const NB_ANCETRES_THEME: Map<string, number> = (() => {
   const profondeur = new Map<string, number>();
   const calcul = (id: string, vus: Set<string> = new Set()): number => {
     const connu = profondeur.get(id);
@@ -453,6 +461,54 @@ let themesIA: ReadonlyMap<string, readonly string[]> = new Map();
 
 export function definirThemesIA(themes: ReadonlyMap<string, readonly string[]>): void {
   themesIA = themes;
+  versionSurcouches++;
+}
+
+// Thèmes appris (voir themesAppris.ts) : catégories Wikipédia normalisées de chaque carte, et thème que reçoit chaque catégorie apprise.
+// Ils s’ajoutent au catalogue (libellés, identifiants, parents) sans le modifier ; `definirThemesAppris` remplace l’ensemble.
+let categoriesWikipedia: ReadonlyMap<string, readonly string[]> = new Map();
+let themeParCategorie: ReadonlyMap<string, string> = new Map();
+let idsApprisPoses: string[] = [];
+
+export function definirCategoriesWikipedia(categories: ReadonlyMap<string, readonly string[]>): void {
+  categoriesWikipedia = categories;
+  versionSurcouches++;
+}
+
+function themesApprisDe(titre: string): string[] {
+  if (themeParCategorie.size === 0) return [];
+  const ids = new Set<string>();
+  for (const c of categoriesWikipedia.get(titre) ?? []) {
+    const id = themeParCategorie.get(c);
+    if (id !== undefined) ids.add(id);
+  }
+  return [...ids];
+}
+
+/** Pose les thèmes appris actifs au catalogue en mémoire (libellé, famille) ; fusionnés : la catégorie reçoit le thème cible ; supprimés : ignorés. */
+export function definirThemesAppris(themes: readonly ThemeAppris[]): void {
+  for (const id of idsApprisPoses) {
+    delete LIBELLES_THEMES[id];
+    PARENTS.delete(id);
+    NB_ANCETRES_THEME.delete(id);
+  }
+  const actifs = themes.filter((t) => t.etat === 'actif');
+  const ids = new Set(actifs.map((t) => t.id));
+  for (const t of actifs) {
+    LIBELLES_THEMES[t.id] = t.libelle;
+    PARENTS.set(t.id, t.parents.filter((p) => p !== t.id));
+    NB_ANCETRES_THEME.set(t.id, t.parents.length);
+  }
+  idsApprisPoses = [...ids];
+  const sans = IDS_THEMES.filter((id) => !id.startsWith('appris-') && id !== THEME_AUTRES);
+  IDS_THEMES.length = 0;
+  IDS_THEMES.push(...[...sans, ...ids].sort(parLibelle), THEME_AUTRES);
+  const m = new Map<string, string>();
+  for (const t of themes) {
+    if (t.etat === 'actif') m.set(t.categorie, t.id);
+    else if (t.etat === 'fusionne' && t.fusionneVers !== undefined && (LIBELLES_THEMES[t.fusionneVers] !== undefined) && t.fusionneVers !== t.id) m.set(t.categorie, t.fusionneVers);
+  }
+  themeParCategorie = m;
   versionSurcouches++;
 }
 
@@ -505,6 +561,7 @@ function themesPrincipauxLocaux(carte: Pick<Carte, 'titre' | 'description'>): st
   faible(themesDirectsDeTexte(carte.titre), 1);
   faible(themesDirectsDeTexte(premiere), 1.5);
   faible(themesDirectsDeTexte(description.slice(premiere.length)), 0.5);
+  faible(themesApprisDe(carte.titre), 2);
   if (page) faible(page.faibles, 2);
   else {
     // Entrée de cache ancienne (sans signaux) : elle contient les parents et le résumé, les ancêtres n'y comptent pas.

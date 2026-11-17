@@ -1,6 +1,6 @@
 import React, { useId, useMemo, useState } from 'react';
 import { basculer, CLASSE_BOUTON } from './outilsReglages';
-import { chercherThemes, couvertPar, enfantsDe, RACINES, selectionMinimale } from '../lib/arbreThemes';
+import { chercherThemes, couvertPar, enfantsDe, racinesArbre, selectionMinimale } from '../lib/arbreThemes';
 import { LIBELLES_THEMES } from '../lib/themes';
 
 /** Un choix hors catalogue (étiquette du site suivie par un ami). */
@@ -88,7 +88,7 @@ const ArbreThemes: React.FC<Props> = ({ nom, selection, onChange, comptes, suppl
     );
   };
 
-  const racines = RACINES.filter((r) => !recherche || recherche.visibles.has(r));
+  const racines = racinesArbre().filter((r) => !recherche || recherche.visibles.has(r));
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2">
@@ -101,7 +101,7 @@ const ArbreThemes: React.FC<Props> = ({ nom, selection, onChange, comptes, suppl
           value={requete}
           onChange={(e) => setRequete(e.target.value)}
         />
-        <button type="button" className={CLASSE_BOUTON} onClick={() => setOuverts(new Set(RACINES))}>Déplier les familles</button>
+        <button type="button" className={CLASSE_BOUTON} onClick={() => setOuverts(new Set(racinesArbre()))}>Déplier les familles</button>
         <button type="button" className={CLASSE_BOUTON} onClick={() => setOuverts(new Set())}>Tout replier</button>
       </div>
       <p className="mt-2 text-sm text-muted" aria-live="polite">
