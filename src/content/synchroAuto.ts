@@ -416,6 +416,8 @@ export interface OptionsDemarrage {
   synchro: SynchroAuto;
   /** Réponse du listing du marché relevée par la synchro : confiée au suivi des mises en vente. */
   surReponseMarche: (json: unknown) => Promise<void>;
+  /** Transport des lectures de la synchro (par défaut `transportSite`) : le content script y met le verrou de requête partagé avec le suivi. */
+  transport: (chemin: string) => Promise<ReponseApi>;
   visibilite: SourceVisibilite;
   /** Demande d'arrêt venue de l'interface. */
   ecouterArret: (rappel: () => void) => () => void;
@@ -467,11 +469,11 @@ function ecrireEnSerie(evenement: EvenementSynchro): Promise<void> {
   return fileJournal;
 }
 
-const synchroDuNavigateur = (surReponseMarche?: (json: unknown) => Promise<void>): SynchroAuto =>
+const synchroDuNavigateur = (surReponseMarche?: (json: unknown) => Promise<void>, transport: (chemin: string) => Promise<ReponseApi> = transportSite): SynchroAuto =>
   creerSynchroAuto({
     horloge: horlogeReelle,
     gigue: gigueAleatoire,
-    transport: transportSite,
+    transport,
     actif: chargerSyncAuto,
     derniereSynchro: chargerDerniereSynchro,
     noterDerniereSynchro: enregistrerDerniereSynchro,
@@ -509,7 +511,7 @@ const visibiliteDuNavigateur = (): SourceVisibilite => ({
  * Renvoie la fonction qui retire minuteur et écouteurs.
  */
 export function demarrerSynchroAuto(options: Partial<OptionsDemarrage> = {}): () => void {
-  const synchro = options.synchro ?? synchroDuNavigateur(options.surReponseMarche);
+  const synchro = options.synchro ?? synchroDuNavigateur(options.surReponseMarche, options.transport);
   const visibilite = options.visibilite ?? visibiliteDuNavigateur();
   const ecouterArret = options.ecouterArret ?? ecouterArretSynchro;
   const ecouterRelance = options.ecouterRelance ?? ecouterRelanceSynchro;

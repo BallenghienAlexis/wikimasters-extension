@@ -1,20 +1,27 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   chargerEcartesVentes,
+  chargerEtatSuiviVentes,
   chargerJournal,
   chargerLancementsVentes,
   chargerRelanceVentes,
   chargerStatutRelanceVentes,
   chargerSuiviVentes,
+  chargerSuiviVentesActif,
   ecouterEcartesVentes,
+  ecouterEtatSuiviVentes,
   ecouterJournal,
   ecouterLancementsVentes,
   ecouterRelanceVentes,
   ecouterStatutRelanceVentes,
   ecouterSuiviVentes,
+  ecouterSuiviVentesActif,
   enregistrerEcartesVentes,
+  enregistrerSignalSuiviVentes,
+  enregistrerSuiviVentesActif,
   enregistrerRelanceVentes,
   enregistrerStatutRelanceVentes,
+  type EtatSuiviVentes,
   type StatutRelanceVentes,
 } from '../lib/stockage';
 import { cleVuCarte, clePasserCarte, purgerEcartes, suiviVide, type LancementVente, type SuiviVentes } from '../lib/ventes';
@@ -32,6 +39,11 @@ export interface EtatMiseEnVente {
   ecartes: Record<string, number>;
   relance: boolean;
   statut: StatutRelanceVentes | null;
+  /** Synchro autonome du suivi : interrupteur, état de santé et bouton « Forcer » propres (indépendants de la synchro globale). */
+  suiviActif: boolean;
+  etatSuivi: EtatSuiviVentes | null;
+  basculerSuivi: (actif: boolean) => void;
+  forcerSuivi: () => void;
   /** Horloge de la page, rafraîchie chaque seconde pour les décomptes. */
   maintenant: number;
   erreur: string | null;
@@ -51,6 +63,8 @@ export function useMiseEnVente(): EtatMiseEnVente {
   const [ecartes, setEcartes] = useState<Record<string, number>>({});
   const [relance, setRelance] = useState(false);
   const [statut, setStatut] = useState<StatutRelanceVentes | null>(null);
+  const [suiviActif, setSuiviActif] = useState(true);
+  const [etatSuivi, setEtatSuivi] = useState<EtatSuiviVentes | null>(null);
   const [maintenant, setMaintenant] = useState(() => Date.now());
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -63,15 +77,19 @@ export function useMiseEnVente(): EtatMiseEnVente {
         chargerEcartesVentes(),
         chargerRelanceVentes(),
         chargerStatutRelanceVentes(),
+        chargerSuiviVentesActif(),
+        chargerEtatSuiviVentes(),
         chargerJournal().catch(() => []),
       ])
-        .then(([s, l, e, r, st, j]) => {
+        .then(([s, l, e, r, st, sa, es, j]) => {
           if (!actif) return;
           setSuivi(s);
           setLancements(l);
           setEcartes(e);
           setRelance(r);
           setStatut(st);
+          setSuiviActif(sa);
+          setEtatSuivi(es);
           setLots(
             j
               .filter((x) => x.type === 'enchere' && x.resultat === 'reussie')
@@ -84,7 +102,7 @@ export function useMiseEnVente(): EtatMiseEnVente {
         });
     };
     lire();
-    const arrets = [ecouterSuiviVentes(lire), ecouterLancementsVentes(lire), ecouterEcartesVentes(lire), ecouterRelanceVentes(lire), ecouterStatutRelanceVentes(lire), ecouterJournal(lire)];
+    const arrets = [ecouterSuiviVentes(lire), ecouterLancementsVentes(lire), ecouterEcartesVentes(lire), ecouterRelanceVentes(lire), ecouterStatutRelanceVentes(lire), ecouterSuiviVentesActif(lire), ecouterEtatSuiviVentes(lire), ecouterJournal(lire)];
     const horloge = setInterval(() => setMaintenant(Date.now()), 1000);
     return () => {
       actif = false;
@@ -110,8 +128,19 @@ export function useMiseEnVente(): EtatMiseEnVente {
     ecartes,
     relance,
     statut,
+    suiviActif,
+    etatSuivi,
     maintenant,
     erreur,
+    basculerSuivi: (actif) => {
+      setErreur(null);
+      void enregistrerSuiviVentesActif(actif).catch(echec);
+    },
+    // « Forcer » : simple signal au content script (aucune requête depuis cette page) ; il applique la limite d’une demande par minute.
+    forcerSuivi: () => {
+      setErreur(null);
+      void enregistrerSignalSuiviVentes(Date.now()).catch(echec);
+    },
     basculerRelance: (actif) => {
       setErreur(null);
       void enregistrerRelanceVentes(actif)

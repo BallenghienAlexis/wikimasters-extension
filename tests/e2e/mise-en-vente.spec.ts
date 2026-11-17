@@ -27,4 +27,18 @@ test.describe('onglet Mise en vente', () => {
     await pageCollection.getByRole('switch', { name: /Relance automatique/ }).click();
     await expect.poll(() => pageCollection.evaluate(() => chrome.storage.local.get('relanceVentes').then((r) => r.relanceVentes))).toBe(true);
   });
+
+  test('synchro autonome du suivi : santé visible, interrupteur propre et « Forcer » enregistrés', async ({ pageCollection }) => {
+    const t = Date.now();
+    await pageCollection.evaluate((maintenant) =>
+      chrome.storage.local.set({ etatSuiviVentes: { etat: 'attente', message: 'Erreur réseau : nouvel essai dans 5 s', jusqua: maintenant + 5000, echecs: 1, dernierPassage: maintenant, dernierSucces: null, forceLe: null } }), t);
+    await allerA(pageCollection, 'mise-en-vente');
+    await expect(pageCollection.getByTestId('sante-suivi')).toContainText('Erreur réseau');
+    await expect(pageCollection.getByTestId('passage-suivi')).toContainText('Dernier passage');
+    await pageCollection.getByRole('button', { name: 'Forcer le suivi' }).click();
+    await expect.poll(() => pageCollection.evaluate(() => chrome.storage.local.get('signalSuiviVentes').then((r) => typeof r.signalSuiviVentes))).toBe('number');
+    await pageCollection.getByRole('switch', { name: /Suivi des ventes en cours/ }).click();
+    await expect.poll(() => pageCollection.evaluate(() => chrome.storage.local.get('suiviVentesActif').then((r) => r.suiviVentesActif))).toBe(false);
+    await expect(pageCollection.getByTestId('sante-suivi')).toContainText('Suivi coupé');
+  });
 });
