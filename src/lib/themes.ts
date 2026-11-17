@@ -270,6 +270,16 @@ function nomPropre(texte: string, debut: number): boolean {
 
 const PARENTS = new Map(DEFINITIONS_THEMES.map((t) => [t.id, t.parents ?? []] as const));
 
+/** Identifiants de thèmes complétés de leurs parents directs (sans doublon). */
+export function avecParents(ids: readonly string[]): string[] {
+  const themes = new Set<string>();
+  for (const id of ids) {
+    themes.add(id);
+    for (const parent of PARENTS.get(id) ?? []) themes.add(parent);
+  }
+  return [...themes];
+}
+
 /** Thèmes (parents compris) trouvés dans un texte libre ; liste vide s'il n'y en a aucun. */
 export function themesDeTexte(texte: string, categories = false): string[] {
   const themes = new Set<string>();
