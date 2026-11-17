@@ -169,3 +169,20 @@ describe('thèmes choisis à la main', () => {
     expect(lot.actions.some((a) => a.type === 'pose-etiquette' && /musique/i.test(a.nomEtiquette))).toBe(true)
   })
 })
+
+describe('favori manuel : effacement à l’alignement (2026-11-17)', () => {
+  const lue = (favori: boolean) => ({ id: ID, titre: 'Berger allemand', rarete: 'commune', description: 'race de chien', quantite: 2, url: null, favori }) as never
+  it('efface le choix « favori » quand le site est aligné', () => {
+    const r1 = fusionnerCartesLues(coll(carte({ favori: false, choixFavori: true })), [lue(true)])
+    expect(r1.cartes[0]!.choixFavori).toBeUndefined()
+  })
+  it('garde le choix « pas favori » aligné pour que la règle des thèmes gardés ne remette pas l’étoile', () => {
+    const r2 = fusionnerCartesLues(coll(carte({ favori: true, choixFavori: false })), [lue(false)])
+    expect(r2.cartes[0]!.choixFavori).toBe(false)
+    expect(favoris(r2)).toHaveLength(0)
+  })
+  it('garde le choix tant que le site diffère', () => {
+    const r = fusionnerCartesLues(coll(carte({ favori: true, choixFavori: false })), [lue(true)])
+    expect(r.cartes[0]!.choixFavori).toBe(false)
+  })
+})
