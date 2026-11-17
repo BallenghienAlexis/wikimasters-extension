@@ -144,9 +144,12 @@ describe('familles de descriptions courtes', () => {
     expect(themesPrincipaux({ titre, description })).toEqual([attendu]);
   });
 
-  it('ne classe pas une homonymie, une date ou un nom de famille', () => {
-    for (const description of ['page d’homonymie', 'date', 'nom de famille', 'prénom masculin']) {
+  it('ne classe pas une homonymie ni une date, mais range un nom de famille ou un prénom dans « Noms et prénoms »', () => {
+    for (const description of ['page d’homonymie', 'date']) {
       expect(themesPrincipaux({ titre: 'Maledon', description })).toEqual([]);
+    }
+    for (const description of ['nom de famille', 'prénom masculin', 'Prénom féminin']) {
+      expect(themesPrincipaux({ titre: 'Maledon', description })).toEqual(['noms']);
     }
   });
 

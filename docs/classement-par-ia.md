@@ -70,6 +70,7 @@ television : Télévision
 litterature : Littérature
 bd : BD et Manga
 langue : Langue
+noms : Noms et prénoms
 idees : Philosophie
 religion : Religion
 sport : Sport
