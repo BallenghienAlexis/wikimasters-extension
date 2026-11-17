@@ -48,6 +48,8 @@ describe('favori manuel : état effectif', () => {
     expect(ok.ok && ok.collection.cartes[0]!.choixFavori).toBe(false)
     expect(analyserStockage({ version: 4, cartes: [{ id: ID, titre: 'X', choixFavori: 'oui' }] }).ok).toBe(false)
     expect(analyserStockage({ version: 4, cartes: [{ id: ID, titre: 'X', themesChoisis: ['autres'] }] }).ok).toBe(false)
+    const inconnu = analyserStockage({ version: 4, cartes: [{ id: ID, titre: 'X', themesChoisis: ['chien', 'theme-retire'] }, { id: 'b|Y', titre: 'Y', themesChoisis: ['theme-retire'] }] })
+    expect(inconnu.ok && inconnu.collection.cartes.map((c) => c.themesChoisis)).toEqual([['chien'], undefined])
   })
   it('sauvegarde : le choix est sauvegardé et relu', () => {
     const s = creerSauvegarde({ collection: coll(carte({ choixFavori: false, themesChoisis: ['chien'] })), preferences: { version: 2, mesThemes: [], amis: [] }, syncAuto: true, ventes: [] }, new Date('2026-11-17T10:00:00Z'))

@@ -7,7 +7,7 @@ import {
   type Carte,
   type EditionCarte,
 } from '../lib/collection';
-import { LIBELLES_THEMES, themesDeCarte } from '../lib/themes';
+import { LIBELLES_THEMES, themesDeCarte, themesPrincipaux } from '../lib/themes';
 import EditeurThemes from './EditeurThemes';
 
 const CLASSE_CHAMP = 'min-h-11 w-full rounded border border-line bg-ink px-3';
@@ -83,7 +83,7 @@ const CarteLigne: React.FC<Props> = ({ carte, onEdition, refLigne }) => {
           <EditeurThemes
             titre={carte.titre}
             choisis={carte.themesChoisis ?? null}
-            automatiques={themesDeCarte({ titre: carte.titre, description: carte.description })}
+            automatiques={themesPrincipaux({ titre: carte.titre, description: carte.description })}
             onValider={(themes) => onEdition({ themesChoisis: themes })}
             onFermer={() => setThemesOuverts(false)}
           />
@@ -103,7 +103,7 @@ const CarteLigne: React.FC<Props> = ({ carte, onEdition, refLigne }) => {
         </button>
         {enAttente && <span className="block text-sm text-muted">À envoyer au site (lot Favoris)</span>}
         {choix !== null && (
-          <button type="button" className="block cursor-pointer text-sm underline" onClick={() => onEdition({ choixFavori: null })}>
+          <button type="button" aria-label={`Revenir aux règles pour ${carte.titre}`} className="flex min-h-11 cursor-pointer items-center text-sm underline" onClick={() => onEdition({ choixFavori: null })}>
             Revenir aux règles
           </button>
         )}

@@ -10,6 +10,17 @@ export function definirThemesAutorises(ids: readonly string[]): void {
   autorises = new Set(ids);
 }
 
+/** Format seul (1 à 4 identifiants distincts, jamais « autres ») : le catalogue peut évoluer, le stockage ne doit pas devenir illisible. */
+export function formatThemesChoisisValide(v: unknown): v is string[] {
+  return Array.isArray(v) && v.length >= 1 && v.length <= MAX_THEMES_CHOISIS && v.every((id) => typeof id === 'string' && id !== '' && id !== 'autres') && new Set(v).size === v.length;
+}
+
+/** Retire les identifiants que le catalogue ne connaît plus ; null si plus rien. */
+export function filtrerThemesChoisis(v: readonly string[]): string[] | null {
+  const restants = autorises === null ? [...v] : v.filter((id) => autorises!.has(id));
+  return restants.length > 0 ? restants : null;
+}
+
 /** Vrai pour une liste de 1 à 4 identifiants distincts du catalogue ; sans catalogue connu, seul le format est contrôlé. */
 export function themesChoisisValides(v: unknown): v is string[] {
   if (!Array.isArray(v) || v.length < 1 || v.length > MAX_THEMES_CHOISIS) return false;

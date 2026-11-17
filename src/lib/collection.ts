@@ -1,5 +1,5 @@
 import { estObjet } from './valider';
-import { themesChoisisValides } from './themesChoisis';
+import { filtrerThemesChoisis, formatThemesChoisisValide } from './themesChoisis';
 // Modèle de la collection et logique pure, sans dépendance à chrome.*.
 
 // Schéma de stockage (v2 : identifiants d’exemplaires du site ; v3 : étiquettes lues sur le site ; v4 : plus de statut ni de décision,
@@ -98,7 +98,7 @@ function analyserCarte(brut: unknown, rang: number): CarteLue | string {
   }
   if (favori !== undefined && typeof favori !== 'boolean') return `${position} : favori invalide.`;
   if (choixFavori !== undefined && choixFavori !== null && typeof choixFavori !== 'boolean') return `${position} : choix de favori invalide.`;
-  if (themesChoisis !== undefined && themesChoisis !== null && !themesChoisisValides(themesChoisis)) return `${position} : thèmes choisis invalides.`;
+  if (themesChoisis !== undefined && themesChoisis !== null && !formatThemesChoisisValide(themesChoisis)) return `${position} : thèmes choisis invalides.`;
   if (prixCible !== undefined && prixCible !== null && !estPrixValide(prixCible)) return `${position} : prix cible invalide.`;
   if (note !== undefined && (typeof note !== 'string' || note.length > MAX_NOTE)) return `${position} : note invalide.`;
   if (valeurMarchande !== undefined && valeurMarchande !== null && !estPrixValide(valeurMarchande)) return `${position} : valeur marchande invalide.`;
@@ -125,7 +125,11 @@ function analyserCarte(brut: unknown, rang: number): CarteLue | string {
   };
   if (favori !== undefined) carte.favori = favori as boolean;
   if (choixFavori !== undefined) carte.choixFavori = choixFavori as boolean | null;
-  if (themesChoisis !== undefined) carte.themesChoisis = themesChoisis as string[] | null;
+  if (themesChoisis !== undefined && themesChoisis !== null) {
+    // Un thème retiré du catalogue ne rend pas la collection illisible : il est ignoré (plus rien = automatique).
+    const gardes = filtrerThemesChoisis(themesChoisis as string[]);
+    if (gardes) carte.themesChoisis = gardes;
+  }
   if (prixCible !== undefined) carte.prixCible = prixCible as number | null;
   if (note !== undefined) carte.note = note as string;
   if (description !== undefined) carte.description = description as string;

@@ -54,9 +54,11 @@ const EditeurThemes: React.FC<Props> = ({ titre, choisis, automatiques, onValide
         <button type="button" className={BOUTON} disabled={selection.length === 0} onClick={() => { onValider([...selection]); dialogue.current?.close(); }}>
           Enregistrer
         </button>
-        <button type="button" className={BOUTON} onClick={() => { onValider(null); dialogue.current?.close(); }}>
+        {choisis !== null && (
+          <button type="button" className={BOUTON} onClick={() => { onValider(null); dialogue.current?.close(); }}>
           Revenir à l’automatique
         </button>
+        )}
         <button type="button" className={BOUTON} onClick={() => dialogue.current?.close()}>
           Annuler
         </button>
