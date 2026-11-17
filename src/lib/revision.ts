@@ -7,6 +7,7 @@
 import { CODES_CARTE_INDISPONIBLE, type Action, type Registre, type ResultatAction } from './actions'
 import {
   aEditionLocale,
+  estFavoriVerrouille,
   retirerCarte,
   retirerIdSite,
   type Collection,
@@ -43,19 +44,26 @@ export function reverifierAction(
   switch (action.type) {
     // Enchère et défausse viennent de la sélection manuelle du joueur : revérifiées avant l’envoi.
     case 'enchere': {
-      if (carte.favori || estACLasser(carte) || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
+      if (estFavoriVerrouille(carte) || estACLasser(carte) || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
       const valeur = carte.valeurMarchande
       if (valeur === null || !(action.prix >= 1 && action.prix < valeur)) return 'passee'
       // Le prix de départ courant (prix cible, sinon matrice) ne doit pas avoir changé depuis l’aperçu.
       return (carte.prixCible ?? prixDepart(valeur)) === action.prix ? 'ok' : 'passee'
     }
     case 'defausse': {
-      if (carte.favori || estACLasser(carte) || carte.quantite < 1 || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
+      if (estFavoriVerrouille(carte) || estACLasser(carte) || carte.quantite < 1 || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
       return typeof carte.valeurMarchande === 'number' && carte.valeurMarchande <= plafondDefausse({ plafondDefausse: config.plafondDefausse }) ? 'ok' : 'passee'
     }
     case 'favori': {
-      // Jamais déjà favorite, ni à classer ; le thème gardé doit toujours correspondre.
-      if (carte.favori || estACLasser(carte) || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
+      if (!carte.idsSite?.includes(action.idExemplaire)) return 'passee'
+      // Choix manuel (valeur explicite) : le choix du joueur doit être toujours le même et le site doit différer.
+      if (action.valeur !== undefined) {
+        if (carte.choixFavori !== action.valeur) return 'passee'
+        // Décocher touche tous les exemplaires (on ne sait pas lequel porte l’étoile) : le premier succès met `favori` à false.
+        return action.valeur ? (carte.favori ? 'passee' : 'ok') : 'ok'
+      }
+      // Règle des thèmes gardés : jamais si le joueur a choisi à la main, ni déjà favorite, ni à classer ; le thème gardé doit toujours correspondre.
+      if ((carte.choixFavori ?? null) !== null || carte.favori || estACLasser(carte)) return 'passee'
       return estAGarder(carte, config.mesThemes) ? 'ok' : 'passee'
     }
     case 'creation-etiquette':
@@ -101,7 +109,7 @@ export function appliquerResultat(
     case 'favori':
       if (!carte) return { collection, registre }
       return {
-        collection: { ...collection, cartes: collection.cartes.map((c) => (c.id === carte.id ? { ...c, favori: true } : c)) },
+        collection: { ...collection, cartes: collection.cartes.map((c) => (c.id === carte.id ? { ...c, favori: action.valeur !== false } : c)) },
         registre,
       }
     case 'defausse': {

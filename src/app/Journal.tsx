@@ -20,7 +20,7 @@ const LIBELLES_TYPE: Record<TypeAction, string> = {
   'pose-etiquette': 'Étiquette',
   enchere: 'Mettre aux enchères',
   defausse: 'Défausser',
-  favori: 'Mettre en favori',
+  favori: 'Favori (étoile)',
   'suppression-etiquette': 'Suppression d’étiquette',
 };
 

@@ -48,7 +48,7 @@ export function libelleType(type: TypeAction): string {
     case 'defausse':
       return 'Défausser';
     case 'favori':
-      return 'Mettre en favori';
+      return 'Favori (étoile)';
     case 'lecture':
       return 'Lecture';
     default:
@@ -98,7 +98,7 @@ export function texteTotaux(t: Totaux): string {
   ajouter(t.etiquettes, 'étiquette', 'étiquettes');
   ajouter(t.encheres, 'enchère', 'enchères');
   ajouter(t.defausses, 'défausse', 'défausses');
-  ajouter(t.favoris, 'mise en favori', 'mises en favori');
+  ajouter(t.favoris, 'action de favori', 'actions de favori');
   return parts.join(' · ');
 }
 
@@ -313,7 +313,7 @@ export function detailsDuLot(actions: readonly Action[], cartes: ReadonlyMap<str
         return valeur == null ? `départ ${a.prix}` : `départ ${a.prix} · valeur marchande ${valeur}`;
       }
       case 'favori':
-        return 'mise en favori (thème gardé)';
+        return a.valeur === undefined ? 'mise en favori (thème gardé)' : a.valeur ? 'mise en favori (votre choix)' : 'retrait du favori (votre choix)';
       case 'retrait-etiquette':
         return `retrait${NB}: ${a.nomEtiquette}`;
       case 'creation-etiquette':

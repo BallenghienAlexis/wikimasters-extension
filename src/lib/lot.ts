@@ -15,7 +15,7 @@ import type {
   TypeAction,
   TypesDisponibles,
 } from './actions'
-import { normaliser, type Carte, type Collection } from './collection'
+import { estFavori, estFavoriVerrouille, normaliser, type Carte, type Collection } from './collection'
 import { estRefuse, LONGUEUR_MAX_ID } from './registre'
 import { amisConcernes, plafondDefausse, prixDepart, type Ami } from './tri'
 import { LIBELLES_THEMES, themesDeCarte, themesPrincipaux, versionThemes } from './themes'
@@ -171,7 +171,7 @@ function calculerEtiquettes(carte: Carte, config?: Pick<Config, 'amis' | 'limite
   const themes = themesDeCarte(carte)
   // Étiquettes d’échange : jamais pour un favori (le site le verrouille, et c’est une carte aimée), ni pour une carte
   // de thème gardé qui va être mise en favori (sinon des poses suivies de retraits au lot d’après).
-  const prioritaires = carte.favori || estACLasser(carte) || estAGarder(carte, config?.mesThemes) ? [] : etiquettesEchange(carte, themes, config?.amis ?? [])
+  const prioritaires = estFavori(carte) || estACLasser(carte) || ((carte.choixFavori ?? null) === null && estAGarder(carte, config?.mesThemes)) ? [] : etiquettesEchange(carte, themes, config?.amis ?? [])
   // Les 4 thèmes les mieux établis seulement (Alexis, 2026-11-14) ; les parents ne servent qu’à désigner les amis.
   const precis = themesPrincipaux(carte).map((id) => LIBELLES_THEMES[id] ?? id)
   // Aucun thème fiable : aucune étiquette de thème (jamais « À classer »), la carte est signalée dans l’aperçu.
@@ -280,7 +280,7 @@ export function construireEncheres(
 
   for (const c of candidates) {
     // Garde-fou propre : jamais d’enchère sur un favori.
-    if (c.favori) continue
+    if (estFavoriVerrouille(c)) continue
     const ecarter = (raison: RaisonEcart): void => {
       ecartees.push({ idCarte: c.id, titre: c.titre, raison })
     }
@@ -376,7 +376,7 @@ export function construireLot(
 
     // Sélection manuelle du joueur (2026-11-14) : un favori est verrouillé sur le site, jamais vendu ni défaussé.
     const nbDefausses = Math.floor(defausser[c.id] ?? 0)
-    if ((vendre.has(c.id) || nbDefausses > 0) && c.favori) {
+    if ((vendre.has(c.id) || nbDefausses > 0) && estFavoriVerrouille(c)) {
       ecarter('favori-verrouille')
       continue
     }
@@ -401,8 +401,16 @@ export function construireLot(
 
     // Mise en favori (Alexis, 2026-11-15) : un seul exemplaire par carte, jamais pour une carte déjà favorite
     // ni pour une carte choisie à la main pour la vente. Jamais l’inverse (aucun défavori).
-    if (!c.favori && !vendre.has(c.id) && c.idsSite.length > 0 && dispo('favori') && estAGarder(c, config.mesThemes)) {
+    // Le choix manuel du joueur (étoile de la Collection, 2026-11-17) prime : une règle n'agit jamais sur une carte dont le choix est fait.
+    const choix = c.choixFavori ?? null
+    if (choix === null && !c.favori && !vendre.has(c.id) && c.idsSite.length > 0 && dispo('favori') && estAGarder(c, config.mesThemes)) {
       favoris.push({ type: 'favori', idCarte: c.id, idExemplaire: c.idsSite[0]! })
+    }
+    // Synchronisation du choix manuel vers le site : cocher = le premier exemplaire ; décocher = tous (on ignore lequel porte l'étoile).
+    // Pas de condition « vendre » : le choix explicite du joueur passe avant ; mais une carte choisie pour la vente est écartée plus haut.
+    if (choix !== null && c.idsSite.length > 0 && dispo('favori')) {
+      if (choix && !c.favori) favoris.push({ type: 'favori', idCarte: c.id, idExemplaire: c.idsSite[0]!, valeur: true })
+      if (!choix && c.favori) for (const ex of c.idsSite) favoris.push({ type: 'favori', idCarte: c.id, idExemplaire: ex, valeur: false })
     }
 
     // Étiquettes (SC-007, SC-008). Les anciennes étiquettes « Statut · … » posées par l’extension ne sont plus attendues :

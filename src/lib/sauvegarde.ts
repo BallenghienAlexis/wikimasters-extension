@@ -19,7 +19,7 @@ export type PolitiqueConflit = 'garder-ici' | 'remplacer';
 /** Champs d'une carte conservés dans la sauvegarde. */
 export type CarteSauvegardee = Pick<
   Carte,
-  'id' | 'titre' | 'rarete' | 'description' | 'quantite' | 'url' | 'favori' | 'prixCible' | 'note' | 'ami' | 'valeurMarchande'
+  'id' | 'titre' | 'rarete' | 'description' | 'quantite' | 'url' | 'favori' | 'prixCible' | 'note' | 'ami' | 'valeurMarchande' | 'choixFavori' | 'themesChoisis'
 >;
 
 export interface Sauvegarde {
@@ -53,6 +53,8 @@ const garderChamps = (c: Carte): CarteSauvegardee => ({
   note: c.note,
   ami: c.ami,
   valeurMarchande: c.valeurMarchande,
+  choixFavori: c.choixFavori ?? null,
+  themesChoisis: c.themesChoisis ?? null,
 });
 
 export function creerSauvegarde(donnees: Donnees, maintenant: Date): Sauvegarde {
@@ -144,10 +146,12 @@ export function lireSauvegarde(texte: string): ResultatLecture {
   };
 }
 
-const vierge = (c: Pick<Carte, 'prixCible' | 'note' | 'ami'>): boolean => c.prixCible === null && c.note === '' && c.ami === null;
+const vierge = (c: Pick<Carte, 'prixCible' | 'note' | 'ami' | 'choixFavori' | 'themesChoisis'>): boolean =>
+  c.prixCible === null && c.note === '' && c.ami === null && (c.choixFavori ?? null) === null && (c.themesChoisis ?? null) === null;
 
 const memeEdition = (a: CarteSauvegardee | Carte, b: CarteSauvegardee | Carte): boolean =>
-  a.prixCible === b.prixCible && a.note === b.note && a.ami === b.ami;
+  a.prixCible === b.prixCible && a.note === b.note && a.ami === b.ami && (a.choixFavori ?? null) === (b.choixFavori ?? null) &&
+  JSON.stringify(a.themesChoisis ?? null) === JSON.stringify(b.themesChoisis ?? null);
 
 type Classe = 'nouvelle' | 'identique' | 'completee' | 'conflit';
 
@@ -226,7 +230,7 @@ export function appliquerImport(locales: Donnees, s: Sauvegarde, politique: Poli
     parId.set(sauvee.id, {
       ...locale,
       ...(prendEdition
-        ? { prixCible: sauvee.prixCible, note: sauvee.note, ami: sauvee.ami }
+        ? { prixCible: sauvee.prixCible, note: sauvee.note, ami: sauvee.ami, choixFavori: sauvee.choixFavori ?? null, themesChoisis: sauvee.themesChoisis ?? null }
         : {}),
       valeurMarchande: valeur,
       description: meilleureDescription(locale.description, sauvee.description),

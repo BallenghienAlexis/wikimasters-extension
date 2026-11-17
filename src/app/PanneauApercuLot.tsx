@@ -499,7 +499,7 @@ const PanneauApercuLot: React.FC<Props> = ({
                 <Avertissement>Une défausse est définitive : la carte ne peut pas être récupérée.</Avertissement>
               )}
               {actionsCochees.some((a) => a.type === 'favori') && (
-                <Avertissement>Les cartes de vos thèmes gardés sont mises en favori sur le site (étoile) ; l’extension ne retire jamais un favori.</Avertissement>
+                <Avertissement>Les cartes de vos thèmes gardés sont mises en favori sur le site (étoile). Un favori n’est retiré que si vous avez décoché l’étoile vous-même dans la Collection ; votre choix prime toujours sur les règles.</Avertissement>
               )}
               {plafond > PLAFOND_VALEUR_DEFAUSSE && (
                 <Avertissement>
