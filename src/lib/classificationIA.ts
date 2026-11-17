@@ -171,8 +171,9 @@ export function exporterCartesAClasser(cartes: readonly CarteAClasser[]): string
 }
 
 /** Objets JSON de premier niveau d’un texte (accolades équilibrées, chaînes respectées) : tolère texte autour et blocs de code. */
-function objetsJson(texte: string): unknown[] {
+function objetsJson(texte: string): { objets: unknown[]; illisibles: number } {
   const objets: unknown[] = [];
+  let illisibles = 0;
   let profondeur = 0;
   let debut = -1;
   let dansChaine = false;
@@ -193,12 +194,13 @@ function objetsJson(texte: string): unknown[] {
         try {
           objets.push(JSON.parse(texte.slice(debut, i + 1)));
         } catch {
-          // morceau illisible : ignoré
+          illisibles++; // morceau illisible : compté, jamais deviné
         }
       }
     }
   }
-  return objets;
+  if (profondeur > 0) illisibles++; // objet jamais refermé (réponse coupée)
+  return { objets, illisibles };
 }
 
 export type LectureImport = { type: 'ok'; resultats: Map<string, string[]>; ignores: number } | { type: 'invalide'; raison: string };
@@ -209,11 +211,12 @@ export type LectureImport = { type: 'ok'; resultats: Map<string, string[]>; igno
  */
 export function lireImportThemes(texte: string, titresConnus: ReadonlySet<string>): LectureImport {
   // Réponse d’un chat IA : JSON pur, ou entouré de texte / d’un bloc ```json, ou en plusieurs objets (un par lot) fusionnés.
-  const objets = objetsJson(texte).filter((o): o is Record<string, unknown> => typeof o === 'object' && o !== null && !Array.isArray(o));
+  const lu = objetsJson(texte);
+  const objets = lu.objets.filter((o): o is Record<string, unknown> => typeof o === 'object' && o !== null && !Array.isArray(o));
   if (objets.length === 0) return { type: 'invalide', raison: 'Aucun objet JSON { "titre": ["thème", …] } trouvé dans le fichier.' };
   const json: Record<string, unknown> = Object.assign(Object.create(null) as Record<string, unknown>, ...objets);
   const resultats = new Map<string, string[]>();
-  let ignores = 0;
+  let ignores = lu.illisibles;
   for (const [titre, ids] of Object.entries(json)) {
     const uniques = Array.isArray(ids) ? [...new Set(ids)] : [];
     const valide = titresConnus.has(titre) && uniques.length >= 1 && uniques.length <= MAX_THEMES_PAR_CARTE && uniques.length === (ids as unknown[]).length && uniques.every((id) => typeof id === 'string' && ENSEMBLE_IDS.has(id));

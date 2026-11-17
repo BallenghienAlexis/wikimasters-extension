@@ -201,6 +201,7 @@ describe('export / import sans clé', () => {
     expect(brut.prompt).toContain('TITRES EXACTS');
     expect(brut.prompt).toContain('de 1 à 4 thèmes');
     expect(brut.prompt).toContain('Autres');
+    expect(brut.prompt).not.toMatch(/^autres : /m);
     for (const id of IDS_CATALOGUE_IA) expect(brut.prompt).toContain(`${id} : `);
   });
   it('importe une réponse d’IA entourée de texte, en bloc de code ou en plusieurs objets', () => {
@@ -218,6 +219,13 @@ describe('export / import sans clé', () => {
     if (r.type !== 'ok') return;
     expect([...r.resultats.keys()]).toEqual(['Honda CB 900']);
     expect(r.ignores).toBe(4);
+  });
+  it('compte un lot tronqué comme ignoré sans perdre le lot valide', () => {
+    const r = lireImportThemes('{"A":["moto"]}\n{"B":["jazz"', new Set(['A', 'B']));
+    expect(r.type).toBe('ok');
+    if (r.type !== 'ok') return;
+    expect([...r.resultats.keys()]).toEqual(['A']);
+    expect(r.ignores).toBe(1);
   });
   it('refuse thème hors liste, plus de 4 thèmes, JSON invalide ou tableau', () => {
     const connus = new Set(['A']);
