@@ -193,7 +193,24 @@ describe('robustesse', () => {
 describe('export / import sans clé', () => {
   it('exporte titre et description courte seulement', () => {
     const brut = JSON.parse(exporterCartesAClasser([{ titre: 'Morcilla', description: '  spécialité\n  espagnole ' }]));
-    expect(brut).toEqual([{ id: 1, titre: 'Morcilla', description: 'spécialité espagnole' }]);
+    expect(brut.cartes).toEqual([{ id: 1, titre: 'Morcilla', description: 'spécialité espagnole' }]);
+  });
+  it('le fichier exporté contient le prompt, le catalogue et la règle des 1 à 4 thèmes', () => {
+    const brut = JSON.parse(exporterCartesAClasser([{ titre: 'Morcilla', description: '' }]));
+    expect(brut.prompt).toBe(PROMPT_EXPORT);
+    expect(brut.prompt).toContain('TITRES EXACTS');
+    expect(brut.prompt).toContain('de 1 à 4 thèmes');
+    expect(brut.prompt).toContain('Autres');
+    expect(brut.prompt).not.toMatch(/^autres : /m);
+    for (const id of IDS_CATALOGUE_IA) expect(brut.prompt).toContain(`${id} : `);
+  });
+  it('importe une réponse d’IA entourée de texte, en bloc de code ou en plusieurs objets', () => {
+    const connus = new Set(['A', 'B', 'C {x}']);
+    const r = lireImportThemes('Voici le résultat :\n```json\n{"A":["moto"],"C {x}":["rock"]}\n```\nLot 2 :\n{"B":["jazz"]}\nBonne journée !', connus);
+    expect(r.type).toBe('ok');
+    if (r.type !== 'ok') return;
+    expect([...r.resultats.keys()].sort()).toEqual(['A', 'B', 'C {x}']);
+    expect(r.ignores).toBe(0);
   });
   it('importe 1 à 4 thèmes du catalogue pour des cartes connues et compte le reste', () => {
     const connus = new Set(['Honda CB 900', 'Morcilla', 'Zzz']);
@@ -203,11 +220,19 @@ describe('export / import sans clé', () => {
     expect([...r.resultats.keys()]).toEqual(['Honda CB 900']);
     expect(r.ignores).toBe(4);
   });
+  it('compte un lot tronqué comme ignoré sans perdre le lot valide', () => {
+    const r = lireImportThemes('{"A":["moto"]}\n{"B":["jazz"', new Set(['A', 'B']));
+    expect(r.type).toBe('ok');
+    if (r.type !== 'ok') return;
+    expect([...r.resultats.keys()]).toEqual(['A']);
+    expect(r.ignores).toBe(1);
+  });
   it('refuse thème hors liste, plus de 4 thèmes, JSON invalide ou tableau', () => {
     const connus = new Set(['A']);
     expect(lireImportThemes('{"A":["inventé"]}', connus).type).toBe('invalide');
     expect(lireImportThemes(`{"A":${JSON.stringify(IDS_CATALOGUE_IA.slice(0, 5))}}`, connus).type).toBe('invalide');
     expect(lireImportThemes('pas du json', connus).type).toBe('invalide');
+    expect(lireImportThemes('{"A":["moto"', connus).type).toBe('invalide');
     expect(lireImportThemes('[]', connus).type).toBe('invalide');
   });
   it('le prompt de docs/classement-par-ia.md cite tout le catalogue', () => {
