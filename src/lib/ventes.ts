@@ -59,6 +59,8 @@ export interface VenteTerminee {
   prixDepart: number
   /** Prix final (vente) ; `null` : pas de vente. */
   prixFinal: number | null
+  /** Issue annoncée par le site (`status` : settled_sold, settled_unsold, cancelled, relevé le 2026-11-17) ; absent : déduite du prix final. */
+  statut?: 'vendue' | 'non-vendue' | 'annulee'
   creeLe: number
   finLe: number
 }
@@ -113,9 +115,11 @@ function compterNonVentes(precedent: SuiviVentes, terminees: readonly VenteTermi
   for (const v of terminees.filter((t) => !connues.has(t.id)).sort((a, b) => a.finLe - b.finLe)) {
     const cle = cleNonVente(v.rarete, v.titre)
     const n = Object.hasOwn(comptes, cle) ? comptes[cle]! : 0
+    const issue = issueDe(v)
+    if (issue === 'annulee') continue
     delete comptes[cle]
     // Réinséré en dernier : si la limite est atteinte, ce sont les cartes les moins récentes qui sont oubliées.
-    if (!(v.prixFinal !== null && v.prixFinal > 0)) comptes[cle] = n + 1
+    if (issue === 'non-vendue') comptes[cle] = n + 1
   }
   const garde = Object.entries(comptes).slice(-MAX_NON_VENTES)
   return { nonVentes: Object.fromEntries(garde), finsVues: [...nouvelles, ...vues.filter((i) => !nouvelles.includes(i))].slice(0, MAX_FINS_VUES) }
@@ -155,6 +159,13 @@ function lireActive(brut: unknown): Omit<VenteActive, 'finInitiale'> | null {
   return { id, idExemplaire, titre: titreDe(brut), rarete: texteCourt(brut.snapshot_rarity), prixDepart, prixActuel: actuel, avecMise: mise !== null && mise > 0, creeLe, finLe }
 }
 
+const statutDe = (v: unknown): { statut?: 'vendue' | 'non-vendue' | 'annulee' } =>
+  v === 'settled_sold' ? { statut: 'vendue' } : v === 'settled_unsold' ? { statut: 'non-vendue' } : v === 'cancelled' ? { statut: 'annulee' } : {}
+
+/** Issue d’une enchère terminée : statut explicite du site, sinon prix final positif = vendue. */
+export const issueDe = (v: Pick<VenteTerminee, 'statut' | 'prixFinal'>): 'vendue' | 'non-vendue' | 'annulee' =>
+  v.statut ?? (v.prixFinal !== null && v.prixFinal > 0 ? 'vendue' : 'non-vendue')
+
 function lireTerminee(brut: unknown): VenteTerminee | null {
   if (!estObjet(brut)) return null
   const { id } = brut
@@ -163,7 +174,7 @@ function lireTerminee(brut: unknown): VenteTerminee | null {
   const creeLe = dateMs(brut.created_at)
   const finLe = dateMs(brut.settled_at) ?? dateMs(brut.end_at)
   if (prixDepart === null || creeLe === null || finLe === null) return null
-  return { id, titre: titreDe(brut), rarete: texteCourt(brut.snapshot_rarity), prixDepart, prixFinal: prix(brut.final_price), creeLe, finLe }
+  return { id, titre: titreDe(brut), rarete: texteCourt(brut.snapshot_rarity), prixDepart, prixFinal: prix(brut.final_price), ...statutDe(brut.status), creeLe, finLe }
 }
 
 export interface LectureVentes {
@@ -307,11 +318,12 @@ export function cartesAAvertir(
   return sortie.sort((a, b) => b.relances - a.relances)
 }
 
-export type EtatTerminee = 'vendue' | 'non-vendue-relancee' | 'non-vendue'
+export type EtatTerminee = 'vendue' | 'non-vendue-relancee' | 'non-vendue' | 'annulee'
 
 /** Vendue (prix final connu), non vendue puis relancée par l’extension, ou non vendue. */
 export function etatTerminee(v: VenteTerminee, lancements: readonly LancementVente[]): EtatTerminee {
-  if (v.prixFinal !== null && v.prixFinal > 0) return 'vendue'
+  const issue = issueDe(v)
+  if (issue !== 'non-vendue') return issue
   const relancee = lancements.some((l) => l.resultat === 'reussie' && l.titre === v.titre && l.le >= v.finLe - 60_000 && l.le <= v.finLe + FENETRE_RELANCE_MS)
   return relancee ? 'non-vendue-relancee' : 'non-vendue'
 }

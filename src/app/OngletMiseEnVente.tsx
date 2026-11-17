@@ -29,7 +29,7 @@ const heureFr = (ms: number): string => {
 
 const libelleOrigine = (o: Origine): string => (o.type === 'auto' ? 'Relance automatique' : o.type === 'lot' ? `Lot ${o.idLot.slice(0, 6)}` : 'Hors extension');
 
-const LIBELLE_ETAT = { vendue: 'Vendue', 'non-vendue-relancee': 'Non vendue, relancée', 'non-vendue': 'Non vendue' } as const;
+const LIBELLE_ETAT = { vendue: 'Vendue', 'non-vendue-relancee': 'Non vendue, relancée', 'non-vendue': 'Non vendue', annulee: 'Annulée' } as const;
 
 /**
  * Onglet Mise en vente (Alexis, 2026-11-17) : suivi des enchères en cours (décompte, prolongations, prix), historique des
@@ -203,7 +203,7 @@ const OngletMiseEnVente: React.FC = () => {
           </div>
         )}
         <p className="mt-2 text-sm text-muted">
-          Une enchère non vendue est gardée en mémoire : à chaque non-vente de suite, le prix de départ de sa prochaine relance est divisé par deux (1re = ÷2, 2e = ÷4…), jamais sous {PRIX_DEPART_PLANCHER} (minimum du site non vérifié). Une vente remet le compte à zéro. Les non-ventes antérieures à cette fonction ne sont pas comptées.
+          Une enchère non vendue est gardée en mémoire : à chaque non-vente de suite, le prix de départ de sa prochaine relance est divisé par deux (1re = ÷2, 2e = ÷4…), jamais sous {PRIX_DEPART_PLANCHER} (plus petit prix observé). Une vente remet le compte à zéro. Les non-ventes antérieures à cette fonction ne sont pas comptées.
         </p>
       </SectionRepliable>
 

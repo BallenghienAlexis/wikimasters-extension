@@ -177,6 +177,17 @@ describe('non-ventes et prix de départ divisé par deux', () => {
     expect(nonVentesDe(v2, 'commune|X')).toBe(2)
   })
 
+  it('le statut explicite du site prime sur le prix final ; une annulation ne compte pas', () => {
+    const v0 = fusionnerSuivi(suiviVide(), lecture([]), 1)
+    const a = { ...fin('a', 'X', 1000, null), statut: 'non-vendue' as const }
+    const b = { ...fin('b', 'X', 2000, null), statut: 'annulee' as const }
+    const v1 = fusionnerSuivi(v0, lecture([b, a]), 2)
+    expect(nonVentesDe(v1, 'commune|X')).toBe(1)
+    const c = { ...fin('c', 'X', 3000, null), statut: 'vendue' as const }
+    expect(nonVentesDe(fusionnerSuivi(v1, lecture([c, b, a]), 3), 'commune|X')).toBe(0)
+    expect(analyserListeVentes({ selling: [], history: [{ id: 'h', base_amount: 5, created_at: iso(T0), settled_at: iso(T0 + 1), status: 'settled_unsold', final_price: null }] })?.terminees[0]?.statut).toBe('non-vendue')
+  })
+
   it('une vente remet le compte à zéro', () => {
     const v0 = fusionnerSuivi(suiviVide(), lecture([]), 1)
     const v1 = fusionnerSuivi(v0, lecture([fin('b', 'X', 2000, null), fin('a', 'X', 1000, null)]), 2)
