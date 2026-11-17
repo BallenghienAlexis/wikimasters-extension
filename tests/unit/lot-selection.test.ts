@@ -151,3 +151,14 @@ describe('conseil de lancement', () => {
     expect(conseilLancement(null, heureForte, [])).toBe('valeur inconnue')
   })
 })
+
+describe('raison de non-proposition (2026-11-17)', () => {
+  it('explique pourquoi une carte sans thème fiable, favorite ou non reliée ne se choisit pas', async () => {
+    const { raisonNonProposable, estProposable } = await import('../../src/lib/selectionLot')
+    expect(raisonNonProposable(carte('a'))).toBeNull()
+    expect(estProposable(carte('a'))).toBe(true)
+    expect(raisonNonProposable(carte('b', { favori: true }))).toMatch(/favori/)
+    expect(raisonNonProposable(carte('c', { idsSite: null }))).toMatch(/non reliée/)
+    expect(raisonNonProposable(carte('d', { titre: 'Zzqx', description: '' }))).toMatch(/thème fiable/)
+  })
+})
