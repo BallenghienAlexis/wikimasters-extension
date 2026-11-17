@@ -166,7 +166,39 @@ export function estimerCout(cartes: readonly CarteAClasser[]): EstimationIA {
 
 /** Fichier d’export pour classer hors de l’extension (abonnement Claude, par exemple) : titre et description courte, rien d’autre. */
 export function exporterCartesAClasser(cartes: readonly CarteAClasser[]): string {
-  return JSON.stringify(cartes.map((c, i) => ({ id: i + 1, titre: nettoyer(c.titre, 120), description: nettoyer(c.description, MAX_DESCRIPTION) })), null, 1);
+  // Le fichier porte son propre prompt : il suffit de le transférer tel quel dans un chat IA, qui renvoie un JSON { titre: [thèmes] }.
+  return JSON.stringify({ prompt: PROMPT_EXPORT, cartes: cartes.map((c, i) => ({ id: i + 1, titre: nettoyer(c.titre, 120), description: nettoyer(c.description, MAX_DESCRIPTION) })) }, null, 1);
+}
+
+/** Objets JSON de premier niveau d’un texte (accolades équilibrées, chaînes respectées) : tolère texte autour et blocs de code. */
+function objetsJson(texte: string): unknown[] {
+  const objets: unknown[] = [];
+  let profondeur = 0;
+  let debut = -1;
+  let dansChaine = false;
+  let echappe = false;
+  for (let i = 0; i < texte.length; i++) {
+    const c = texte[i];
+    if (dansChaine) {
+      if (echappe) echappe = false;
+      else if (c === '\\') echappe = true;
+      else if (c === '"') dansChaine = false;
+    } else if (c === '"' && profondeur > 0) dansChaine = true;
+    else if (c === '{') {
+      if (profondeur === 0) debut = i;
+      profondeur++;
+    } else if (c === '}' && profondeur > 0) {
+      profondeur--;
+      if (profondeur === 0) {
+        try {
+          objets.push(JSON.parse(texte.slice(debut, i + 1)));
+        } catch {
+          // morceau illisible : ignoré
+        }
+      }
+    }
+  }
+  return objets;
 }
 
 export type LectureImport = { type: 'ok'; resultats: Map<string, string[]>; ignores: number } | { type: 'invalide'; raison: string };
@@ -176,13 +208,10 @@ export type LectureImport = { type: 'ok'; resultats: Map<string, string[]>; igno
  * `titresConnus` limite l’import aux cartes réellement sans thème ; une entrée invalide est comptée dans `ignores`, jamais devinée.
  */
 export function lireImportThemes(texte: string, titresConnus: ReadonlySet<string>): LectureImport {
-  let json: unknown;
-  try {
-    json = JSON.parse(texte);
-  } catch {
-    return { type: 'invalide', raison: 'Le fichier n’est pas un JSON valide.' };
-  }
-  if (typeof json !== 'object' || json === null || Array.isArray(json)) return { type: 'invalide', raison: 'Le fichier doit être un objet { "titre": ["thème", …] }.' };
+  // Réponse d’un chat IA : JSON pur, ou entouré de texte / d’un bloc ```json, ou en plusieurs objets (un par lot) fusionnés.
+  const objets = objetsJson(texte).filter((o): o is Record<string, unknown> => typeof o === 'object' && o !== null && !Array.isArray(o));
+  if (objets.length === 0) return { type: 'invalide', raison: 'Aucun objet JSON { "titre": ["thème", …] } trouvé dans le fichier.' };
+  const json: Record<string, unknown> = Object.assign(Object.create(null) as Record<string, unknown>, ...objets);
   const resultats = new Map<string, string[]>();
   let ignores = 0;
   for (const [titre, ids] of Object.entries(json)) {
@@ -201,5 +230,5 @@ export function lireImportThemes(texte: string, titresConnus: ReadonlySet<string
  */
 export const PROMPT_EXPORT = PROMPT_SYSTEME.replace(
   'dont les clés sont les numéros des cartes et les valeurs des listes d’identifiants. Exemple : {"1":["moto"],"2":["litterature","histoire"],"3":[]}',
-  'dont les clés sont les TITRES EXACTS des cartes (champ "titre" du fichier) et les valeurs des listes de 1 à 4 identifiants. Exemple : {"Honda CB 900":["moto"],"Morcilla":["gastronomie"]}. Traite le fichier par lots de 150 cartes et donne le JSON complet de chaque lot',
+  'dont les clés sont les TITRES EXACTS des cartes (champ "titre" de la liste "cartes" du fichier) et les valeurs des listes de 1 à 4 identifiants. Exemple : {"Honda CB 900":["moto"],"Morcilla":["gastronomie"]}. Jamais de thème « À classer » ni « Autres ». Traite toutes les cartes du fichier ; si la réponse est trop longue, donne un objet JSON complet par lot de 150 cartes',
 ).replace('réponds une liste vide pour cette carte.', 'omets cette carte de ta réponse (jamais de liste vide ni de thème deviné).');

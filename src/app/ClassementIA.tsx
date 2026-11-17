@@ -45,7 +45,7 @@ const ClassementIA: React.FC<Props> = ({ cartes, cache, onCache }) => {
     lien.download = 'cartes-sans-theme.json';
     lien.click();
     URL.revokeObjectURL(url);
-    setEtat(`${format(aClasser.length)} cartes exportées. Classe-les avec le prompt de docs/classement-par-ia.md puis importe le résultat.`);
+    setEtat(`${format(aClasser.length)} cartes exportées. Le fichier contient son prompt : transfère-le tel quel dans un chat IA, puis importe sa réponse JSON.`);
   };
 
   const importer = async (fichier: File | undefined): Promise<void> => {
