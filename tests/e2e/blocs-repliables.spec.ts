@@ -82,16 +82,27 @@ test('tableau de bord : santé en quatre lignes Lecture, Étiquettes, Prix, Igno
   await expect(lignes.nth(3).getByRole('link', { name: 'Gérer les actions ignorées' })).toBeVisible();
 });
 
-test('collection : lignes repliées par défaut, détails au clavier', async ({ pageCollection: page }) => {
+// Tout est replié par défaut (2026-11-17) : le bloc global « Cartes » et les chiffres clés se replient avec un résumé.
+test('collection : le bloc « Cartes » est replié avec le nombre de cartes, se déplie au clavier', async ({ pageCollection: page }) => {
   await chargerCollectionFictive(page);
   await allerA(page, 'collection');
-  const bouton = page.getByRole('button', { name: /^Détails de / }).first();
+  const bloc = page.getByTestId('liste-cartes');
+  const bouton = bloc.getByRole('button').first();
   await expect(bouton).toHaveAttribute('aria-expanded', 'false');
-  await expect(page.getByLabel(/^Prix cible de /)).toHaveCount(0);
+  await expect(bouton).toContainText(/\d+ cartes?/);
+  await expect(page.getByTestId('tableau-cartes')).toBeHidden();
   await bouton.focus();
   await page.keyboard.press('Enter');
   await expect(bouton).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.getByLabel(/^Prix cible de /)).toHaveCount(1);
-  await page.keyboard.press('Space');
+  await expect(page.getByTestId('tableau-cartes')).toBeVisible();
+  await page.keyboard.press('Enter');
   await expect(bouton).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('tableau de bord : chiffres clés repliés avec un résumé', async ({ pageCollection: page }) => {
+  await chargerCollectionFictive(page);
+  await allerA(page, 'tableau-de-bord');
+  const bouton = page.getByTestId('chiffres-cles').getByRole('button').first();
+  await expect(bouton).toHaveAttribute('aria-expanded', 'false');
+  await expect(bouton).toContainText('exemplaires');
 });

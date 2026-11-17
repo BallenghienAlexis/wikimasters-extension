@@ -4,6 +4,7 @@ import { chargerCollection, chargerIgnorees, chargerPreferences, ecouterCollecti
 import { calculerTableauDeBord, lignesSante as lignesSanteDe, type ContexteTableauDeBord, type LigneSante } from '../lib/tableauDeBord';
 import { preferencesParDefaut, type Preferences } from '../lib/tri';
 import CarteKpi from './CarteKpi';
+import SectionRepliable from './SectionRepliable';
 import SanteSynchro from './SanteSynchro';
 import { pastilleDe, useLectureSynchro } from './useLectureSynchro';
 
@@ -72,31 +73,39 @@ const OngletTableauDeBord: React.FC = () => {
           : 'Lecture de la collection…'}
       </p>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <CarteKpi
-          libelle="Exemplaires"
-          unite="exemplaires"
-          valeur={v(tableau.exemplaires)}
-          detail={accorder(tableau.distinctes, 'carte distincte', 'cartes distinctes')}
-        />
-        <CarteKpi
-          libelle="Valeur estimée"
-          unite="pièces"
-          valeur={v(tableau.valeur)}
-          detail={tableau.partSansPrix === null ? 'Aucun prix connu' : `${tableau.partSansPrix}\u00a0% des cartes sans prix`}
-        />
-        <CarteKpi
-          libelle="Écarts"
-          valeur={v(tableau.ecarts)}
-          detail={tableau.ecarts === 0 ? 'Étiquettes conformes au plan' : 'Cartes dont les étiquettes diffèrent du plan'}
-        />
-      </div>
+      <SectionRepliable
+        id="chiffres-cles"
+        testId="chiffres-cles"
+        className="mt-4"
+        titre="Chiffres clés"
+        resume={chargee ? `${tableau.exemplaires} exemplaires · ${tableau.ecarts === 0 ? 'aucun écart' : accorder(tableau.ecarts, 'écart', 'écarts')}` : 'Lecture…'}
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <CarteKpi
+            libelle="Exemplaires"
+            unite="exemplaires"
+            valeur={v(tableau.exemplaires)}
+            detail={accorder(tableau.distinctes, 'carte distincte', 'cartes distinctes')}
+          />
+          <CarteKpi
+            libelle="Valeur estimée"
+            unite="pièces"
+            valeur={v(tableau.valeur)}
+            detail={tableau.partSansPrix === null ? 'Aucun prix connu' : `${tableau.partSansPrix}\u00a0% des cartes sans prix`}
+          />
+          <CarteKpi
+            libelle="Écarts"
+            valeur={v(tableau.ecarts)}
+            detail={tableau.ecarts === 0 ? 'Étiquettes conformes au plan' : 'Cartes dont les étiquettes diffèrent du plan'}
+          />
+        </div>
 
-      <p className="mt-3 text-sm text-muted" data-testid="sans-theme">
-        {tableau.sansTheme === 0
-          ? 'Toutes les cartes reliées ont un thème fiable.'
-          : `${accorder(tableau.sansTheme, 'carte reliée sans thème fiable', 'cartes reliées sans thème fiable')} : aucune étiquette de thème posée pour l’instant.`}
-      </p>
+        <p className="mt-3 text-sm text-muted" data-testid="sans-theme">
+          {tableau.sansTheme === 0
+            ? 'Toutes les cartes reliées ont un thème fiable.'
+            : `${accorder(tableau.sansTheme, 'carte reliée sans thème fiable', 'cartes reliées sans thème fiable')} : aucune étiquette de thème posée pour l’instant.`}
+        </p>
+      </SectionRepliable>
 
       {vide && <p className="mt-4 rounded border border-line bg-ink-2 p-4">Aucune carte</p>}
 
