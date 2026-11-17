@@ -306,9 +306,11 @@ describe('ordonnanceur — pages : départ à 0 et plafond', () => {
       chemin.includes('/stats') ? { statut: 200, json: statsJson(100) } : { statut: 200, json: { collection: [exemplaire(1)] } },
     );
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });
-    expect(b.departs.filter((d) => d.chemin.includes('page=')).length).toBe(2); // lecture + contrôle de tête
+    // Rien n’a bougé côté site : pas de relecture inutile (lecture + contrôle de tête), abandon sans arrêt.
+    expect(b.departs.filter((d) => d.chemin.includes('page=')).length).toBe(2);
     expect(r.issue).toBe('termine');
     expect(r.complete).toBe(false);
+    expect(r.causeIncomplete).toBe('1 exemplaire(s) lu(s) pour 100 annoncé(s) par le site');
     expect(r.etat.derniereComplete).toBeNull();
   });
 });

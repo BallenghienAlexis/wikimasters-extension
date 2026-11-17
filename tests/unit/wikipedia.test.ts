@@ -443,6 +443,20 @@ describe('pages d’homonymie', () => {
     expect(themesDepuisHomonymie(texte)).toEqual([]);
     expect(themesDepuisHomonymie('')).toEqual([]);
   });
+  it('relit une fois une entrée sans thème lue avant le thème « Noms et prénoms »', () => {
+    const ancien = validerCache({ version: 1, entrees: { Z: { themes: [], verifieLe: 1000, avecResume: true, avecWikidata: true, avecHomonymie: true, nomsPropres: true, signaux: SIG } } })!;
+    expect(titresAVerifier(['Z'], ancien, 2000)).toEqual(['Z']);
+    expect(titresAVerifier(['Z'], ajouterEntree(ancien, 'Z', [], 2000, true, SIG), 3000)).toEqual([]);
+  });
+  it('« prénommé » ne suffit pas pour « Noms et prénoms »', () => {
+    expect(themesDepuisHomonymie('X peut désigner :\nUn personnage prénommé Jean dans un roman ancien ;\nUne chose prénommée autrement.')).toEqual([]);
+  });
+  it('range dans « Noms et prénoms » un patronyme dont aucun domaine ne domine', () => {
+    const texte = ['Martin peut désigner :', '== Patronyme ==', 'Alain Martin, homme politique français ;', 'Bruno Martin, médecin belge ;', 'Claire Martin, peintre canadienne ;', 'David Martin, joueur de rugby australien.'].join('\n');
+    expect(themesDepuisHomonymie(texte)).toEqual(['noms']);
+    expect(themesDepuisHomonymie('Martin est un prénom masculin.')).toEqual(['noms']);
+    expect(themesDepuisHomonymie('BMS peut désigner :\nUn constructeur de moteurs fictif ;\nUne chanson inconnue du groupe Z.')).not.toContain('noms');
+  });
   it('ignore les entrées après « Voir aussi »', () => {
     const texte = ['X peut désigner :', 'Une ville du nord de la France, commune de la Somme ;', 'Un film réalisé par Jean Dupont en 1990 ;', '== Voir aussi ==', 'Zinédine Zidane, footballeur international français ;', 'Elyaz Zidane, footballeur international français ;', 'Luca Zidane, footballeur international français.'].join('\n');
     expect(themesDepuisHomonymie(texte)).not.toContain('football');

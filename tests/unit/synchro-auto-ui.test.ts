@@ -191,53 +191,36 @@ describe('T-206 : garde-fous du fichier', () => {
   });
 });
 
-describe('bouton « Relancer la synchro »', () => {
+describe('bouton « Forcer la synchro »', () => {
   const arret = (surcharge: Partial<StatutSynchro> = {}) => statut({ etat: 'arret', ...surcharge });
+  const BOUTON = /<button[^>]*type="button"[^>]*>Forcer la synchro/;
 
-  it('après des échecs, pas de bouton : la pause de 30 min est gardée', () => {
-    const html = rendre({ actif: true, statut: arret({ raison: 'echecs' }) });
-    expect(html).not.toContain('Relancer la synchro');
-    expect(html).toContain('Reprise automatique après');
+  it('toujours proposé quand la fonction est activée et qu’aucune synchro ne tourne, quel que soit l’arrêt', () => {
+    const statuts = [
+      arret({ raison: 'echecs' }),
+      arret({ raison: 'manuel' }),
+      ...[401, 403, 429].map((codeHttp) => arret({ raison: 'code-http', codeHttp })),
+      statut({ etat: 'termine' }),
+      null,
+    ];
+    for (const s of statuts) expect(rendre({ actif: true, statut: s })).toMatch(BOUTON);
   });
 
-  it('après un 401 ou un 429, pas de bouton : la pause de 30 min est gardée', () => {
-    for (const code of [401, 429]) {
-      const html = rendre({ actif: true, statut: arret({ raison: 'code-http', codeHttp: code }) });
-      expect(html).not.toContain('Relancer la synchro');
-      expect(html).toContain('Reprise automatique après');
-    }
-  });
-
-  it('proposé après un arrêt manuel ou un refus 403', () => {
-    for (const s of [arret({ raison: 'manuel' }), arret({ raison: 'code-http', codeHttp: 403 })]) {
-      const html = rendre({ actif: true, statut: s });
-      expect(html).toContain('Relancer la synchro');
-      expect(html).toMatch(/<button[^>]*type="button"[^>]*>Relancer la synchro/);
-    }
-  });
-
-  it('absent quand la synchro tourne, est terminée, désactivée ou sans statut', () => {
+  it('absent quand la synchro tourne ou quand la fonction est désactivée', () => {
     const bail = MAINTENANT + 60_000;
-    expect(rendre({ actif: true, statut: statut({ etat: 'en-cours' }), bail })).not.toContain('Relancer');
-    expect(rendre({ actif: true, statut: statut({ etat: 'termine' }) })).not.toContain('Relancer');
-    expect(rendre({ actif: false, statut: arret({ raison: 'manuel' }) })).not.toContain('Relancer');
-    expect(rendre({ actif: true, statut: null })).not.toContain('Relancer');
+    expect(rendre({ actif: true, statut: statut({ etat: 'en-cours' }), bail })).not.toContain('Forcer la synchro');
+    expect(rendre({ actif: false, statut: arret({ raison: 'manuel' }) })).not.toContain('Forcer la synchro');
+    expect(relancePossible({ actif: true, statut: statut({ etat: 'en-cours' }), bail, maintenant: MAINTENANT })).toBe(false);
   });
 
-  it('pas proposé quand un statut « en cours » est resté sans bail : seul un arrêt compte', () => {
-    expect(relancePossible({ actif: true, statut: statut({ etat: 'en-cours' }), bail: null, maintenant: MAINTENANT })).toBe(false);
-  });
-
-  it('après un refus, le message dit que la pause de 30 min est ignorée et que le site peut refuser de nouveau', () => {
-    const texte = texteRelance(arret({ raison: 'code-http', codeHttp: 403 }));
-    expect(texte).toContain(`pause de 30${NB}min`);
-    expect(texte).toContain('(403)');
+  it('l’avertissement dit que le délai et les pauses sont ignorés, pas l’anti-bot, avec le dernier refus', () => {
+    const texte = texteRelance(arret({ raison: 'code-http', codeHttp: 429 }));
+    expect(texte).toContain(`30${NB}min`);
+    expect(texte).toContain('401, 403 ou 429');
+    expect(texte).toContain('anti-bot');
     expect(texte).toContain('refuser de nouveau');
+    expect(texte).toContain('429');
+    expect(texteRelance(null)).not.toContain('Dernier refus');
     expect(rendre({ actif: true, statut: arret({ raison: 'code-http', codeHttp: 403 }) })).toContain('refuser de nouveau');
-  });
-
-  it('après un arrêt manuel, pas d’avertissement de pause', () => {
-    expect(texteRelance(arret({ raison: 'manuel' }))).not.toContain('pause');
-    expect(texteRelance(null)).toBe('');
   });
 });

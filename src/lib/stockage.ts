@@ -297,7 +297,7 @@ export function ecouterArretSynchro(rappel: () => void): () => void {
   return () => chrome.storage.onChanged.removeListener(ecouteur);
 }
 
-/** Demande de relance de l’interface (« Relancer la synchro ») : un horodatage, aucune autre donnée. */
+/** Demande de relance de l’interface (« Forcer la synchro ») : un horodatage, aucune autre donnée. */
 export async function enregistrerRelanceSynchro(horodatage: number): Promise<void> {
   if (!horodatageValide(horodatage)) throw new Error('Horodatage invalide.');
   await chrome.storage.local.set({ [CLE_RELANCE_SYNCHRO]: horodatage });

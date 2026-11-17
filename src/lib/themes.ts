@@ -85,6 +85,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'litterature', libelle: '#Littérature', motifs: ['ecrivain', 'roman', 'auteur', 'autrice', 'poete', 'poetesse', 'livre', 'theatre', 'dramaturge', 'maison d\'edition', 'revue litteraire'] },
   { id: 'bd', libelle: '#BD et Manga', motifs: ['bande dessinee', 'manga', 'anime ', 'comics', 'one piece'], parents: ['litterature'] },
   { id: 'langue', libelle: '#Langue', motifs: ['langue', 'linguist', 'terme ', 'mot ', 'consonne', 'voyelle', 'alphabet', 'dialecte'] },
+  { id: 'noms', libelle: '#Noms et prénoms', motifs: ['noms? de famille', 'patronymes?', 'prenoms? (?:masculin|feminin|mixte|epicene)'] },
   { id: 'idees', libelle: '#Philosophie', motifs: ['philosoph', 'theolog', 'orthodoxe'] },
   { id: 'religion', libelle: '#Religion', motifs: ['religi', 'dieu', 'deesse', 'saint', 'pape', 'eglise', 'mytholog', 'prelat', 'eparchie', 'diocese', 'abbaye', 'monastere', 'eveque', 'vicaire', 'anglican', 'catholique', 'clerge'] },
 
@@ -440,7 +441,8 @@ function themesPrincipauxLocaux(carte: Pick<Carte, 'titre' | 'description'>): st
   let genre = genreDe(description, defSite);
   if (genre === 'autre' && page) genre = page.genre;
   const faible = (ids: Iterable<string>, valeur: number): void => {
-    ajouter([...ids].filter((id) => !(GENRES_HUMAINS.has(genre) && estPhysique(id))), valeur);
+    // « Noms et prénoms » ne vient jamais d'un canal faible pour une personne (« né sous le patronyme de… »).
+    ajouter([...ids].filter((id) => !(GENRES_HUMAINS.has(genre) && estPhysique(id)) && !(id === 'noms' && genre === 'personne')), valeur);
   };
   ajouter(themesDirectsDeTexte(defSite), 5);
   ajouter(page?.fortes ?? [], 5);
