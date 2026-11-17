@@ -89,6 +89,7 @@ describe('fusion en chaîne et cache', () => {
     const [a, b] = base.themes;
     expect(a && b).toBeTruthy();
     definirCategoriesWikipedia(new Map([['Zed', [a!.categorie]]]));
+    definirThemesAppris(base.themes);
     const chaine = fusionner(base, a!.id, b!.id, 2);
     definirThemesAppris(chaine.themes);
     expect(themesPrincipaux({ titre: 'Zed', description: '' })).toEqual([b!.id]);
