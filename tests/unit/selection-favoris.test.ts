@@ -1,7 +1,7 @@
 // Choix carte par carte des favoris dans l’aperçu (Alexis, 2026-11-17). Données fictives.
 import { describe, expect, it } from 'vitest'
 import type { Action } from '../../src/lib/actions'
-import { cartesRefuseesParRegle, type ActionFavori, cleFavori, propositionsFavori, sansFavorisDecoches } from '../../src/lib/selectionFavoris'
+import { type ActionFavori, cleFavori, propositionsFavori, sansFavorisDecoches } from '../../src/lib/selectionFavoris'
 
 const fav = (idCarte: string, idExemplaire: string, valeur?: boolean): ActionFavori => ({ type: 'favori', idCarte, idExemplaire, ...(valeur === undefined ? {} : { valeur }) }) as ActionFavori
 const pose: Action = { type: 'pose-etiquette', idCarte: 'a', idExemplaire: 'x', nomEtiquette: '#Chien' } as Action
@@ -32,10 +32,5 @@ describe('décocher une proposition', () => {
   })
   it('rien décoché : le lot est inchangé', () => {
     expect(sansFavorisDecoches(actions, new Set())).toEqual(actions)
-  })
-  it('le refus d’une mise en favori de règle est mémorisé, pas celui d’un choix manuel', () => {
-    const d = new Set(propositionsFavori(actions).map((p) => p.cle))
-    expect(cartesRefuseesParRegle(actions, d)).toEqual(['a'])
-    expect(cartesRefuseesParRegle(actions, new Set())).toEqual([])
   })
 })

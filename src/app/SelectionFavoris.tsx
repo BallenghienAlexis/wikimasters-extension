@@ -11,6 +11,10 @@ interface Props {
   onBasculer: (cle: string) => void;
   /** Coche ou décoche d’un coup les lignes données (celles du filtre affiché). */
   onTout: (cles: readonly string[], cocher: boolean) => void;
+  /** Cartes pour lesquelles la proposition de la règle a été refusée pour de bon (choix « pas favori » mémorisé). */
+  refuses?: ReadonlySet<string>;
+  /** Mémorise « pas favori » pour la carte : la règle ne la proposera plus. */
+  onRefuser?: (idCarte: string) => void;
 }
 
 type Filtre = 'toutes' | 'poses' | 'retraits' | 'regle' | 'choix';
@@ -35,7 +39,7 @@ export function resumeFavoris(propositions: readonly PropositionFavori[], decoch
 }
 
 /** Choix carte par carte des favoris du lot : le joueur décide avant « Lancer » (Alexis, 2026-11-17). */
-const SelectionFavoris: React.FC<Props> = ({ propositions, decochees, cartes, onBasculer, onTout }) => {
+const SelectionFavoris: React.FC<Props> = ({ propositions, decochees, cartes, onBasculer, onTout, refuses = new Set(), onRefuser }) => {
   const [filtre, setFiltre] = useState<Filtre>('toutes');
   const garde = FILTRES.find((f) => f.id === filtre)!.garde;
   const visibles = useMemo(() => propositions.filter(garde), [propositions, garde]);
@@ -44,7 +48,7 @@ const SelectionFavoris: React.FC<Props> = ({ propositions, decochees, cartes, on
   return (
     <SectionRepliable id="choix-favoris" testId="choix-favoris" className="mt-4" titre="Favoris carte par carte" resume={resumeFavoris(propositions, decochees)}>
       <p className="text-sm text-muted">
-        Décochez une carte pour ne pas lui appliquer le favori. Une mise en favori décochée est mémorisée comme « pas favori » (la règle ne la reproposera plus ; « Revenir aux règles » dans la Collection l’annule). Un retrait ou une mise en favori de votre choix décochés restent proposés au prochain lot.
+        Rien n’est coché pour les mises en favori proposées par la règle des thèmes gardés : cochez celles que vous voulez appliquer. « Ne plus proposer » mémorise « pas favori » pour la carte (« Revenir aux règles » dans la Collection l’annule). Vos propres choix (étoile) sont cochés ; décochés, ils restent proposés au prochain lot.
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-2" role="group" aria-label="Filtrer les favoris">
         {FILTRES.map((f) => (
@@ -78,6 +82,15 @@ const SelectionFavoris: React.FC<Props> = ({ propositions, decochees, cartes, on
                 <span className="text-muted">· {p.origine === 'regle' ? 'thème gardé' : 'votre choix'}</span>
               </span>
             </label>
+            {p.origine === 'regle' && onRefuser && (
+              refuses.has(p.idCarte) ? (
+                <p className="pb-1 pl-8 text-muted">Ne sera plus proposée.</p>
+              ) : (
+                <button type="button" className={`${CLASSE_BOUTON} ${CLASSE_ACTIF} ml-8 mb-1 border-muted`} onClick={() => onRefuser(p.idCarte)}>
+                  Ne plus proposer
+                </button>
+              )
+            )}
           </li>
         ))}
       </ul>

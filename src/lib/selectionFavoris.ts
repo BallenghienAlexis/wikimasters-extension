@@ -39,14 +39,3 @@ export function propositionsFavori(actions: readonly Action[]): PropositionFavor
 /** Retire du lot les actions de favori décochées par le joueur. */
 export const sansFavorisDecoches = (actions: readonly Action[], decochees: ReadonlySet<string>): Action[] =>
   decochees.size === 0 ? [...actions] : actions.filter((a) => !(estFavori(a) && decochees.has(cleFavori(a))))
-
-/**
- * Cartes dont une mise en favori décidée par la règle a été décochée : le refus est mémorisé comme choix
- * manuel « pas favori », pour que la règle ne la reproposera pas en boucle. Un choix manuel décoché
- * (étoile de la Collection) n’est pas mémorisé : il reste proposé au lot suivant.
- */
-export function cartesRefuseesParRegle(actions: readonly Action[], decochees: ReadonlySet<string>): string[] {
-  const ids = new Set<string>()
-  for (const a of actions) if (estFavori(a) && origineDe(a) === 'regle' && decochees.has(cleFavori(a))) ids.add(a.idCarte)
-  return [...ids]
-}
