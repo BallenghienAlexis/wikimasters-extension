@@ -48,3 +48,18 @@ describe('cohérence compteur / filtre / étiquettes non thématiques', () => {
     expect(correspondAuTheme(c, 'nazis')).toBe(true);
   });
 });
+
+describe('performance et « #Autres »', () => {
+  it('compte 2 600 cartes en moins de 2 s', async () => {
+    const { compterParTheme } = await import('../../src/lib/tagsCarte');
+    const { IDS_THEMES } = await import('../../src/lib/themes');
+    const cartes = Array.from({ length: 2600 }, (_, i) => carte(i % 3 === 0 ? ['#Nazis'] : [], `Titre ${i}`, 'film d’animation japonais'));
+    const debut = Date.now();
+    compterParTheme(cartes, IDS_THEMES);
+    expect(Date.now() - debut).toBeLessThan(2000);
+  });
+
+  it('une étiquette « #Autres » posée n’est pas un thème posé', () => {
+    expect(tagsDeCarte(carte(['#Autres'])).poses).toEqual([]);
+  });
+});
