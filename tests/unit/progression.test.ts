@@ -21,7 +21,7 @@
  *     si rien n’est annoncé, `suivant` === `precedent`.
  *
  * secondesExecution(restantes: number): number         restantes × 0,25 (pas de division par la concurrence)
- * secondesSynchro(statut: StatutSynchroV2): number     (pagesRestantes + prixRestants + 1) × 0,25
+ * secondesSynchro(statut: StatutSynchroV2): number     (pagesRestantes + 1) × 0,25 + prixRestants × 1,65
  *     pagesRestantes = pages - page + 1 pour etape stats|pages (0 si page ou pages inconnus, 0 après), prixRestants = max(0, prixPrevus - prixFaits) (0 si inconnu)
  * dureeRestante(secondes: number): string               « moins d’une minute » sous 60 s, sinon « environ N min » (N = plafond)
  *
@@ -174,8 +174,8 @@ describe('T-302 durée restante H4 (SC-002)', () => {
   });
 
   it('SC-002 : synchro, (pages restantes + prix restants + 1) × 0,25 s', () => {
-    expect(secondesSynchro(statut({ etape: 'pages', page: 3, pages: 6, prixPrevus: 400, prixFaits: 0 }))).toBe(101.25);
-    expect(secondesSynchro(statut({ etape: 'prix', page: 6, pages: 6, prixPrevus: 400, prixFaits: 100 }))).toBe(75.25);
+    expect(secondesSynchro(statut({ etape: 'pages', page: 3, pages: 6, prixPrevus: 400, prixFaits: 0 }))).toBe(5 * 0.25 + 400 * 1.65);
+    expect(secondesSynchro(statut({ etape: 'prix', page: 6, pages: 6, prixPrevus: 400, prixFaits: 100 }))).toBe(0.25 + 300 * 1.65);
   });
 
   it('SC-002 : prixPrevus null, aucun prix restant compté', () => {
