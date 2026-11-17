@@ -164,10 +164,28 @@ export function estimerCout(cartes: readonly CarteAClasser[]): EstimationIA {
   return { cartes: cartes.length, requetes: lots.length, jetonsEntree, jetonsSortie, cout };
 }
 
+/** Cartes par fichier d’export : une réponse d’IA tient en un seul bloc de code JSON (≈ 20 tokens par carte). */
+export const CARTES_PAR_FICHIER_EXPORT = 150;
+
+export interface FichierExport {
+  nom: string;
+  contenu: string;
+}
+
+const contenuExport = (cartes: readonly CarteAClasser[], debut: number): string =>
+  // Le fichier porte son propre prompt : il suffit de le transférer tel quel dans un chat IA, qui renvoie un JSON { titre: [thèmes] }.
+  JSON.stringify({ prompt: PROMPT_EXPORT, cartes: cartes.map((c, i) => ({ id: debut + i + 1, titre: nettoyer(c.titre, 120), description: nettoyer(c.description, MAX_DESCRIPTION) })) }, null, 1);
+
 /** Fichier d’export pour classer hors de l’extension (abonnement Claude, par exemple) : titre et description courte, rien d’autre. */
 export function exporterCartesAClasser(cartes: readonly CarteAClasser[]): string {
-  // Le fichier porte son propre prompt : il suffit de le transférer tel quel dans un chat IA, qui renvoie un JSON { titre: [thèmes] }.
-  return JSON.stringify({ prompt: PROMPT_EXPORT, cartes: cartes.map((c, i) => ({ id: i + 1, titre: nettoyer(c.titre, 120), description: nettoyer(c.description, MAX_DESCRIPTION) })) }, null, 1);
+  return contenuExport(cartes, 0);
+}
+
+/** Un fichier par tranche de 150 cartes (`cartes-sans-theme-1-sur-4.json`…) : chaque fichier donne une réponse d’IA complète et unique. */
+export function exporterEnFichiers(cartes: readonly CarteAClasser[], taille = CARTES_PAR_FICHIER_EXPORT): FichierExport[] {
+  if (cartes.length <= taille) return [{ nom: 'cartes-sans-theme.json', contenu: contenuExport(cartes, 0) }];
+  const total = Math.ceil(cartes.length / taille);
+  return Array.from({ length: total }, (_, n) => ({ nom: `cartes-sans-theme-${n + 1}-sur-${total}.json`, contenu: contenuExport(cartes.slice(n * taille, (n + 1) * taille), n * taille) }));
 }
 
 /** Objets JSON de premier niveau d’un texte (accolades équilibrées, chaînes respectées) : tolère texte autour et blocs de code. */
@@ -205,22 +223,34 @@ function objetsJson(texte: string): { objets: unknown[]; illisibles: number } {
 
 export type LectureImport = { type: 'ok'; resultats: Map<string, string[]>; ignores: number } | { type: 'invalide'; raison: string };
 
+/** Clé de comparaison d’un titre : une IA remplace souvent l’apostrophe droite par ’, change les espaces ou la casse. */
+const cleTitre = (t: string): string => t.normalize('NFC').replace(/[’‘ʼ`´]/g, '\'').replace(/[\u00a0\s]+/g, ' ').trim().toLowerCase();
+
 /**
- * Valide un fichier `{ "titre": ["theme", …] }` classé hors de l’extension : 1 à 4 identifiants du catalogue par carte, sans doublon.
+ * Valide une réponse `{ "titre": ["theme", …] }` classée hors de l’extension : 1 à 4 identifiants du catalogue par carte, sans doublon.
  * `titresConnus` limite l’import aux cartes réellement sans thème ; une entrée invalide est comptée dans `ignores`, jamais devinée.
+ * Le titre est retrouvé malgré l’apostrophe, la casse ou la coupe à 120 caractères de l’export ; un identifiant est accepté en minuscules sans espace.
  */
 export function lireImportThemes(texte: string, titresConnus: ReadonlySet<string>): LectureImport {
   // Réponse d’un chat IA : JSON pur, ou entouré de texte / d’un bloc ```json, ou en plusieurs objets (un par lot) fusionnés.
   const lu = objetsJson(texte);
   const objets = lu.objets.filter((o): o is Record<string, unknown> => typeof o === 'object' && o !== null && !Array.isArray(o));
-  if (objets.length === 0) return { type: 'invalide', raison: 'Aucun objet JSON { "titre": ["thème", …] } trouvé dans le fichier.' };
+  if (objets.length === 0) return { type: 'invalide', raison: 'Aucun objet JSON { "titre": ["thème", …] } trouvé dans le texte.' };
   const json = Object.create(null) as Record<string, unknown>;
   for (const o of objets) for (const [k, v] of Object.entries(o)) json[k] = v;
+  const parCle = new Map<string, string>();
+  for (const t of titresConnus) {
+    parCle.set(cleTitre(t), t);
+    parCle.set(cleTitre(nettoyer(t, 120)), t);
+  }
   const resultats = new Map<string, string[]>();
   let ignores = lu.illisibles;
-  for (const [titre, ids] of Object.entries(json)) {
-    const uniques = Array.isArray(ids) ? [...new Set(ids)] : [];
-    const valide = titresConnus.has(titre) && uniques.length >= 1 && uniques.length <= MAX_THEMES_PAR_CARTE && uniques.length === (ids as unknown[]).length && uniques.every((id) => typeof id === 'string' && ENSEMBLE_IDS.has(id));
+  for (const [cle, brut] of Object.entries(json)) {
+    const titre = titresConnus.has(cle) ? cle : parCle.get(cleTitre(cle));
+    const liste = typeof brut === 'string' ? [brut] : brut;
+    const ids = Array.isArray(liste) ? liste.map((id) => (typeof id === 'string' ? id.trim().toLowerCase() : id)) : [];
+    const uniques = [...new Set(ids)];
+    const valide = titre !== undefined && uniques.length >= 1 && uniques.length <= MAX_THEMES_PAR_CARTE && uniques.every((id) => typeof id === 'string' && ENSEMBLE_IDS.has(id));
     if (valide) resultats.set(titre, uniques as string[]);
     else ignores++;
   }
@@ -232,7 +262,14 @@ export function lireImportThemes(texte: string, titresConnus: ReadonlySet<string
  * mais les clés de la réponse sont les titres exacts et une carte non reconnue est omise (jamais de liste vide ni de thème deviné).
  * `docs/classement-par-ia.md` en contient le texte exact (test de synchronisation).
  */
-export const PROMPT_EXPORT = PROMPT_SYSTEME.replace(
-  'dont les clés sont les numéros des cartes et les valeurs des listes d’identifiants. Exemple : {"1":["moto"],"2":["litterature","histoire"],"3":[]}',
-  'dont les clés sont les TITRES EXACTS des cartes (champ "titre" de la liste "cartes" du fichier) et les valeurs des listes de 1 à 4 identifiants. Exemple : {"Honda CB 900":["moto"],"Morcilla":["gastronomie"]}. Jamais de thème « À classer » ni « Autres ». Traite toutes les cartes du fichier ; si la réponse est trop longue, donne un objet JSON complet par lot de 150 cartes',
-).replace('réponds une liste vide pour cette carte.', 'omets cette carte de ta réponse (jamais de liste vide ni de thème deviné).');
+export const PROMPT_EXPORT = [
+  'Tu classes des cartes d’un jeu de collection dont chaque carte porte le titre d’un article de Wikipédia (personne, œuvre, lieu, objet, notion, animal…). Tu reçois un fichier avec une liste "cartes" (id, titre, description courte).',
+  `Pour chaque carte, choisis de 1 à ${MAX_THEMES_PAR_CARTE} thèmes parmi le catalogue ci-dessous, du plus caractéristique au moins caractéristique.`,
+  'Règles : appuie-toi sur la description quand il y en a une, puis sur ce que le sujet est réellement (pas sur les mots du titre) ; choisis le thème le plus précis qui existe (« Moto » plutôt que « Véhicule ») ;',
+  'n’ajoute pas un thème parent en plus de son thème précis ; n’invente aucun identifiant ; une liste, une année (« 2013 en Bulgarie »), une résolution, une commune ou un établissement ont un sujet : classe-les.',
+  'À omettre (ne les écris pas dans la réponse) : pages d’homonymie, noms de famille, prénoms, et sujets que tu ne reconnais pas avec certitude. Ces cartes restent « à classer » dans l’extension, c’est voulu. Jamais de liste vide, jamais de thème deviné, jamais de thème « À classer » ni « Autres ».',
+  'Format de réponse : ta réponse entière est UN SEUL bloc de code JSON (```json … ```), sans aucune phrase avant ou après, sans explication ni liste des cartes omises. Si tu peux créer un fichier téléchargeable, donne-le sous le nom classement.json avec le même contenu.',
+  'Ce bloc est un unique objet dont les clés sont les TITRES EXACTS des cartes (champ "titre", recopié caractère pour caractère) et les valeurs des listes de 1 à 4 identifiants. Exemple : {"Honda CB 900":["moto"],"Morcilla":["gastronomie"]}.',
+  'Traite toutes les cartes du fichier dans cette seule réponse (il en contient 150 au plus), sans la couper en plusieurs messages.',
+  `Catalogue (identifiant : libellé) :\n${DEFINITIONS_THEMES.map((t) => `${t.id} : ${t.libelle.replace(/^#/, '')}`).join('\n')}`,
+].join('\n');

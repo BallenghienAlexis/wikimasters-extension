@@ -2,19 +2,22 @@
 
 Circuit sans clé API ni coût supplémentaire (rattrapage ponctuel) : l’extension exporte les cartes sans thème, tu les fais classer dans Claude, puis tu réimportes le résultat.
 
-1. Extension › Réglages › « Classement par l’IA » › **Exporter les cartes sans thème** : tu obtiens `cartes-sans-theme.json` : un objet `{ "prompt": …, "cartes": [id, titre, description courte] }` (rien du compte). Le prompt, avec le catalogue de thèmes et le format de réponse, est **dans le fichier**.
-2. Dans une conversation Claude (ou autre IA), joins le fichier tel quel, sans rien écrire d’autre : l’IA suit le prompt qu’il contient. Le prompt ci-dessous n’est donné qu’à titre de référence (ou si l’IA refuse les pièces jointes : colle-le avec les cartes).
-3. L’IA répond par un objet JSON `{ "titre": ["theme", …] }`. Enregistre la réponse dans un fichier `.json` (2 Mo au plus) : le texte autour, un bloc de code ou plusieurs objets (un par lot) sont tolérés à l’import.
-4. Extension › Réglages › « Classement par l’IA » › **Importer les thèmes classés**. Les entrées invalides (titre inconnu, thème hors liste, plus de 4 thèmes, liste vide) sont ignorées et comptées ; rien n’est deviné. Les thèmes importés sont gardés par titre, comme ceux de l’API, et ne servent qu’en dernier recours.
+1. Extension › Réglages › « Classement par l’IA » › **Exporter les cartes sans thème** : tu obtiens un ou plusieurs fichiers `cartes-sans-theme*.json` (150 cartes au plus chacun, par exemple `cartes-sans-theme-1-sur-4.json`) : un objet `{ "prompt": …, "cartes": [id, titre, description courte] }` (rien du compte). Le prompt, avec le catalogue de thèmes et le format de réponse, est **dans chaque fichier**.
+2. Dans une conversation Claude (ou autre IA), joins **un fichier par message**, tel quel, sans rien écrire d’autre : l’IA suit le prompt qu’il contient et répond par un seul bloc de code JSON (ou un fichier `classement.json`). Le prompt ci-dessous n’est donné qu’à titre de référence (ou si l’IA refuse les pièces jointes : colle-le avec les cartes).
+3. Dans l’extension, **colle la réponse** dans la zone « Ou colle ici la réponse de l’IA » puis « Importer le texte collé » (à répéter pour chaque réponse), ou choisis le ou les fichiers avec « Importer les thèmes classés » (plusieurs à la fois, 2 Mo au plus chacun). Le texte autour, un bloc de code ou plusieurs objets sont tolérés ; le titre est retrouvé malgré l’apostrophe ’, la casse ou les espaces.
+4. Les entrées invalides (titre inconnu, thème hors liste, plus de 4 thèmes, liste vide) sont ignorées et comptées ; rien n’est deviné. Les pages d’homonymie, noms de famille, prénoms et sujets inconnus sont omis par l’IA et restent « à classer » : c’est voulu (jamais « Autres » ni « À classer » posé). Les thèmes importés sont gardés par titre, comme ceux de l’API, et ne servent qu’en dernier recours.
 
 ## Prompt à coller
 
 ```text
-Tu classes des cartes d’un jeu de collection dont chaque carte porte le titre d’un article de Wikipédia (personne, œuvre, lieu, objet, notion, animal…).
+Tu classes des cartes d’un jeu de collection dont chaque carte porte le titre d’un article de Wikipédia (personne, œuvre, lieu, objet, notion, animal…). Tu reçois un fichier avec une liste "cartes" (id, titre, description courte).
 Pour chaque carte, choisis de 1 à 4 thèmes parmi le catalogue ci-dessous, du plus caractéristique au moins caractéristique.
-Règles : réponds d’après le sens du sujet (ce qu’il est, ce qu’il fait), pas d’après les mots du titre ; choisis le thème le plus précis qui existe (« Moto » plutôt que « Véhicule ») ;
-n’ajoute pas un thème parent en plus de son thème précis ; n’invente aucun identifiant ; si tu ne reconnais pas le sujet, omets cette carte de ta réponse (jamais de liste vide ni de thème deviné).
-Format de réponse : uniquement un objet JSON, sans texte autour, dont les clés sont les TITRES EXACTS des cartes (champ "titre" de la liste "cartes" du fichier) et les valeurs des listes de 1 à 4 identifiants. Exemple : {"Honda CB 900":["moto"],"Morcilla":["gastronomie"]}. Jamais de thème « À classer » ni « Autres ». Traite toutes les cartes du fichier ; si la réponse est trop longue, donne un objet JSON complet par lot de 150 cartes
+Règles : appuie-toi sur la description quand il y en a une, puis sur ce que le sujet est réellement (pas sur les mots du titre) ; choisis le thème le plus précis qui existe (« Moto » plutôt que « Véhicule ») ;
+n’ajoute pas un thème parent en plus de son thème précis ; n’invente aucun identifiant ; une liste, une année (« 2013 en Bulgarie »), une résolution, une commune ou un établissement ont un sujet : classe-les.
+À omettre (ne les écris pas dans la réponse) : pages d’homonymie, noms de famille, prénoms, et sujets que tu ne reconnais pas avec certitude. Ces cartes restent « à classer » dans l’extension, c’est voulu. Jamais de liste vide, jamais de thème deviné, jamais de thème « À classer » ni « Autres ».
+Format de réponse : ta réponse entière est UN SEUL bloc de code JSON (```json … ```), sans aucune phrase avant ou après, sans explication ni liste des cartes omises. Si tu peux créer un fichier téléchargeable, donne-le sous le nom classement.json avec le même contenu.
+Ce bloc est un unique objet dont les clés sont les TITRES EXACTS des cartes (champ "titre", recopié caractère pour caractère) et les valeurs des listes de 1 à 4 identifiants. Exemple : {"Honda CB 900":["moto"],"Morcilla":["gastronomie"]}.
+Traite toutes les cartes du fichier dans cette seule réponse (il en contient 150 au plus), sans la couper en plusieurs messages.
 Catalogue (identifiant : libellé) :
 vehicule : Véhicule
 automobile : Automobile
