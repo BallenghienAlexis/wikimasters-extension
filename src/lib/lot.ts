@@ -53,6 +53,8 @@ export interface Config {
   selection?: SelectionLot
   /** Plafond de valeur de défausse réglé par le joueur ; absent : `PLAFOND_VALEUR_DEFAUSSE` (5). */
   plafondDefausse?: number
+  /** Mode des étiquettes (absent : `poser`) : `suspendre` ne crée ni ne pose rien ; `retirer-tout` ne propose que des retraits (tout ce que l’extension a posé). */
+  modeEtiquettes?: 'poser' | 'suspendre' | 'retirer-tout'
   /** Thèmes gardés du joueur (« Mes thèmes ») : une carte reliée de ces thèmes est mise en favori (Alexis, 2026-11-15). */
   mesThemes?: readonly string[]
 }
@@ -419,7 +421,8 @@ export function construireLot(
     let tropLong = false
     let homonyme = false
     const { retenues, ecartees: ecarteesCarte } = parCarte.get(c.id) ?? { retenues: [], ecartees: [] }
-    const attendus: Array<{ idExemplaire: string; etiquettes: readonly string[] }> = c.idsSite.map((idExemplaire) => ({ idExemplaire, etiquettes: retenues }))
+    const modeEtiq = config.modeEtiquettes ?? 'poser'
+    const attendus: Array<{ idExemplaire: string; etiquettes: readonly string[] }> = c.idsSite.map((idExemplaire) => ({ idExemplaire, etiquettes: modeEtiq === 'retirer-tout' ? [] : retenues }))
     const dejaSignalees = new Set<string>()
     const nonPoseeCarte = (nomEtiquette: string, raison: RaisonNonPosee): void => {
       const cle = `${nomEtiquette}\u0000${raison}`
@@ -441,7 +444,7 @@ export function construireLot(
         else nonDispo = true
       }
 
-      for (const nom of etiquettes) {
+      for (const nom of modeEtiq === 'poser' ? etiquettes : []) {
         if (presents.includes(nom)) continue
         // Retirée à la main par le joueur : jamais reposée (la synchro ne défait pas ses décisions).
         if (estRefuse(registre, idExemplaire, nom)) continue

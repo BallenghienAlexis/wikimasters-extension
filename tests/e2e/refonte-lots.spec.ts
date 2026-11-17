@@ -47,7 +47,7 @@ async function amorcer(page: Page, cartes: Record<string, unknown>[], extra: Rec
     async ([c, e]) => {
       await chrome.storage.local.set({
         collection: { version: 3, cartes: c },
-        preferences: { version: 2, mesThemes: [], amis: [] },
+        preferences: { version: 2, mesThemes: [], amis: [], modeEtiquettes: 'poser' },
         amisInitiaux: 999,
         syncAuto: false,
         ...(e as object),

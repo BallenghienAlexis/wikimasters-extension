@@ -120,7 +120,7 @@ export async function ecrireJeuRiche(page: Page): Promise<void> {
   });
   const valeurs = {
     collection: { version: 3, cartes },
-    preferences: { version: 2, mesThemes: [], amis: [] },
+    preferences: { version: 2, mesThemes: [], amis: [], modeEtiquettes: 'poser' },
     amisInitiaux: 999,
     syncAuto: false,
     derniereSynchro: MAINTENANT - 12 * 60_000,
