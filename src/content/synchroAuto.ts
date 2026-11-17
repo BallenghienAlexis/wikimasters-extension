@@ -168,7 +168,7 @@ function evenementFinal(resultat: ResultatSynchro, pages: number | null): Evenem
     const details = [
       resultat.sautes > 0 ? `${resultat.sautes} élément(s) sauté(s) sur erreur` : null,
       resultat.causeIncomplete,
-      pages !== null && resultat.pagesLues >= pages + PAGES_DE_MARGE ? 'plafond de pages atteint' : null,
+      resultat.causeIncomplete === null && pages !== null && resultat.pagesLues >= pages + PAGES_DE_MARGE ? 'plafond de pages atteint' : null,
     ].filter((d): d is string => d !== null);
     return { titre: 'Synchronisation automatique : fin', parametre: details.length > 0 ? details.join(' · ') : 'lecture incomplète (cause inconnue)', resultat: 'reussie', codeHttp: null };
   }

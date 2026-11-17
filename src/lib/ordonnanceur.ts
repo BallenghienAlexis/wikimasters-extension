@@ -150,7 +150,7 @@ export interface ResultatSynchro {
   codeHttp: number | null;
   /** Vrai si la collection a été lue en entier (ou jugée inchangée) sans échec. */
   complete: boolean;
-  /** Cause exacte d’une lecture non propre (sans échec ni arrêt) ; `null` si complète ou si des éléments ont été sautés. */
+  /** Cause exacte d’une lecture non propre (sans échec ni arrêt) ; `null` si complète. */
   causeIncomplete: string | null;
   /** Éléments (pages, prix…) sautés sur erreur pendant l’exécution. */
   sautes: number;
@@ -423,7 +423,10 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         }
         if (stats === null) break;
         const fin = await lireStats();
-        if (fin === null) break;
+        if (fin === null) {
+          cause = 'relecture des statistiques impossible (requête en échec)';
+          break;
+        }
         // Contrôle de la tête (plus récents d’abord) : une carte ajoutée ou un favori basculé sur la première page pendant la
         // lecture, à total égal (remplacement), passe sinon inaperçu.
         const teteFin = lecture.tete == null ? null : await lireTete();

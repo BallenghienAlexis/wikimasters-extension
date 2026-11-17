@@ -90,8 +90,8 @@ export const relancePossible = (entree: EntreeEtat): boolean => entree.actif && 
 
 /** Avertissement affiché près du bouton : le forçage passe outre le délai et les pauses, jamais la vérification anti-bot. */
 export function texteRelance(statut: StatutSynchro | null): string {
-  const base = 'Lance une synchro tout de suite, dans un onglet WikiMasters ouvert, sans attendre le délai de 30 min ni la pause qui suit un refus du site (401, 403 ou 429), qui peut alors refuser de nouveau. La vérification anti-bot reste à franchir à la main sur le site, et une seule synchro tourne à la fois (une demande par minute au plus).';
-  if (statut?.etat === 'arret' && statut.raison === 'code-http' && statut.codeHttp !== null) return `${base} Dernier refus du site : ${statut.codeHttp}.`;
+  const base = `Lance une synchro tout de suite, dans un onglet WikiMasters ouvert, sans attendre le délai de 30${NB}min ni la pause qui suit un refus du site (401, 403 ou 429), qui peut alors refuser de nouveau. La vérification anti-bot reste à franchir à la main sur le site, et une seule synchro tourne à la fois (une demande par minute au plus).`;
+  if (statut?.etat === 'arret' && statut.raison === 'code-http' && statut.codeHttp !== null) return `${base} Dernier refus du site${NB}: ${statut.codeHttp}.`;
   return base;
 }
 
@@ -122,7 +122,7 @@ export const VueSynchroAuto: React.FC<VueSynchroAutoProps> = ({ actif, statut, b
       testId="synchro-auto"
       className="mt-4"
       titre="Synchronisation automatique"
-      ouvertParDefaut={enCours || erreur !== null || relancePossible(entree)}
+      ouvertParDefaut={enCours || erreur !== null || (entree.actif && statut?.etat === 'arret')}
       resume={`${texteEtatSynchro(entree)} · ${ecarts.length === 0 ? 'aucun écart' : `${ecarts.length} écart${ecarts.length > 1 ? 's' : ''}`}`}
     >
       <span id="titre-synchro-auto" className="sr-only">

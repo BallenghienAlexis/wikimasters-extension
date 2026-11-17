@@ -215,7 +215,7 @@ describe('bouton « Forcer la synchro »', () => {
 
   it('l’avertissement dit que le délai et les pauses sont ignorés, pas l’anti-bot, avec le dernier refus', () => {
     const texte = texteRelance(arret({ raison: 'code-http', codeHttp: 429 }));
-    expect(texte).toContain('30 min');
+    expect(texte).toContain(`30${NB}min`);
     expect(texte).toContain('401, 403 ou 429');
     expect(texte).toContain('anti-bot');
     expect(texte).toContain('refuser de nouveau');
