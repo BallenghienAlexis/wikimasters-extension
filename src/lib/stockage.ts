@@ -584,6 +584,9 @@ export async function chargerPreferences(): Promise<Preferences> {
   if (typeof version === 'number' && version >= VERSION_AMIS_INITIAUX) return lues;
   const fusionnees = fusionnerAmisInitiaux(lues, AMIS_INITIAUX);
   try {
+    // Relecture juste avant l’écriture : des préférences posées entre-temps (autre onglet, réglage) ne sont pas écrasées.
+    const frais = (await chrome.storage.local.get([CLE_PREFERENCES, CLE_AMIS_INITIAUX]))[CLE_PREFERENCES];
+    if (JSON.stringify(frais) !== JSON.stringify(brut)) return frais === undefined ? fusionnees : fusionnerAmisInitiaux(lirePreferences(frais), AMIS_INITIAUX);
     await chrome.storage.local.set({ [CLE_PREFERENCES]: fusionnees, [CLE_AMIS_INITIAUX]: VERSION_AMIS_INITIAUX });
   } catch {
     /* le drapeau n'est pas posé : la fusion sera retentée au prochain chargement */
