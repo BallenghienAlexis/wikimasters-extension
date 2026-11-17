@@ -32,9 +32,9 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'avion', libelle: '#Avion', motifs: ['avion', 'aeronef', 'aviation', 'compagnie aerienne', 'helicoptere', 'accident aerien', 'aeroport', 'aerodrome'], parents: ['vehicule'] },
   { id: 'bateaux', libelle: '#Bateaux', motifs: ['bateau', 'navire', 'paquebot', 'voilier', 'sous-marin', 'porte-avions', 'croiseur ', 'torpilleur'], parents: ['vehicule'] },
   { id: 'course', libelle: '#Course', motifs: ['course automobile', 'course de', 'pilote automobile', 'pilote de', 'grand prix', 'circuit automobile'], parents: ['sport'] },
-  { id: 'formule1', libelle: '#Formule 1', motifs: ['formule 1', 'formula one'], parents: ['course', 'sport'] },
-  { id: 'nascar', libelle: '#Nascar', motifs: ['nascar'], parents: ['course', 'sport'] },
-  { id: 'rallye', libelle: '#Rallye', motifs: ['rallye'], parents: ['course', 'sport'] },
+  { id: 'formule1', libelle: '#Formule 1', motifs: ['formule 1', 'formula one'], parents: ['course', 'automobile', 'vehicule', 'sport'] },
+  { id: 'nascar', libelle: '#Nascar', motifs: ['nascar'], parents: ['course', 'automobile', 'vehicule', 'sport'] },
+  { id: 'rallye', libelle: '#Rallye', motifs: ['rallye'], parents: ['course', 'automobile', 'vehicule', 'sport'] },
 
   // Musique
   { id: 'musique', libelle: '#Musique', motifs: ['musicien', 'musique', 'musical', 'chanteur', 'chanteuse', 'compositeur', 'compositrice', 'album', 'chanson', 'groupe de', 'rappeur', 'rappeuse', 'guitariste', 'batteur', 'pianiste', 'single ', 'compilation de', 'label discographique', 'troubadour'] },
@@ -92,7 +92,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'sport', libelle: '#Sport', motifs: ['athlete', 'sportif', '(?<!motos? )(?<!voitures? )(?<!automobiles? )sportives?', 'joueur de', 'joueuse de', 'championnat', 'tournoi', 'olympique', 'coureur', 'coureuse', 'rugby', 'tennis', 'basket', 'joueu(?:r|se) (?:[a-z-]+ )?(?:de |d\')?(?:baseball|squash|badminton|volley|handball|cricket|polo|curling|hockey)', 'rameu(?:r|se)', 'compet[a-z]* de patinage', 'etapes? du tour d[eu]', 'saisons? [0-9]{4}-[0-9]{4} d', 'patineu(?:r|se)', 'fondeu(?:r|se)', 'skieu(?:r|se)', 'nageu(?:r|se)', 'gymnaste', 'tir a l\'arc', 'handballeu(?:r|se)', 'lutte professionnelle', 'competition de [a-z-]+ball', 'haltero', 'escrimeu(?:r|se)'] },
   { id: 'football', libelle: '#Football', motifs: ['football', 'club de foot'], parents: ['sport'] },
   { id: 'hockey', libelle: '#Hockey', motifs: ['hockey'], parents: ['sport'] },
-  { id: 'cyclisme', libelle: '#Cyclisme', motifs: ['cyclis', 'tour de france (?:cycliste|[0-9]{4})', 'tour d\'italie [0-9]{4}', 'tour d\'espagne [0-9]{4}'], parents: ['sport'] },
+  { id: 'cyclisme', libelle: '#Cyclisme', motifs: ['cyclis', 'tour de france (?:cycliste|[0-9]{4})', 'tour d\'italie [0-9]{4}', 'tour d\'espagne [0-9]{4}'], parents: ['sport', 'course'] },
   { id: 'combat', libelle: '#Arts martiaux', motifs: ['arts martiaux', 'boxeur', 'boxeuse', 'catcheur', 'judoka', 'karate'], parents: ['sport'] },
   { id: 'societe', libelle: '#Société', motifs: ['sociolog', "homme d'affaires", "femme d'affaires", 'entreprise', 'econom', 'droit', 'adulter', 'habitants', 'journaliste'] },
   { id: 'crime', libelle: '#Crime', motifs: ['tueur', 'criminel', 'cartel', 'assassin', 'torture', 'mafia', 'gang ', 'meurtres?(?![a-z0-9])', 'meurtrier ou meurtriere', 'condamnee? pour crime'], parents: ['societe'] },
@@ -174,7 +174,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'basketball', libelle: '#Basketball', motifs: ['basket'], parents: ['sport'] },
   { id: 'ski', libelle: '#Ski', motifs: ['skis?(?![a-z0-9])', 'skieur', 'skieuse'], parents: ['sport'] },
   { id: 'golf', libelle: '#Golf', motifs: ['golf(?![a-z0-9])', 'golfeur', 'golfeuse'], parents: ['sport'] },
-  { id: 'natation', libelle: '#Natation', motifs: ['natation', 'nageur', 'nageuse'], parents: ['sport'] },
+  { id: 'natation', libelle: '#Natation', motifs: ['natation', 'nageur', 'nageuse'], parents: ['sport', 'course'] },
   { id: 'velo', libelle: '#Vélo', motifs: ['velos?(?![a-z0-9])', 'bicyclette'], parents: ['vehicule'] },
 
   // Histoire, religion, bande dessinée
@@ -187,6 +187,66 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'secondeguerre', libelle: '#Seconde Guerre mondiale', motifs: ['seconde guerre mondiale', 'deuxieme guerre mondiale'], parents: ['guerre', 'histoire'] },
   { id: 'mythologie', libelle: '#Mythologie', motifs: ['mytholog', 'divinite'], parents: ['religion'] },
   { id: 'superheros', libelle: '#Super-héros', motifs: ['super-heros', 'super heros', 'super-heroine'], parents: ['bd', 'litterature'] },
+
+  // Familles étendues (Alexis, 2026-11-17 : « logique de famille » ; une notion peut figurer sous plusieurs familles).
+  // Alcool
+  { id: 'rhum', libelle: '#Rhum', motifs: ['rhum(?![a-z0-9])'], parents: ['alcool', 'gastronomie'] },
+  { id: 'whisky', libelle: '#Whisky', motifs: ['whisk(?:y|ey)'], parents: ['alcool', 'gastronomie'] },
+  { id: 'cocktail', libelle: '#Cocktail', motifs: ['cocktail'], parents: ['alcool', 'gastronomie'] },
+  { id: 'champagne', libelle: '#Champagne', motifs: ['(?<!en )(?<!de )(?<!la )(?<!-)champagne(?![a-z0-9-])', 'coupe de champagne'], parents: ['alcool', 'gastronomie'] },
+  { id: 'vodka', libelle: '#Vodka', motifs: ['vodka'], parents: ['alcool', 'gastronomie'] },
+  { id: 'tequila', libelle: '#Tequila', motifs: ['tequila'], parents: ['alcool', 'gastronomie'] },
+  // Course (une course automobile est sous Course ET Automobile)
+  { id: 'courseauto', libelle: '#Course automobile', motifs: ['courses? automobiles?', 'grand prix automobile', '24 heures du mans', 'pilote de course'], parents: ['course', 'automobile', 'vehicule', 'sport'] },
+  { id: 'coursepied', libelle: '#Course à pied', motifs: ['course a pied', 'semi-marathon', 'marathon(?![a-z0-9])', 'trail '], parents: ['course', 'sport'] },
+  { id: 'coursehippique', libelle: '#Course hippique', motifs: ['courses? hippiques?', 'jockey', 'hippodrome', 'trot attele'], parents: ['course', 'sport', 'cheval', 'animaux', 'nature'] },
+  { id: 'coursenautique', libelle: '#Course nautique', motifs: ['course nautique', 'regate', "america's cup", 'vendee globe', 'route du rhum'], parents: ['course', 'sport', 'bateaux', 'vehicule'] },
+  { id: 'athletisme', libelle: '#Athlétisme', motifs: ['athletisme'], parents: ['sport', 'course'] },
+  { id: 'baseball', libelle: '#Baseball', motifs: ['baseball'], parents: ['sport'] },
+  { id: 'volleyball', libelle: '#Volley-ball', motifs: ['volley'], parents: ['sport'] },
+  { id: 'handball', libelle: '#Handball', motifs: ['handball'], parents: ['sport'] },
+  { id: 'equitation', libelle: '#Équitation', motifs: ['equitation', 'concours hippique'], parents: ['sport', 'cheval', 'animaux', 'nature'] },
+  // Guerre et histoire
+  { id: 'guerrefroide', libelle: '#Guerre froide', motifs: ['guerre froide'], parents: ['guerre', 'histoire'] },
+  { id: 'guerrevietnam', libelle: '#Guerre du Vietnam', motifs: ['guerre du vietnam'], parents: ['guerre', 'histoire'] },
+  { id: 'guerrecivile', libelle: '#Guerre civile', motifs: ['guerre civile'], parents: ['guerre', 'histoire'] },
+  { id: 'croisades', libelle: '#Croisades', motifs: ['croisades?(?![a-z0-9])'], parents: ['guerre', 'histoire', 'religion'] },
+  { id: 'napoleon', libelle: '#Napoléon', motifs: ['napoleon', 'premier empire'], parents: ['histoire', 'guerre'] },
+  { id: 'revolutionfr', libelle: '#Révolution française', motifs: ['revolution francaise'], parents: ['histoire', 'politique'] },
+  // Musique
+  { id: 'punk', libelle: '#Punk', motifs: ['punk'], parents: ['rock', 'musique'] },
+  { id: 'blues', libelle: '#Blues', motifs: ['blues(?![a-z0-9])'], parents: ['musique'] },
+  { id: 'reggae', libelle: '#Reggae', motifs: ['reggae'], parents: ['musique'] },
+  { id: 'folk', libelle: '#Folk', motifs: ['folk(?![a-z0-9])'], parents: ['musique'] },
+  { id: 'countrymusique', libelle: '#Country', motifs: ['musique country', 'country (?:music|rock)'], parents: ['musique'] },
+  // Sciences
+  { id: 'chimie', libelle: '#Chimie', motifs: ['chimi'], parents: ['sciences'] },
+  { id: 'mathematiques', libelle: '#Mathématiques', motifs: ['mathemati'], parents: ['sciences'] },
+  { id: 'biologie', libelle: '#Biologie', motifs: ['biolog'], parents: ['sciences'] },
+  { id: 'geologie', libelle: '#Géologie', motifs: ['geolog'], parents: ['sciences', 'geographie'] },
+  { id: 'psychologie', libelle: '#Psychologie', motifs: ['psycholog'], parents: ['sciences', 'sante'] },
+  // Religion
+  { id: 'christianisme', libelle: '#Christianisme', motifs: ['christian', 'chretien'], parents: ['religion'] },
+  { id: 'islam', libelle: '#Islam', motifs: ['islam', 'musulman', 'coran'], parents: ['religion'] },
+  { id: 'bouddhisme', libelle: '#Bouddhisme', motifs: ['boudd'], parents: ['religion'] },
+  { id: 'judaisme', libelle: '#Judaïsme', motifs: ['judaisme', 'rabbin', 'synagogue'], parents: ['religion'] },
+  // Arts, cinéma, littérature, jeux
+  { id: 'peinture', libelle: '#Peinture', motifs: ['peintre', 'peinture'], parents: ['arts'] },
+  { id: 'photographie', libelle: '#Photographie', motifs: ['photograph'], parents: ['arts'] },
+  { id: 'sculpture', libelle: '#Sculpture', motifs: ['sculpt'], parents: ['arts'] },
+  { id: 'animation', libelle: '#Animation', motifs: ["film d'animation", 'dessin anime', "serie d'animation"], parents: ['cinema'] },
+  { id: 'poesie', libelle: '#Poésie', motifs: ['poete', 'poetesse', 'poesie', 'poeme'], parents: ['litterature'] },
+  { id: 'theatre', libelle: '#Théâtre', motifs: ['theatre', 'dramaturge'], parents: ['litterature', 'arts'] },
+  { id: 'echecs', libelle: '#Échecs', motifs: ['echecs'], parents: ['jeux'] },
+  { id: 'poker', libelle: '#Poker', motifs: ['poker'], parents: ['jeux'] },
+  // Nature, gastronomie, transports, technologie
+  { id: 'oiseau', libelle: '#Oiseau', motifs: ['oiseau', 'passereau'], parents: ['animaux', 'nature'] },
+  { id: 'poisson', libelle: '#Poisson', motifs: ['poissons?(?![a-z0-9])'], parents: ['animaux', 'nature'] },
+  { id: 'legume', libelle: '#Légume', motifs: ['legumes?(?![a-z0-9])'], parents: ['gastronomie'] },
+  { id: 'epice', libelle: '#Épice', motifs: ['epices?(?![a-z0-9])'], parents: ['gastronomie'] },
+  { id: 'charcuterie', libelle: '#Charcuterie', motifs: ['charcuterie'], parents: ['gastronomie'] },
+  { id: 'helicoptere', libelle: '#Hélicoptère', motifs: ['helicoptere'], parents: ['avion', 'vehicule'] },
+  { id: 'ia', libelle: '#Intelligence artificielle', motifs: ['intelligence artificielle', 'apprentissage automatique'], parents: ['informatique', 'technologie'] },
 ];
 
 export const LIBELLES_THEMES: Record<string, string> = {

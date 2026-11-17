@@ -41,6 +41,7 @@ export const ONGLETS = [
   { id: 'synchro', nom: 'Synchro' },
   { id: 'lots', nom: 'Lots' },
   { id: 'collection', nom: 'Collection' },
+  { id: 'themes', nom: 'Thèmes' },
   { id: 'reglages', nom: 'Réglages' },
 ] as const;
 

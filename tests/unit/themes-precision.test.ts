@@ -63,7 +63,7 @@ describe('thème le plus précis', () => {
     expect(ids(CAS['novelists']!)).toEqual(['metalcore']);
     expect(themesDeTexte('groupe de metalcore')).toEqual(expect.arrayContaining(['metalcore', 'metal', 'musique']));
   });
-  it('Morcilla : Gastronomie', () => expect(ids(CAS['morcilla']!)).toEqual(['gastronomie']));
+  it('Morcilla : Gastronomie', () => expect(ids(CAS['morcilla']!)).toEqual(['charcuterie']));
   it('Tesla Semi : Camion seulement (un camion tracteur n’est pas un tracteur)', () => expect(ids(CAS['tesla']!)).toEqual(['camion']));
   it('Hydravion : Avion', () => expect(ids(CAS['hydravion']!)).toEqual(['avion']));
   it('Longueur de Planck : Physique (parent Sciences)', () => {
@@ -132,13 +132,13 @@ describe('familles de descriptions courtes', () => {
     ['district de l’État indien du Gujarat', 'District de Devbhoomi Dwarka', 'geographie'],
     ['comté de l’Indiana, aux USA', 'Comté de Floyd (Indiana)', 'geographie'],
     ['prélat catholique († 1361)', 'Pierre Ier de Cros', 'religion'],
-    ['joueur américain de baseball', 'Jarrett Parker', 'sport'],
-    ['handballeuse norvégienne', 'Unni Birkrem', 'sport'],
+    ['joueur américain de baseball', 'Jarrett Parker', 'baseball'],
+    ['handballeuse norvégienne', 'Unni Birkrem', 'handball'],
     ['entomologiste allemand (1724-1795)', 'Johann Siegfried Hufnagel', 'sciences'],
     ['ligne de chemin de fer finlandaise', 'Ligne de Raisio à Naantali', 'train'],
     ['aéroport malaisien', 'Aéroport de Bario', 'avion'],
     ['mois de 1849', 'Janvier 1849', 'histoire'],
-    ['peinture de Mary Cassatt', 'La Toilette de l’enfant', 'arts'],
+    ['peinture de Mary Cassatt', 'La Toilette de l’enfant', 'peinture'],
   ];
   it.each(CAS_DESCRIPTION)('« %s » donne le thème %s', (description, titre, attendu) => {
     expect(themesPrincipaux({ titre, description })).toEqual([attendu]);

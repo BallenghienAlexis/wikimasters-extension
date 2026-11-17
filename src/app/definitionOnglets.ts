@@ -1,10 +1,11 @@
-/** Les cinq onglets de la page de gestion, dans l’ordre d’affichage (D-02, D-12). Le fragment d’URL est l’identifiant. */
+/** Les six onglets de la page de gestion, dans l’ordre d’affichage (D-02, D-12). Le fragment d’URL est l’identifiant. */
 
 export const ONGLETS = [
   { id: 'tableau-de-bord', nom: 'Tableau de bord' },
   { id: 'synchro', nom: 'Synchro' },
   { id: 'lots', nom: 'Lots' },
   { id: 'collection', nom: 'Collection' },
+  { id: 'themes', nom: 'Thèmes' },
   { id: 'reglages', nom: 'Réglages' },
 ] as const;
 

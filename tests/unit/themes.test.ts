@@ -149,7 +149,7 @@ const NOUVEAUX: Record<string, { libelle: string; parents: string[]; cartes: Arr
   basketball: { libelle: '#Basketball', parents: ['sport'], cartes: [['Dunk', 'basketball américain'], ['Meneur', 'basketteur']] },
   ski: { libelle: '#Ski', parents: ['sport'], cartes: [['Slalom', 'épreuve de ski'], ['Skieuse', 'championne alpine']] },
   golf: { libelle: '#Golf', parents: ['sport'], cartes: [['Green', 'terrain de golf'], ['Golfeur', 'joueur']] },
-  natation: { libelle: '#Natation', parents: ['sport'], cartes: [['Crawl', 'nage de natation'], ['Nageuse', 'championne']] },
+  natation: { libelle: '#Natation', parents: ['sport', 'course'], cartes: [['Crawl', 'nage de natation'], ['Nageuse', 'championne']] },
   egypteantique: { libelle: '#Égypte antique', parents: ['histoire'], cartes: [['Toutankhamon', 'pharaon'], ['Pyramide', 'monument de l’Égypte antique']] },
   romeantique: { libelle: '#Rome antique', parents: ['histoire'], cartes: [['Jules César', 'Rome antique'], ['Légionnaire', 'légion romaine']] },
   greceantique: { libelle: '#Grèce antique', parents: ['histoire'], cartes: [['Athènes', 'cité de la Grèce antique'], ['Sparte', 'cité grecque']] },
@@ -265,7 +265,7 @@ describe('taxonomie précise (SC-001 à SC-003)', () => {
     expect(IDS_THEMES[IDS_THEMES.length - 1]).toBe('autres');
     const libelles = IDS_THEMES.slice(0, -1).map((id) => LIBELLES_THEMES[id] ?? id);
     expect(libelles).toEqual([...libelles].sort((a, b) => a.localeCompare(b, 'fr')));
-    expect(IDS_THEMES).toHaveLength(59 + 61 + 12 + 1 + 1);
+    expect(IDS_THEMES).toHaveLength(59 + 61 + 12 + 50 + 1 + 1);
   });
 
   it('fige les identifiants et libellés existants (SC-002)', () => {
