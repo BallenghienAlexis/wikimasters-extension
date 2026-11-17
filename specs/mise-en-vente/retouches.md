@@ -13,3 +13,6 @@
 - (fins d’enchère) `src/lib/ventes.ts` (`lireTerminee`) : `card_id` de l’historique n’est pas relevé sur le site ; sans lui la non vendue n’est pas retentée en priorité (la règle habituelle la reprend le plus souvent). Relever une réponse `history` réelle.
 - (fins d’enchère) `src/app/OngletMiseEnVente.tsx` : afficher l’issue (`issue`) de chaque ligne du journal des lancements.
 - (#187) `src/content/suiviVentes.ts` : la pause d’un envoi de la relance (401/429) n’est pas transmise à `arretJusqua` (seule la lecture le fait) ; à décider avec la clé de pause du site dédiée.
+- (fins d’enchère) `src/content/suiviVentes.ts` (`relancer`) : si l’onglet se ferme entre un envoi réussi et `clore`, la fin est retraitée et une mise en vente de trop est possible (bornée par les places et le 409) ; retirer la fin avant l’envoi et la remettre sur `stop`/`bloque`.
+- (fins d’enchère) Une enchère annulée (`cancelled`) libère une place reprise tout de suite, y compris la carte annulée : question posée à Alexis (écarter un temps l’exemplaire annulé ?).
+- (fins d’enchère) Tests unitaires de module pour `fileDesFins` (file plafonnée à 50, `sansVerdict` expiré), « Aucune carte éligible » affichée sans `prix: 0`.

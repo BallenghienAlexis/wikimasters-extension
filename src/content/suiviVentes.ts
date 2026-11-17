@@ -255,7 +255,7 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     if (verdictEnAttente(suivi, deps.horloge.now())) return false;
     const parId = new Map(suivi.terminees.map((t) => [t.id, t]));
     const file = new Set(suivi.aTraiter ?? []);
-    const fins = [...file].map((id) => parId.get(id)).filter((t): t is NonNullable<typeof t> => t !== undefined).sort((a, b) => a.finLe - b.finLe);
+    const fins = [...file].map((id) => parId.get(id)).filter((t): t is NonNullable<typeof t> => t !== undefined).sort((a, b) => Number(issueDe(b) === 'non-vendue' && b.idExemplaire !== undefined) - Number(issueDe(a) === 'non-vendue' && a.idExemplaire !== undefined) || a.finLe - b.finLe);
     let lancees = 0;
     const clore = async (id: string): Promise<void> => {
       file.delete(id);
