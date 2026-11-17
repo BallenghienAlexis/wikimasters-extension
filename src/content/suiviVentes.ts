@@ -1,4 +1,8 @@
 // Suivi des mises en vente et relance automatique, côté content script (Alexis, 2026-11-17).
+// SYNCHRO AUTONOME (Alexis, 2026-11-17) : le suivi a son propre minuteur, son propre état (`etatSuiviVentes`), son propre
+// bail (`bailSuiviVentes`), son interrupteur et son bouton « Forcer ». Il n’attend jamais la synchro globale (ni son bail,
+// ni ses 30 min, ni ses pauses) et ne la bloque pas. Seul point commun : le verrou de requête (une seule requête en vol
+// vers le site, 0,2 s plus gigue entre deux débuts), tenu le temps d’une requête.
 // Lecture : un `GET` vers le listing du marché déjà autorisé (`CONFIG_AFFLUENCE.routeMarche`, même origine, cookies du
 // navigateur, aucun en-tête, aucun jeton), toutes les 5 min puis toutes les 10 s dans la dernière minute d’une enchère,
 // seulement tant qu’un onglet WikiMasters est visible. Aucun arrêt automatique de la lecture : après un échec elle attend
@@ -8,11 +12,12 @@
 // N’appelle jamais `fetch` lui-même : le transport de lecture et l’émetteur d’écriture sont injectés.
 import { CAUSE_VERIFICATION_HUMAINE, estLimiteEncheres, type Action, type ResultatAction } from '../lib/actions';
 import type { Collection } from '../lib/collection';
-import { INTERVALLE_MS, type Horloge } from '../lib/file';
+import type { Horloge } from '../lib/file';
 import { routeMarcheValide } from '../lib/affluence';
-import { DUREE_BAIL_MS, etatInitial, type Bail, type EtatOrdonnanceur, type ReponseApi } from '../lib/ordonnanceur';
+import { DUREE_BAIL_MS, PAUSE_APRES_ARRET_MS, etatInitial, type Bail, type EtatOrdonnanceur, type ReponseApi } from '../lib/ordonnanceur';
+import type { AvecVerrouRequete } from '../lib/verrouRequete';
 import { choisirProchaineEnchere } from '../lib/relanceVentes';
-import type { StatutRelanceVentes } from '../lib/stockage';
+import { ETAT_SUIVI_INITIAL, type EtatSuiviVentes, type StatutRelanceVentes } from '../lib/stockage';
 import type { Preferences } from '../lib/tri';
 import {
   DELAI_NORMAL_MS,
@@ -48,8 +53,15 @@ export interface DependancesSuiviVentes {
   /** Émetteur d’écriture des lots (contrat `enchere`). */
   emettre: (ordre: Action) => Promise<ResultatAction>;
   visible: () => boolean;
-  /** Synchronisation automatique activée : le suivi (lecture du marché) n’a lieu que si elle l’est (AGENTS.md). */
+  /** Interrupteur propre du suivi (activé par défaut) : indépendant de la synchronisation automatique. */
   actif: () => Promise<boolean>;
+  /** Verrou de requête partagé avec la synchro globale : une seule requête en vol, 0,2 s plus gigue entre deux. */
+  verrou: AvecVerrouRequete;
+  /** État propre du suivi (santé : dernier passage, attente) affiché dans l’onglet. */
+  chargerEtatSuivi: () => Promise<EtatSuiviVentes | null>;
+  enregistrerEtatSuivi: (e: EtatSuiviVentes) => Promise<void>;
+  /** Un lot d’écriture est en cours : la relance (écriture) lui laisse la place ; la lecture n’en dépend pas. */
+  lotEnCours: () => Promise<boolean>;
   route: string | null;
   relanceActive: () => Promise<boolean>;
   chargerSuivi: () => Promise<SuiviVentes>;
@@ -62,19 +74,20 @@ export interface DependancesSuiviVentes {
   ajouterLancement: (l: LancementVente) => Promise<void>;
   chargerEcartes: () => Promise<Record<string, number>>;
   enregistrerEcartes: (e: Record<string, number>) => Promise<void>;
-  /** Dernière synchro et dernier relevé du marché : le suivi attend que la synchro (due ou en pause) ait fait les siens. */
-  /** Fin de la pause de l’exécution des lots (401, 429), `null` sans pause. */
+  /** Fin de la pause de l’exécution des lots (401, 429), `null` sans pause : ne concerne que la relance (écriture). */
   pauseLots: () => Promise<number | null>;
-  derniereSynchro: () => Promise<number | null>;
-  derniereReleve: () => Promise<number | null>;
+  /** État partagé de la synchro : le suivi n’y écrit que la pause de 30 min demandée par le site (401, 429). */
   chargerEtat: () => Promise<EtatOrdonnanceur | null>;
   enregistrerEtat: (e: EtatOrdonnanceur) => Promise<void>;
+  /** Bail propre du suivi (un seul passage à la fois entre onglets), distinct de celui de la synchro globale. */
   bail: Bail;
 }
 
 export interface SuiviVentesAuto {
-  /** Un cycle : lit si l’échéance est là, relance si une place est libre ; renvoie le délai avant le suivant (ms). */
-  cycle: () => Promise<number>;
+  /** Un cycle : lit si l’échéance est là, relance si une place est libre ; renvoie le délai avant le suivant (ms). `forcer` : action explicite du joueur. */
+  cycle: (forcer?: boolean) => Promise<number>;
+  /** Bouton « Forcer » : un passage tout de suite, sans attendre l’échéance ni l’attente en cours (une fois par minute au plus). */
+  forcer: () => Promise<void>;
   /** Réponse du listing lue par la synchro (même requête) : met le suivi à jour sans requête de plus. */
   integrer: (json: unknown) => Promise<void>;
 }
@@ -93,7 +106,6 @@ const libelleLecture = (r: ReponseApi): string => {
 };
 
 export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto {
-  let echecsLecture = 0;
   let echecsEcriture = 0;
   /** Attente en mémoire de la relance (échec d’envoi, 401, 429) : pas de requête d’écriture avant cette date. */
   let attenteEcritureJusqua = 0;
@@ -103,17 +115,14 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
   let enCours = false;
 
   const statut = async (s: Omit<StatutRelanceVentes, 'maj' | 'echecs'> & { echecs?: number }): Promise<void> => {
-    await deps.enregistrerStatut({ ...s, echecs: s.echecs ?? echecsLecture, maj: deps.horloge.now() }).catch(() => undefined);
+    await deps.enregistrerStatut({ ...s, echecs: s.echecs ?? 0, maj: deps.horloge.now() }).catch(() => undefined);
   };
 
-  /** Espace d’au moins 0,2 s avec la requête précédente de toute l’extension et la note dans l’état partagé. */
-  async function cadencer(): Promise<void> {
-    const etat = (await deps.chargerEtat()) ?? etatInitial();
-    const derniere = etat.requetes.reduce((m, t) => Math.max(m, t), 0);
-    await deps.horloge.attendreJusqua(Math.max(deps.horloge.now(), derniere + INTERVALLE_MS + deps.gigue()));
-    const apres = (await deps.chargerEtat()) ?? etatInitial();
-    await deps.enregistrerEtat({ ...apres, requetes: [...apres.requetes, deps.horloge.now()].slice(-20) }).catch(() => undefined);
-  }
+  const ecrireEtat = async (base: EtatSuiviVentes, partie: Partial<EtatSuiviVentes>): Promise<EtatSuiviVentes> => {
+    const suivant = { ...base, ...partie };
+    await deps.enregistrerEtatSuivi(suivant).catch(() => undefined);
+    return suivant;
+  };
 
   /** Mise en vente d’une carte si une place est libre. Renvoie vrai quand une enchère est partie. */
   async function relancer(suivi: SuiviVentes): Promise<boolean> {
@@ -121,13 +130,14 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     // L’attente d’écriture survit à un rechargement de l’onglet : elle est aussi lue dans le statut enregistré.
     const stocke = await deps.chargerStatut();
     const jusquaStocke = stocke?.etat === 'pause' && stocke.jusqua !== null ? stocke.jusqua : 0;
-    const etatSynchro = await deps.chargerEtat();
     const pauseLots = (await deps.pauseLots().catch(() => null)) ?? 0;
-    const pausesAutres = Math.max(etatSynchro?.arretJusqua ?? 0, pauseLots);
-    if (deps.horloge.now() < Math.max(attenteEcritureJusqua, jusquaStocke, pausesAutres) || suivi.max === null) return false;
+    // Les écritures respectent aussi la pause demandée par le site (401, 403, 429 de la synchro ou du suivi) : un « Forcer » ou
+    // une lecture réussie n’autorise jamais un envoi pendant cette pause.
+    const pauseSite = (await deps.chargerEtat().catch(() => null))?.arretJusqua ?? 0;
+    if (deps.horloge.now() < Math.max(attenteEcritureJusqua, jusquaStocke, pauseLots, pauseSite) || suivi.max === null) return false;
     const maintenant = deps.horloge.now();
-    const tenu = await deps.bail.lire();
-    if (tenu !== null && tenu > maintenant) return false;
+    // Un lot d’écriture en cours garde la main sur les enchères (le 409 reste le garde-fou) ; la synchro globale, elle, ne gêne pas.
+    if (await deps.lotEnCours().catch(() => false)) return false;
     const [collection, preferences, ecartes] = await Promise.all([deps.chargerCollection(), deps.chargerPreferences(), deps.chargerEcartes()]);
     const ecartesActifs = Object.entries(ecartes).filter(([cle, t]) => !cle.startsWith('carte:') && !cle.startsWith('vu:') && !cle.startsWith('attend:') && t > maintenant).map(([cle]) => cle);
     const titresRetires = Object.keys(ecartes).filter((c) => c.startsWith('carte:')).map((c) => c.slice('carte:'.length));
@@ -151,19 +161,12 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       echecsEcriture = stocke.carte.essais;
       exemplaireEnEchec = choix.action.idExemplaire;
     }
-    // Bail pris puis relu : si un autre process l’a pris entre-temps, la relance renonce.
-    const echeanceBail = maintenant + DUREE_BAIL_MS;
-    await deps.bail.ecrire(echeanceBail);
-    if ((await deps.bail.lire()) !== echeanceBail) return false;
+    // Le bail propre du suivi est déjà tenu par le cycle ; le verrou de requête garantit une seule requête en vol.
     let resultat: ResultatAction;
     try {
-      await cadencer();
-      resultat = await deps.emettre(choix.action);
+      resultat = await deps.verrou(() => deps.emettre(choix.action));
     } catch {
       resultat = { classe: 'inconnu', codeHttp: null, cause: 'erreur d’émission' };
-    } finally {
-      // Le bail n’est libéré que s’il est encore le nôtre.
-      if ((await deps.bail.lire().catch(() => null)) === echeanceBail) await deps.bail.ecrire(null).catch(() => undefined);
     }
     const lancement = (resultat: 'reussie' | 'echec', cause: string | null): LancementVente => ({ le: deps.horloge.now(), source: 'auto', titre: choix.titre, prix: choix.action.prix, resultat, cause });
 
@@ -184,6 +187,9 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     };
     if (resultat.codeHttp === 401 || resultat.codeHttp === 429) {
       await pause(PAUSE_ECRITURE_MS, resultat.codeHttp === 401 ? 'Session du site expirée (401) : relance en pause 30 min' : 'Le site demande de ralentir (429) : relance en pause 30 min');
+      // 401 et 429 sont un signal du site entier : la lecture du suivi respecte la même pause de 30 min.
+      const courant = (await deps.chargerEtatSuivi().catch(() => null)) ?? ETAT_SUIVI_INITIAL;
+      await ecrireEtat(courant, { etat: 'pause', message: resultat.codeHttp === 401 ? 'Session du site expirée (401) : pause de 30 min' : 'Le site demande de ralentir (429) : pause de 30 min', jusqua: deps.horloge.now() + PAUSE_ECRITURE_MS });
       return false;
     }
     if (resultat.codeHttp === 409 || estLimiteEncheres(diagnostic)) {
@@ -218,73 +224,100 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     return false;
   }
 
-  async function cycle(): Promise<number> {
+  async function cycle(forcer = false): Promise<number> {
     const route = deps.route;
-    if (!routeMarcheValide(route) || !deps.visible() || enCours) return PAS_ATTENTE_MS * 6;
-    if (!(await deps.actif().catch(() => false))) return DELAI_NORMAL_MS;
+    if (!routeMarcheValide(route) || (!forcer && !deps.visible()) || enCours) return PAS_ATTENTE_MS * 6;
+    const base0 = (await deps.chargerEtatSuivi().catch(() => null)) ?? ETAT_SUIVI_INITIAL;
+    if (!(await deps.actif().catch(() => false))) {
+      if (base0.etat !== 'inactif') await ecrireEtat(base0, { etat: 'inactif', message: 'Suivi coupé par le joueur', jusqua: null });
+      return DELAI_NORMAL_MS;
+    }
     enCours = true;
+    // Bail propre du suivi, relu après écriture : un autre onglet qui suit déjà fait renoncer celui-ci.
+    let echeanceBail: number | null = null;
     try {
       const maintenant = deps.horloge.now();
-      // Tant que la synchro est due (ou son relevé du marché), elle passe d’abord : aucune requête de suivi avant elle.
-      const [derniere, releve, etatSynchro] = await Promise.all([deps.derniereSynchro(), deps.derniereReleve(), deps.chargerEtat()]);
-      const fraiche = (t: number | null): boolean => t !== null && maintenant - t <= 30 * 60_000;
-      if (!fraiche(derniere) || !fraiche(releve)) return PAS_ATTENTE_MS;
-      // Une synchro ou un lot tient le bail : une seule requête en vol, la lecture attend.
-      const bail = await deps.bail.lire();
-      if (bail !== null && bail > maintenant) return PAS_ATTENTE_MS;
-      // Pause du site (401, 403, 429 de la synchro) : aucune lecture de suivi non plus.
-      if (etatSynchro?.arretJusqua != null && maintenant < etatSynchro.arretJusqua) return Math.min(etatSynchro.arretJusqua - maintenant, 60_000);
+      const tenu = await deps.bail.lire();
+      if (tenu !== null && tenu > maintenant) {
+        if (forcer) await ecrireEtat(base0, { message: 'Forcer : un passage du suivi est déjà en cours' });
+        return PAS_ATTENTE_MS;
+      }
+      echeanceBail = maintenant + DUREE_BAIL_MS;
+      await deps.bail.ecrire(echeanceBail);
+      if ((await deps.bail.lire()) !== echeanceBail) {
+        echeanceBail = null;
+        return PAS_ATTENTE_MS;
+      }
+      let base = (await deps.chargerEtatSuivi().catch(() => null)) ?? ETAT_SUIVI_INITIAL;
+      // Un lot d’écriture (jusqu’à 3 requêtes en vol, hors verrou) garde la main : la lecture attend sa fin, pas celle de la synchro globale.
+      if (await deps.lotEnCours().catch(() => false)) {
+        if (forcer) await ecrireEtat(base, { message: 'Forcer : un lot d’écriture est en cours, nouvel essai à sa fin' });
+        return PAS_ATTENTE_MS;
+      }
+      if (base.etat === 'inactif') base = await ecrireEtat(base, { etat: 'ok', message: 'Suivi réactivé', jusqua: null });
+      if (forcer) {
+        // Une demande par minute au plus, commune aux onglets ; le bail et le verrou de requête restent respectés.
+        if (base.forceLe !== null && maintenant - base.forceLe < 60_000) {
+          await ecrireEtat(base, { message: 'Forcer : déjà demandé il y a moins d’une minute' });
+          return PAS_ATTENTE_MS;
+        }
+        base = await ecrireEtat(base, { forceLe: maintenant });
+      } else if ((base.etat === 'attente' || base.etat === 'pause') && base.jusqua !== null && maintenant < base.jusqua) {
+        // Attente enregistrée (échec de lecture, pause 401/429 de 30 min) : valable aussi après un rechargement ou dans un autre onglet.
+        return base.jusqua - maintenant;
+      }
       const stocke = await deps.chargerSuivi();
-      const precedent = await deps.chargerStatut();
-      // Un autre onglet a déjà lu, ou une attente est en cours : on n’ajoute pas de requête.
-      // Attente enregistrée (échec de lecture, pause 401/429 de 30 min) : valable aussi après un rechargement ou dans un autre onglet.
-      if (precedent?.etat === 'pause' && precedent.jusqua !== null && maintenant < precedent.jusqua) return precedent.jusqua - maintenant;
       const echeance = stocke.releveLe === 0 ? 0 : stocke.releveLe + delaiSuivant(stocke.actives, stocke.releveLe);
-      if (maintenant < echeance - 1_000) return echeance - maintenant;
+      if (!forcer && maintenant < echeance - 1_000) return echeance - maintenant;
 
-      await cadencer();
       let reponse: ReponseApi;
       try {
-        reponse = await deps.transport(route);
+        reponse = await deps.verrou(() => deps.transport(route));
       } catch {
         reponse = { statut: 0, json: null };
       }
+      const passage = deps.horloge.now();
       const lecture = reponse.statut === 200 ? analyserListeVentes(reponse.json) : null;
       if (lecture === null) {
-        echecsLecture += 1;
-        const etat0 = await deps.chargerStatut();
+        const echecs = base.echecs + 1;
         // 401 et 429 : règle de sécurité existante, pause de 30 min ; toute autre erreur : attente progressive sans arrêt.
         const longue = reponse.statut === 401 || reponse.statut === 429;
-        const attente = longue ? PAUSE_ECRITURE_MS : attenteApresEchec(echecsLecture);
+        const attente = longue ? PAUSE_ECRITURE_MS : attenteApresEchec(echecs);
         if (longue) {
           // Le site demande de ralentir : la synchro et les lots le voient aussi (même pause de 30 min que le relevé d’affluence).
           const etat = (await deps.chargerEtat()) ?? etatInitial();
-          await deps.enregistrerEtat({ ...etat, arretJusqua: deps.horloge.now() + PAUSE_ECRITURE_MS }).catch(() => undefined);
+          await deps.enregistrerEtat({ ...etat, arretJusqua: passage + PAUSE_APRES_ARRET_MS }).catch(() => undefined);
         }
         const message = reponse.statut === 0 ? 'Erreur réseau' : libelleLecture(reponse);
-        // Une pause d’écriture plus longue (401, 429) reste affichée : la lecture ne l’écrase jamais.
-        if (!(etat0?.etat === 'pause' && etat0.jusqua !== null && etat0.jusqua > deps.horloge.now() + attente)) {
-          await statut({ etat: 'pause', message: `${message} : ${longue ? 'pause de 30 min' : `nouvel essai dans ${Math.round(attente / 1000)} s`}`, jusqua: deps.horloge.now() + attente, carte: longue ? null : etat0?.carte ?? null });
-        }
+        await ecrireEtat(base, {
+          etat: longue ? 'pause' : 'attente',
+          message: `${message} : ${longue ? 'pause de 30 min' : `nouvel essai dans ${Math.round(attente / 1000)} s`}`,
+          jusqua: passage + attente,
+          echecs,
+          dernierPassage: passage,
+        });
         return attente;
       }
-      echecsLecture = 0;
-      const suivi = fusionnerSuivi(stocke, lecture, deps.horloge.now());
+      const suivi = fusionnerSuivi(stocke, lecture, passage);
       await deps.enregistrerSuivi(suivi);
-      const etat = await deps.chargerStatut();
-      // Le statut de la relance (attente, avertissement) n’est écrasé que s’il n’est plus d’actualité.
-      if (etat === null || etat.etat === 'lecture' || (etat.etat === 'pause' && deps.horloge.now() >= Math.max(attenteEcritureJusqua, etat.jusqua ?? 0) && etat.carte === null)) {
-        await statut({ etat: 'lecture', message: 'Suivi à jour', jusqua: null, echecs: 0, carte: null });
-      }
+      await ecrireEtat(base, { etat: 'ok', message: 'Suivi à jour', jusqua: null, echecs: 0, dernierPassage: passage, dernierSucces: passage });
       const lancee = await relancer(suivi);
       if (lancee) return DELAI_APRES_LANCEMENT_MS + deps.gigue();
       return Math.max(1_000, delaiSuivant(suivi.actives, deps.horloge.now())) + deps.gigue();
     } catch {
-      echecsLecture += 1;
-      return attenteApresEchec(echecsLecture);
+      const e = (await deps.chargerEtatSuivi().catch(() => null)) ?? ETAT_SUIVI_INITIAL;
+      const echecs = e.echecs + 1;
+      await ecrireEtat(e, { etat: 'attente', message: 'Erreur interne du suivi : nouvel essai bientôt', echecs, jusqua: deps.horloge.now() + attenteApresEchec(echecs), dernierPassage: deps.horloge.now() });
+      return attenteApresEchec(echecs);
     } finally {
+      // Le bail n’est libéré que s’il est encore le nôtre.
+      if (echeanceBail !== null && (await deps.bail.lire().catch(() => null)) === echeanceBail) await deps.bail.ecrire(null).catch(() => undefined);
       enCours = false;
     }
+  }
+
+  async function forcer(): Promise<void> {
+    await cycle(true);
   }
 
   async function integrer(json: unknown): Promise<void> {
@@ -293,7 +326,7 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     await deps.enregistrerSuivi(fusionnerSuivi(await deps.chargerSuivi(), lecture, deps.horloge.now()));
   }
 
-  return { cycle, integrer };
+  return { cycle, forcer, integrer };
 }
 
 export interface OptionsDemarrageSuivi {

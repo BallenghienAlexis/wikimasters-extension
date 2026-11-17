@@ -8,7 +8,7 @@ interface Props {
 
 /** Onglet Lots : aperçu du lot, lancement et journal (contenu actuel, déplacé tel quel). */
 const OngletLots: React.FC<Props> = ({ donnees }) => {
-  const { collection, registre, preferences, stockageSynchroLu, cacheIALu, preferencesLues, registreIllisible, executionIllisible, executionEnCours, relireStockageSynchro, ventes } = donnees;
+  const { collection, registre, preferences, stockageSynchroLu, cacheIALu, preferencesLues, registreIllisible, executionIllisible, executionEnCours, relireStockageSynchro, ventes, editer } = donnees;
   if (collection.cartes.length === 0) {
     return (
       <p className="mt-6 rounded border border-line bg-ink-2 p-6">
@@ -30,6 +30,7 @@ const OngletLots: React.FC<Props> = ({ donnees }) => {
         executionEnCours={executionEnCours}
         ventes={ventes}
         onReessayer={relireStockageSynchro}
+        onEdition={editer}
       />
     </div>
   );
