@@ -9,7 +9,7 @@ import type { Registre, TypeAction } from './actions'
 import { TYPES_ACTION } from './actions'
 import type { Collection } from './collection'
 import { construireLot, etiquettesDeCarte, type Config, type EtiquetteNonPosee } from './lot'
-import { DEFINITIONS_THEMES, LIBELLES_THEMES } from './themes'
+import { IDS_THEMES, LIBELLES_THEMES, parentsDe } from './themes'
 
 /** Secondes par écriture d’étiquette en moyenne : 0,2 s minimale plus un supplément de 0 à 0,1 s. */
 const SECONDES_PAR_REQUETE = 0.25
@@ -69,7 +69,8 @@ const genreDe = (nom: string): GenreEtiquette =>
 
 const ORDRE_GENRE: Record<GenreEtiquette, number> = { statut: 0, echange: 1, theme: 2 }
 
-const ANCETRES_PAR_LIBELLE = new Map(DEFINITIONS_THEMES.map((t) => [LIBELLES_THEMES[t.id] ?? t.id, t.parents?.length ?? 0]))
+// Calculé à chaque appel : les thèmes appris s’ajoutent au catalogue en mémoire.
+const ancetresParLibelle = (): Map<string, number> => new Map(IDS_THEMES.map((id) => [LIBELLES_THEMES[id] ?? id, parentsDe(id).length]))
 
 const TOUS_TYPES: ReadonlySet<TypeAction> = new Set(TYPES_ACTION)
 
@@ -102,10 +103,11 @@ export function regrouperEtiquettes(collection: Collection, registre: Registre, 
     nouvelle: !Object.prototype.hasOwnProperty.call(registre.etiquettes, nom),
     genre: genreDe(nom),
   }))
+  const ancetres = ancetresParLibelle()
   toutes.sort((a, b) => {
     if (a.genre !== b.genre) return ORDRE_GENRE[a.genre] - ORDRE_GENRE[b.genre]
     if (a.genre === 'theme') {
-      const d = (ANCETRES_PAR_LIBELLE.get(b.nom) ?? 0) - (ANCETRES_PAR_LIBELLE.get(a.nom) ?? 0)
+      const d = (ancetres.get(b.nom) ?? 0) - (ancetres.get(a.nom) ?? 0)
       if (d !== 0) return d
     }
     return a.nom.localeCompare(b.nom, 'fr')

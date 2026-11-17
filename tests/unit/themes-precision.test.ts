@@ -193,3 +193,18 @@ describe('faux positifs des familles de descriptions courtes', () => {
     SANS('Le Tour de France par deux enfants', '', ['cyclisme', 'sport']);
   });
 });
+
+describe('sous-thèmes de familles : faux positifs écartés (revue PR #185)', () => {
+  const direct = (texte: string): string[] => themesDeTexte(texte);
+  it('« échecs commerciaux », « théâtre d’opérations » et « poisson d’avril » ne donnent pas ces thèmes', () => {
+    expect(direct('Fiasco : échecs commerciaux du studio')).not.toContain('echecs');
+    expect(direct('Théâtre du Pacifique de la guerre')).not.toContain('theatre');
+    expect(direct('Le théâtre d’opérations européen')).not.toContain('theatre');
+    expect(direct('Poisson d’avril : tradition')).not.toContain('poisson');
+  });
+  it('les vrais cas restent reconnus', () => {
+    expect(direct('joueur d’échecs russe')).toContain('echecs');
+    expect(direct('pièce de théâtre en trois actes')).toContain('theatre');
+    expect(direct('le poisson rouge')).toContain('poisson');
+  });
+});

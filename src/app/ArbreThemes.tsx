@@ -115,10 +115,10 @@ const ArbreThemes: React.FC<Props> = ({ nom, selection, onChange, comptes, suppl
               <button
                 type="button"
                 className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded border border-line bg-ink-2 px-3 text-sm"
-                aria-label={`Retirer ${LIBELLES_THEMES[s] ?? supplementaires.find((x) => x.cle === s)?.libelle ?? s}`}
+                aria-label={`Retirer ${LIBELLES_THEMES[s] ?? supplementaires.find((x) => x.cle === s)?.libelle ?? (s.startsWith('appris-') ? 'Thème appris retiré' : s)}`}
                 onClick={() => onChange(selection.filter((x) => x !== s))}
               >
-                {LIBELLES_THEMES[s] ?? supplementaires.find((x) => x.cle === s)?.libelle ?? s} <span aria-hidden="true">×</span>
+                {LIBELLES_THEMES[s] ?? supplementaires.find((x) => x.cle === s)?.libelle ?? (s.startsWith('appris-') ? 'Thème appris retiré' : s)} <span aria-hidden="true">×</span>
               </button>
             </li>
           ))}

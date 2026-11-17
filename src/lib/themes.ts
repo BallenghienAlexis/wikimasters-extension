@@ -238,12 +238,12 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'sculpture', libelle: '#Sculpture', motifs: ['sculpt'], parents: ['arts'] },
   { id: 'animation', libelle: '#Animation', motifs: ["film d'animation", 'dessin anime', "serie d'animation"], parents: ['cinema'] },
   { id: 'poesie', libelle: '#Poésie', motifs: ['poete', 'poetesse', 'poesie', 'poeme'], parents: ['litterature'] },
-  { id: 'theatre', libelle: '#Théâtre', motifs: ['theatre', 'dramaturge'], parents: ['litterature', 'arts'] },
-  { id: 'echecs', libelle: '#Échecs', motifs: ['echecs'], parents: ['jeux'] },
+  { id: 'theatre', libelle: '#Théâtre', motifs: ["theatre(?! d'operations)(?! du pacifique)(?! des operations)", 'dramaturge'], parents: ['litterature', 'arts'] },
+  { id: 'echecs', libelle: '#Échecs', motifs: ["jeux? d'echecs", 'aux echecs', "joueu(?:r|se) d'echecs", "tournoi d'echecs", "championnat d'echecs", "grand maitre d'echecs"], parents: ['jeux'] },
   { id: 'poker', libelle: '#Poker', motifs: ['poker'], parents: ['jeux'] },
   // Nature, gastronomie, transports, technologie
   { id: 'oiseau', libelle: '#Oiseau', motifs: ['oiseau', 'passereau'], parents: ['animaux', 'nature'] },
-  { id: 'poisson', libelle: '#Poisson', motifs: ['poissons?(?![a-z0-9])'], parents: ['animaux', 'nature'] },
+  { id: 'poisson', libelle: '#Poisson', motifs: ["poissons?(?![a-z0-9])(?! d'avril)"], parents: ['animaux', 'nature'] },
   { id: 'legume', libelle: '#Légume', motifs: ['legumes?(?![a-z0-9])'], parents: ['gastronomie'] },
   { id: 'epice', libelle: '#Épice', motifs: ['epices?(?![a-z0-9])'], parents: ['gastronomie'] },
   { id: 'charcuterie', libelle: '#Charcuterie', motifs: ['charcuterie'], parents: ['gastronomie'] },
@@ -410,7 +410,7 @@ export function themesDeCarte(carte: CarteThemes): string[] {
  * sans parents ni « Autres »), pour que la ligne d’une carte corresponde à l’appli. `themesDeCarte`, qui ajoute les parents,
  * reste réservé aux filtres, aux amis et à « Mes thèmes ».
  */
-export function libellesThemesAffiches(carte: Pick<Carte, 'titre' | 'description'>): string[] {
+export function libellesThemesAffiches(carte: CarteThemes): string[] {
   return themesPrincipaux(carte).map((id) => LIBELLES_THEMES[id] ?? id);
 }
 
@@ -516,9 +516,23 @@ export function definirThemesAppris(themes: readonly ThemeAppris[]): void {
   IDS_THEMES.length = 0;
   IDS_THEMES.push(...[...sans, ...ids].sort(parLibelle), THEME_AUTRES);
   const m = new Map<string, string>();
+  const parId = new Map(themes.map((t) => [t.id, t] as const));
+  // Une fusion suivie jusqu’à un thème actif (A dans B, B dans C…) ; supprimé ou cyclique : la catégorie ne donne plus rien.
+  const cible = (t: ThemeAppris): string | undefined => {
+    let courant: ThemeAppris | undefined = t;
+    for (let i = 0; i < 6 && courant !== undefined; i++) {
+      if (courant.etat === 'actif') return courant.id;
+      if (courant.etat !== 'fusionne' || courant.fusionneVers === undefined) return undefined;
+      const vers: string = courant.fusionneVers;
+      const suivant: ThemeAppris | undefined = parId.get(vers);
+      if (suivant === undefined) return LIBELLES_THEMES[vers] !== undefined ? vers : undefined;
+      courant = suivant;
+    }
+    return undefined;
+  };
   for (const t of themes) {
-    if (t.etat === 'actif') m.set(t.categorie, t.id);
-    else if (t.etat === 'fusionne' && t.fusionneVers !== undefined && (LIBELLES_THEMES[t.fusionneVers] !== undefined) && t.fusionneVers !== t.id) m.set(t.categorie, t.fusionneVers);
+    const id = cible(t);
+    if (id !== undefined) m.set(t.categorie, id);
   }
   themeParCategorie = m;
   versionSurcouches++;

@@ -82,3 +82,28 @@ describe('noms réservés et validation', () => {
     expect(validerEtatAppris(brut)).toBeNull();
   });
 });
+
+describe('fusion en chaîne et cache', () => {
+  it('suit la chaîne de fusion jusqu’à un thème actif, et perd la catégorie si la fin est supprimée', () => {
+    const base = proposerThemes({ ...entrees(5, ['Spécialité artisanale']), ...Object.fromEntries(Array.from({ length: 5 }, (_, i) => [`Autre ${i}`, { categories: ['Conserve maison'], themes: ['gastronomie'] }])) }, etatApprisVide(), 1);
+    const [a, b] = base.themes;
+    expect(a && b).toBeTruthy();
+    definirCategoriesWikipedia(new Map([['Zed', [a!.categorie]]]));
+    const chaine = fusionner(base, a!.id, b!.id, 2);
+    definirThemesAppris(chaine.themes);
+    expect(themesPrincipaux({ titre: 'Zed', description: '' })).toEqual([b!.id]);
+    definirThemesAppris(supprimer(chaine, b!.id, 3).themes);
+    expect(themesDeCarte({ titre: 'Zed', description: '' })).toEqual(['autres']);
+  });
+  it('les catégories du cache sont validées, relues si absentes et indexées normalisées', async () => {
+    const { validerCache, categoriesParTitre, titresAVerifier, ajouterEntree, cacheVide } = await import('../../src/lib/wikipedia');
+    const cache = ajouterEntree(cacheVide(), 'Carte', ['rhum'], 1000, true, { fortes: [], faibles: [], genre: 'autre' }, ['Spécialité artisanale', 'Article de qualité']);
+    expect(cache.entrees['Carte']?.categories).toEqual(['Spécialité artisanale']);
+    expect(validerCache(JSON.parse(JSON.stringify(cache)))?.entrees['Carte']?.categories).toEqual(['Spécialité artisanale']);
+    expect(categoriesParTitre(cache).get('Carte')).toEqual(['specialite artisanale']);
+    const ancienne = { version: 1 as const, entrees: { Carte: { ...cache.entrees['Carte']!, categories: undefined } } };
+    delete (ancienne.entrees.Carte as { categories?: string[] }).categories;
+    expect(titresAVerifier(['Carte'], ancienne, 1001)).toEqual(['Carte']);
+    expect(titresAVerifier(['Carte'], cache, 1001)).toEqual([]);
+  });
+});

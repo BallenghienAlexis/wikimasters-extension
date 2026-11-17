@@ -10,7 +10,6 @@ import ThemesAppris from './ThemesAppris';
 import type { DonneesPage } from './useDonneesPage';
 
 const CLASSE_CHAMP = 'min-h-11 rounded border border-line bg-ink px-3';
-const LIBELLES_EXTENSION = new Set(Object.values(LIBELLES_THEMES));
 const MOI = '__moi__';
 
 interface Props {
@@ -32,12 +31,16 @@ const OngletThemes: React.FC<Props> = ({ donnees }) => {
   }, [collection.cartes]);
   const aimesDesFavoris = useMemo(() => themesAimesDesFavoris(collection.cartes), [collection.cartes]);
   const supplementaires: ChoixSupplementaire[] = useMemo(
-    () =>
-      (etiquettesSite ?? [])
-        .filter((e) => !e.nom.startsWith('#À échanger ') && e.nom !== ETIQUETTE_A_CLASSER && !LIBELLES_EXTENSION.has(e.nom))
+    () => {
+      // Les libellés posés par l’extension (thèmes appris compris) ne sont pas des étiquettes du joueur.
+      const libellesExtension = new Set(Object.values(LIBELLES_THEMES));
+      return (etiquettesSite ?? [])
+        .filter((e) => !e.nom.startsWith('#À échanger ') && e.nom !== ETIQUETTE_A_CLASSER && !libellesExtension.has(e.nom))
         .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
-        .map((e) => ({ cle: cleEtiquetteSite(e.nom), libelle: e.nom })),
-    [etiquettesSite],
+        .map((e) => ({ cle: cleEtiquetteSite(e.nom), libelle: e.nom }));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `apprisEtat` change les libellés du catalogue lus ici.
+    [etiquettesSite, apprisEtat],
   );
   const ami = preferences.amis.find((a) => a.nom === profil);
   const courant = profil === MOI || !ami ? MOI : profil;
