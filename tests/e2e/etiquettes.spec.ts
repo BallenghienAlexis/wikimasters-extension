@@ -24,7 +24,7 @@ async function amorcer(page: Page, cartes: object[], preferences: object): Promi
     page.evaluate(
       async ([c, p]) => {
         // Le drapeau des amis initiaux évite la fusion de ceux de src/config/amis.ts (G2).
-        await chrome.storage.local.set({ collection: { version: 2, cartes: c }, preferences: p, amisInitiaux: 999 });
+        await chrome.storage.local.set({ collection: { version: 2, cartes: c }, preferences: { modeEtiquettes: 'poser', ...p }, amisInitiaux: 999 });
       },
       [cartes, preferences] as const,
     );

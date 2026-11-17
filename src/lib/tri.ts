@@ -10,12 +10,24 @@ export interface Ami {
   themes: string[];
 }
 
+/** Mode des étiquettes de thème sur le site (Alexis, 2026-11-17) : `poser` (règles normales), `suspendre` (aucune création ni pose, les retraits normaux restent proposés), `retirer-tout` (le lot ne propose que le retrait de toutes les étiquettes posées par l'extension). */
+export type ModeEtiquettes = 'poser' | 'suspendre' | 'retirer-tout';
+export const MODES_ETIQUETTES: readonly ModeEtiquettes[] = ['poser', 'suspendre', 'retirer-tout'];
+
 export interface Preferences {
   version: 2;
   mesThemes: string[];
   amis: Ami[];
   /** Plafond de défausse réglé par le joueur (1 à 20) ; absent : valeur par défaut de `config/prix.ts`. */
   plafondDefausse?: number;
+  /** Mode des étiquettes ; absent : `suspendre` (la pose reste coupée tant que le joueur ne la rétablit pas). */
+  modeEtiquettes?: ModeEtiquettes;
+}
+
+/** Mode effectif : la valeur réglée si elle est valide, sinon `suspendre`. */
+export function modeEtiquettes(preferences: Pick<Preferences, 'modeEtiquettes'>): ModeEtiquettes {
+  const m = preferences.modeEtiquettes;
+  return m !== undefined && MODES_ETIQUETTES.includes(m) ? m : 'suspendre';
 }
 
 /** Plafond de défausse effectif : la valeur réglée si elle est valide, sinon la valeur par défaut (5). */
@@ -73,12 +85,13 @@ const estListeTextes = (v: unknown): v is string[] => Array.isArray(v) && v.ever
 // Valide des préférences stockées ; retourne les valeurs par défaut si elles sont illisibles.
 export function lirePreferences(brut: unknown): Preferences {
   if (typeof brut !== 'object' || brut === null) return preferencesParDefaut();
-  const { version, mesThemes, amis, plafondDefausse: plafond } = brut as Partial<Preferences>;
+  const { version, mesThemes, amis, plafondDefausse: plafond, modeEtiquettes: mode } = brut as Partial<Preferences>;
   const amisValides =
     Array.isArray(amis) && amis.every((a) => typeof a === 'object' && a !== null && typeof a.nom === 'string' && estListeTextes(a.themes));
   if (version !== 2 || !estListeTextes(mesThemes) || !amisValides) return preferencesParDefaut();
   const base: Preferences = { version, mesThemes, amis };
-  return typeof plafond === 'number' && plafondDefausse({ plafondDefausse: plafond }) === plafond ? { ...base, plafondDefausse: plafond } : base;
+  const avecPlafond: Preferences = typeof plafond === 'number' && plafondDefausse({ plafondDefausse: plafond }) === plafond ? { ...base, plafondDefausse: plafond } : base;
+  return mode !== undefined && MODES_ETIQUETTES.includes(mode) ? { ...avecPlafond, modeEtiquettes: mode } : avecPlafond;
 }
 
 const cleAmi = (nom: string): string => normaliser(nom.trim());

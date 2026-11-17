@@ -67,8 +67,10 @@ export function reverifierAction(
       return estAGarder(carte, config.mesThemes) ? 'ok' : 'passee'
     }
     case 'creation-etiquette':
+      if ((config.modeEtiquettes ?? 'poser') !== 'poser') return 'passee'
       return exemplairesAttendus(carte, config).some((e) => e.etiquettes.includes(action.nomEtiquette)) ? 'ok' : 'passee'
     case 'pose-etiquette': {
+      if ((config.modeEtiquettes ?? 'poser') !== 'poser') return 'passee'
       const attendu = exemplairesAttendus(carte, config).find((e) => e.idExemplaire === action.idExemplaire)
       return attendu?.etiquettes.includes(action.nomEtiquette) ? 'ok' : 'passee'
     }
@@ -77,7 +79,8 @@ export function reverifierAction(
       // (Alexis, 2026-11-15) ; seule une étiquette encore attendue, ou un exemplaire inconnu, passe l’action.
       if (!carte.idsSite?.includes(action.idExemplaire)) return 'passee'
       const attendu = exemplairesAttendus(carte, config).find((e) => e.idExemplaire === action.idExemplaire)
-      if (attendu?.etiquettes.includes(action.nomEtiquette)) return 'passee'
+      // Retrait de toutes les étiquettes (Alexis, 2026-11-17) : seul le registre compte, même pour une étiquette encore attendue.
+      if (config.modeEtiquettes !== 'retirer-tout' && attendu?.etiquettes.includes(action.nomEtiquette)) return 'passee'
       const pose = registre.couples.some((c) => c.ex === action.idExemplaire && c.nom === action.nomEtiquette)
       return pose ? 'ok' : 'passee'
     }

@@ -25,7 +25,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   // Transports
   { id: 'vehicule', libelle: '#Véhicule', motifs: ['vehicule'] },
   { id: 'automobile', libelle: '#Automobile', motifs: ['automobile', 'constructeur auto', 'modele de voiture'], parents: ['vehicule'] },
-  { id: 'voiture', libelle: '#Voiture', motifs: ['voiture', 'berline', 'cabriolet', 'roadster', 'monospace'], parents: ['automobile', 'vehicule'] },
+  { id: 'voiture', libelle: '#Voiture', motifs: ["voitures?(?!s? (?:de |d')?(?:chemin de fer|train|trains|queue|tete|metro|tramway|voyageurs|bagages|restaurant|lit|salon))(?!s?-(?:lit|salon|bar|restaurant))", 'berline', 'cabriolet', 'roadster', 'monospace'], parents: ['automobile', 'vehicule'] },
   { id: 'moto', libelle: '#Moto', motifs: ['moto ', 'motos ', 'motocycl'], parents: ['vehicule'] },
   { id: 'camion', libelle: '#Camion', motifs: ['camion', 'poids lourd'], parents: ['vehicule'] },
   { id: 'bus', libelle: '#Bus', motifs: ['autobus', 'autocar', 'bus '], parents: ['vehicule'] },
@@ -49,7 +49,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'jazz', libelle: '#Jazz', motifs: ['jazz'], parents: ['musique'] },
   { id: 'techno', libelle: '#Techno', motifs: ['techno ', 'musique electronique'], parents: ['musique'] },
   { id: 'rap', libelle: '#Rap', motifs: ['rap ', 'rappeur', 'rappeuse', 'hip-hop', 'hip hop'], parents: ['musique'] },
-  { id: 'classique', libelle: '#Musique classique', motifs: ['opera', 'symphonie', 'musique classique', 'chef d\'orchestre'], parents: ['musique'] },
+  { id: 'classique', libelle: '#Musique classique', motifs: ['operas?(?![a-z0-9])', 'symphonie', 'musique classique', 'chef d\'orchestre'], parents: ['musique'] },
 
   // Histoire et politique
   { id: 'histoire', libelle: '#Histoire', motifs: ['histoire', 'histori', 'antique', 'medieval', 'prehistor', 'siecle', 'dynastie', 'monument', 'cite inca', 'av. j.-c', 'passe du', 'chronologie', 'mois de [0-9]{4}', 'evenements lies'] },
@@ -69,7 +69,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
 
   // Nature et cuisine
   { id: 'nature', libelle: '#Nature', motifs: ['espece', 'genre de', 'parc national', 'reserve naturelle', 'espace naturel', 'grottes?', 'ilots? '] },
-  { id: 'animaux', libelle: '#Animaux', motifs: ['animal', 'animaux', 'mammifere', 'oiseau', 'insecte', 'poisson', 'reptile', 'amphibien', 'felide', 'canide', 'strigide', 'octopode', 'dinosaure', 'araignee', 'papillon'], parents: ['nature'] },
+  { id: 'animaux', libelle: '#Animaux', motifs: ['(?<!humains et )(?<!humains et des )(?<!hommes et )(?<!hommes et des )(?<!personnes et )(?<!personnes et des )(?<!etres humains et des )(?<!hommes et les )(?<!humains et les )(?<!humains comme )(?<!hommes comme )(?<!comme les )animal', '(?<!humains et )(?<!humains et des )(?<!hommes et )(?<!hommes et des )(?<!personnes et )(?<!personnes et des )(?<!etres humains et des )(?<!hommes et les )(?<!humains et les )(?<!humains comme )(?<!hommes comme )(?<!comme les )animaux', 'mammifere', 'oiseau', 'insecte', 'poisson', 'reptile', 'amphibien', 'felide', 'canide', 'strigide', 'octopode', 'dinosaure', 'araignee', 'papillon'], parents: ['nature'] },
   { id: 'plantes', libelle: '#Plantes', motifs: ['plante', 'arbre', 'fleur', 'champignon', 'graminee', 'tribu d[eu] [a-z]+aceae', 'algues?'], parents: ['nature'] },
   { id: 'gastronomie', libelle: '#Gastronomie', motifs: ['agrume', 'fruit', 'legume', 'cereale', 'plat ', 'cuisine', 'culinaire', 'charcuterie', 'boisson', 'fromage', 'vin ', 'patisserie', 'epice', 'lait '] },
 
@@ -96,7 +96,7 @@ export const DEFINITIONS_THEMES: DefinitionTheme[] = [
   { id: 'hockey', libelle: '#Hockey', motifs: ['hockey'], parents: ['sport'] },
   { id: 'cyclisme', libelle: '#Cyclisme', motifs: ['cyclis', 'tour de france (?:cycliste|[0-9]{4})', 'tour d\'italie [0-9]{4}', 'tour d\'espagne [0-9]{4}'], parents: ['sport', 'course'] },
   { id: 'combat', libelle: '#Arts martiaux', motifs: ['arts martiaux', 'boxeur', 'boxeuse', 'catcheur', 'judoka', 'karate'], parents: ['sport'] },
-  { id: 'societe', libelle: '#Société', motifs: ['sociolog', "homme d'affaires", "femme d'affaires", 'entreprise', 'econom', 'droit', 'adulter', 'habitants', 'journaliste'] },
+  { id: 'societe', libelle: '#Société', motifs: ['sociolog', "homme d'affaires", "femme d'affaires", 'econom', 'droit', 'adulter', 'habitants', 'journaliste'] },
   { id: 'crime', libelle: '#Crime', motifs: ['tueur', 'criminel', 'cartel', 'assassin', 'torture', 'mafia', 'gang ', 'meurtres?(?![a-z0-9])', 'meurtrier ou meurtriere', 'condamnee? pour crime'], parents: ['societe'] },
 
   // Thèmes précis (feature theme-etiquettes). Une lookahead `(?![a-z0-9])` vise le mot entier.
@@ -408,7 +408,7 @@ export function themesDeCarte(carte: CarteThemes): string[] {
 /**
  * Libellés affichés dans la Collection : exactement les thèmes qui seront posés comme étiquettes (4 au plus, les mieux établis,
  * sans parents ni « Autres »), pour que la ligne d’une carte corresponde à l’appli. `themesDeCarte`, qui ajoute les parents,
- * reste réservé aux filtres, aux amis et à « Mes thèmes ».
+ * sert aux amis et à « Mes thèmes » ; le filtre de la Collection suit les étiquettes du site (`tagsCarte.ts`).
  */
 export function libellesThemesAffiches(carte: CarteThemes): string[] {
   return themesPrincipaux(carte).map((id) => LIBELLES_THEMES[id] ?? id);

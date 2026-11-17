@@ -5,7 +5,8 @@ import {
   plusCheres,
   themesFrequents,
 } from '../../src/lib/analyses'
-import { compterThemes, themesDeCarte } from '../../src/lib/themes'
+import { IDS_THEMES, themesDeCarte } from '../../src/lib/themes'
+import { compterParTheme } from '../../src/lib/tagsCarte'
 
 // Données fictives uniquement.
 const carte = (id: string, extra: Partial<Carte> = {}): Carte => ({
@@ -88,12 +89,12 @@ describe('themesFrequents', () => {
   ]
   const cartes = descriptions.map((d, i) => carte(`t${i}`, { titre: `Titre fictif ${i}`, description: d }))
 
-  it('SC-021 : 10 thèmes au plus, nombre décroissant, comptes identiques à themesDeCarte', () => {
+  it('SC-021 : 10 thèmes au plus, nombre décroissant, comptes identiques à compterParTheme (même source que le filtre)', () => {
     const r = themesFrequents(cartes)
     expect(r.length).toBeLessThanOrEqual(10)
     expect(r.length).toBeGreaterThan(0)
     for (let i = 1; i < r.length; i++) expect(r[i - 1]?.nombre).toBeGreaterThanOrEqual(r[i]?.nombre as number)
-    const attendu = compterThemes(cartes)
+    const attendu = compterParTheme(cartes, IDS_THEMES)
     for (const { theme, nombre } of r) expect(nombre).toBe(attendu[theme])
     // Un thème utilisé par une carte au moins ; jamais de thème à zéro.
     expect(r.every((t) => t.nombre > 0)).toBe(true)
