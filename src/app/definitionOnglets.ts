@@ -4,6 +4,7 @@ export const ONGLETS = [
   { id: 'tableau-de-bord', nom: 'Tableau de bord' },
   { id: 'synchro', nom: 'Synchro' },
   { id: 'lots', nom: 'Lots' },
+  { id: 'mise-en-vente', nom: 'Mise en vente' },
   { id: 'collection', nom: 'Collection' },
   { id: 'themes', nom: 'Thèmes' },
   { id: 'reglages', nom: 'Réglages' },

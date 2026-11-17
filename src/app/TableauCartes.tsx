@@ -1,12 +1,12 @@
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
-import type { Carte, EditionCarte } from '../lib/collection';
+import { estFavori, type Carte, type EditionCarte } from '../lib/collection';
 import { basculerTri, type SensTri, type ValeurTri } from '../lib/ordreTableau';
 import CarteLigne from './CarteLigne';
 import EnTeteTriable from './EnTeteTriable';
 import { courbeToken, dureeToken, useMouvement } from './useMouvement';
 import { useFlip } from './useFlip';
 
-export type CleTri = 'titre' | 'rarete' | 'quantite' | 'valeur';
+export type CleTri = 'favori' | 'titre' | 'rarete' | 'quantite' | 'valeur';
 export interface EtatTri {
   cle: CleTri | null;
   sens: SensTri;
@@ -14,6 +14,7 @@ export interface EtatTri {
 
 export const COLONNES: { cle: CleTri; libelle: string }[] = [
   { cle: 'titre', libelle: 'Titre' },
+  { cle: 'favori', libelle: 'Favori' },
   { cle: 'rarete', libelle: 'Rareté' },
   { cle: 'quantite', libelle: 'Quantité' },
   { cle: 'valeur', libelle: 'Valeur' },
@@ -22,6 +23,9 @@ export const COLONNES: { cle: CleTri; libelle: string }[] = [
 /** Valeur de tri d’une carte pour une colonne (une rareté vide ou une valeur inconnue passent en dernier). */
 export function valeurDeTri(carte: Carte, cle: CleTri): ValeurTri {
   switch (cle) {
+    case 'favori':
+      // Croissant = favoris d’abord (0 avant 1).
+      return estFavori(carte) ? 0 : 1;
     case 'titre':
       return carte.titre;
     case 'rarete':
@@ -110,6 +114,7 @@ const TableauCartes: React.FC<Props> = ({ cartes, tri, revision, cleFiltre, onTr
           <caption className="sr-only">Cartes de la collection, triables par colonne</caption>
           <colgroup className="hidden min-[600px]:table-column-group">
             <col />
+            <col className="w-24" />
             <col className="w-28" />
             <col className="w-26" />
             <col className="w-26" />

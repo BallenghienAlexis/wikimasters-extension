@@ -15,6 +15,14 @@ vi.mock('../../src/config/amis', () => ({
 import { poserCouple, enregistrerEtiquette, registreVide } from '../../src/lib/registre';
 import {
   CLES_STOCKAGE,
+  chargerBailSuivi,
+  chargerEtatSuiviVentes,
+  chargerSuiviVentesActif,
+  chargerVerrouRequete,
+  enregistrerBailSuivi,
+  enregistrerEtatSuiviVentes,
+  enregistrerSuiviVentesActif,
+  enregistrerVerrouRequete,
   chargerPreferences,
   VERSION_JOURNAL,
   chargerCollection,
@@ -178,7 +186,7 @@ describe('affluenceSite', () => {
 describe('CLES_STOCKAGE', () => {
   it('AC4 : énumère exactement les clés locales de l’extension', () => {
     expect([...cles()].sort()).toEqual([
-      'affichage', 'affluenceSite', 'amisInitiaux', 'arretSynchro', 'bailSynchro', 'classementIA', 'collection', 'derniereRelance', 'derniereSynchro', 'etatSynchro', 'etiquettesSite', 'execution', 'historique', 'ignorees', 'journal', 'passerCarteSynchro', 'preferences', 'registre', 'relanceSynchro', 'releveMarche', 'signalSynchro', 'statutSynchro', 'syncAuto', 'themesAppris', 'ventes', 'wikipedia',
+      'affichage', 'affluenceSite', 'amisInitiaux', 'arretSynchro', 'bailSuiviVentes', 'bailSynchro', 'classementIA', 'collection', 'derniereRelance', 'derniereSynchro', 'ecartesVentes', 'etatSuiviVentes', 'etatSynchro', 'etiquettesSite', 'execution', 'historique', 'ignorees', 'journal', 'lancementsVentes', 'passerCarteSynchro', 'preferences', 'registre', 'relanceSynchro', 'relanceVentes', 'releveMarche', 'signalSuiviVentes', 'signalSynchro', 'statutRelanceVentes', 'statutSynchro', 'suiviVentes', 'suiviVentesActif', 'syncAuto', 'themesAppris', 'ventes', 'verrouRequete', 'wikipedia',
     ]);
   });
 
@@ -657,5 +665,33 @@ describe('récupération d’une collection illisible', () => {
     expect(faux.donnees.get('preferences')).toEqual({ a: 1 });
     expect(faux.donnees.has('ventes')).toBe(true);
     expect(await chargerCollection()).toEqual(collectionVide());
+  });
+});
+
+describe('synchro autonome du suivi des ventes', () => {
+  it('interrupteur activé par défaut, seule la valeur true le garde, false le coupe', async () => {
+    expect(await chargerSuiviVentesActif()).toBe(true);
+    await enregistrerSuiviVentesActif(false);
+    expect(await chargerSuiviVentesActif()).toBe(false);
+    faux.donnees.set('suiviVentesActif', 'oui');
+    expect(await chargerSuiviVentesActif()).toBe(false);
+  });
+  it('état de santé : aller-retour, valeur illisible = null', async () => {
+    expect(await chargerEtatSuiviVentes()).toBeNull();
+    const e = { etat: 'attente' as const, message: 'Erreur réseau', jusqua: 5, echecs: 2, dernierPassage: 3, dernierSucces: 1, forceLe: null };
+    await enregistrerEtatSuiviVentes(e);
+    expect(await chargerEtatSuiviVentes()).toEqual(e);
+    faux.donnees.set('etatSuiviVentes', { ...e, etat: 'autre' });
+    expect(await chargerEtatSuiviVentes()).toBeNull();
+  });
+  it('bail et verrou de requête propres, valeurs illisibles ignorées', async () => {
+    await enregistrerBailSuivi(42);
+    expect(await chargerBailSuivi()).toBe(42);
+    await enregistrerBailSuivi(null);
+    expect(await chargerBailSuivi()).toBeNull();
+    await enregistrerVerrouRequete({ proprio: 'a', jusqua: 5, derniere: 4 });
+    expect(await chargerVerrouRequete()).toEqual({ proprio: 'a', jusqua: 5, derniere: 4 });
+    faux.donnees.set('verrouRequete', { proprio: 3, jusqua: 1, derniere: 1 });
+    expect(await chargerVerrouRequete()).toBeNull();
   });
 });

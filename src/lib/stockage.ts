@@ -17,6 +17,8 @@ import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../config/amis';
 import { ajouterEvenement, validerEvenements, VERSION_VENTES, type EvenementVente } from './affluence';
 import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, type Preferences } from './tri';
 import { estObjet } from './valider';
+import type { EtatVerrouRequete } from './verrouRequete';
+import { VERSION_SUIVI, suiviVide, validerLancements, type LancementVente, type SuiviVentes } from './ventes';
 
 const CLE = 'collection';
 const CLE_PREFERENCES = 'preferences';
@@ -45,6 +47,16 @@ const CLE_ETIQUETTES_SITE = 'etiquettesSite';
 const CLE_IGNOREES = 'ignorees';
 const CLE_HISTORIQUE = 'historique';
 const CLE_AFFICHAGE = 'affichage';
+const CLE_SUIVI_VENTES = 'suiviVentes';
+const CLE_LANCEMENTS_VENTES = 'lancementsVentes';
+const CLE_RELANCE_VENTES = 'relanceVentes';
+const CLE_STATUT_RELANCE = 'statutRelanceVentes';
+const CLE_ECARTES_VENTES = 'ecartesVentes';
+const CLE_SUIVI_ACTIF = 'suiviVentesActif';
+const CLE_ETAT_SUIVI = 'etatSuiviVentes';
+const CLE_SIGNAL_SUIVI = 'signalSuiviVentes';
+const CLE_BAIL_SUIVI = 'bailSuiviVentes';
+const CLE_VERROU_REQUETE = 'verrouRequete';
 
 export type { StatutSynchro };
 
@@ -79,6 +91,16 @@ export const CLES_STOCKAGE = {
   ignorees: CLE_IGNOREES,
   historique: CLE_HISTORIQUE,
   affichage: CLE_AFFICHAGE,
+  suiviVentes: CLE_SUIVI_VENTES,
+  lancementsVentes: CLE_LANCEMENTS_VENTES,
+  relanceVentes: CLE_RELANCE_VENTES,
+  statutRelanceVentes: CLE_STATUT_RELANCE,
+  ecartesVentes: CLE_ECARTES_VENTES,
+  suiviVentesActif: CLE_SUIVI_ACTIF,
+  etatSuiviVentes: CLE_ETAT_SUIVI,
+  signalSuiviVentes: CLE_SIGNAL_SUIVI,
+  bailSuiviVentes: CLE_BAIL_SUIVI,
+  verrouRequete: CLE_VERROU_REQUETE,
 } as const;
 
 function illisible(detail: string): Error {
@@ -423,6 +445,98 @@ export function ecouterSynchroAuto(rappel: () => void): () => void {
   return () => chrome.storage.onChanged.removeListener(ecouteur);
 }
 
+// ---- Mise en vente : suivi, relance automatique (Alexis, 2026-11-17) ----
+
+/** Dernier suivi lu sur le site ; absent ou illisible : suivi vide (sans rien écraser). */
+export async function chargerSuiviVentes(): Promise<SuiviVentes> {
+  const contenu = await chrome.storage.local.get(CLE_SUIVI_VENTES);
+  const brut = contenu[CLE_SUIVI_VENTES];
+  if (!estObjet(brut) || brut.version !== VERSION_SUIVI || !Array.isArray(brut.actives) || !Array.isArray(brut.terminees)) return suiviVide();
+  const suivi = brut as unknown as SuiviVentes;
+  const nonVentes: Record<string, number> = {};
+  if (estObjet(suivi.nonVentes)) for (const [t, n] of Object.entries(suivi.nonVentes)) if (typeof n === 'number' && Number.isSafeInteger(n) && n > 0 && n < 1000) nonVentes[t] = n;
+  const finsVues = Array.isArray(suivi.finsVues) ? suivi.finsVues.filter((i): i is string => typeof i === 'string').slice(0, 200) : undefined;
+  return { ...suivi, nonVentes, finsVues };
+}
+
+export async function enregistrerSuiviVentes(suivi: SuiviVentes): Promise<void> {
+  await chrome.storage.local.set({ [CLE_SUIVI_VENTES]: suivi });
+}
+
+export const ecouterSuiviVentes = (rappel: () => void): (() => void) => ecouterCle(CLE_SUIVI_VENTES, rappel);
+
+/** Journal des lancements automatiques (100 au plus, les plus récents gardés). */
+export async function chargerLancementsVentes(): Promise<LancementVente[]> {
+  const contenu = await chrome.storage.local.get(CLE_LANCEMENTS_VENTES);
+  return validerLancements(contenu[CLE_LANCEMENTS_VENTES]);
+}
+
+export async function ajouterLancementVente(lancement: LancementVente): Promise<void> {
+  const actuels = await chargerLancementsVentes();
+  await chrome.storage.local.set({ [CLE_LANCEMENTS_VENTES]: validerLancements([...actuels, lancement]) });
+}
+
+export const ecouterLancementsVentes = (rappel: () => void): (() => void) => ecouterCle(CLE_LANCEMENTS_VENTES, rappel);
+
+/** Interrupteur de la relance automatique : désactivé par défaut, seule la valeur `true` l’active. */
+export async function chargerRelanceVentes(): Promise<boolean> {
+  const contenu = await chrome.storage.local.get(CLE_RELANCE_VENTES);
+  return contenu[CLE_RELANCE_VENTES] === true;
+}
+
+export async function enregistrerRelanceVentes(actif: boolean): Promise<void> {
+  if (typeof actif !== 'boolean') throw new Error('Réglage de relance invalide.');
+  await chrome.storage.local.set({ [CLE_RELANCE_VENTES]: actif });
+}
+
+export const ecouterRelanceVentes = (rappel: () => void): (() => void) => ecouterCle(CLE_RELANCE_VENTES, rappel);
+
+/** État affiché de la relance automatique et du suivi (libellés fixes, jamais un corps de réponse). */
+export interface StatutRelanceVentes {
+  /** `lecture` : suivi en cours ; `attente` : relance prête ; `pause` : attente jusqu’à `jusqua` (jamais d’arrêt automatique). */
+  etat: 'lecture' | 'attente' | 'pause'
+  message: string
+  jusqua: number | null
+  /** Échecs de lecture de suite (attente 5 s, +5 s à chaque échec). */
+  echecs: number
+  maj: number
+  /** Carte en échec depuis plusieurs essais : avertissement avec choix « Passer cette carte » ou « Continuer d’attendre ». */
+  carte?: { titre: string; idExemplaire: string; essais: number } | null
+}
+
+export async function chargerStatutRelanceVentes(): Promise<StatutRelanceVentes | null> {
+  const contenu = await chrome.storage.local.get(CLE_STATUT_RELANCE);
+  const b = contenu[CLE_STATUT_RELANCE];
+  if (!estObjet(b) || typeof b.message !== 'string' || !['lecture', 'attente', 'pause'].includes(String(b.etat))) return null;
+  if (!nullOuHorodatage(b.jusqua) || !horodatageValide(b.maj) || !horodatageValide(b.echecs)) return null;
+  const c = b.carte;
+  const carte = estObjet(c) && typeof c.titre === 'string' && typeof c.idExemplaire === 'string' && horodatageValide(c.essais) ? { titre: c.titre.slice(0, 200), idExemplaire: c.idExemplaire.slice(0, 80), essais: c.essais } : null;
+  return { etat: b.etat as StatutRelanceVentes['etat'], message: b.message.slice(0, 300), jusqua: b.jusqua, echecs: b.echecs, maj: b.maj, carte };
+}
+
+export async function enregistrerStatutRelanceVentes(statut: StatutRelanceVentes): Promise<void> {
+  await chrome.storage.local.set({ [CLE_STATUT_RELANCE]: { ...statut, message: statut.message.slice(0, 300) } });
+}
+
+export const ecouterStatutRelanceVentes = (rappel: () => void): (() => void) => ecouterCle(CLE_STATUT_RELANCE, rappel);
+
+/** Exemplaires écartés après un refus : identifiant → date avant laquelle on ne les retente pas. */
+export async function chargerEcartesVentes(): Promise<Record<string, number>> {
+  const contenu = await chrome.storage.local.get(CLE_ECARTES_VENTES);
+  const b = contenu[CLE_ECARTES_VENTES];
+  if (!estObjet(b)) return {};
+  const sortie: Record<string, number> = {};
+  // Les 1 000 entrées les plus récentes (échéance la plus lointaine) : un écart récent n’est jamais jeté.
+  for (const [id, t] of Object.entries(b).filter(([, v]) => horodatageValide(v)).sort((x, y) => (y[1] as number) - (x[1] as number)).slice(0, 1000)) sortie[id] = t as number;
+  return sortie;
+}
+
+export const ecouterEcartesVentes = (rappel: () => void): (() => void) => ecouterCle(CLE_ECARTES_VENTES, rappel);
+
+export async function enregistrerEcartesVentes(ecartes: Record<string, number>): Promise<void> {
+  await chrome.storage.local.set({ [CLE_ECARTES_VENTES]: ecartes });
+}
+
 function lireContenu(brut: unknown): Collection {
   if (brut === undefined) return collectionVide();
 
@@ -575,4 +689,78 @@ export async function ecrireDonneesSauvegarde(donnees: Donnees): Promise<void> {
   await enregistrerPreferences(donnees.preferences);
   await enregistrerVentes(donnees.ventes);
   await enregistrerSyncAuto(donnees.syncAuto);
+}
+
+// ---- Synchro autonome du suivi des ventes en cours (Alexis, 2026-11-17) ----
+// Minuteur, état, bail, interrupteur et signal « Forcer » propres : aucune dépendance à la synchro globale.
+
+/** Interrupteur du suivi : activé par défaut (comme la synchro), seule la valeur `false` le coupe. */
+export async function chargerSuiviVentesActif(): Promise<boolean> {
+  const contenu = await chrome.storage.local.get(CLE_SUIVI_ACTIF);
+  const valeur = contenu[CLE_SUIVI_ACTIF];
+  return valeur === undefined || valeur === true;
+}
+
+export async function enregistrerSuiviVentesActif(actif: boolean): Promise<void> {
+  if (typeof actif !== 'boolean') throw new Error('Réglage du suivi invalide.');
+  await chrome.storage.local.set({ [CLE_SUIVI_ACTIF]: actif });
+}
+
+export const ecouterSuiviVentesActif = (rappel: () => void): (() => void) => ecouterCle(CLE_SUIVI_ACTIF, rappel);
+
+/** État affiché du suivi (santé) : dernier passage, dernier succès, attente éventuelle. Libellés fixes. */
+export interface EtatSuiviVentes {
+  /** `ok` : à jour ; `attente` : nouvel essai après un échec ; `pause` : 401/429, pause de 30 min ; `inactif` : interrupteur coupé. */
+  etat: 'ok' | 'attente' | 'pause' | 'inactif';
+  message: string;
+  /** Fin de l’attente ou de la pause en cours. */
+  jusqua: number | null;
+  /** Échecs de lecture de suite (attente 5 s, +5 s à chaque échec). */
+  echecs: number;
+  /** Dernière tentative de lecture (réussie ou non). */
+  dernierPassage: number | null;
+  /** Dernière lecture réussie. */
+  dernierSucces: number | null;
+  /** Dernier « Forcer » pris en compte (une demande par minute au plus, commune aux onglets). */
+  forceLe: number | null;
+}
+
+export const ETAT_SUIVI_INITIAL: EtatSuiviVentes = { etat: 'ok', message: 'Suivi en attente du premier passage.', jusqua: null, echecs: 0, dernierPassage: null, dernierSucces: null, forceLe: null };
+
+export async function chargerEtatSuiviVentes(): Promise<EtatSuiviVentes | null> {
+  const contenu = await chrome.storage.local.get(CLE_ETAT_SUIVI);
+  const b = contenu[CLE_ETAT_SUIVI];
+  if (!estObjet(b) || typeof b.message !== 'string' || !['ok', 'attente', 'pause', 'inactif'].includes(String(b.etat))) return null;
+  if (!nullOuHorodatage(b.jusqua) || !horodatageValide(b.echecs) || !nullOuHorodatage(b.dernierPassage) || !nullOuHorodatage(b.dernierSucces)) return null;
+  const forceLe = nullOuHorodatage(b.forceLe) ? b.forceLe : null;
+  return { etat: b.etat as EtatSuiviVentes['etat'], message: b.message.slice(0, 300), jusqua: b.jusqua, echecs: b.echecs, dernierPassage: b.dernierPassage, dernierSucces: b.dernierSucces, forceLe };
+}
+
+export async function enregistrerEtatSuiviVentes(etat: EtatSuiviVentes): Promise<void> {
+  await chrome.storage.local.set({ [CLE_ETAT_SUIVI]: { ...etat, message: etat.message.slice(0, 300) } });
+}
+
+export const ecouterEtatSuiviVentes = (rappel: () => void): (() => void) => ecouterCle(CLE_ETAT_SUIVI, rappel);
+
+/** Signal du bouton « Forcer » du suivi : un horodatage, simple déclencheur (illisible = pas de signal). */
+export async function enregistrerSignalSuiviVentes(horodatage: number): Promise<void> {
+  await chrome.storage.local.set({ [CLE_SIGNAL_SUIVI]: horodatage });
+}
+
+export const ecouterSignalSuiviVentes = (rappel: () => void): (() => void) => ecouterCle(CLE_SIGNAL_SUIVI, rappel);
+
+/** Bail propre du suivi : un seul passage à la fois entre onglets, sans rapport avec le bail de la synchro globale. */
+export const chargerBailSuivi = (): Promise<number | null> => chargerHorodatage(CLE_BAIL_SUIVI);
+export const enregistrerBailSuivi = (expiration: number | null): Promise<void> => enregistrerHorodatage(CLE_BAIL_SUIVI, expiration);
+
+/** Verrou de requête (une seule requête en vol vers le site, toutes fonctions confondues) : voir `verrouRequete.ts`. */
+export async function chargerVerrouRequete(): Promise<EtatVerrouRequete | null> {
+  const contenu = await chrome.storage.local.get(CLE_VERROU_REQUETE);
+  const b = contenu[CLE_VERROU_REQUETE];
+  if (!estObjet(b) || !(b.proprio === null || typeof b.proprio === 'string') || !horodatageValide(b.jusqua) || !horodatageValide(b.derniere)) return null;
+  return { proprio: b.proprio === null ? null : b.proprio.slice(0, 64), jusqua: b.jusqua, derniere: b.derniere };
+}
+
+export async function enregistrerVerrouRequete(etat: EtatVerrouRequete): Promise<void> {
+  await chrome.storage.local.set({ [CLE_VERROU_REQUETE]: etat });
 }

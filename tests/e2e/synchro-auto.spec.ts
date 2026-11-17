@@ -62,7 +62,9 @@ const carteLocale = (surcharge: object = {}): object => ({
   ...surcharge,
 });
 
-const poser = (worker: Worker, valeurs: Record<string, unknown>): Promise<void> => worker.evaluate((v) => chrome.storage.local.set(v), valeurs);
+// Ces tests portent sur la synchro globale : le suivi des ventes est une synchro séparée (interrupteur propre) et reste coupé ici,
+// pour que ses lectures du marché ne se mêlent pas aux requêtes comptées.
+const poser = (worker: Worker, valeurs: Record<string, unknown>): Promise<void> => worker.evaluate((v) => chrome.storage.local.set({ suiviVentesActif: false, ...v }), valeurs);
 
 const cartesStockees = (worker: Worker): Promise<CarteStockee[]> =>
   worker.evaluate(async () => {

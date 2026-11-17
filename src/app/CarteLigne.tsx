@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   MAX_NOTE,
   estPrixValide,
+  estFavori,
   excedent,
   type Carte,
   type EditionCarte,
 } from '../lib/collection';
-import { libellesThemesAffiches } from '../lib/themes';
+import { LIBELLES_THEMES, libellesThemesAffiches, themesPrincipaux } from '../lib/themes';
+import EditeurThemes from './EditeurThemes';
 
 const CLASSE_CHAMP = 'min-h-11 w-full rounded border border-line bg-ink px-3';
+const CLASSE_PETIT_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded border border-line bg-ink-2 px-3 text-sm';
 
 interface Props {
   carte: Carte;
@@ -37,6 +40,12 @@ const CarteLigne: React.FC<Props> = ({ carte, onEdition, refLigne }) => {
     return nombre;
   };
 
+  const [themesOuverts, setThemesOuverts] = useState(false);
+  const favori = estFavori(carte);
+  const choix = carte.choixFavori ?? null;
+  // Choix pas encore envoyé au site : il le sera par le lot « Favoris » (« Lancer »).
+  const enAttente = choix !== null && choix !== carte.favori;
+
   const validerPrix = (champ: HTMLInputElement): void => {
     const prix = lireNombre(champ, carte.prixCible);
     if (prix !== undefined && prix !== carte.prixCible) onEdition({ prixCible: prix });
@@ -61,11 +70,43 @@ const CarteLigne: React.FC<Props> = ({ carte, onEdition, refLigne }) => {
           )}
         </p>
         <p className="text-sm text-muted break-words">
-          {libellesThemesAffiches(carte).join(', ') || 'Sans thème fiable'}
+          {(carte.themesChoisis ? carte.themesChoisis.map((id) => LIBELLES_THEMES[id] ?? id) : libellesThemesAffiches(carte)).join(', ') || 'Sans thème fiable'}
           {carte.ami ? ` · À échanger avec ${carte.ami}` : ''}
           {excedent(carte) > 0 ? ` · ${excedent(carte)} en double` : ''}
-          {carte.favori ? ' · Favori, verrouillé sur le site' : ''}
+          {favori ? ' · Favori, verrouillé sur le site' : ''}
+          {carte.themesChoisis ? ' · Thèmes choisis par vous' : ''}
         </p>
+        <button type="button" className={`${CLASSE_PETIT_BOUTON} mt-1`} onClick={() => setThemesOuverts(true)} aria-label={`Modifier les thèmes de ${carte.titre}`}>
+          Modifier les thèmes
+        </button>
+        {themesOuverts && (
+          <EditeurThemes
+            titre={carte.titre}
+            choisis={carte.themesChoisis ?? null}
+            automatiques={themesPrincipaux({ titre: carte.titre, description: carte.description })}
+            onValider={(themes) => onEdition({ themesChoisis: themes })}
+            onFermer={() => setThemesOuverts(false)}
+          />
+        )}
+      </td>
+      <td className={CELLULE}>
+        <Etiquette texte="Favori" />
+        <button
+          type="button"
+          aria-pressed={favori}
+          aria-label={favori ? `Retirer ${carte.titre} des favoris` : `Mettre ${carte.titre} en favori`}
+          title={favori ? 'Retirer des favoris' : 'Mettre en favori'}
+          onClick={() => onEdition({ choixFavori: !favori })}
+          className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded text-2xl focus-visible:shadow-(--halo-focus)"
+        >
+          <span aria-hidden="true">{favori ? '★' : '☆'}</span>
+        </button>
+        {enAttente && <span className="block text-sm text-muted">À envoyer au site (lot Favoris)</span>}
+        {choix !== null && (
+          <button type="button" aria-label={`Revenir aux règles pour ${carte.titre}`} className="flex min-h-11 cursor-pointer items-center text-sm underline" onClick={() => onEdition({ choixFavori: null })}>
+            Revenir aux règles
+          </button>
+        )}
       </td>
       <td className={CELLULE}>
         <Etiquette texte="Rareté" />

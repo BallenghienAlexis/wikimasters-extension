@@ -2,7 +2,7 @@
 // les étiquettes du site et les favoris font foi.
 import { CONFIG_PRIX, PLAFOND_DEFAUSSE_MAX, PLAFOND_DEFAUSSE_MIN, PLAFOND_VALEUR_DEFAUSSE, type ConfigPrix } from '../config/prix';
 import type { Carte } from './collection';
-import { normaliser } from './collection';
+import { estFavori, normaliser } from './collection';
 import { parentsDe, THEME_AUTRES, themesDeCarte } from './themes';
 
 export interface Ami {
@@ -53,7 +53,7 @@ export function amisConcernes(themesCarte: readonly string[], amis: readonly Ami
 export function themesAimesDesFavoris(cartes: readonly Carte[]): { theme: string; nombre: number }[] {
   const compte = new Map<string, number>();
   for (const carte of cartes) {
-    if (!carte.favori) continue;
+    if (!estFavori(carte)) continue;
     // Seuls les thèmes les plus précis : un parent déjà couvert par un thème de la carte est écarté,
     // sinon « Tibet » ferait cocher toute la géographie.
     const themes = themesDeCarte(carte);

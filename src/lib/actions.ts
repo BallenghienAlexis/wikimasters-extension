@@ -65,10 +65,15 @@ export interface ActionDefausse extends ActionBase {
   idExemplaire: string
 }
 
-/** Mise en favori (étoile) d’un exemplaire d’une carte « gardée » (Alexis, 2026-11-15). Jamais l’inverse. */
+/**
+ * Étoile d’un exemplaire. Règle des thèmes gardés (Alexis, 2026-11-15) : mise en favori seulement (`valeur` absente = true).
+ * Choix manuel du joueur dans la Collection (Alexis, 2026-11-17) : `valeur` explicite, true pour cocher, false pour décocher.
+ * Une règle ne produit jamais `valeur: false`.
+ */
 export interface ActionFavori extends ActionBase {
   type: 'favori'
   idExemplaire: string
+  valeur?: boolean
 }
 
 /**

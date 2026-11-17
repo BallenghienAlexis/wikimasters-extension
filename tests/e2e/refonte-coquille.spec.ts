@@ -13,11 +13,11 @@ const THEMES = ['light', 'dark'] as const;
 const nomOnglet = (i: number): RegExp => new RegExp(`^${ONGLETS[i]?.nom ?? ''}`);
 
 test.describe('SC-012 : onglets', () => {
-  test('SC-012 : cinq onglets dans l’ordre, motif tablist/tab/tabpanel', async ({ pageCollection }) => {
+  test('SC-012 : six onglets dans l’ordre, motif tablist/tab/tabpanel', async ({ pageCollection }) => {
     const liste = pageCollection.getByRole('tablist', { name: 'Sections' });
     await expect(liste).toBeVisible();
     const onglets = liste.getByRole('tab');
-    await expect(onglets).toHaveCount(6);
+    await expect(onglets).toHaveCount(ONGLETS.length);
     for (let i = 0; i < ONGLETS.length; i++) {
       await expect(onglets.nth(i)).toHaveText(nomOnglet(i));
     }
@@ -55,8 +55,8 @@ test.describe('SC-012 : onglets', () => {
     await expect(onglets.nth(1)).toBeFocused();
     await expect(onglets.nth(1)).toHaveAttribute('aria-selected', 'true');
     await pageCollection.keyboard.press('End');
-    await expect(onglets.nth(5)).toBeFocused();
-    await expect(onglets.nth(5)).toHaveAttribute('aria-selected', 'true');
+    await expect(onglets.nth(ONGLETS.length - 1)).toBeFocused();
+    await expect(onglets.nth(ONGLETS.length - 1)).toHaveAttribute('aria-selected', 'true');
     await expect(pageCollection).toHaveURL(/#reglages$/);
     await pageCollection.keyboard.press('Home');
     await expect(onglets.nth(0)).toBeFocused();
