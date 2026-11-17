@@ -443,6 +443,10 @@ describe('pages d’homonymie', () => {
     expect(themesDepuisHomonymie(texte)).toEqual([]);
     expect(themesDepuisHomonymie('')).toEqual([]);
   });
+  it('ignore les entrées après « Voir aussi »', () => {
+    const texte = ['X peut désigner :', 'Une ville du nord de la France, commune de la Somme ;', 'Un film réalisé par Jean Dupont en 1990 ;', '== Voir aussi ==', 'Zinédine Zidane, footballeur international français ;', 'Elyaz Zidane, footballeur international français ;', 'Luca Zidane, footballeur international français.'].join('\n');
+    expect(themesDepuisHomonymie(texte)).not.toContain('football');
+  });
   it('classe la carte d’une page d’homonymie grâce à ses entrées (un GET de plus, thèmes dominants en signaux fiables)', async () => {
     const vus: string[] = [];
     const transport: Transport = async (url) => {
