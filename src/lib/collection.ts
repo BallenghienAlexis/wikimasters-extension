@@ -205,7 +205,9 @@ export function fusionnerCartesLues(collection: Collection, lues: CarteLueSite[]
     parId.set(lue.id, {
       favori: existante?.favori ?? false,
       // Champs facultatifs : absents tant que le joueur n'a rien choisi (le stockage existant reste identique).
-      ...(existante?.choixFavori == null ? {} : { choixFavori: existante.choixFavori }),
+      // Un choix « favori » est effacé dès que le site est aligné (Alexis, 2026-11-17). Un choix « pas favori » est gardé : l'effacer laisserait
+      // la règle des thèmes gardés remettre l'étoile que le joueur a retirée.
+      ...(existante?.choixFavori == null || (existante.choixFavori === true && lue.favori) ? {} : { choixFavori: existante.choixFavori }),
       ...(existante?.themesChoisis == null ? {} : { themesChoisis: existante.themesChoisis }),
       idsSite: existante?.idsSite ?? null,
       etiquettesSite: existante?.etiquettesSite ?? [],
