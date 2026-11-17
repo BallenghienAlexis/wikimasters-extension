@@ -38,7 +38,7 @@ const LIBELLE_ETAT = { vendue: 'Vendue', 'non-vendue-relancee': 'Non vendue, rel
  */
 const OngletMiseEnVente: React.FC = () => {
   const e = useMiseEnVente();
-  const { suivi, lancements, lots, ecartes, relance, statut, maintenant } = e;
+  const { suivi, lancements, lots, ecartes, relance, statut, maintenant, suiviActif, etatSuivi } = e;
   const max = suivi.max ?? CONFIG_PRIX.maxVentesSimultanees;
   const avertissements = cartesAAvertir(lancements, ecartes, suivi.terminees);
   const retirees = Object.keys(ecartes)
@@ -50,6 +50,39 @@ const OngletMiseEnVente: React.FC = () => {
 
   return (
     <div className="mt-6 flex flex-col gap-4" data-testid="onglet-mise-en-vente">
+      <div className="rounded-xl border border-muted bg-ink-2 p-3" data-testid="synchro-suivi-ventes">
+        <label className="flex min-h-11 items-center gap-3">
+          <input
+            type="checkbox"
+            role="switch"
+            checked={suiviActif}
+            onChange={(ev) => e.basculerSuivi(ev.target.checked)}
+            className="size-5 accent-[var(--color-paper)] focus-visible:shadow-(--halo-focus)"
+          />
+          <span className="font-bold">Suivi des ventes en cours</span>
+        </label>
+        <p className="mt-1 text-sm text-muted">
+          Synchro séparée de la synchro globale : sa propre cadence (5 min, puis 10 s dans la dernière minute d’une enchère), ses propres pauses et son propre
+          interrupteur. Elle n’attend pas la synchro globale et ne la bloque pas ; les deux se partagent seulement le verrou de requête (une requête à la fois vers le site).
+          Elle lit tant qu’un onglet WikiMasters est visible, ou à la demande avec « Forcer ».
+        </p>
+        <p className="mt-2 text-sm" aria-live="polite" data-testid="sante-suivi">
+          {!suiviActif ? 'Suivi coupé.' : etatSuivi === null ? 'Suivi en attente du premier passage.' : etatSuivi.message}
+          {suiviActif && etatSuivi?.jusqua != null && etatSuivi.jusqua > maintenant ? ` (reprise dans ${formaterDecompte(etatSuivi.jusqua - maintenant)})` : ''}
+        </p>
+        <p className="mt-1 text-sm text-muted" data-testid="passage-suivi">
+          Dernier passage : {etatSuivi?.dernierPassage != null ? heureFr(etatSuivi.dernierPassage) : 'jamais'} · dernière lecture réussie :{' '}
+          {etatSuivi?.dernierSucces != null ? heureFr(etatSuivi.dernierSucces) : 'jamais'}
+          {suiviActif && enDirect ? ' · cadence 10 s (dernière minute)' : ''}
+        </p>
+        <div className="mt-2">
+          <button type="button" className={CLASSE_BOUTON} onClick={() => e.forcerSuivi()} disabled={!suiviActif} data-testid="forcer-suivi">
+            Forcer le suivi
+          </button>
+          <span className="ml-2 text-sm text-muted">Une lecture tout de suite, sans attendre l’échéance ; une par minute au plus. N’outrepasse ni la vérification anti-bot ni le verrou de requête.</span>
+        </div>
+      </div>
+
       <div className="rounded-xl border border-muted bg-ink-2 p-3">
         <label className="flex min-h-11 items-center gap-3">
           <input
@@ -64,10 +97,10 @@ const OngletMiseEnVente: React.FC = () => {
         <p className="mt-1 text-sm text-muted">
           Quand une enchère se termine et qu’une place se libère, l’extension met en vente la carte suivante, sans clic « Lancer » : règle de pré-cochage des Lots
           (favoris, thèmes gardés, amis et cartes « à classer » exclus), les plus chères d’abord, 1 h, au plus {max} enchères en même temps. Une enchère non vendue
-          remet sa carte dans la file. Elle ne tourne que si un onglet WikiMasters est visible.
+          remet sa carte dans la file. Elle fait partie du suivi : elle ne tourne que si le suivi est activé.
         </p>
         <p className="mt-2 text-sm" aria-live="polite" data-testid="statut-relance">
-          {statut === null ? 'Suivi en attente du premier relevé.' : statut.message}
+          {statut === null ? 'Relance en attente.' : statut.message}
           {statut?.etat === 'pause' && statut.jusqua !== null && statut.jusqua > maintenant ? ` (reprise dans ${formaterDecompte(statut.jusqua - maintenant)})` : ''}
         </p>
         {statut?.carte != null && statut.carte.essais - (ecartes[`attend:${statut.carte.idExemplaire}`] ?? 0) >= 5 && (
@@ -86,7 +119,7 @@ const OngletMiseEnVente: React.FC = () => {
           </div>
         )}
         <p className="mt-2 text-sm text-muted">
-          Dernier relevé : {heureFr(suivi.releveLe)}. Relecture toutes les 5 min, puis toutes les 10 s dans la dernière minute d’une enchère
+          Dernier relevé de la liste : {heureFr(suivi.releveLe)}. Cadence : toutes les 5 min, puis toutes les 10 s dans la dernière minute d’une enchère
           {enDirect ? ' (en cours)' : ''}.
         </p>
         {e.erreur !== null && (

@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { Action, ResultatAction } from '../../src/lib/actions'
 import { collectionVide, type Carte } from '../../src/lib/collection'
 import { creerSuiviVentes, type DependancesSuiviVentes } from '../../src/content/suiviVentes'
-import type { StatutRelanceVentes } from '../../src/lib/stockage'
+import type { EtatSuiviVentes, StatutRelanceVentes } from '../../src/lib/stockage'
 import { preferencesParDefaut } from '../../src/lib/tri'
+import { etatInitial, type EtatOrdonnanceur } from '../../src/lib/ordonnanceur'
 import { suiviVide, type LancementVente, type SuiviVentes } from '../../src/lib/ventes'
 
 const T0 = Date.parse('2026-11-17T10:00:00Z')
@@ -14,10 +15,12 @@ const carte: Carte = {
 }
 const vente = (id: string, finDans: number) => ({ id, card_id: `ex-${id}`, base_amount: 50, current_bid: null, effective_bid: 50, created_at: iso(T0), end_at: iso(T0 + finDans), card: { wikipedia_title: `T${id}` } })
 
-function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relance?: boolean; resultat?: ResultatAction; visible?: boolean; actif?: boolean; synchroRecente?: boolean; pauseLots?: number }) {
+function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relance?: boolean; resultat?: ResultatAction; visible?: boolean; actif?: boolean; synchroRecente?: boolean; pauseLots?: number; lotEnCours?: boolean }) {
   let t = T0
+  // Le bail du suivi est le sien : celui de la synchro globale (tenu ou non) ne le concerne pas.
   let bailValeur: number | null = null
-  const etat = { suivi: suiviVide() as SuiviVentes, statut: null as StatutRelanceVentes | null, lancements: [] as LancementVente[], ecartes: {} as Record<string, number>, lectures: 0, ordres: [] as Action[] }
+  let globalEtat: EtatOrdonnanceur | null = opts.synchroRecente === false ? { ...etatInitial(), arretJusqua: T0 + 3_600_000 } : null
+  const etat = { suivi: suiviVide() as SuiviVentes, statut: null as StatutRelanceVentes | null, suiviEtat: null as EtatSuiviVentes | null, verrous: 0, lancements: [] as LancementVente[], ecartes: {} as Record<string, number>, lectures: 0, ordres: [] as Action[] }
   const reponses = [...opts.reponses]
   const deps: DependancesSuiviVentes = {
     horloge: { now: () => t, attendreJusqua: async (e) => void (t = Math.max(t, e)) },
@@ -29,6 +32,13 @@ function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relan
     emettre: async (o) => (etat.ordres.push(o), opts.resultat ?? { classe: 'reussie', codeHttp: 201, cause: 'action réussie' }),
     visible: () => opts.visible ?? true,
     actif: async () => opts.actif ?? true,
+    verrou: async (f) => {
+      etat.verrous += 1
+      return f()
+    },
+    chargerEtatSuivi: async () => etat.suiviEtat,
+    enregistrerEtatSuivi: async (e) => void (etat.suiviEtat = e),
+    lotEnCours: async () => opts.lotEnCours ?? false,
     route: '/api/marketplace?page=1&limit=50&sort=recent&mine=1',
     relanceActive: async () => opts.relance ?? false,
     chargerSuivi: async () => etat.suivi,
@@ -42,13 +52,11 @@ function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relan
     chargerEcartes: async () => etat.ecartes,
     enregistrerEcartes: async (e) => void (etat.ecartes = e),
     pauseLots: async () => opts.pauseLots ?? null,
-    derniereSynchro: async () => (opts.synchroRecente === false ? null : T0),
-    derniereReleve: async () => (opts.synchroRecente === false ? null : T0),
-    chargerEtat: async () => null,
-    enregistrerEtat: async () => undefined,
+    chargerEtat: async () => globalEtat,
+    enregistrerEtat: async (e) => void (globalEtat = e),
     bail: { lire: async () => bailValeur, ecrire: async (v) => void (bailValeur = v) },
   }
-  return { suivi: creerSuiviVentes(deps), etat, avancer: (ms: number) => void (t += ms), maintenant: () => t }
+  return { suivi: creerSuiviVentes(deps), etat, global: () => globalEtat, bail: (v: number | null) => void (bailValeur = v), avancer: (ms: number) => void (t += ms), maintenant: () => t }
 }
 
 const ok = (selling: unknown[]) => ({ statut: 200, json: { selling, history: [], maxConcurrentAuctions: 5 } })
@@ -79,7 +87,9 @@ describe('cycle de suivi des mises en vente', () => {
   it('401/429 en lecture : pause de 30 min, comme le relevé d’affluence', async () => {
     const m = monde({ reponses: [{ statut: 429, json: null }, ok([])] })
     expect(await m.suivi.cycle()).toBe(1_800_000)
-    expect(m.etat.statut).toMatchObject({ etat: 'pause', jusqua: T0 + 1_800_000 })
+    expect(m.etat.suiviEtat).toMatchObject({ etat: 'pause', jusqua: T0 + 1_800_000 })
+    // Le site demande de ralentir : la synchro globale le voit aussi (la pause lui est transmise, jamais l’inverse).
+    expect(m.global()?.arretJusqua).toBe(T0 + 1_800_000)
   })
   it('échecs : 5 s, 10 s, 15 s, jamais d’arrêt, puis reprise normale', async () => {
     const m = monde({ reponses: [{ statut: 403, json: { code: 'human_verification_required' } }, { statut: 502, json: null }, { statut: 500, json: null }, ok([])] })
@@ -90,7 +100,7 @@ describe('cycle de suivi des mises en vente', () => {
     }
     expect(attentes.slice(0, 3)).toEqual([5000, 10_000, 15_000])
     expect(attentes[3]).toBe(300_000)
-    expect(m.etat.statut?.etat).toBe('lecture')
+    expect(m.etat.suiviEtat).toMatchObject({ etat: 'ok', echecs: 0 })
   })
   it('relance : une carte éligible est mise en vente quand une place est libre, sans clic', async () => {
     const m = monde({ reponses: [ok([])], relance: true })
@@ -154,6 +164,7 @@ describe('cycle de suivi des mises en vente', () => {
   it('« Passer cette carte » pendant une pause 429 : la pause reste, aucune requête avant son échéance', async () => {
     const m = monde({ reponses: [ok([]), { statut: 429, json: null }, ok([])], relance: true, resultat: { classe: 'echec', codeHttp: 500, cause: 'erreur réseau' } })
     m.etat.statut = { etat: 'pause', message: 'x', jusqua: T0 + 1_800_000, echecs: 0, maj: T0, carte: { titre: 'Berger allemand', idExemplaire: 'ex-c', essais: 5 } }
+    m.etat.suiviEtat = { etat: 'pause', message: 'x', jusqua: T0 + 1_800_000, echecs: 0, dernierPassage: null, dernierSucces: null, forceLe: null }
     const attente = await m.suivi.cycle()
     expect(attente).toBe(1_800_000)
     expect(m.etat.lectures).toBe(0)
@@ -172,10 +183,73 @@ describe('cycle de suivi des mises en vente', () => {
     }
     expect(m.etat.statut).toMatchObject({ etat: 'pause', jusqua: m.maintenant() - 400_000 + 5000 })
   })
-  it('la synchro passe d’abord : aucune lecture tant qu’elle est due', async () => {
-    const m = monde({ reponses: [ok([])], synchroRecente: false })
+  it('autonome : ni la pause de la synchro globale, ni son absence de relevé récent, ne bloquent la lecture', async () => {
+    const m = monde({ reponses: [ok([vente('a', 3_600_000)])], synchroRecente: false })
+    expect(await m.suivi.cycle()).toBe(300_000)
+    expect(m.etat.lectures).toBe(1)
+    expect(m.etat.verrous).toBe(1)
+  })
+  it('autonome : la lecture ne touche jamais au bail de la synchro et libère le sien', async () => {
+    const m = monde({ reponses: [ok([])] })
+    await m.suivi.cycle()
+    m.bail(null)
+    expect(m.etat.lectures).toBe(1)
+  })
+  it('bail propre tenu par un autre onglet : aucune lecture', async () => {
+    const m = monde({ reponses: [ok([])] })
+    m.bail(T0 + 60_000)
     expect(await m.suivi.cycle()).toBe(5000)
     expect(m.etat.lectures).toBe(0)
+  })
+  it('santé : dernier passage et dernier succès sont notés, même après un échec', async () => {
+    const m = monde({ reponses: [ok([]), { statut: 500, json: null }] })
+    await m.suivi.cycle()
+    expect(m.etat.suiviEtat).toMatchObject({ etat: 'ok', dernierPassage: T0, dernierSucces: T0 })
+    m.avancer(300_000)
+    await m.suivi.cycle()
+    expect(m.etat.suiviEtat).toMatchObject({ etat: 'attente', echecs: 1, dernierPassage: T0 + 300_000, dernierSucces: T0 })
+  })
+  it('« Forcer » : lit tout de suite malgré l’échéance et l’attente, onglet caché compris', async () => {
+    const m = monde({ reponses: [ok([vente('a', 3_600_000)]), { statut: 500, json: null }, ok([])], visible: false })
+    await m.suivi.cycle(true)
+    expect(m.etat.lectures).toBe(1)
+    m.avancer(60_001)
+    await m.suivi.forcer()
+    expect(m.etat.lectures).toBe(2)
+    expect(m.etat.suiviEtat?.etat).toBe('attente')
+    m.avancer(61_000)
+    await m.suivi.forcer()
+    expect(m.etat.lectures).toBe(3)
+    expect(m.etat.suiviEtat?.etat).toBe('ok')
+  })
+  it('« Forcer » : une demande par minute au plus, et jamais deux requêtes en parallèle (bail)', async () => {
+    const m = monde({ reponses: [ok([]), ok([]), ok([])] })
+    await m.suivi.forcer()
+    await m.suivi.forcer()
+    expect(m.etat.lectures).toBe(1)
+  })
+  it('« Forcer » passe outre la pause 429 du suivi, pas le verrou de requête', async () => {
+    const m = monde({ reponses: [{ statut: 429, json: null }, ok([])] })
+    await m.suivi.cycle()
+    expect(m.etat.suiviEtat?.etat).toBe('pause')
+    expect(await m.suivi.cycle()).toBe(1_800_000)
+    m.avancer(61_000)
+    await m.suivi.forcer()
+    expect(m.etat.lectures).toBe(2)
+    expect(m.etat.suiviEtat?.etat).toBe('ok')
+    expect(m.etat.verrous).toBe(2)
+  })
+  it('un lot d’écriture en cours : la lecture continue, la relance laisse la place', async () => {
+    const m = monde({ reponses: [ok([])], relance: true, lotEnCours: true })
+    await m.suivi.cycle()
+    expect(m.etat.lectures).toBe(1)
+    expect(m.etat.ordres).toHaveLength(0)
+  })
+  it('la relance (écriture) passe aussi par le verrou de requête', async () => {
+    const m = monde({ reponses: [ok([])], relance: true })
+    await m.suivi.cycle()
+    expect(m.etat.ordres).toHaveLength(1)
+    expect(m.etat.verrous).toBe(2)
   })
   it('la réponse du listing lue par la synchro met le suivi à jour sans requête', async () => {
     const m = monde({ reponses: [] })
@@ -185,10 +259,11 @@ describe('cycle de suivi des mises en vente', () => {
     expect(await m.suivi.cycle()).toBeGreaterThan(200_000)
     expect(m.etat.lectures).toBe(0)
   })
-  it('synchro automatique coupée : aucune lecture', async () => {
+  it('interrupteur du suivi coupé : aucune lecture, état « inactif », réactivable', async () => {
     const m = monde({ reponses: [ok([])], actif: false })
     await m.suivi.cycle()
     expect(m.etat.lectures).toBe(0)
+    expect(m.etat.suiviEtat?.etat).toBe('inactif')
   })
   it('5 échecs d’une même carte : avertissement avec choix, attente toujours en cours', async () => {
     const m = monde({ reponses: Array.from({ length: 8 }, () => ok([])), relance: true, resultat: { classe: 'echec', codeHttp: 500, cause: 'erreur réseau' } })
@@ -203,6 +278,7 @@ describe('cycle de suivi des mises en vente', () => {
     const m = monde({ reponses: [ok([])], relance: true, resultat: { classe: 'arret', codeHttp: 429, cause: 'réponse hors contrat' } })
     await m.suivi.cycle()
     expect(m.etat.statut).toMatchObject({ etat: 'pause', jusqua: T0 + 1_800_000 })
+    expect(m.etat.suiviEtat).toMatchObject({ etat: 'pause', jusqua: T0 + 1_800_000 })
     const r = monde({ reponses: [ok([])], relance: true, resultat: { classe: 'echec', codeHttp: 403, cause: 'réponse hors contrat' } })
     await r.suivi.cycle()
     expect(r.etat.ecartes['ex-c']).toBeGreaterThan(T0)

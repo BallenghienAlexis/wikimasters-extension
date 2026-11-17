@@ -5,11 +5,18 @@ import { CONFIG_AFFLUENCE } from '../config/affluence';
 import { TABLE_CONTRAT } from '../lib/contrat';
 import { gigueAleatoire } from '../lib/gigue';
 import { creerEmetteur } from '../lib/reseau';
+import { creerVerrouRequete } from '../lib/verrouRequete';
+import { INTERVALLE_MS } from '../lib/file';
 import {
   ajouterLancementVente,
-  chargerBailSynchro,
-  chargerDerniereSynchro,
-  chargerReleveMarche,
+  chargerBailSuivi,
+  chargerEtatSuiviVentes,
+  chargerSuiviVentesActif,
+  chargerVerrouRequete,
+  ecouterSignalSuiviVentes,
+  enregistrerBailSuivi,
+  enregistrerEtatSuiviVentes,
+  enregistrerVerrouRequete,
   chargerCollection,
   chargerEcartesVentes,
   chargerExecution,
@@ -17,10 +24,8 @@ import {
   chargerLancementsVentes,
   chargerPreferences,
   chargerRelanceVentes,
-  chargerSyncAuto,
   chargerStatutRelanceVentes,
   chargerSuiviVentes,
-  enregistrerBailSynchro,
   enregistrerEcartesVentes,
   enregistrerEtatSynchro,
   enregistrerStatutRelanceVentes,
@@ -30,6 +35,17 @@ import { demarrerExecutant } from './executant';
 import { demarrerSynchroAuto, horlogeReelle, transportSite } from './synchroAuto';
 import { creerSuiviVentes, demarrerSuiviVentes } from './suiviVentes';
 
+// Verrou de requête : une seule requête en vol vers le site entre la synchro globale (lectures) et le suivi des ventes,
+// 0,2 s plus gigue entre deux débuts. Tenu le temps d’une requête seulement : aucun des deux n’attend la fin de l’autre.
+const verrou = creerVerrouRequete({
+  now: () => Date.now(),
+  attendre: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  gigue: gigueAleatoire,
+  intervalle: INTERVALLE_MS,
+  lire: chargerVerrouRequete,
+  ecrire: enregistrerVerrouRequete,
+  identifiant: () => Math.random().toString(36).slice(2, 12),
+});
 const emettre = creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: location.origin });
 
 // Pilotage depuis la page de gestion : aucune requête tant qu'aucune action n'est branchée.
@@ -42,7 +58,11 @@ const suivi = creerSuiviVentes({
   transport: transportSite,
   emettre,
   visible: () => document.visibilityState === 'visible',
-  actif: chargerSyncAuto,
+  actif: chargerSuiviVentesActif,
+  verrou,
+  chargerEtatSuivi: chargerEtatSuiviVentes,
+  enregistrerEtatSuivi: enregistrerEtatSuiviVentes,
+  lotEnCours: async () => (await chargerExecution().catch(() => null))?.etat === 'en-cours',
   route: CONFIG_AFFLUENCE.routeMarche,
   relanceActive: chargerRelanceVentes,
   chargerSuivi: chargerSuiviVentes,
@@ -56,14 +76,12 @@ const suivi = creerSuiviVentes({
   chargerEcartes: chargerEcartesVentes,
   enregistrerEcartes: enregistrerEcartesVentes,
   pauseLots: async () => (await chargerExecution().catch(() => null))?.pauseJusqua ?? null,
-  derniereSynchro: chargerDerniereSynchro,
-  derniereReleve: async () => (await chargerReleveMarche()).le,
   chargerEtat: chargerEtatSynchro,
   enregistrerEtat: enregistrerEtatSynchro,
-  bail: { lire: chargerBailSynchro, ecrire: enregistrerBailSynchro },
+  bail: { lire: chargerBailSuivi, ecrire: enregistrerBailSuivi },
 });
 // Lecture automatique de la collection par l'API du site : activée par défaut, 0 requête si le joueur coupe l'option.
-demarrerSynchroAuto({ surReponseMarche: suivi.integrer });
+demarrerSynchroAuto({ surReponseMarche: suivi.integrer, transport: (chemin) => verrou(() => transportSite(chemin)) });
 // Suivi des mises en vente (lecture toutes les 5 min, puis 10 s dans la dernière minute) et relance automatique si activée.
 demarrerSuiviVentes({
   suivi,
@@ -73,3 +91,5 @@ demarrerSuiviVentes({
     return () => document.removeEventListener('visibilitychange', rappel);
   },
 });
+// Bouton « Forcer » du suivi (onglet Mise en vente) : un passage tout de suite, même si l’onglet WikiMasters est en arrière-plan.
+ecouterSignalSuiviVentes(() => void suivi.forcer().catch(() => undefined));
