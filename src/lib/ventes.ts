@@ -54,6 +54,8 @@ export interface VenteActive {
 
 export interface VenteTerminee {
   id: string
+  /** Exemplaire mis en vente (`card_id`), quand le site le donne pour l’historique : sert à retenter le même exemplaire. */
+  idExemplaire?: string
   titre: string
   rarete: string
   prixDepart: number
@@ -80,7 +82,19 @@ export interface SuiviVentes {
   nonVentes?: Record<string, number>
   /** Identifiants des enchères terminées déjà comptées (200 au plus) ; absent : jamais lu, l’historique existant n’est pas compté. */
   finsVues?: string[]
+  /**
+   * File de traitement des fins d’enchère (Alexis, 2026-11-17) : identifiants des enchères terminées vues depuis la dernière
+   * lecture et pas encore traitées par la relance (50 au plus). Un identifiant sort de la file une fois la remise en vente
+   * lancée (ou jugée impossible) : le traitement est idempotent, une fin n’est jamais traitée deux fois.
+   */
+  aTraiter?: string[]
+  /** Enchères disparues de la liste en cours sans être encore dans l’historique (verdict inconnu) : id → date de disparition. */
+  sansVerdict?: Record<string, number>
 }
+
+/** Attente du verdict d’une enchère disparue avant de repartir sans lui (la relance ne s’arrête jamais pour autant). */
+export const VERDICT_ATTENTE_MS = 2 * 60_000
+const MAX_A_TRAITER = 50
 
 export const suiviVide = (): SuiviVentes => ({ version: VERSION_SUIVI, releveLe: 0, max: null, actives: [], terminees: [] })
 
@@ -174,7 +188,8 @@ function lireTerminee(brut: unknown): VenteTerminee | null {
   const creeLe = dateMs(brut.created_at)
   const finLe = dateMs(brut.settled_at) ?? dateMs(brut.end_at)
   if (prixDepart === null || creeLe === null || finLe === null) return null
-  return { id, titre: titreDe(brut), rarete: texteCourt(brut.snapshot_rarity), prixDepart, prixFinal: prix(brut.final_price), ...statutDe(brut.status), creeLe, finLe }
+  const exemplaire = typeof brut.card_id === 'string' && brut.card_id !== '' && brut.card_id.length <= 80 ? { idExemplaire: brut.card_id } : {}
+  return { id, ...exemplaire, titre: titreDe(brut), rarete: texteCourt(brut.snapshot_rarity), prixDepart, prixFinal: prix(brut.final_price), ...statutDe(brut.status), creeLe, finLe }
 }
 
 export interface LectureVentes {
@@ -205,8 +220,38 @@ export function analyserListeVentes(json: unknown): LectureVentes | null {
 export function fusionnerSuivi(precedent: SuiviVentes, lecture: LectureVentes, maintenant: number): SuiviVentes {
   const anciennes = new Map(precedent.actives.map((v) => [v.id, v]))
   const actives: VenteActive[] = lecture.actives.map((v) => ({ ...v, finInitiale: anciennes.get(v.id)?.finInitiale ?? v.finLe }))
-  return { version: VERSION_SUIVI, releveLe: maintenant, max: lecture.max ?? precedent.max, actives, terminees: lecture.terminees, ...compterNonVentes(precedent, lecture.terminees) }
+  return {
+    version: VERSION_SUIVI,
+    releveLe: maintenant,
+    max: lecture.max ?? precedent.max,
+    actives,
+    terminees: lecture.terminees,
+    ...compterNonVentes(precedent, lecture.terminees),
+    ...fileDesFins(precedent, lecture, maintenant),
+  }
 }
+
+/**
+ * File des fins d’enchère à traiter. Une fin entre dans la file quand elle apparaît dans l’historique alors que la lecture
+ * précédente ne la connaissait pas (la première lecture ne compte pas l’historique existant) ; elle y reste tant que la
+ * relance ne l’a pas traitée. Une enchère qui disparaît de la liste en cours sans être dans l’historique est « sans verdict » :
+ * on attend son statut (vendue, non vendue, annulée) avant de décider de la suite.
+ */
+function fileDesFins(precedent: SuiviVentes, lecture: LectureVentes, maintenant: number): Pick<SuiviVentes, 'aTraiter' | 'sansVerdict'> {
+  const presentes = new Set(lecture.terminees.map((v) => v.id))
+  const vues = precedent.finsVues === undefined ? null : new Set(precedent.finsVues)
+  const nouvelles = vues === null ? [] : lecture.terminees.filter((v) => !vues.has(v.id)).sort((a, b) => a.finLe - b.finLe).map((v) => v.id)
+  const file = [...(precedent.aTraiter ?? []).filter((id) => presentes.has(id)), ...nouvelles.filter((id) => !(precedent.aTraiter ?? []).includes(id))].slice(-MAX_A_TRAITER)
+  const encore = new Set(lecture.actives.map((v) => v.id))
+  const sansVerdict: Record<string, number> = {}
+  for (const [id, le] of Object.entries(precedent.sansVerdict ?? {})) if (!presentes.has(id) && !encore.has(id) && maintenant - le < VERDICT_ATTENTE_MS) sansVerdict[id] = le
+  for (const v of precedent.actives) if (!encore.has(v.id) && !presentes.has(v.id) && sansVerdict[v.id] === undefined) sansVerdict[v.id] = maintenant
+  return { aTraiter: file, sansVerdict }
+}
+
+/** Vrai tant qu’une enchère disparue attend son verdict : la relance patiente (10 s) au lieu de choisir à l’aveugle. */
+export const verdictEnAttente = (suivi: Pick<SuiviVentes, 'sansVerdict'>, maintenant: number): boolean =>
+  Object.values(suivi.sansVerdict ?? {}).some((le) => maintenant - le < VERDICT_ATTENTE_MS)
 
 /** Nombre de prolongations de 60 s déjà subies (0 si aucune). */
 export const prolongations = (v: Pick<VenteActive, 'finLe' | 'finInitiale'>): number => Math.max(0, Math.round((v.finLe - v.finInitiale) / PROLONGATION_MS))
@@ -219,7 +264,8 @@ export const resteMs = (v: Pick<VenteActive, 'finLe'>, maintenant: number): numb
  * plus proche ; puis toutes les 10 s dans la dernière minute (et tant qu’une enchère terminée n’a pas disparu de la liste,
  * toutes les 30 s au-delà de 2 min de retard).
  */
-export function delaiSuivant(actives: ReadonlyArray<Pick<VenteActive, 'finLe'>>, maintenant: number): number {
+export function delaiSuivant(actives: ReadonlyArray<Pick<VenteActive, 'finLe'>>, maintenant: number, verdictAttendu = false): number {
+  if (verdictAttendu) return DELAI_FINAL_MS
   if (actives.length === 0) return DELAI_NORMAL_MS
   const reste = Math.min(...actives.map((v) => v.finLe - maintenant))
   if (reste <= -DEPASSEE_MS) return DELAI_DEPASSEE_MS
@@ -251,6 +297,8 @@ export interface LancementVente {
   resultat: 'reussie' | 'echec'
   /** Cause en libellé fixe, jamais un corps de réponse. */
   cause: string | null
+  /** Issue de l’enchère terminée qui a déclenché ce traitement (journal par enchère, 2026-11-17) ; absent : place libre sans fin à traiter. */
+  issue?: 'vendue' | 'non-vendue' | 'annulee'
 }
 
 export const MAX_LANCEMENTS = 100
@@ -265,7 +313,8 @@ export function validerLancements(brut: unknown): LancementVente[] {
     if (typeof le !== 'number' || !Number.isSafeInteger(le) || le < 0 || source !== 'auto') continue
     if (typeof titre !== 'string' || typeof p !== 'number' || !Number.isSafeInteger(p) || p < 0) continue
     if (resultat !== 'reussie' && resultat !== 'echec') continue
-    sortie.push({ le, source: 'auto', titre: tronquer(titre, MAX_TITRE), prix: p, resultat, cause: typeof cause === 'string' ? tronquer(cause, 120) : null })
+    const issue: Pick<LancementVente, 'issue'> = e.issue === 'vendue' ? { issue: 'vendue' } : e.issue === 'non-vendue' ? { issue: 'non-vendue' } : e.issue === 'annulee' ? { issue: 'annulee' } : {}
+    sortie.push({ le, source: 'auto', titre: tronquer(titre, MAX_TITRE), prix: p, resultat, cause: typeof cause === 'string' ? tronquer(cause, 120) : null, ...issue })
   }
   return sortie.slice(-MAX_LANCEMENTS)
 }

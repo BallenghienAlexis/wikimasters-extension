@@ -13,6 +13,7 @@
 import { CAUSE_VERIFICATION_HUMAINE, estLimiteEncheres, type Action, type ResultatAction } from '../lib/actions';
 import type { Collection } from '../lib/collection';
 import type { Horloge } from '../lib/file';
+import { CONFIG_PRIX } from '../config/prix';
 import { routeMarcheValide } from '../lib/affluence';
 import { DUREE_BAIL_MS, PAUSE_APRES_ARRET_MS, etatInitial, type Bail, type EtatOrdonnanceur, type ReponseApi } from '../lib/ordonnanceur';
 import type { AvecVerrouRequete } from '../lib/verrouRequete';
@@ -28,10 +29,13 @@ import {
   fusionnerSuivi,
   cleNonVente,
   nonVentesDe,
+  issueDe,
+  verdictEnAttente,
   prixDepartAjuste,
   purgerEcartes,
   type LancementVente,
   type SuiviVentes,
+  type VenteActive,
 } from '../lib/ventes';
 
 /** Pause de la relance après un 401 ou un 429 (règle de sécurité des lots d’écriture). */
@@ -83,6 +87,11 @@ export interface DependancesSuiviVentes {
   bail: Bail;
 }
 
+/** Mises en vente lancées au plus par passage (5 = maximum du site) ; les suivantes attendent la lecture suivante. */
+export const MAX_PAR_PASSE = 5;
+
+type ResultatRelance = { etat: 'lancee'; active: VenteActive } | { etat: 'rien' } | { etat: 'bloque' } | { etat: 'stop' };
+
 export interface SuiviVentesAuto {
   /** Un cycle : lit si l’échéance est là, relance si une place est libre ; renvoie le délai avant le suivant (ms). `forcer` : action explicite du joueur. */
   cycle: (forcer?: boolean) => Promise<number>;
@@ -124,9 +133,13 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     return suivant;
   };
 
-  /** Mise en vente d’une carte si une place est libre. Renvoie vrai quand une enchère est partie. */
-  async function relancer(suivi: SuiviVentes): Promise<boolean> {
-    if (!(await deps.relanceActive())) return false;
+  /**
+   * Une mise en vente si une place est libre. `prefere` : retente cet exemplaire seulement (enchère terminée sans vente) ;
+   * `issue` : issue de la fin traitée, gardée dans le journal. `bloque` : rien ne peut partir maintenant (interrupteur, pause,
+   * lot en cours, aucune place) ; `rien` : aucune carte éligible ; `stop` : un envoi a échoué (attente ou pause enregistrée).
+   */
+  async function relancerUne(suivi: SuiviVentes, prefere: string | undefined, issue: LancementVente['issue']): Promise<ResultatRelance> {
+    if (!(await deps.relanceActive())) return { etat: 'bloque' };
     // L’attente d’écriture survit à un rechargement de l’onglet : elle est aussi lue dans le statut enregistré.
     const stocke = await deps.chargerStatut();
     const jusquaStocke = stocke?.etat === 'pause' && stocke.jusqua !== null ? stocke.jusqua : 0;
@@ -134,10 +147,10 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     // Les écritures respectent aussi la pause demandée par le site (401, 403, 429 de la synchro ou du suivi) : un « Forcer » ou
     // une lecture réussie n’autorise jamais un envoi pendant cette pause.
     const pauseSite = (await deps.chargerEtat().catch(() => null))?.arretJusqua ?? 0;
-    if (deps.horloge.now() < Math.max(attenteEcritureJusqua, jusquaStocke, pauseLots, pauseSite) || suivi.max === null) return false;
+    if (deps.horloge.now() < Math.max(attenteEcritureJusqua, jusquaStocke, pauseLots, pauseSite) || suivi.max === null || suivi.actives.length >= Math.min(suivi.max, CONFIG_PRIX.maxVentesSimultanees)) return { etat: 'bloque' };
     const maintenant = deps.horloge.now();
     // Un lot d’écriture en cours garde la main sur les enchères (le 409 reste le garde-fou) ; la synchro globale, elle, ne gêne pas.
-    if (await deps.lotEnCours().catch(() => false)) return false;
+    if (await deps.lotEnCours().catch(() => false)) return { etat: 'bloque' };
     const [collection, preferences, ecartes] = await Promise.all([deps.chargerCollection(), deps.chargerPreferences(), deps.chargerEcartes()]);
     const ecartesActifs = Object.entries(ecartes).filter(([cle, t]) => !cle.startsWith('carte:') && !cle.startsWith('vu:') && !cle.startsWith('attend:') && t > maintenant).map(([cle]) => cle);
     const titresRetires = Object.keys(ecartes).filter((c) => c.startsWith('carte:')).map((c) => c.slice('carte:'.length));
@@ -149,8 +162,9 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       exemplairesEnVente: new Set(suivi.actives.map((v) => v.idExemplaire)),
       exemplairesEcartes: new Set(ecartesActifs),
       titresRetires: new Set(titresRetires),
+      ...(prefere !== undefined ? { seulementExemplaire: prefere } : {}),
     });
-    if (choix === null) return false;
+    if (choix === null) return { etat: 'rien' };
     // Non vendue : prix de départ divisé par deux autant de fois que la carte est restée sans vente (Alexis, 2026-11-17).
     const rarete = collection.cartes.find((c) => c.id === choix.action.idCarte)?.rarete ?? '';
     const nonVentes = nonVentesDe(suivi, cleNonVente(rarete, choix.titre));
@@ -168,7 +182,7 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     } catch {
       resultat = { classe: 'inconnu', codeHttp: null, cause: 'erreur d’émission' };
     }
-    const lancement = (resultat: 'reussie' | 'echec', cause: string | null): LancementVente => ({ le: deps.horloge.now(), source: 'auto', titre: choix.titre, prix: choix.action.prix, resultat, cause });
+    const lancement = (resultat: 'reussie' | 'echec', cause: string | null): LancementVente => ({ le: deps.horloge.now(), source: 'auto', titre: choix.titre, prix: choix.action.prix, resultat, cause, ...(issue !== undefined ? { issue } : {}) });
 
     if (resultat.classe === 'reussie') {
       echecsEcriture = 0;
@@ -176,7 +190,10 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       exemplaireEnEchec = null;
       await deps.ajouterLancement(lancement('reussie', null)).catch(() => undefined);
       await statut({ etat: 'attente', message: `Mise en vente lancée : ${choix.titre}`, jusqua: null, carte: null });
-      return true;
+      const maintenantLancee = deps.horloge.now();
+      // Compte local de la place prise : le listing du site ne la montrera qu’à la lecture suivante.
+      const prise: VenteActive = { id: `local:${choix.action.idExemplaire}`, idExemplaire: choix.action.idExemplaire, titre: choix.titre, rarete, prixDepart: choix.action.prix, prixActuel: choix.action.prix, avecMise: false, creeLe: maintenantLancee, finLe: maintenantLancee + 3600_000, finInitiale: maintenantLancee };
+      return { etat: 'lancee', active: prise };
     }
     const cause = resultat.cause;
     await deps.ajouterLancement(lancement('echec', cause)).catch(() => undefined);
@@ -190,12 +207,12 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       // 401 et 429 sont un signal du site entier : la lecture du suivi respecte la même pause de 30 min.
       const courant = (await deps.chargerEtatSuivi().catch(() => null)) ?? ETAT_SUIVI_INITIAL;
       await ecrireEtat(courant, { etat: 'pause', message: resultat.codeHttp === 401 ? 'Session du site expirée (401) : pause de 30 min' : 'Le site demande de ralentir (429) : pause de 30 min', jusqua: deps.horloge.now() + PAUSE_ECRITURE_MS });
-      return false;
+      return { etat: 'stop' };
     }
     if (resultat.codeHttp === 409 || estLimiteEncheres(diagnostic)) {
       // Le listing sous-compte peut-être : au plus un essai par minute tant qu’une lecture ne montre pas une place libre.
       await pause(DELAI_APRES_409_MS, 'Limite d’enchères actives atteinte : la relance attend une place', null);
-      return false;
+      return { etat: 'stop' };
     }
     // Exemplaire vendu, défaussé ou introuvable : la carte est écartée un jour et la relance passe à la suivante ; à partir
     // de 3 refus de suite (le site peut s’en servir comme avertissement), attente progressive comme pour toute erreur.
@@ -204,11 +221,11 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       refusSuite += 1;
       if (refusSuite < 3) {
         await statut({ etat: 'attente', message: `Carte refusée par le site : ${choix.titre} est écartée un jour`, jusqua: null, carte: null });
-        return false;
+        return { etat: 'stop' };
       }
       const attenteRefus = attenteApresEchec(refusSuite - 2);
       await pause(attenteRefus, `${refusSuite} refus de suite par le site : nouvel essai dans ${Math.round(attenteRefus / 1000)} s`, refusSuite - 2 >= SEUIL_AVERTISSEMENT_ECRITURE ? { titre: choix.titre, idExemplaire: choix.action.idExemplaire, essais: refusSuite } : null);
-      return false;
+      return { etat: 'stop' };
     }
     // Toute autre erreur (anti-bot compris, jamais contourné) : attente progressive de 5 s, +5 s à chaque échec de suite de la
     // même carte, sans plafond ni arrêt automatique ; à partir de 5 échecs, avertissement avec choix pour le joueur.
@@ -221,7 +238,59 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       `${raison} pour ${choix.titre} : essai ${echecsEcriture}, nouvel essai dans ${Math.round(attente / 1000)} s`,
       echecsEcriture >= SEUIL_AVERTISSEMENT_ECRITURE ? { titre: choix.titre, idExemplaire: choix.action.idExemplaire, essais: echecsEcriture } : null,
     );
-    return false;
+    return { etat: 'stop' };
+  }
+
+  /**
+   * File de traitement des fins d’enchère (Alexis, 2026-11-17 : « quand le décompte est terminé, vérifier si elle a été vendue »).
+   * Chaque fin lue dans l’historique du site (statut explicite : vendue, non vendue, annulée) est traitée une fois, la plus ancienne
+   * d’abord, chacune sous le verrou de requête : vendue ou annulée, la place libérée va à la prochaine carte de la règle ; non
+   * vendue, le même exemplaire est retenté (prix de départ ÷2 de plus, `nonVentes`), sinon la prochaine carte. Plusieurs fins
+   * simultanées donnent plusieurs mises en vente dans la même passe, dans la limite des places libres. Un identifiant ne sort de la
+   * file qu’une fois traité : une attente, un 401/429, un 409 ou un échec le laissent en place pour le passage suivant.
+   */
+  async function relancer(suivi0: SuiviVentes): Promise<boolean> {
+    let suivi = suivi0;
+    // Une enchère disparue sans verdict : on attend son statut (10 s entre deux lectures, 2 min au plus), jamais d’arrêt.
+    if (verdictEnAttente(suivi, deps.horloge.now())) return false;
+    const parId = new Map(suivi.terminees.map((t) => [t.id, t]));
+    const file = new Set(suivi.aTraiter ?? []);
+    const fins = [...file].map((id) => parId.get(id)).filter((t): t is NonNullable<typeof t> => t !== undefined).sort((a, b) => a.finLe - b.finLe);
+    let lancees = 0;
+    const clore = async (id: string): Promise<void> => {
+      file.delete(id);
+      // Seule la file est écrite : les places prises localement ne sont pas dans la liste du site et ne doivent pas être enregistrées.
+      await deps.enregistrerSuivi({ ...suivi0, aTraiter: [...file] }).catch(() => undefined);
+    };
+    const poser = (active: VenteActive): void => {
+      lancees += 1;
+      suivi = { ...suivi, actives: [...suivi.actives, active] };
+    };
+    let arret = false;
+    for (const fin of fins) {
+      if (lancees >= MAX_PAR_PASSE) break;
+      const issue = issueDe(fin);
+      let r: ResultatRelance = issue === 'non-vendue' && fin.idExemplaire !== undefined ? await relancerUne(suivi, fin.idExemplaire, issue) : { etat: 'rien' };
+      if (r.etat === 'rien') r = await relancerUne(suivi, undefined, issue);
+      if (r.etat === 'lancee') {
+        poser(r.active);
+        await clore(fin.id);
+      } else if (r.etat === 'rien') {
+        // Aucune carte éligible : la fin est traitée (la place reste libre), journalisée une seule fois.
+        await deps.ajouterLancement({ le: deps.horloge.now(), source: 'auto', titre: fin.titre, prix: 0, resultat: 'echec', cause: 'Aucune carte éligible pour remplacer cette enchère', issue }).catch(() => undefined);
+        await clore(fin.id);
+      } else {
+        arret = true;
+        break;
+      }
+    }
+    // Places encore libres sans fin à traiter (relance qu’on vient d’activer, place libérée à la main) : comme avant, par la règle.
+    while (!arret && lancees < MAX_PAR_PASSE) {
+      const r = await relancerUne(suivi, undefined, undefined);
+      if (r.etat !== 'lancee') break;
+      poser(r.active);
+    }
+    return lancees > 0;
   }
 
   async function cycle(forcer = false): Promise<number> {
@@ -267,7 +336,7 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
         return base.jusqua - maintenant;
       }
       const stocke = await deps.chargerSuivi();
-      const echeance = stocke.releveLe === 0 ? 0 : stocke.releveLe + delaiSuivant(stocke.actives, stocke.releveLe);
+      const echeance = stocke.releveLe === 0 ? 0 : stocke.releveLe + delaiSuivant(stocke.actives, stocke.releveLe, verdictEnAttente(stocke, stocke.releveLe));
       if (!forcer && maintenant < echeance - 1_000) return echeance - maintenant;
 
       let reponse: ReponseApi;
@@ -303,7 +372,7 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       await ecrireEtat(base, { etat: 'ok', message: 'Suivi à jour', jusqua: null, echecs: 0, dernierPassage: passage, dernierSucces: passage });
       const lancee = await relancer(suivi);
       if (lancee) return DELAI_APRES_LANCEMENT_MS + deps.gigue();
-      return Math.max(1_000, delaiSuivant(suivi.actives, deps.horloge.now())) + deps.gigue();
+      return Math.max(1_000, delaiSuivant(suivi.actives, deps.horloge.now(), verdictEnAttente(suivi, deps.horloge.now()))) + deps.gigue();
     } catch {
       const e = (await deps.chargerEtatSuivi().catch(() => null)) ?? ETAT_SUIVI_INITIAL;
       const echecs = e.echecs + 1;

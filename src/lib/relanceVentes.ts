@@ -24,6 +24,8 @@ export interface EntreeChoix {
   exemplairesEcartes: ReadonlySet<string>
   /** Cartes retirées de la relance par le joueur (choix explicite après l’avertissement). */
   titresRetires?: ReadonlySet<string>
+  /** Retente cet exemplaire seulement (enchère terminée sans vente : la même carte est remise en vente moins chère). */
+  seulementExemplaire?: string
 }
 
 /** Prochaine mise aux enchères à lancer, ou `null` (aucune place libre ou aucune carte éligible). */
@@ -32,7 +34,7 @@ export function choisirProchaineEnchere(e: EntreeChoix): { action: Extract<Actio
   const cartes: Carte[] = []
   for (const c of e.collection.cartes) {
     if (!estProposable(c) || e.titresRetires?.has(c.titre)) continue
-    const libres = (c.idsSite ?? []).filter((id) => !e.exemplairesEnVente.has(id) && !e.exemplairesEcartes.has(id))
+    const libres = (c.idsSite ?? []).filter((id) => !e.exemplairesEnVente.has(id) && !e.exemplairesEcartes.has(id) && (e.seulementExemplaire === undefined || id === e.seulementExemplaire))
     if (libres.length === 0) continue
     cartes.push({ ...c, idsSite: libres })
   }
