@@ -70,7 +70,7 @@ describe('fins d’enchères simultanées', () => {
       cartes,
     })
     await m.suivi.cycle()
-    expect(m.etat.ordres.map(ex).sort()).toEqual(['ex-E1', 'ex-K', 'ex-U'])
+    expect(m.etat.ordres.map(ex).sort()).toEqual(['ex-E1', 'ex-E2', 'ex-U'])
     // La non vendue repart : même exemplaire, prix de départ divisé par deux.
     const retentee = m.etat.ordres.find((o) => ex(o) === 'ex-U')!
     expect(prix(retentee)).toBe(Math.max(1, Math.floor(normal / 2)))
@@ -82,11 +82,19 @@ describe('fins d’enchères simultanées', () => {
     expect(m.etat.verrous).toBe(4)
   })
 
+  it('annulée : une carte est remise en vente, mais jamais la carte annulée', async () => {
+    const m = monde({ reponses: [liste([enCours('A')], [fin('K', 'cancelled', -1000)])], cartes })
+    await m.suivi.cycle()
+    expect(m.etat.ordres.map(ex)).not.toContain('ex-K')
+    expect(m.etat.ordres.length).toBeGreaterThan(0)
+    expect(m.etat.ecartes['ex-K']).toBeGreaterThan(T0)
+  })
+
   it('idempotent : relire la même liste ne relance rien de plus', async () => {
     const m = monde({
       reponses: [
         liste([enCours('A'), enCours('B')], [fin('S', 'settled_sold', -3000), fin('U', 'settled_unsold', -2000), fin('K', 'cancelled', -1000)]),
-        liste([enCours('A'), enCours('B'), enCours('K'), enCours('U'), enCours('E1')], [fin('S', 'settled_sold', -3000), fin('U', 'settled_unsold', -2000), fin('K', 'cancelled', -1000)]),
+        liste([enCours('A'), enCours('B'), enCours('E1'), enCours('E2'), enCours('U')], [fin('S', 'settled_sold', -3000), fin('U', 'settled_unsold', -2000), fin('K', 'cancelled', -1000)]),
       ],
       cartes,
     })

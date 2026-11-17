@@ -266,6 +266,13 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       lancees += 1;
       suivi = { ...suivi, actives: [...suivi.actives, active] };
     };
+    // Annulée (Alexis, 2026-11-17) : une carte est remise en vente, mais jamais la carte annulée (écartée un jour), même par une autre fin du passage.
+    const annulees = fins.filter((f) => issueDe(f) === 'annulee' && f.idExemplaire !== undefined);
+    if (annulees.length > 0) {
+      const ecartes = await deps.chargerEcartes().catch(() => ({}) as Record<string, number>);
+      const ajoutes = Object.fromEntries(annulees.map((f) => [f.idExemplaire!, deps.horloge.now() + ECART_REFUS_MS]));
+      await deps.enregistrerEcartes(purgerEcartes({ ...ecartes, ...ajoutes }, deps.horloge.now())).catch(() => undefined);
+    }
     let arret = false;
     for (const fin of fins) {
       if (lancees >= MAX_PAR_PASSE || !(await bailToujoursNotre())) break;
