@@ -11,3 +11,5 @@ Critères : tests `tests/unit/mise-en-vente.test.ts`, `tests/unit/suivi-ventes-c
 ## Non-ventes et prix de départ (Alexis, 2026-11-17)
 
 Une enchère non vendue est mémorisée par carte (`nonVentes`, `finsVues` dans `suiviVentes`) : la relance divise le prix de départ de la matrice par deux autant de fois que la carte est restée non vendue de suite (÷2, ÷4…), plancher de 1 wikibidou (minimum du site **non vérifié**). Une vente remet le compte à zéro. À la première lecture, l’historique existant n’est pas compté. L’onglet affiche les non-ventes de suite et le prochain prix de départ.
+
+Le compte est tenu par `rareté|titre`. **Non vérifié** : la forme de `history` pour une vente réelle (`final_price`) ; une vente sans `final_price` serait comptée non vendue (point à relever, `retouches.md`). Un seul onglet WikiMasters visible évite l’entrelacement du bail.

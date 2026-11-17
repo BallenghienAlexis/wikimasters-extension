@@ -97,7 +97,11 @@ export function prixDepartAjuste(base: number, nonVentes: number): number {
 }
 
 /** Compte des non-ventes de suite pour une carte (0 si aucune). */
-export const nonVentesDe = (suivi: Pick<SuiviVentes, 'nonVentes'>, titre: string): number => suivi.nonVentes?.[titre] ?? 0
+export const nonVentesDe = (suivi: Pick<SuiviVentes, 'nonVentes'>, cle: string): number =>
+  suivi.nonVentes !== undefined && Object.hasOwn(suivi.nonVentes, cle) ? suivi.nonVentes[cle]! : 0
+
+/** Clé d’une carte pour les non-ventes : rareté et titre (identité de la carte sur le site). */
+export const cleNonVente = (rarete: string, titre: string): string => `${rarete}|${titre}`
 
 function compterNonVentes(precedent: SuiviVentes, terminees: readonly VenteTerminee[]): Pick<SuiviVentes, 'nonVentes' | 'finsVues'> {
   const vues = precedent.finsVues
@@ -107,8 +111,11 @@ function compterNonVentes(precedent: SuiviVentes, terminees: readonly VenteTermi
   const comptes = { ...(precedent.nonVentes ?? {}) }
   // Les plus anciennes d’abord : une vente remet le compte à zéro, une non-vente l’augmente.
   for (const v of terminees.filter((t) => !connues.has(t.id)).sort((a, b) => a.finLe - b.finLe)) {
-    if (v.prixFinal !== null && v.prixFinal > 0) delete comptes[v.titre]
-    else comptes[v.titre] = (comptes[v.titre] ?? 0) + 1
+    const cle = cleNonVente(v.rarete, v.titre)
+    const n = Object.hasOwn(comptes, cle) ? comptes[cle]! : 0
+    delete comptes[cle]
+    // Réinséré en dernier : si la limite est atteinte, ce sont les cartes les moins récentes qui sont oubliées.
+    if (!(v.prixFinal !== null && v.prixFinal > 0)) comptes[cle] = n + 1
   }
   const garde = Object.entries(comptes).slice(-MAX_NON_VENTES)
   return { nonVentes: Object.fromEntries(garde), finsVues: [...nouvelles, ...vues.filter((i) => !nouvelles.includes(i))].slice(0, MAX_FINS_VUES) }

@@ -105,7 +105,7 @@ describe('cycle de suivi des mises en vente', () => {
     await m.suivi.cycle()
     const normal = (m.etat.ordres[0] as { prix: number }).prix
     const n = monde({ reponses: [ok([])], relance: true })
-    n.etat.suivi = { ...suiviVide(), nonVentes: { 'Berger allemand': 2 }, finsVues: [] }
+    n.etat.suivi = { ...suiviVide(), nonVentes: { 'commune|Berger allemand': 2 }, finsVues: [] }
     await n.suivi.cycle()
     expect(n.etat.ordres[0]).toMatchObject({ type: 'enchere', prix: Math.max(1, Math.floor(normal / 4)) })
     expect(n.etat.lancements[0]?.prix).toBe(Math.max(1, Math.floor(normal / 4)))

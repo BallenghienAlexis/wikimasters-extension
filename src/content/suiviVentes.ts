@@ -21,6 +21,7 @@ import {
   attenteApresEchec,
   delaiSuivant,
   fusionnerSuivi,
+  cleNonVente,
   nonVentesDe,
   prixDepartAjuste,
   purgerEcartes,
@@ -141,7 +142,8 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     });
     if (choix === null) return false;
     // Non vendue : prix de départ divisé par deux autant de fois que la carte est restée sans vente (Alexis, 2026-11-17).
-    const nonVentes = nonVentesDe(suivi, choix.titre);
+    const rarete = collection.cartes.find((c) => c.id === choix.action.idCarte)?.rarete ?? '';
+    const nonVentes = nonVentesDe(suivi, cleNonVente(rarete, choix.titre));
     if (nonVentes > 0) choix.action = { ...choix.action, prix: prixDepartAjuste(choix.action.prix, nonVentes) };
 
     // Les essais déjà faits sur cette carte survivent à un rechargement de l’onglet (lus dans le statut enregistré).

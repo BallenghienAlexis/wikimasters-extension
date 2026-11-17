@@ -168,20 +168,20 @@ describe('non-ventes et prix de départ divisé par deux', () => {
 
   it('ne compte pas l’historique existant à la première lecture, puis compte les nouvelles fins une seule fois', () => {
     const v0 = fusionnerSuivi(suiviVide(), lecture([fin('a', 'X', 1000, null)]), 1)
-    expect(nonVentesDe(v0, 'X')).toBe(0)
+    expect(nonVentesDe(v0, 'commune|X')).toBe(0)
     const l1 = lecture([fin('b', 'X', 2000, null), fin('a', 'X', 1000, null)])
     const v1 = fusionnerSuivi(v0, l1, 2)
-    expect(nonVentesDe(v1, 'X')).toBe(1)
-    expect(nonVentesDe(fusionnerSuivi(v1, l1, 3), 'X')).toBe(1)
+    expect(nonVentesDe(v1, 'commune|X')).toBe(1)
+    expect(nonVentesDe(fusionnerSuivi(v1, l1, 3), 'commune|X')).toBe(1)
     const v2 = fusionnerSuivi(v1, lecture([fin('c', 'X', 3000, null), ...l1.terminees]), 4)
-    expect(nonVentesDe(v2, 'X')).toBe(2)
+    expect(nonVentesDe(v2, 'commune|X')).toBe(2)
   })
 
   it('une vente remet le compte à zéro', () => {
     const v0 = fusionnerSuivi(suiviVide(), lecture([]), 1)
     const v1 = fusionnerSuivi(v0, lecture([fin('b', 'X', 2000, null), fin('a', 'X', 1000, null)]), 2)
-    expect(nonVentesDe(v1, 'X')).toBe(2)
+    expect(nonVentesDe(v1, 'commune|X')).toBe(2)
     const v2 = fusionnerSuivi(v1, lecture([fin('c', 'X', 3000, 60), ...lecture([fin('b', 'X', 2000, null), fin('a', 'X', 1000, null)]).terminees]), 3)
-    expect(nonVentesDe(v2, 'X')).toBe(0)
+    expect(nonVentesDe(v2, 'commune|X')).toBe(0)
   })
 })
