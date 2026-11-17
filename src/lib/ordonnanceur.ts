@@ -445,8 +445,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         cause = !stable
           ? 'la collection a changé pendant la lecture'
           : `${lecture.lus ?? 0} exemplaire(s) lu(s) pour ${stats.total} annoncé(s) par le site`;
-        // Rien n’a bougé côté site : une seule relecture de contrôle, une troisième n’y changerait rien.
-        const derniere = passe === MAX_PASSES || (stable && passe >= 2);
+        // Rien n’a bougé côté site : une nouvelle passe n’y changerait rien, la cause exacte est gardée sans relire.
+        const derniere = passe === MAX_PASSES || stable;
         journal(`Lecture non propre (passe ${passe}/${MAX_PASSES}) : ${cause} ; ${derniere ? 'abandon, aucun retrait local.' : 'nouvelle lecture.'}`);
         stats = fin;
         if (derniere) break;
