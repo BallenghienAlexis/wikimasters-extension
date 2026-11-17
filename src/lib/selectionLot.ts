@@ -17,6 +17,14 @@ export type ChoixCarte = 'aucun' | 'vendre' | 'defausser'
 /** Une carte est proposable si elle est reliée au site, n’est ni un favori (verrouillé) ni « à classer ». */
 export const estProposable = (c: Carte): boolean => !c.favori && !estACLasser(c) && c.idsSite !== null && c.idsSite.length > 0 && c.quantite > 0
 
+/** Raison pour laquelle une carte n’est pas proposable (null si elle l’est) : affichée au lieu de la masquer en silence. */
+export const raisonNonProposable = (c: Carte): string | null => {
+  if (c.favori) return 'favori : verrouillé sur le site'
+  if (c.idsSite === null || c.idsSite.length === 0 || c.quantite <= 0) return 'non reliée au site : lancez une synchronisation'
+  if (estACLasser(c)) return 'sans thème fiable ou encore « #À classer » : écartée de toute vente tant qu’elle n’est pas classée'
+  return null
+}
+
 const sansDieseEtAccents = (nom: string): string => normaliser(nom).replace(/^#\s*/, '').trim()
 
 /**

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { observations, type EvenementVente } from '../lib/affluence';
 import { normaliser, type Carte } from '../lib/collection';
-import { conseilLancement, estProposable, type Choix, type ChoixCarte } from '../lib/selectionLot';
+import { conseilLancement, estProposable, raisonNonProposable, type Choix, type ChoixCarte } from '../lib/selectionLot';
 import { NB, CLASSE_BOUTON } from './apercuLot';
 import SectionRepliable from './SectionRepliable';
 import HeuresFortes from './HeuresFortes';
@@ -31,6 +31,11 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, onCho
     if (q === '') return [];
     return proposables.filter((c) => normaliser(c.titre).includes(q) && !choisies.includes(c));
   }, [proposables, recherche, choisies]);
+  const nonProposables = useMemo(() => {
+    const q = normaliser(recherche.trim());
+    if (q === '') return [];
+    return cartes.filter((c) => !estProposable(c) && normaliser(c.titre).includes(q));
+  }, [cartes, recherche]);
   const nbVendre = choisies.filter((c) => choix.get(c.id)?.choix === 'vendre').length;
   const nbDefausser = choisies.length - nbVendre;
 
@@ -124,6 +129,16 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, onCho
         />
       </label>
       {trouvees.length > 0 && <ul className="mt-2">{trouvees.slice(0, MAX_AFFICHEES).map(ligne)}</ul>}
+      {nonProposables.length > 0 && (
+        <ul className="mt-2" data-testid="non-proposables">
+          {nonProposables.slice(0, MAX_AFFICHEES).map((c) => (
+            <li key={c.id} className="border-b border-line py-2 text-sm text-muted">
+              {c.titre}
+              {NB}: non proposable, {raisonNonProposable(c)}.
+            </li>
+          ))}
+        </ul>
+      )}
       {trouvees.length > MAX_AFFICHEES && <p className="mt-1 text-sm text-muted">… et {trouvees.length - MAX_AFFICHEES} autres : précisez la recherche.</p>}
     </SectionRepliable>
   );
