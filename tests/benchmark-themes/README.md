@@ -5,7 +5,7 @@ Rien ici ne touche à la logique de production.
 
 ## Contenu
 
-- `cartes.ts` : 309 cartes (titre, description courte du site, page Wikipédia, 1 à 4 thèmes de référence du catalogue de `src/lib/themes.ts`, justification), classées par catégorie (personne, œuvre, organisation, lieu, objet, événement, notion, espèce, homonymie, nom propre). Les cas piégeux (`piege: true`) portent des `interdits` : le faux thème exact relevé par Alexis (Four crématoire → Animaux, Wagon → Voiture, Jaguar → félin…).
+- `cartes.ts` : 317 cartes (titre, description courte du site, page Wikipédia, 1 à 4 thèmes de référence du catalogue de `src/lib/themes.ts`, justification), classées par catégorie (personne, œuvre, organisation, lieu, objet, événement, notion, espèce, homonymie, nom propre). Les cas piégeux (`piege: true`) portent le plus souvent des `interdits` (pas toujours : certains pièges n’ont pas de faux thème nommable) : le faux thème exact relevé par Alexis (Four crématoire → Animaux, Wagon → Voiture, Jaguar → félin…).
 - `types.ts` : `CarteReference`, `FonctionDeduction`.
 - `scoring.ts` : `evaluer(fonction)` (asynchrone, une carte à la fois), `scorerPredictions(titre → thèmes)` (prédictions déjà calculées, par exemple lues d’un JSON), `formaterRapport`.
 - `production.ts` : la déduction actuelle comme ligne de base.

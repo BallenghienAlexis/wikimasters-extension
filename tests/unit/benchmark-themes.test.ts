@@ -32,6 +32,10 @@ describe('jeu de référence', () => {
       }
     }
   });
+  it('contient des cartes sans thème attendu, pour mesurer les fausses propositions', () => {
+    expect(CARTES_REFERENCE.filter((c) => c.themes.length === 0).length).toBeGreaterThanOrEqual(8);
+    expect(scorerPredictions({}).global.tauxFauxSurCartesVides).toBe(0);
+  });
   it('contient les cas piégeux connus', () => {
     const titres = new Set(CARTES_REFERENCE.map((c) => c.titre));
     for (const t of ['Four crématoire', 'Cambuses nord-américaines', 'Malibu', 'Longmorn', 'Maitrank', 'Solution de Dakin', 'Croix de saint André', 'Adolf Hitler', 'Vera Salvequart', 'Der Angriff', 'Regelbau 602', 'Wagon']) {
