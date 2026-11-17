@@ -25,6 +25,8 @@ export interface EntreeWikipedia {
   signaux?: SignauxPage;
   /** Vrai quand la lecture des entrées d'une page d'homonymie a été prévue (entrées plus anciennes sans thème : relues une fois, 2026-11-17). */
   avecHomonymie?: true;
+  /** Vrai quand le thème « Noms et prénoms » existait au moment de la lecture ; sans lui, une entrée sans thème est relue une fois (2026-11-17). */
+  avecNoms?: true;
   /** Vrai quand les thèmes ont été calculés sans compter les noms propres composés (« Bee Train ») ; sinon relue une fois (2026-11-14). */
   nomsPropres?: true;
 }
@@ -96,16 +98,20 @@ export function themesDepuisHomonymie(texte: string): string[] {
     entrees.push(ligne);
     if (entrees.length >= MAX_ENTREES_HOMONYMIE) break;
   }
-  if (entrees.length === 0) return [];
+  if (entrees.length === 0) return nomOuPrenom(texte);
   const compte = new Map<string, number>();
   for (const ligne of entrees) for (const id of themesDirectsDeTexte(ligne)) compte.set(id, (compte.get(id) ?? 0) + 1);
   const minimum = Math.max(entrees.length === 1 ? 1 : 2, Math.ceil(entrees.length * 0.3));
-  return [...compte.entries()]
+  const dominants = [...compte.entries()]
     .filter(([, n]) => n >= minimum)
     .sort(([a, na], [b, nb]) => nb - na || a.localeCompare(b))
     .slice(0, 3)
     .map(([id]) => id);
+  return dominants.length > 0 ? dominants : nomOuPrenom(texte);
 }
+
+/** Aucun domaine ne domine : une page qui parle d'un patronyme ou d'un prénom relève du thème « Noms et prénoms » (Alexis, 2026-11-17). */
+const nomOuPrenom = (texte: string): string[] => (/patronyme|nom de famille|(?:^|[^a-z])prenoms?(?![a-z])/.test(cle(texte)) ? ['noms'] : []);
 
 /** GET en lecture seule : recherche d'une entité par son titre ; seuls l'étiquette et la courte description sont lues. */
 export function urlRequeteWikidata(titre: string): string {
@@ -256,6 +262,7 @@ export function validerCache(brut: unknown): CacheWikipedia | null {
       ...(e.avecWikidata === true ? { avecWikidata: true as const } : {}),
       ...(lireSignaux(e.signaux, connus) ? { signaux: lireSignaux(e.signaux, connus) as SignauxPage } : {}),
       ...(e.avecHomonymie === true ? { avecHomonymie: true as const } : {}),
+      ...(e.avecNoms === true ? { avecNoms: true as const } : {}),
       ...(e.nomsPropres === true ? { nomsPropres: true as const } : {}),
     };
   }
@@ -263,7 +270,7 @@ export function validerCache(brut: unknown): CacheWikipedia | null {
 }
 
 export function ajouterEntree(cache: CacheWikipedia, titre: string, themes: string[], maintenant: number, wikidata = false, signaux?: SignauxPage): CacheWikipedia {
-  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, avecHomonymie: true, nomsPropres: true, ...(wikidata ? { avecWikidata: true as const } : {}), ...(signaux ? { signaux } : {}) };
+  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, avecHomonymie: true, avecNoms: true, nomsPropres: true, ...(wikidata ? { avecWikidata: true as const } : {}), ...(signaux ? { signaux } : {}) };
   return { version: 1, entrees: { ...cache.entrees, [titre]: entree } };
 }
 
@@ -278,7 +285,7 @@ export function titresAVerifier(titres: string[], cache: CacheWikipedia, mainten
     // Une entrée calculée avant le filtre des noms propres est relue une fois.
     if (entree !== undefined && entree.nomsPropres !== true) { resultat.push(titre); continue }
     // Une entrée sans thème et sans résumé (ancienne version) est relue une fois pour profiter du résumé.
-    if (entree === undefined || entree.signaux === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS || (entree.themes.length === 0 && (entree.avecResume !== true || entree.avecWikidata !== true || entree.avecHomonymie !== true))) resultat.push(titre);
+    if (entree === undefined || entree.signaux === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS || (entree.themes.length === 0 && (entree.avecResume !== true || entree.avecWikidata !== true || entree.avecHomonymie !== true || entree.avecNoms !== true))) resultat.push(titre);
   }
   return resultat;
 }
