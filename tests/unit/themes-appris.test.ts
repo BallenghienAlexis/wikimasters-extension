@@ -67,3 +67,18 @@ describe('thèmes appris', () => {
     expect(categoriesUtiles(['Article à référence nécessaire', 'Spécialité artisanale'])).toEqual(['Spécialité artisanale']);
   });
 });
+
+describe('noms réservés et validation', () => {
+  it('refuse les noms qui ont un sens pour l’extension ou des caractères invisibles', () => {
+    const etat = proposerThemes(entrees(5, ['Spécialité artisanale']), etatApprisVide(), 1);
+    const id = etat.themes[0]!.id;
+    for (const nom of ['À classer', 'Autres', 'À échanger Léa', 'Statut · Vendre', 'À vendre', 'Nom‮ca']) expect(erreurDeNom(nom, etat, id), nom).not.toBeNull();
+    expect(erreurDeNom('Spécialité maison', etat, id)).toBeNull();
+  });
+  it('écarte un identifiant de fusion illisible', () => {
+    const etat = proposerThemes(entrees(5, ['Spécialité artisanale']), etatApprisVide(), 1);
+    const brut = JSON.parse(JSON.stringify(etat)) as { themes: Record<string, unknown>[] };
+    brut.themes[0]!.fusionneVers = '__proto__ ';
+    expect(validerEtatAppris(brut)).toBeNull();
+  });
+});

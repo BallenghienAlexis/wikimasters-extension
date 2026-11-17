@@ -4,6 +4,7 @@
 import { normaliser } from './collection';
 import { LIBELLES_THEMES, parentsDe, themesDeTexte } from './themes';
 import { estObjet } from './valider';
+import { estEtiquetteAVendre } from './selectionLot';
 
 /** Nombre de cartes distinctes à partir duquel une catégorie devient un thème (Alexis, 2026-11-17). */
 export const SEUIL_CARTES_APPRIS = 5;
@@ -52,7 +53,8 @@ export function validerEtatAppris(brut: unknown): EtatAppris | null {
   for (const t of brut.themes) {
     if (!estObjet(t) || typeof t.id !== 'string' || !/^appris-[a-z0-9-]{1,60}$/.test(t.id)) return null;
     if (typeof t.libelle !== 'string' || !/^#.{2,40}$/u.test(t.libelle) || typeof t.categorie !== 'string' || t.categorie.length > 120) return null;
-    if (!Array.isArray(t.parents) || !t.parents.every((p) => typeof p === 'string') || t.parents.length > 20) return null;
+    if (!Array.isArray(t.parents) || !t.parents.every((p) => typeof p === 'string' && /^[a-z0-9-]{1,60}$/.test(p)) || t.parents.length > 20) return null;
+    if (t.fusionneVers !== undefined && (typeof t.fusionneVers !== 'string' || !/^[a-z0-9-]{1,60}$/.test(t.fusionneVers))) return null;
     if (typeof t.cartes !== 'number' || !Number.isSafeInteger(t.cartes) || t.cartes < 0 || typeof t.creeLe !== 'number' || !Number.isSafeInteger(t.creeLe)) return null;
     if (!ETATS.includes(t.etat as EtatThemeAppris)) return null;
     themes.push({
@@ -131,7 +133,7 @@ export function proposerThemes(entrees: Readonly<Record<string, EntreeCategories
       .sort((a, b) => parentsDe(b[0]).length - parentsDe(a[0]).length || b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0];
     const parents = famille === undefined ? [] : [famille, ...parentsDe(famille)];
     const id = idDepuisCategorie(n);
-    if (themes.some((t) => t.id === id)) continue;
+    if (id === 'appris-' || themes.some((t) => t.id === id)) continue;
     libellesPris.add(normaliser(libelle));
     themes.push({ id, libelle, categorie: n, parents, cartes: g.titres.length, creeLe: maintenant, etat: 'actif' });
     actifs += 1;
@@ -144,7 +146,10 @@ export function proposerThemes(entrees: Readonly<Record<string, EntreeCategories
 export function erreurDeNom(nom: string, etat: EtatAppris, id: string): string | null {
   const libelle = nom.trim().startsWith('#') ? nom.trim() : `#${nom.trim()}`;
   if (libelle.length < 3 || libelle.length > 40) return 'Le nom doit faire de 2 à 39 caractères.';
+  if (/[\p{Cc}\p{Cf}]/u.test(libelle)) return 'Le nom contient des caractères invisibles.';
   const n = normaliser(libelle);
+  // Noms qui ont un sens pour l’extension ou pour les autres joueurs.
+  if (/^#\s*(a classer|autres?|a echanger|statut|a vendre|vendre)/.test(n) || estEtiquetteAVendre(libelle)) return 'Ce nom est réservé par l’extension.';
   const pris = [...Object.entries(LIBELLES_THEMES)].some(([k, l]) => k !== id && normaliser(l) === n) || etat.themes.some((t) => t.id !== id && t.etat === 'actif' && normaliser(t.libelle) === n);
   return pris ? 'Ce nom est déjà utilisé par un autre thème.' : null;
 }
