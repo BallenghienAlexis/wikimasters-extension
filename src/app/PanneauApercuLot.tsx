@@ -13,6 +13,9 @@ import { PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
 import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
 import SelectionVenteDefausse from './SelectionVenteDefausse';
 import { choixInitial, precocher, versSelection, type Choix, type ChoixCarte } from '../lib/selectionLot';
+import SelectionFavoris from './SelectionFavoris';
+import { cartesRefuseesParRegle, propositionsFavori, sansFavorisDecoches } from '../lib/selectionFavoris';
+import type { EditionCarte } from '../lib/collection';
 import EtiquettesPrevues from './EtiquettesPrevues';
 import Journal, { type CoupleRetrait } from './Journal';
 import BandeauRisque from './BandeauRisque';
@@ -79,6 +82,8 @@ interface Props {
   onReessayer?: () => Promise<Registre | null>;
   /** Appelé par « Lancer » (câblé en T-017). */
   onLancer?: (actions: Action[]) => void;
+  /** Édition locale d’une carte : sert à mémoriser un favori refusé dans l’aperçu (choix « pas favori »). */
+  onEdition?: (id: string, edition: EditionCarte) => void;
 }
 
 const Avertissement: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -101,6 +106,7 @@ const PanneauApercuLot: React.FC<Props> = ({
   ventes = [],
   onReessayer,
   onLancer,
+  onEdition,
 }) => {
   // Lot figé au clic sur « Voir l’aperçu du lot » ou « Réessayer » : aucun recalcul ensuite.
   const [etat, setEtat] = useState<ResultatLot | null>(null);
@@ -154,6 +160,8 @@ const PanneauApercuLot: React.FC<Props> = ({
   // Ignorées figées avec le lot ; familles décochées (tout est coché par défaut, SC-015).
   const [ignorees, setIgnorees] = useState<Ignoree[]>([]);
   const [decochees, setDecochees] = useState<ReadonlySet<FamilleLot>>(new Set());
+  // Favoris décochés carte par carte (tout est coché par défaut), figés avec le lot.
+  const [favorisDecoches, setFavorisDecoches] = useState<ReadonlySet<string>>(new Set());
   const [pauseJusqua, setPauseJusqua] = useState<number | null>(null);
   // Une erreur détaillée est stockée : le panneau d’erreur de l’onglet Synchro existe (sinon pas de lien).
   const [erreurStockee, setErreurStockee] = useState(false);
@@ -193,6 +201,7 @@ const PanneauApercuLot: React.FC<Props> = ({
   const figer = (r: Registre | null, listeIgnorees: Ignoree[]): void => {
     setIgnorees(listeIgnorees);
     setDecochees(new Set());
+    setFavorisDecoches(new Set());
     const config = { ...configDuLot(preferences, ventesSiteLues), selection: versSelection(collection.cartes, choix) };
     setEtat(preparerLot(collection, r, dispo, config));
     let apercu: ApercuEtiquettes | null = null;
@@ -224,7 +233,25 @@ const PanneauApercuLot: React.FC<Props> = ({
     () => new Set(lotsAffiches.map((l) => l.famille).filter((f) => !decochees.has(f))),
     [lotsAffiches, decochees],
   );
-  const actionsCochees = useMemo(() => actionsDesLotsCoches(separes?.disponibles ?? [], cochees), [separes, cochees]);
+  const actionsFamillesCochees = useMemo(() => actionsDesLotsCoches(separes?.disponibles ?? [], cochees), [separes, cochees]);
+  const propositionsFavoris = useMemo(() => propositionsFavori(actionsFamillesCochees), [actionsFamillesCochees]);
+  const actionsCochees = useMemo(() => sansFavorisDecoches(actionsFamillesCochees, favorisDecoches), [actionsFamillesCochees, favorisDecoches]);
+  const basculerFavori = (cle: string): void =>
+    setFavorisDecoches((d) => {
+      const suite = new Set(d);
+      if (suite.has(cle)) suite.delete(cle);
+      else suite.add(cle);
+      return suite;
+    });
+  const toutFavoris = (cles: readonly string[], cocher: boolean): void =>
+    setFavorisDecoches((d) => {
+      const suite = new Set(d);
+      for (const c of cles) {
+        if (cocher) suite.delete(c);
+        else suite.add(c);
+      }
+      return suite;
+    });
   const lignesLots = useMemo(() => lotsAffiches.map((l, i) => ({ famille: l.famille, nbActions: l.actions.length, ordre: i + 1 })), [lotsAffiches]);
   const detailsCochees = useMemo(() => detailsDuLot(actionsCochees, cartes), [actionsCochees, cartes]);
   const pageCochees = useMemo(() => pageActions(actionsCochees), [actionsCochees]);
@@ -284,7 +311,11 @@ const PanneauApercuLot: React.FC<Props> = ({
       setErreurLancement(libelleErreurLancement(e));
     });
   };
-  const lancerDepuisApercu = (actions: Action[]): void => (onLancer ?? ((a: Action[]) => lancer(a, nouvelIdLot('lot'))))(actions);
+  const lancerDepuisApercu = (actions: Action[]): void => {
+    // Une mise en favori de la règle décochée devient le choix « pas favori » : la règle ne la reproposera plus.
+    if (onEdition) for (const id of cartesRefuseesParRegle(actionsFamillesCochees, favorisDecoches)) onEdition(id, { choixFavori: false });
+    (onLancer ?? ((a: Action[]) => lancer(a, nouvelIdLot('lot'))))(actions);
+  };
 
   const arreter = (): void => {
     contexteExecution().file.arreter();
@@ -471,6 +502,8 @@ const PanneauApercuLot: React.FC<Props> = ({
                 </SectionRepliable>
               </div>
             )}
+
+            <SelectionFavoris propositions={propositionsFavoris} decochees={favorisDecoches} cartes={cartes} onBasculer={basculerFavori} onTout={toutFavoris} />
 
             {filtre && filtre.ecartees.length > 0 && (
               <SectionRepliable id="actions-ecartees" testId="actions-ecartees" className="mt-4" titre="Actions écartées" resume={texteActionsEcartees(filtre.ecartees.length)}>
