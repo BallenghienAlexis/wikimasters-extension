@@ -1,0 +1,7328 @@
+{
+ "details": [
+  {
+   "titre": "Four crématoire",
+   "categorie": "objet",
+   "piege": true,
+   "predits": [],
+   "reference": [
+    "technologie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "technologie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Wagon",
+   "categorie": "objet",
+   "piege": true,
+   "predits": [
+    "train"
+   ],
+   "reference": [
+    "train"
+   ],
+   "corrects": [
+    "train"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "train ← type of rail vehicle (Q137735383, P31, d=0)",
+    "vehicule ← véhicule (Q42889, P279, d=3)"
+   ]
+  },
+  {
+   "titre": "Cambuses nord-américaines",
+   "categorie": "notion",
+   "piege": true,
+   "predits": [],
+   "reference": [
+    "histoire"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "histoire"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "vehicule ← véhicule (Q42889, P279, d=5)"
+   ]
+  },
+  {
+   "titre": "Malibu",
+   "categorie": "homonymie",
+   "piege": true,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "page d’homonymie"
+   ]
+  },
+  {
+   "titre": "Chevrolet Malibu",
+   "categorie": "homonymie",
+   "piege": true,
+   "predits": [
+    "voiture"
+   ],
+   "reference": [
+    "voiture"
+   ],
+   "corrects": [
+    "voiture"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "voiture ← modèle d'automobile (Q3231690, P31, d=0)",
+    "vehicule ← véhicule (Q42889, P279, d=3)"
+   ]
+  },
+  {
+   "titre": "Malibu (rhum)",
+   "categorie": "homonymie",
+   "piege": true,
+   "predits": [],
+   "reference": [
+    "rhum",
+    "alcool"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "rhum",
+    "alcool"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Longmorn",
+   "categorie": "organisation",
+   "piege": true,
+   "predits": [
+    "whisky"
+   ],
+   "reference": [
+    "whisky"
+   ],
+   "corrects": [
+    "whisky"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "whisky ← distillerie de whisky (Q10373548, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Maitrank",
+   "categorie": "objet",
+   "piege": true,
+   "predits": [
+    "cocktail"
+   ],
+   "reference": [
+    "alcool"
+   ],
+   "corrects": [],
+   "faux": [
+    "cocktail"
+   ],
+   "manquants": [
+    "alcool"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "cocktail ← cocktail avec alcool (Q134768, P279, d=1)"
+   ]
+  },
+  {
+   "titre": "Solution de Dakin",
+   "categorie": "notion",
+   "piege": true,
+   "predits": [
+    "sante"
+   ],
+   "reference": [
+    "sante",
+    "chimie"
+   ],
+   "corrects": [
+    "sante"
+   ],
+   "faux": [],
+   "manquants": [
+    "chimie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sante ← médicament (Q12140, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Croix de saint André",
+   "categorie": "notion",
+   "piege": true,
+   "predits": [],
+   "reference": [
+    "religion"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "religion"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Annexion de l’Alsace-Moselle (1940)",
+   "categorie": "evenement",
+   "piege": true,
+   "predits": [],
+   "reference": [
+    "secondeguerre",
+    "nazis"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "secondeguerre",
+    "nazis"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Adolf Hitler",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "guerre"
+   ],
+   "reference": [
+    "nazis",
+    "secondeguerre",
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "nazis",
+    "secondeguerre",
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "guerre ← soldat (Q4991371, P106, d=0)",
+    "peinture ← artiste peintre (Q1028181, P106, d=0)",
+    "politique ← personnalité politique (Q82955, P106, d=0)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
+    "nazis ← nazisme (Q7310, P101, d=0)",
+    "societe ← racisme (Q8461, P101, d=2)",
+    "biologie ← procédé biologique (Q2996394, P101, d=4)",
+    "physique ← phénomène physique (Q1293220, P101, d=6)"
+   ]
+  },
+  {
+   "titre": "Vera Salvequart",
+   "categorie": "personne",
+   "piege": true,
+   "predits": [
+    "crime",
+    "sante"
+   ],
+   "reference": [
+    "nazis",
+    "crime",
+    "secondeguerre"
+   ],
+   "corrects": [
+    "crime"
+   ],
+   "faux": [
+    "sante"
+   ],
+   "manquants": [
+    "nazis",
+    "secondeguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sante ← infirmière ou infirmier (Q186360, P106, d=0)",
+    "crime ← tortionnaire (Q20725072, P106, d=0)"
+   ]
+  },
+  {
+   "titre": "Der Angriff",
+   "categorie": "oeuvre",
+   "piege": true,
+   "predits": [],
+   "reference": [
+    "nazis"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "nazis"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Regelbau 602",
+   "categorie": "objet",
+   "piege": true,
+   "predits": [
+    "nazis"
+   ],
+   "reference": [
+    "secondeguerre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "secondeguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "nazis ← Troisième Reich (Q7318, P495, d=0)"
+   ]
+  },
+  {
+   "titre": "Novelists",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "metalcore"
+   ],
+   "reference": [
+    "metalcore"
+   ],
+   "corrects": [
+    "metalcore"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← groupe de musique (Q215380, P31, d=0)",
+    "metalcore ← metalcore (Q183862, P136, d=0)",
+    "punk ← Q3071 (Q3071, P136, d=2)",
+    "rock ← rock (Q11399, P136, d=3)"
+   ]
+  },
+  {
+   "titre": "Morcilla",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "charcuterie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "charcuterie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Tesla Semi",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "camion"
+   ],
+   "reference": [
+    "camion"
+   ],
+   "corrects": [
+    "camion"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "camion ← modèle de camion (Q21546143, P31, d=0)",
+    "vehicule ← véhicule (Q42889, P279, d=2)"
+   ]
+  },
+  {
+   "titre": "Hydravion",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "avion"
+   ],
+   "reference": [
+    "avion"
+   ],
+   "corrects": [
+    "avion"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "avion ← aircraft undercarriage class (Q20031543, P31, d=0)",
+    "vehicule ← véhicule (Q42889, P279, d=2)"
+   ]
+  },
+  {
+   "titre": "Longueur de Planck",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "physique"
+   ],
+   "reference": [
+    "physique"
+   ],
+   "corrects": [
+    "physique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "physique ← constante physique (Q173227, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Leslie Van Houten",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "crime"
+   ],
+   "reference": [
+    "crime"
+   ],
+   "corrects": [
+    "crime"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "crime ← meurtrier ou meurtrière (Q931260, P106, d=0)"
+   ]
+  },
+  {
+   "titre": "Honda CB 900 F Bol d’Or",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "moto"
+   ],
+   "reference": [
+    "moto"
+   ],
+   "corrects": [
+    "moto"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "moto ← modèle de moto (Q23866334, P31, d=0)",
+    "vehicule ← véhicule (Q42889, P279, d=5)"
+   ]
+  },
+  {
+   "titre": "Camille-Laurin (circonscription provinciale)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "politique"
+   ],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [
+    "politique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "politique ← circonscription électorale provinciale du Québec (Q2973931, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Albert Einstein",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "physique"
+   ],
+   "reference": [
+    "physique"
+   ],
+   "corrects": [
+    "physique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "physique ← physicien théoricien ou physicienne théoricienne (Q19350898, P106, d=0)",
+    "idees ← philosophe (Q4964182, P106, d=0)",
+    "technologie ← ingénieur ou ingénieure (Q81096, P106, d=1)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=1)",
+    "biologie ← procédé biologique (Q2996394, P101, d=6)"
+   ]
+  },
+  {
+   "titre": "Marie Curie",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "physique"
+   ],
+   "reference": [
+    "physique",
+    "chimie"
+   ],
+   "corrects": [
+    "physique"
+   ],
+   "faux": [],
+   "manquants": [
+    "chimie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "physique ← physicien ou physicienne (Q169470, P106, d=0)",
+    "chimie ← chimiste (Q593644, P106, d=0)",
+    "idees ← philosophie (Q5891, P101, d=4)",
+    "biologie ← procédé biologique (Q2996394, P101, d=5)"
+   ]
+  },
+  {
+   "titre": "Charles Darwin",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "biologie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "biologie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "idees ← philosophe (Q4964182, P106, d=0)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
+    "biologie ← biologiste (Q864503, P106, d=1)"
+   ]
+  },
+  {
+   "titre": "Wolfgang Amadeus Mozart",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "musique"
+   ],
+   "reference": [
+    "classique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "classique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "musique ← compositeur ou compositrice (Q36834, P106, d=0)",
+    "classique ← chef ou cheffe d'orchestre ou de chœur (Q158852, P106, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=1)",
+    "classique ← musique classique (Q9730, P136, d=1)",
+    "cinema ← réalisateur ou réalisatrice (Q3455803, P106, d=2)"
+   ]
+  },
+  {
+   "titre": "Jimi Hendrix",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "rock"
+   ],
+   "reference": [
+    "rock"
+   ],
+   "corrects": [
+    "rock"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← chanteur ou chanteuse (Q177220, P106, d=0)",
+    "rock ← hard rock (Q83270, P136, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=1)",
+    "blues ← blues (Q9759, P136, d=1)"
+   ]
+  },
+  {
+   "titre": "Kurt Cobain",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "grunge"
+   ],
+   "reference": [
+    "grunge"
+   ],
+   "corrects": [
+    "grunge"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← guitariste (Q855091, P106, d=0)",
+    "grunge ← grunge (Q11365, P136, d=0)",
+    "rock ← rock alternatif (Q11366, P136, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=1)",
+    "biologie ← procédé biologique (Q2996394, P101, d=5)"
+   ]
+  },
+  {
+   "titre": "Miles Davis",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "jazz"
+   ],
+   "reference": [
+    "jazz"
+   ],
+   "corrects": [
+    "jazz"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← compositeur ou compositrice (Q36834, P106, d=0)",
+    "classique ← chef ou cheffe d'orchestre ou de chœur (Q158852, P106, d=0)",
+    "cinema ← acteur ou actrice (Q33999, P106, d=0)",
+    "jazz ← jazz (Q8341, P136, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=1)",
+    "cinema ← réalisateur ou réalisatrice (Q3455803, P106, d=2)"
+   ]
+  },
+  {
+   "titre": "Bob Marley",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "reggae"
+   ],
+   "reference": [
+    "reggae"
+   ],
+   "corrects": [
+    "reggae"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← auteur-compositeur-interprète ou auteure-compositrice-interprète (Q488205, P106, d=0)",
+    "reggae ← reggae (Q9794, P136, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=1)"
+   ]
+  },
+  {
+   "titre": "Eminem",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "rap"
+   ],
+   "reference": [
+    "rap"
+   ],
+   "corrects": [
+    "rap"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "rap ← rappeur ou rappeuse (Q2252262, P106, d=0)",
+    "musique ← auteur-compositeur ou autrice-compositrice (Q753110, P106, d=0)",
+    "cinema ← acteur ou actrice (Q33999, P106, d=0)",
+    "cinema ← acteur ou actrice de cinéma (Q10800557, P106, d=0)",
+    "rap ← hip-hop (Q11401, P136, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=1)",
+    "rock ← rock (Q11399, P136, d=1)"
+   ]
+  },
+  {
+   "titre": "Napoléon Ier",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "politique",
+    "napoleon"
+   ],
+   "reference": [
+    "napoleon"
+   ],
+   "corrects": [
+    "napoleon"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "politique ← personnalité politique (Q82955, P106, d=0)",
+    "royaute ← empereur (Q39018, P106, d=0)",
+    "napoleon ← Napoléon Ier (Q517, self, d=0)",
+    "guerre ← officier (Q189290, P106, d=1)"
+   ]
+  },
+  {
+   "titre": "Cléopâtre VII",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "royaute"
+   ],
+   "reference": [
+    "egypteantique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "egypteantique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "royaute ← souverain (Q2304859, P106, d=0)",
+    "politique ← personne d'État (Q372436, P106, d=2)"
+   ]
+  },
+  {
+   "titre": "Jules César",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "romeantique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "romeantique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "poesie ← poète ou poétesse (Q49757, P106, d=0)",
+    "politique ← personnalité politique (Q82955, P106, d=0)",
+    "guerre ← militaire (Q47064, P106, d=0)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=1)",
+    "religion ← chef religieux (Q15995642, P106, d=3)"
+   ]
+  },
+  {
+   "titre": "Louis XIV",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "politique"
+   ],
+   "reference": [
+    "royaute"
+   ],
+   "corrects": [],
+   "faux": [
+    "politique"
+   ],
+   "manquants": [
+    "royaute"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "politique ← personnalité politique (Q82955, P106, d=0)",
+    "cinema ← acteur ou actrice (Q33999, P106, d=0)",
+    "royaute ← monarque (Q116, P106, d=0)"
+   ]
+  },
+  {
+   "titre": "Charles de Gaulle",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "politique"
+   ],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [
+    "politique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "politique ← personne d'État (Q372436, P106, d=0)",
+    "guerre ← officier (Q189290, P106, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=0)",
+    "biologie ← procédé biologique (Q2996394, P101, d=4)",
+    "physique ← phénomène physique (Q1293220, P101, d=6)"
+   ]
+  },
+  {
+   "titre": "Winston Churchill",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "politique"
+   ],
+   "reference": [
+    "politique",
+    "secondeguerre"
+   ],
+   "corrects": [
+    "politique"
+   ],
+   "faux": [],
+   "manquants": [
+    "secondeguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "politique ← personnalité politique (Q82955, P106, d=0)",
+    "peinture ← artiste peintre (Q1028181, P106, d=0)",
+    "cinema ← scénariste (Q28389, P106, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=1)"
+   ]
+  },
+  {
+   "titre": "Joseph Staline",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "politique"
+   ],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [
+    "politique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "politique ← personnalité politique (Q82955, P106, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=2)"
+   ]
+  },
+  {
+   "titre": "Heinrich Himmler",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "politique"
+   ],
+   "reference": [
+    "nazis",
+    "secondeguerre"
+   ],
+   "corrects": [],
+   "faux": [
+    "politique"
+   ],
+   "manquants": [
+    "nazis",
+    "secondeguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "politique ← personnalité politique (Q82955, P106, d=0)",
+    "technologie ← ingénieur ou ingénieure (Q81096, P106, d=2)"
+   ]
+  },
+  {
+   "titre": "Joseph Goebbels",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "politique"
+   ],
+   "reference": [
+    "nazis"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "nazis"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "politique ← personnalité politique (Q82955, P106, d=0)",
+    "litterature ← romancier ou romancière (Q6625963, P106, d=0)",
+    "cinema ← scénariste (Q28389, P106, d=0)",
+    "idees ← philosophie (Q5891, P101, d=6)"
+   ]
+  },
+  {
+   "titre": "Philippe Pétain",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "politique"
+   ],
+   "reference": [
+    "secondeguerre",
+    "premiereguerre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "secondeguerre",
+    "premiereguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "politique ← personnalité politique (Q82955, P106, d=0)",
+    "guerre ← officier (Q189290, P106, d=0)"
+   ]
+  },
+  {
+   "titre": "Ted Bundy",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "psychologie"
+   ],
+   "reference": [
+    "crime"
+   ],
+   "corrects": [],
+   "faux": [
+    "psychologie"
+   ],
+   "manquants": [
+    "crime"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "psychologie ← psychologue (Q212980, P106, d=0)",
+    "crime ← tueur en série (Q484188, P106, d=0)"
+   ]
+  },
+  {
+   "titre": "Pablo Escobar",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "drogue",
+    "crime"
+   ],
+   "reference": [
+    "drogue",
+    "crime"
+   ],
+   "corrects": [
+    "drogue",
+    "crime"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "drogue ← baron de la drogue (Q2543769, P106, d=0)",
+    "crime ← baron de la drogue (Q2543769, P106, d=0)",
+    "politique ← personnalité politique (Q82955, P106, d=0)"
+   ]
+  },
+  {
+   "titre": "Lionel Messi",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "football"
+   ],
+   "reference": [
+    "football"
+   ],
+   "corrects": [
+    "football"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "football ← footballeur ou footballeuse (Q937857, P106, d=0)",
+    "football ← football (Q2736, P641, d=0)",
+    "sport ← sportif ou sportive (Q2066131, P106, d=2)",
+    "sport ← sport (Q349, P641, d=2)",
+    "jeux ← jeu (Q11410, P641, d=2)"
+   ]
+  },
+  {
+   "titre": "Michael Jordan",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "basketball"
+   ],
+   "reference": [
+    "basketball"
+   ],
+   "corrects": [
+    "basketball"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "basketball ← basketteur ou basketteuse (Q3665646, P106, d=0)",
+    "baseball ← joueur ou joueuse de baseball (Q10871364, P106, d=0)",
+    "sport ← sportif ou sportive (Q2066131, P106, d=0)",
+    "basketball ← basket-ball (Q5372, P641, d=0)",
+    "baseball ← baseball (Q5369, P641, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=2)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=2)",
+    "sport ← sport (Q349, P641, d=2)",
+    "jeux ← jeu (Q11410, P641, d=2)"
+   ]
+  },
+  {
+   "titre": "Roger Federer",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "tennis"
+   ],
+   "reference": [
+    "tennis"
+   ],
+   "corrects": [
+    "tennis"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "tennis ← joueur ou joueuse de tennis (Q10833314, P106, d=0)",
+    "tennis ← tennis (Q847, P641, d=0)",
+    "sport ← sportif ou sportive (Q2066131, P106, d=1)",
+    "sport ← sport (Q349, P641, d=2)",
+    "jeux ← jeu (Q11410, P641, d=2)"
+   ]
+  },
+  {
+   "titre": "Eddy Merckx",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "cyclisme"
+   ],
+   "reference": [
+    "cyclisme"
+   ],
+   "corrects": [
+    "cyclisme"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "cyclisme ← coureur ou coureuse cycliste (Q2309784, P106, d=0)",
+    "cyclisme ← cyclisme sur route (Q3609, P641, d=0)",
+    "sport ← sport (Q349, P101, d=1)",
+    "jeux ← jeu (Q11410, P101, d=2)",
+    "sport ← événement sportif (Q16510064, P641, d=3)",
+    "physique ← phénomène physique (Q1293220, P101, d=3)"
+   ]
+  },
+  {
+   "titre": "Ayrton Senna",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "courseauto",
+    "formule1"
+   ],
+   "reference": [
+    "formule1"
+   ],
+   "corrects": [
+    "formule1"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "formule1 ← pilote de Formule 1 (Q10841764, P106, d=0)",
+    "courseauto ← pilote de course automobile (Q10349745, P106, d=0)",
+    "courseauto ← course automobile (Q5386, P641, d=0)",
+    "sport ← sport (Q349, P641, d=2)",
+    "jeux ← jeu (Q11410, P641, d=3)"
+   ]
+  },
+  {
+   "titre": "Mohamed Ali",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "combat"
+   ],
+   "reference": [
+    "combat"
+   ],
+   "corrects": [
+    "combat"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "combat ← boxeur ou boxeuse (Q11338576, P106, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=0)",
+    "sport ← sportif ou sportive (Q2066131, P106, d=0)",
+    "combat ← boxe (Q32112, P641, d=0)",
+    "sport ← sport (Q349, P641, d=3)",
+    "jeux ← jeu (Q11410, P641, d=4)"
+   ]
+  },
+  {
+   "titre": "Pablo Picasso",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "peinture"
+   ],
+   "reference": [
+    "peinture",
+    "sculpture"
+   ],
+   "corrects": [
+    "peinture"
+   ],
+   "faux": [],
+   "manquants": [
+    "sculpture"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "peinture ← artiste peintre (Q1028181, P106, d=0)",
+    "sculpture ← sculpteur ou sculptrice (Q1281618, P106, d=0)",
+    "photographie ← photographe (Q33231, P106, d=0)",
+    "cinema ← réalisateur ou réalisatrice (Q3455803, P106, d=1)"
+   ]
+  },
+  {
+   "titre": "Vincent van Gogh",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "peinture"
+   ],
+   "reference": [
+    "peinture"
+   ],
+   "corrects": [
+    "peinture"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "peinture ← artiste peintre (Q1028181, P106, d=0)",
+    "technologie ← ingénieur ou ingénieure (Q81096, P106, d=2)"
+   ]
+  },
+  {
+   "titre": "Victor Hugo",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "theatre"
+   ],
+   "reference": [
+    "litterature",
+    "poesie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "litterature",
+    "poesie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "theatre ← dramaturge (Q214917, P106, d=0)",
+    "litterature ← romancier ou romancière (Q6625963, P106, d=0)",
+    "biologie ← procédé biologique (Q2996394, P101, d=6)"
+   ]
+  },
+  {
+   "titre": "William Shakespeare",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "theatre"
+   ],
+   "reference": [
+    "theatre",
+    "litterature"
+   ],
+   "corrects": [
+    "theatre"
+   ],
+   "faux": [],
+   "manquants": [
+    "litterature"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "theatre ← dramaturge (Q214917, P106, d=0)",
+    "poesie ← poète ou poétesse (Q49757, P106, d=0)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
+    "cinema ← acteur ou actrice (Q33999, P106, d=0)",
+    "biologie ← procédé biologique (Q2996394, P136, d=5)"
+   ]
+  },
+  {
+   "titre": "Stanley Kubrick",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "cinema"
+   ],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [
+    "cinema"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "cinema ← réalisateur ou réalisatrice de cinéma (Q2526255, P106, d=0)",
+    "photographie ← photographe (Q33231, P106, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=1)",
+    "jeux ← jeu (Q11410, P641, d=2)",
+    "sport ← sport (Q349, P641, d=2)",
+    "biologie ← procédé biologique (Q2996394, P641, d=5)"
+   ]
+  },
+  {
+   "titre": "Hayao Miyazaki",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "cinema"
+   ],
+   "reference": [
+    "animation",
+    "cinema"
+   ],
+   "corrects": [
+    "cinema"
+   ],
+   "faux": [],
+   "manquants": [
+    "animation"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "cinema ← réalisateur ou réalisatrice de cinéma (Q2526255, P106, d=0)",
+    "animation ← animateur ou animatrice (Q266569, P106, d=0)",
+    "bd ← mangaka (Q191633, P106, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=1)",
+    "photographie ← photographe (Q33231, P106, d=2)"
+   ]
+  },
+  {
+   "titre": "Stan Lee",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "bd"
+   ],
+   "reference": [
+    "superheros"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "superheros"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "bd ← éditeur ou éditrice (Q2516866, P106, d=0)",
+    "bd ← scénariste de bande dessinée (Q11892507, P106, d=0)",
+    "cinema ← producteur ou productrice de cinéma (Q3282637, P106, d=0)",
+    "guerre ← soldat (Q4991371, P106, d=0)",
+    "bd ← bande dessinée (Q1004, P136, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=1)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=1)",
+    "litterature ← œuvre littéraire (Q7725634, P136, d=1)",
+    "societe ← entreprise (Q6881511, P101, d=1)"
+   ]
+  },
+  {
+   "titre": "Alan Turing",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "athletisme",
+    "informatique"
+   ],
+   "reference": [
+    "informatique",
+    "mathematiques"
+   ],
+   "corrects": [
+    "informatique"
+   ],
+   "faux": [
+    "athletisme"
+   ],
+   "manquants": [
+    "mathematiques"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "informatique ← informaticien ou informaticienne (Q82594, P106, d=0)",
+    "mathematiques ← mathématicien ou mathématicienne (Q170790, P106, d=0)",
+    "athletisme ← athlétisme (Q542, P641, d=0)",
+    "idees ← philosophe (Q4964182, P106, d=1)",
+    "sport ← sport (Q349, P641, d=2)",
+    "jeux ← jeu (Q11410, P641, d=3)",
+    "biologie ← procédé biologique (Q2996394, P101, d=5)",
+    "physique ← phénomène physique (Q1293220, P641, d=6)"
+   ]
+  },
+  {
+   "titre": "Steve Jobs",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "informatique"
+   ],
+   "reference": [
+    "informatique"
+   ],
+   "corrects": [
+    "informatique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "informatique ← informaticien ou informaticienne (Q82594, P106, d=0)",
+    "cinema ← producteur ou productrice de cinéma (Q3282637, P106, d=0)",
+    "technologie ← ingénieur ou ingénieure (Q81096, P106, d=1)"
+   ]
+  },
+  {
+   "titre": "Elon Musk",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "informatique"
+   ],
+   "reference": [
+    "technologie",
+    "fusee"
+   ],
+   "corrects": [],
+   "faux": [
+    "informatique"
+   ],
+   "manquants": [
+    "technologie",
+    "fusee"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "informatique ← programmeur (Q5482740, P106, d=0)",
+    "technologie ← ingénieur ou ingénieure (Q81096, P106, d=0)",
+    "politique ← personnalité politique (Q82955, P106, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=1)",
+    "cinema ← acteur ou actrice (Q33999, P106, d=2)"
+   ]
+  },
+  {
+   "titre": "Gandhi",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "politique"
+   ],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [
+    "politique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "politique ← personnalité politique (Q82955, P106, d=0)",
+    "idees ← philosophe (Q4964182, P106, d=0)",
+    "idees ← philosophie (Q5891, P101, d=0)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=1)",
+    "societe ← mouvement social (Q49773, P101, d=3)",
+    "biologie ← procédé biologique (Q2996394, P101, d=5)"
+   ]
+  },
+  {
+   "titre": "Dalaï-lama",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "politique"
+   ],
+   "reference": [
+    "bouddhisme",
+    "tibet"
+   ],
+   "corrects": [],
+   "faux": [
+    "politique"
+   ],
+   "manquants": [
+    "bouddhisme",
+    "tibet"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "politique ← personnalité politique (Q82955, P279, d=1)"
+   ]
+  },
+  {
+   "titre": "Jeanne d’Arc",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "guerre"
+   ],
+   "reference": [
+    "moyenage"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "moyenage"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "guerre ← militaire (Q47064, P106, d=0)",
+    "religion ← chef religieux (Q15995642, P106, d=0)"
+   ]
+  },
+  {
+   "titre": "Saint Paul",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "litterature"
+   ],
+   "reference": [
+    "christianisme"
+   ],
+   "corrects": [],
+   "faux": [
+    "litterature"
+   ],
+   "manquants": [
+    "christianisme"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
+    "religion ← théologien ou théologienne (Q1234713, P106, d=0)"
+   ]
+  },
+  {
+   "titre": "Buddha",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "bouddhisme"
+   ],
+   "reference": [
+    "bouddhisme"
+   ],
+   "corrects": [
+    "bouddhisme"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "bouddhisme ← moine bouddhiste (Q854997, P106, d=0)",
+    "idees ← philosophe (Q4964182, P106, d=0)",
+    "religion ← chef religieux (Q15995642, P106, d=0)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
+    "religion ← religion (Q9174, P101, d=0)"
+   ]
+  },
+  {
+   "titre": "Platon",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "idees"
+   ],
+   "reference": [
+    "idees",
+    "greceantique"
+   ],
+   "corrects": [
+    "idees"
+   ],
+   "faux": [],
+   "manquants": [
+    "greceantique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "idees ← philosophe (Q4964182, P106, d=0)",
+    "poesie ← poète ou poétesse (Q49757, P106, d=0)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
+    "politique ← politique (Q7163, P101, d=0)",
+    "sport ← sport (Q349, P641, d=3)",
+    "jeux ← jeu (Q11410, P641, d=4)",
+    "guerre ← conflit (Q180684, P641, d=4)",
+    "biologie ← procédé biologique (Q2996394, P101, d=4)",
+    "physique ← phénomène physique (Q1293220, P101, d=6)"
+   ]
+  },
+  {
+   "titre": "Sigmund Freud",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "psychologie"
+   ],
+   "reference": [
+    "psychologie"
+   ],
+   "corrects": [
+    "psychologie"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "psychologie ← psychanalyste (Q3410028, P106, d=0)",
+    "sante ← neurologue (Q783906, P106, d=0)",
+    "biologie ← biologiste (Q864503, P106, d=2)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=2)",
+    "idees ← philosophie (Q5891, P101, d=4)"
+   ]
+  },
+  {
+   "titre": "Coco Chanel",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "mode"
+   ],
+   "reference": [
+    "mode"
+   ],
+   "corrects": [
+    "mode"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "mode ← modéliste (Q3501317, P106, d=0)"
+   ]
+  },
+  {
+   "titre": "Yves Saint Laurent",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "mode"
+   ],
+   "reference": [
+    "mode"
+   ],
+   "corrects": [
+    "mode"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "mode ← grand couturier (Q4845479, P106, d=0)",
+    "peinture ← artiste peintre (Q1028181, P106, d=0)"
+   ]
+  },
+  {
+   "titre": "Gordon Ramsay",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "television"
+   ],
+   "reference": [
+    "gastronomie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "gastronomie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "television ← animateur ou animatrice de télévision (Q947873, P106, d=0)",
+    "gastronomie ← chef cuisinier ou chef cuisinière (Q3499072, P106, d=0)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
+    "cinema ← acteur ou actrice (Q33999, P106, d=1)"
+   ]
+  },
+  {
+   "titre": "Nelson Mandela",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "politique"
+   ],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [
+    "politique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "politique ← personnalité politique (Q82955, P106, d=0)",
+    "cinema ← scénariste (Q28389, P106, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=1)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=2)"
+   ]
+  },
+  {
+   "titre": "Volodymyr Zelensky",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "politique"
+   ],
+   "reference": [
+    "ukraine",
+    "politique"
+   ],
+   "corrects": [
+    "politique"
+   ],
+   "faux": [],
+   "manquants": [
+    "ukraine"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "politique ← personnalité politique (Q82955, P106, d=0)",
+    "cinema ← producteur ou productrice de cinéma (Q3282637, P106, d=0)",
+    "television ← animateur ou animatrice de télévision (Q947873, P106, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P101, d=1)",
+    "biologie ← procédé biologique (Q2996394, P101, d=4)",
+    "physique ← phénomène physique (Q1293220, P101, d=6)"
+   ]
+  },
+  {
+   "titre": "Neil Armstrong",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "espace",
+    "guerre"
+   ],
+   "reference": [
+    "espace"
+   ],
+   "corrects": [
+    "espace"
+   ],
+   "faux": [
+    "guerre"
+   ],
+   "manquants": [],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "espace ← astronaute (Q11631, P106, d=0)",
+    "technologie ← ingénieur ou ingénieure (Q81096, P106, d=1)",
+    "guerre ← officier (Q189290, P106, d=2)",
+    "idees ← philosophie (Q5891, P101, d=5)",
+    "biologie ← procédé biologique (Q2996394, P101, d=6)"
+   ]
+  },
+  {
+   "titre": "Youri Gagarine",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "espace"
+   ],
+   "reference": [
+    "espace"
+   ],
+   "corrects": [
+    "espace"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "espace ← astronaute (Q11631, P106, d=0)",
+    "guerre ← officier (Q189290, P106, d=0)",
+    "politique ← personnalité politique (Q82955, P106, d=0)"
+   ]
+  },
+  {
+   "titre": "Jean-Pierre Foucault",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "television"
+   ],
+   "reference": [
+    "television"
+   ],
+   "corrects": [
+    "television"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "television ← animateur ou animatrice de télévision (Q947873, P106, d=0)",
+    "cinema ← acteur ou actrice (Q33999, P106, d=1)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=4)"
+   ]
+  },
+  {
+   "titre": "Rosa Parks",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "litterature"
+   ],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [
+    "litterature"
+   ],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "litterature ← auteur ou autrice (Q482980, P106, d=2)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=2)",
+    "societe ← mouvement social (Q49773, P101, d=2)",
+    "biologie ← procédé biologique (Q2996394, P101, d=6)"
+   ]
+  },
+  {
+   "titre": "Jarrett Parker",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "baseball"
+   ],
+   "reference": [
+    "baseball"
+   ],
+   "corrects": [
+    "baseball"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "baseball ← joueur ou joueuse de baseball (Q10871364, P106, d=0)",
+    "baseball ← baseball (Q5369, P641, d=0)",
+    "sport ← sportif ou sportive (Q2066131, P106, d=1)",
+    "jeux ← jeu (Q11410, P641, d=2)",
+    "sport ← sport (Q349, P641, d=2)"
+   ]
+  },
+  {
+   "titre": "Unni Birkrem",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "handball"
+   ],
+   "reference": [
+    "handball"
+   ],
+   "corrects": [
+    "handball"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "handball ← handballeur ou handballeuse (Q12840545, P106, d=0)",
+    "handball ← handball (Q8418, P641, d=0)",
+    "sport ← sportif ou sportive (Q2066131, P106, d=1)",
+    "sport ← sport (Q349, P641, d=2)",
+    "jeux ← jeu (Q11410, P641, d=2)"
+   ]
+  },
+  {
+   "titre": "Johann Siegfried Hufnagel",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "insecte"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "insecte"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "biologie ← biologiste (Q864503, P106, d=3)"
+   ]
+  },
+  {
+   "titre": "Pierre Ier de Cros",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "christianisme"
+   ],
+   "reference": [
+    "christianisme"
+   ],
+   "corrects": [
+    "christianisme"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "christianisme ← prélat (Q725440, P106, d=0)",
+    "religion ← chef religieux (Q15995642, P106, d=3)"
+   ]
+  },
+  {
+   "titre": "Mike Tyson",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "combat"
+   ],
+   "reference": [
+    "combat"
+   ],
+   "corrects": [
+    "combat"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "combat ← boxeur ou boxeuse (Q11338576, P106, d=0)",
+    "cinema ← acteur ou actrice (Q33999, P106, d=0)",
+    "combat ← boxe (Q32112, P641, d=0)",
+    "sport ← sportif ou sportive (Q2066131, P106, d=2)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=2)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=2)",
+    "sport ← sport (Q349, P641, d=3)",
+    "jeux ← jeu (Q11410, P641, d=4)"
+   ]
+  },
+  {
+   "titre": "Serena Williams",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "tennis"
+   ],
+   "reference": [
+    "tennis"
+   ],
+   "corrects": [
+    "tennis"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "tennis ← joueur ou joueuse de tennis (Q10833314, P106, d=0)",
+    "cinema ← acteur ou actrice (Q33999, P106, d=0)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
+    "sport ← sportif ou sportive (Q2066131, P106, d=0)",
+    "tennis ← tennis (Q847, P641, d=0)",
+    "sport ← sport (Q349, P641, d=2)",
+    "jeux ← jeu (Q11410, P641, d=2)"
+   ]
+  },
+  {
+   "titre": "Usain Bolt",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "athletisme"
+   ],
+   "reference": [
+    "athletisme"
+   ],
+   "corrects": [
+    "athletisme"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "athletisme ← athlète (Q11513337, P106, d=0)",
+    "football ← footballeur ou footballeuse (Q937857, P106, d=0)",
+    "sport ← sportif ou sportive (Q2066131, P106, d=0)",
+    "athletisme ← athlétisme (Q542, P641, d=0)",
+    "football ← football (Q2736, P641, d=0)",
+    "sport ← sport (Q349, P641, d=2)",
+    "jeux ← jeu (Q11410, P641, d=2)",
+    "physique ← phénomène physique (Q1293220, P641, d=6)"
+   ]
+  },
+  {
+   "titre": "Michael Phelps",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "natation"
+   ],
+   "reference": [
+    "natation"
+   ],
+   "corrects": [
+    "natation"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "natation ← nageur ou nageuse (Q10843402, P106, d=0)",
+    "natation ← natation sportive (Q31920, P641, d=0)",
+    "sport ← sportif ou sportive (Q2066131, P106, d=1)",
+    "sport ← sport (Q349, P641, d=2)",
+    "jeux ← jeu (Q11410, P641, d=3)",
+    "biologie ← procédé biologique (Q2996394, P641, d=4)",
+    "physique ← phénomène physique (Q1293220, P641, d=6)"
+   ]
+  },
+  {
+   "titre": "Tiger Woods",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "litterature"
+   ],
+   "reference": [
+    "golf"
+   ],
+   "corrects": [],
+   "faux": [
+    "litterature"
+   ],
+   "manquants": [
+    "golf"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
+    "golf ← joueur de golf professionnel (Q490253, P106, d=0)",
+    "sport ← sportif ou sportive (Q2066131, P106, d=2)"
+   ]
+  },
+  {
+   "titre": "Louis Pasteur",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "biologie"
+   ],
+   "reference": [
+    "biologie",
+    "sante"
+   ],
+   "corrects": [
+    "biologie"
+   ],
+   "faux": [],
+   "manquants": [
+    "sante"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "biologie ← microbiologiste (Q3779582, P106, d=0)",
+    "chimie ← chimiste (Q593644, P106, d=0)",
+    "technologie ← ingénieur ou ingénieure (Q81096, P106, d=1)",
+    "idees ← philosophie (Q5891, P101, d=4)"
+   ]
+  },
+  {
+   "titre": "Isaac Newton",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "mathematiques"
+   ],
+   "reference": [
+    "physique",
+    "mathematiques"
+   ],
+   "corrects": [
+    "mathematiques"
+   ],
+   "faux": [],
+   "manquants": [
+    "physique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "mathematiques ← mathématicien ou mathématicienne (Q170790, P106, d=0)",
+    "physique ← physicien ou physicienne (Q169470, P106, d=0)",
+    "idees ← philosophe (Q4964182, P106, d=0)",
+    "espace ← astronome (Q11063, P106, d=0)",
+    "religion ← théologien ou théologienne (Q1234713, P106, d=0)",
+    "politique ← personnalité politique (Q82955, P106, d=0)",
+    "technologie ← ingénieur ou ingénieure (Q81096, P106, d=1)",
+    "biologie ← procédé biologique (Q2996394, P101, d=4)"
+   ]
+  },
+  {
+   "titre": "Ludwig van Beethoven",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "classique"
+   ],
+   "reference": [
+    "classique"
+   ],
+   "corrects": [
+    "classique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← compositeur ou compositrice (Q36834, P106, d=0)",
+    "classique ← chef ou cheffe d'orchestre ou de chœur (Q158852, P106, d=0)",
+    "classique ← musique classique (Q9730, P136, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=1)",
+    "cinema ← réalisateur ou réalisatrice (Q3455803, P106, d=2)"
+   ]
+  },
+  {
+   "titre": "Johnny Cash",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "countrymusique"
+   ],
+   "reference": [
+    "countrymusique"
+   ],
+   "corrects": [
+    "countrymusique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← auteur-compositeur-interprète ou auteure-compositrice-interprète (Q488205, P106, d=0)",
+    "cinema ← acteur ou actrice (Q33999, P106, d=0)",
+    "countrymusique ← musique country (Q83440, P136, d=0)",
+    "rock ← rock 'n' roll (Q7749, P136, d=0)",
+    "blues ← blues (Q9759, P136, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=1)"
+   ]
+  },
+  {
+   "titre": "Alfred Hitchcock",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "cinema"
+   ],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [
+    "cinema"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "cinema ← réalisateur ou réalisatrice de cinéma (Q2526255, P106, d=0)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
+    "photographie ← photographe (Q33231, P106, d=3)"
+   ]
+  },
+  {
+   "titre": "Agatha Christie",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "litterature"
+   ],
+   "reference": [
+    "litterature"
+   ],
+   "corrects": [
+    "litterature"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
+    "cinema ← scénariste (Q28389, P106, d=0)",
+    "poesie ← poète ou poétesse (Q49757, P106, d=0)",
+    "theatre ← dramaturge (Q214917, P106, d=0)",
+    "sport ← sport (Q349, P641, d=2)",
+    "jeux ← jeu (Q11410, P641, d=3)",
+    "biologie ← procédé biologique (Q2996394, P101, d=6)"
+   ]
+  },
+  {
+   "titre": "Leonard de Vinci",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "peinture"
+   ],
+   "reference": [
+    "peinture",
+    "arts"
+   ],
+   "corrects": [
+    "peinture"
+   ],
+   "faux": [],
+   "manquants": [
+    "arts"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "peinture ← artiste peintre (Q1028181, P106, d=0)",
+    "technologie ← ingénieur ou ingénieure (Q81096, P106, d=0)",
+    "espace ← astronome (Q11063, P106, d=0)",
+    "mathematiques ← mathématicien ou mathématicienne (Q170790, P106, d=0)",
+    "sculpture ← sculpteur ou sculptrice (Q1281618, P106, d=0)",
+    "architecture ← architecte (Q42973, P106, d=0)",
+    "biologie ← biologiste (Q864503, P106, d=2)",
+    "idees ← philosophe (Q4964182, P106, d=2)"
+   ]
+  },
+  {
+   "titre": "Michel-Ange",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "sculpture"
+   ],
+   "reference": [
+    "sculpture",
+    "peinture"
+   ],
+   "corrects": [
+    "sculpture"
+   ],
+   "faux": [],
+   "manquants": [
+    "peinture"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sculpture ← sculpteur ou sculptrice (Q1281618, P106, d=0)",
+    "peinture ← artiste peintre (Q1028181, P106, d=0)",
+    "architecture ← architecte (Q42973, P106, d=0)",
+    "poesie ← poète ou poétesse (Q49757, P106, d=0)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
+    "societe ← entreprise (Q6881511, P106, d=1)",
+    "technologie ← ingénieur ou ingénieure (Q81096, P106, d=2)"
+   ]
+  },
+  {
+   "titre": "Tim Berners-Lee",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "informatique"
+   ],
+   "reference": [
+    "informatique"
+   ],
+   "corrects": [
+    "informatique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "informatique ← informaticien ou informaticienne (Q82594, P106, d=0)",
+    "physique ← physicien ou physicienne (Q169470, P106, d=0)",
+    "technologie ← ingénieur ou ingénieure (Q81096, P106, d=0)",
+    "litterature ← auteur ou autrice (Q482980, P106, d=0)",
+    "idees ← philosophie (Q5891, P101, d=5)",
+    "biologie ← procédé biologique (Q2996394, P101, d=6)"
+   ]
+  },
+  {
+   "titre": "Les Misérables",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "theatre"
+   ],
+   "reference": [
+    "litterature"
+   ],
+   "corrects": [],
+   "faux": [
+    "theatre"
+   ],
+   "manquants": [
+    "litterature"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "litterature ← œuvre littéraire (Q7725634, P31, d=0)",
+    "theatre ← tragédie (Q80930, P136, d=0)"
+   ]
+  },
+  {
+   "titre": "La Joconde",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "peinture"
+   ],
+   "reference": [
+    "peinture"
+   ],
+   "corrects": [
+    "peinture"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "peinture ← peinture (Q3305213, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "La Nuit étoilée",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "peinture"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "peinture"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "page d’homonymie"
+   ]
+  },
+  {
+   "titre": "Le Penseur",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "sculpture"
+   ],
+   "reference": [
+    "sculpture"
+   ],
+   "corrects": [
+    "sculpture"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "sculpture ← œuvre sculptée (Q28890616, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "La Toilette de l’enfant",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "peinture"
+   ],
+   "reference": [
+    "peinture"
+   ],
+   "corrects": [
+    "peinture"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "peinture ← peinture (Q3305213, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Star Wars",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "cinema"
+   ],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [
+    "cinema"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "cinema ← franchise cinématographique (Q130371093, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Le Parrain",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "cinema"
+   ],
+   "reference": [
+    "cinema",
+    "crime"
+   ],
+   "corrects": [
+    "cinema"
+   ],
+   "faux": [],
+   "manquants": [
+    "crime"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "cinema ← film (Q11424, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Titanic",
+   "categorie": "oeuvre",
+   "piege": true,
+   "predits": [
+    "cinema"
+   ],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [
+    "cinema"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "cinema ← film (Q11424, P31, d=0)",
+    "litterature ← œuvre littéraire (Q7725634, P136, d=3)"
+   ]
+  },
+  {
+   "titre": "RMS Titanic",
+   "categorie": "oeuvre",
+   "piege": true,
+   "predits": [
+    "bateaux"
+   ],
+   "reference": [
+    "bateaux",
+    "histoire"
+   ],
+   "corrects": [
+    "bateaux"
+   ],
+   "faux": [],
+   "manquants": [
+    "histoire"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "bateaux ← paquebot à quatre cheminées (Q3362987, P31, d=0)",
+    "vehicule ← véhicule (Q42889, P31, d=2)"
+   ]
+  },
+  {
+   "titre": "Mon voisin Totoro",
+   "categorie": "oeuvre",
+   "piege": true,
+   "predits": [
+    "animation"
+   ],
+   "reference": [
+    "animation"
+   ],
+   "corrects": [
+    "animation"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "animation ← film d'animation japonais (Q20650540, P31, d=0)",
+    "cinema ← film (Q11424, P136, d=1)",
+    "litterature ← œuvre littéraire (Q7725634, P136, d=5)"
+   ]
+  },
+  {
+   "titre": "Le Roi Lion",
+   "categorie": "oeuvre",
+   "piege": true,
+   "predits": [
+    "animation"
+   ],
+   "reference": [
+    "animation"
+   ],
+   "corrects": [
+    "animation"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "animation ← film d'animation (Q202866, P31, d=0)",
+    "cinema ← film (Q11424, P31, d=1)",
+    "felin ← félins (Q25265, P921, d=2)",
+    "felin ← félins (Q25265, P921, d=0.6000000000000001)",
+    "animaux ← mammifères (Q7377, P921, d=4.4)",
+    "animaux ← mammifères (Q7377, P921, d=3.6000000000000005)",
+    "animaux ← mammifères (Q7377, P921, d=3)",
+    "animaux ← mammifères (Q7377, P921, d=2.2)",
+    "animaux ← mammifères (Q7377, P921, d=1.7999999999999998)"
+   ]
+  },
+  {
+   "titre": "Le Seigneur des anneaux",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "litterature"
+   ],
+   "reference": [
+    "litterature"
+   ],
+   "corrects": [
+    "litterature"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "litterature ← suite romanesque (Q1667921, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Harry Potter",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "litterature"
+   ],
+   "reference": [
+    "litterature"
+   ],
+   "corrects": [
+    "litterature"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "litterature ← suite romanesque (Q1667921, P31, d=0)",
+    "biologie ← procédé biologique (Q2996394, P921, d=5)"
+   ]
+  },
+  {
+   "titre": "One Piece",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "bd"
+   ],
+   "reference": [
+    "bd"
+   ],
+   "corrects": [
+    "bd"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "bd ← série de manga (Q21198342, P31, d=0)",
+    "litterature ← œuvre littéraire (Q7725634, P31, d=3)"
+   ]
+  },
+  {
+   "titre": "Dragon Ball",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "bd"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "bd"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Astérix",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "bd"
+   ],
+   "reference": [
+    "bd"
+   ],
+   "corrects": [
+    "bd"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "bd ← série de bande dessinée (Q14406742, P31, d=0)",
+    "litterature ← œuvre littéraire (Q7725634, P31, d=2)"
+   ]
+  },
+  {
+   "titre": "Batman",
+   "categorie": "oeuvre",
+   "piege": true,
+   "predits": [
+    "bd",
+    "combat"
+   ],
+   "reference": [
+    "superheros"
+   ],
+   "corrects": [],
+   "faux": [
+    "combat"
+   ],
+   "manquants": [
+    "superheros"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "bd ← personnage de bande dessinée (Q1114461, P31, d=0)",
+    "combat ← boxe (Q32112, P641, d=0)",
+    "guerre ← soldat (Q4991371, P106, d=1)",
+    "sport ← sportif ou sportive (Q2066131, P106, d=1)",
+    "sport ← sport (Q349, P641, d=3)",
+    "jeux ← jeu (Q11410, P641, d=4)"
+   ]
+  },
+  {
+   "titre": "Spider-Man",
+   "categorie": "oeuvre",
+   "piege": true,
+   "predits": [
+    "superheros",
+    "photographie"
+   ],
+   "reference": [
+    "superheros"
+   ],
+   "corrects": [
+    "superheros"
+   ],
+   "faux": [
+    "photographie"
+   ],
+   "manquants": [],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "superheros ← muté (Q14831768, P31, d=0)",
+    "bd ← personnage de bande dessinée (Q1114461, P31, d=0)",
+    "photographie ← photographe (Q33231, P106, d=0)",
+    "technologie ← ingénieur ou ingénieure (Q81096, P106, d=1)"
+   ]
+  },
+  {
+   "titre": "Super Mario Bros.",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "jeuvideo"
+   ],
+   "reference": [
+    "jeuvideo"
+   ],
+   "corrects": [
+    "jeuvideo"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "jeuvideo ← jeu vidéo (Q7889, P31, d=0)",
+    "jeux ← jeu (Q11410, P31, d=2)",
+    "informatique ← logiciel (Q7397, P31, d=2)"
+   ]
+  },
+  {
+   "titre": "The Legend of Zelda",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "jeuvideo"
+   ],
+   "reference": [
+    "jeuvideo"
+   ],
+   "corrects": [
+    "jeuvideo"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "jeuvideo ← série de jeux vidéo (Q7058673, P31, d=0)",
+    "jeux ← jeu (Q11410, P136, d=3)",
+    "informatique ← logiciel (Q7397, P136, d=3)",
+    "litterature ← œuvre littéraire (Q7725634, P136, d=5)"
+   ]
+  },
+  {
+   "titre": "Doom",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "jeuvideo"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "jeuvideo"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Bohemian Rhapsody",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "rock"
+   ],
+   "reference": [
+    "rock"
+   ],
+   "corrects": [
+    "rock"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← œuvre ou composition musicale (Q105543609, P31, d=0)",
+    "rock ← rock progressif (Q49451, P136, d=0)",
+    "pop ← pop (Q37073, P136, d=1)"
+   ]
+  },
+  {
+   "titre": "Thriller",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "pop",
+    "rock"
+   ],
+   "reference": [
+    "pop"
+   ],
+   "corrects": [
+    "pop"
+   ],
+   "faux": [
+    "rock"
+   ],
+   "manquants": [],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "musique ← album (Q482994, P31, d=0)",
+    "pop ← pop (Q37073, P136, d=0)",
+    "rock ← rock (Q11399, P136, d=0)",
+    "techno ← musique électronique (Q9778, P136, d=2)"
+   ]
+  },
+  {
+   "titre": "Nevermind",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "grunge"
+   ],
+   "reference": [
+    "grunge"
+   ],
+   "corrects": [
+    "grunge"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← album (Q482994, P31, d=0)",
+    "grunge ← grunge (Q11365, P136, d=0)",
+    "rock ← rock alternatif (Q11366, P136, d=0)"
+   ]
+  },
+  {
+   "titre": "La Cinquième Symphonie",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "musique"
+   ],
+   "reference": [
+    "classique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "classique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "musique ← œuvre ou composition musicale (Q105543609, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Game of Thrones",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "television"
+   ],
+   "reference": [
+    "television"
+   ],
+   "corrects": [
+    "television"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "television ← série télévisée (Q5398426, P31, d=0)",
+    "litterature ← œuvre littéraire (Q7725634, P136, d=6)"
+   ]
+  },
+  {
+   "titre": "Breaking Bad",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "television",
+    "drogue"
+   ],
+   "reference": [
+    "television",
+    "drogue"
+   ],
+   "corrects": [
+    "television",
+    "drogue"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "television ← série télévisée (Q5398426, P31, d=0)",
+    "drogue ← trafic de stupéfiants (Q844924, P921, d=0)",
+    "cinema ← film (Q11424, P136, d=3)",
+    "idees ← philosophie (Q5891, P921, d=6)"
+   ]
+  },
+  {
+   "titre": "Friends",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "television"
+   ],
+   "reference": [
+    "television"
+   ],
+   "corrects": [
+    "television"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "television ← série télévisée (Q5398426, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Hamlet",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "theatre"
+   ],
+   "reference": [
+    "theatre"
+   ],
+   "corrects": [
+    "theatre"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "theatre ← œuvre dramatique (Q116476516, P31, d=0)",
+    "theatre ← tragédie (Q80930, P136, d=0)",
+    "litterature ← œuvre littéraire (Q7725634, P31, d=1)"
+   ]
+  },
+  {
+   "titre": "Les Fleurs du mal",
+   "categorie": "oeuvre",
+   "piege": true,
+   "predits": [
+    "poesie"
+   ],
+   "reference": [
+    "poesie"
+   ],
+   "corrects": [
+    "poesie"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "litterature ← œuvre littéraire (Q7725634, P31, d=0)",
+    "poesie ← poésie (Q482, P136, d=0)"
+   ]
+  },
+  {
+   "titre": "Der Untergang",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "cinema",
+    "secondeguerre"
+   ],
+   "reference": [
+    "cinema",
+    "nazis"
+   ],
+   "corrects": [
+    "cinema"
+   ],
+   "faux": [],
+   "manquants": [
+    "nazis"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "cinema ← film (Q11424, P31, d=0)",
+    "secondeguerre ← Seconde Guerre mondiale (Q362, P921, d=0)",
+    "guerre ← conflit (Q180684, P921, d=3)"
+   ]
+  },
+  {
+   "titre": "Mein Kampf",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "litterature"
+   ],
+   "reference": [
+    "nazis"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "nazis"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "litterature ← œuvre littéraire (Q7725634, P31, d=0)",
+    "idees ← philosophie (Q5891, P136, d=1)",
+    "societe ← racisme (Q8461, P921, d=1)",
+    "biologie ← procédé biologique (Q2996394, P921, d=5)"
+   ]
+  },
+  {
+   "titre": "Tetris",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [
+    "jeuvideo"
+   ],
+   "reference": [
+    "jeuvideo"
+   ],
+   "corrects": [
+    "jeuvideo"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "jeuvideo ← jeu vidéo d'arcade (Q192851, P31, d=0)",
+    "informatique ← plateforme informatique (Q241317, P31, d=1)",
+    "sport ← discipline sportive (Q2312410, P31, d=1)",
+    "jeux ← jeu (Q11410, P31, d=2)"
+   ]
+  },
+  {
+   "titre": "Monopoly",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "jeux"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "jeux"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Nirvana",
+   "categorie": "organisation",
+   "piege": true,
+   "predits": [
+    "grunge"
+   ],
+   "reference": [
+    "grunge"
+   ],
+   "corrects": [
+    "grunge"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "rock ← groupe de rock (Q5741069, P31, d=0)",
+    "musique ← groupe de musique (Q215380, P31, d=0)",
+    "rock ← rock alternatif (Q11366, P136, d=0)",
+    "grunge ← grunge (Q11365, P136, d=0)"
+   ]
+  },
+  {
+   "titre": "Metallica",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "metal"
+   ],
+   "reference": [
+    "metal"
+   ],
+   "corrects": [
+    "metal"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← groupe de musique (Q215380, P31, d=0)",
+    "metal ← thrash metal (Q483352, P136, d=0)",
+    "rock ← rock (Q11399, P136, d=2)"
+   ]
+  },
+  {
+   "titre": "The Beatles",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "rock",
+    "pop"
+   ],
+   "reference": [
+    "rock",
+    "pop"
+   ],
+   "corrects": [
+    "rock",
+    "pop"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← groupe de musique (Q215380, P31, d=0)",
+    "rock ← rock (Q11399, P136, d=0)",
+    "pop ← pop (Q37073, P136, d=0)",
+    "blues ← blues (Q9759, P136, d=1)"
+   ]
+  },
+  {
+   "titre": "Queen",
+   "categorie": "organisation",
+   "piege": true,
+   "predits": [
+    "rock"
+   ],
+   "reference": [
+    "rock"
+   ],
+   "corrects": [
+    "rock"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← groupe de musique (Q215380, P31, d=0)",
+    "rock ← rock progressif (Q49451, P136, d=0)",
+    "metal ← heavy metal (Q38848, P136, d=0)",
+    "pop ← pop (Q37073, P136, d=1)"
+   ]
+  },
+  {
+   "titre": "Daft Punk",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "techno"
+   ],
+   "reference": [
+    "techno"
+   ],
+   "corrects": [
+    "techno"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "techno ← duo de musique électronique (Q71129815, P31, d=0)",
+    "musique ← groupe de musique (Q215380, P31, d=0)",
+    "techno ← house (Q20502, P136, d=0)",
+    "rock ← rock (Q11399, P136, d=1)",
+    "pop ← pop (Q37073, P136, d=2)"
+   ]
+  },
+  {
+   "titre": "NTM",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "rap"
+   ],
+   "reference": [
+    "rap"
+   ],
+   "corrects": [
+    "rap"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← groupe de musique (Q215380, P31, d=0)",
+    "rap ← hip-hop (Q11401, P136, d=0)"
+   ]
+  },
+  {
+   "titre": "Olympique de Marseille",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "football"
+   ],
+   "reference": [
+    "football"
+   ],
+   "corrects": [
+    "football"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "football ← club de football (Q476028, P31, d=0)",
+    "football ← football (Q2736, P641, d=0)",
+    "sport ← sport (Q349, P641, d=2)",
+    "jeux ← jeu (Q11410, P641, d=2)"
+   ]
+  },
+  {
+   "titre": "Real Madrid",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "football"
+   ],
+   "reference": [
+    "football"
+   ],
+   "corrects": [
+    "football"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "football ← club de football (Q476028, P31, d=0)",
+    "football ← football (Q2736, P641, d=0)",
+    "sport ← sport (Q349, P641, d=2)",
+    "jeux ← jeu (Q11410, P641, d=2)"
+   ]
+  },
+  {
+   "titre": "Los Angeles Lakers",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "basketball"
+   ],
+   "reference": [
+    "basketball"
+   ],
+   "corrects": [
+    "basketball"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "basketball ← équipe de basket-ball (Q13393265, P31, d=0)",
+    "basketball ← basket-ball (Q5372, P641, d=0)",
+    "sport ← sport (Q349, P641, d=2)",
+    "jeux ← jeu (Q11410, P641, d=2)"
+   ]
+  },
+  {
+   "titre": "Ferrari",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "automobile",
+    "formule1"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "automobile",
+    "formule1"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "page d’homonymie"
+   ]
+  },
+  {
+   "titre": "Tesla",
+   "categorie": "organisation",
+   "piege": true,
+   "predits": [
+    "societe"
+   ],
+   "reference": [
+    "automobile"
+   ],
+   "corrects": [],
+   "faux": [
+    "societe"
+   ],
+   "manquants": [
+    "automobile"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "societe ← entreprise (Q6881511, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Apple",
+   "categorie": "organisation",
+   "piege": true,
+   "predits": [
+    "societe"
+   ],
+   "reference": [
+    "informatique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "informatique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "societe ← entreprise (Q6881511, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Amazon",
+   "categorie": "organisation",
+   "piege": true,
+   "predits": [
+    "societe"
+   ],
+   "reference": [
+    "societe",
+    "informatique"
+   ],
+   "corrects": [
+    "societe"
+   ],
+   "faux": [],
+   "manquants": [
+    "informatique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "societe ← entreprise (Q6881511, P31, d=0)",
+    "informatique ← logiciel (Q7397, P31, d=3)"
+   ]
+  },
+  {
+   "titre": "Python",
+   "categorie": "organisation",
+   "piege": true,
+   "predits": [
+    "informatique"
+   ],
+   "reference": [
+    "informatique"
+   ],
+   "corrects": [
+    "informatique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "informatique ← langage de programmation orienté objet (Q899523, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Linux",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "informatique"
+   ],
+   "reference": [
+    "informatique"
+   ],
+   "corrects": [
+    "informatique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "informatique ← logiciel (Q7397, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Wikipédia",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "informatique"
+   ],
+   "reference": [
+    "informatique"
+   ],
+   "corrects": [
+    "informatique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "informatique ← projet Wikimedia de contenu (Q33120876, P31, d=0)",
+    "litterature ← œuvre littéraire (Q7725634, P136, d=4)"
+   ]
+  },
+  {
+   "titre": "Gestapo",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "nazis"
+   ],
+   "reference": [
+    "nazis"
+   ],
+   "corrects": [
+    "nazis"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "nazis ← Troisième Reich (Q7318, P17, d=0)"
+   ]
+  },
+  {
+   "titre": "Schutzstaffel",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "guerre"
+   ],
+   "reference": [
+    "nazis",
+    "secondeguerre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "nazis",
+    "secondeguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "guerre ← organisation paramilitaire (Q207320, P31, d=0)",
+    "nazis ← Troisième Reich (Q7318, P17, d=0)",
+    "idees ← philosophie (Q5891, P101, d=4)",
+    "politique ← politique (Q7163, P101, d=6)"
+   ]
+  },
+  {
+   "titre": "Camp de Ravensbrück",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "nazis"
+   ],
+   "reference": [
+    "nazis",
+    "secondeguerre"
+   ],
+   "corrects": [
+    "nazis"
+   ],
+   "faux": [],
+   "manquants": [
+    "secondeguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "nazis ← camp de concentration nazi (Q328468, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Wehrmacht",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "guerre"
+   ],
+   "reference": [
+    "secondeguerre",
+    "nazis"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "secondeguerre",
+    "nazis"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "guerre ← forces armées (Q772547, P31, d=0)",
+    "nazis ← Troisième Reich (Q7318, P17, d=0)"
+   ]
+  },
+  {
+   "titre": "Parti communiste français",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "politique"
+   ],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [
+    "politique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "politique ← parti politique (Q7278, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Organisation des Nations unies",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "politique"
+   ],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [
+    "politique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "politique ← organisation intergouvernementale (Q245065, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Cartel de Medellín",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "crime"
+   ],
+   "reference": [
+    "drogue",
+    "crime"
+   ],
+   "corrects": [
+    "crime"
+   ],
+   "faux": [],
+   "manquants": [
+    "drogue"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "crime ← cartel (Q179216, P31, d=0)",
+    "drogue ← trafic de stupéfiants (Q844924, P101, d=0)",
+    "idees ← philosophie (Q5891, P101, d=4)"
+   ]
+  },
+  {
+   "titre": "Cosa nostra",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "crime"
+   ],
+   "reference": [
+    "crime"
+   ],
+   "corrects": [
+    "crime"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "crime ← organisation criminelle (Q1788992, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "NASA",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "espace"
+   ],
+   "reference": [
+    "espace"
+   ],
+   "corrects": [
+    "espace"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "espace ← agence spatiale (Q17505024, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Airbus",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "avion"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "avion"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Air France",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "avion"
+   ],
+   "reference": [
+    "avion"
+   ],
+   "corrects": [
+    "avion"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "avion ← compagnie aérienne (Q46970, P31, d=0)",
+    "societe ← entreprise (Q4830453, P31, d=3)"
+   ]
+  },
+  {
+   "titre": "Shoobidoo Labs",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "jeuvideo"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "jeuvideo"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Studio Ghibli",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "animation"
+   ],
+   "reference": [
+    "animation"
+   ],
+   "corrects": [
+    "animation"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "animation ← studio d'animation (Q1107679, P31, d=0)",
+    "cinema ← industrie cinématographique (Q1415395, P101, d=0)",
+    "societe ← entreprise (Q4830453, P31, d=3)"
+   ]
+  },
+  {
+   "titre": "Marvel Comics",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "superheros",
+    "bd"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "superheros",
+    "bd"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "societe ← entreprise (Q6881511, P31, d=1)"
+   ]
+  },
+  {
+   "titre": "Pixar",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "animation"
+   ],
+   "reference": [
+    "animation"
+   ],
+   "corrects": [
+    "animation"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "animation ← studio d'animation (Q1107679, P31, d=0)",
+    "cinema ← société de production de cinéma (Q1762059, P31, d=0)",
+    "societe ← entreprise (Q4830453, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Paris",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "ville"
+   ],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [
+    "ville"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "ville ← commune française (Q484170, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Tokyo",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "ville"
+   ],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [
+    "ville"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "ville ← métropole (Q200250, P31, d=0)",
+    "geographie ← région historique (Q1620908, P31, d=5)"
+   ]
+  },
+  {
+   "titre": "New York",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "ville"
+   ],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [
+    "ville"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "ville ← cité aux États-Unis (Q1093829, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Lhassa",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "ville"
+   ],
+   "reference": [
+    "tibet",
+    "ville"
+   ],
+   "corrects": [
+    "ville"
+   ],
+   "faux": [],
+   "manquants": [
+    "tibet"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "ville ← ville-préfecture de Chine (Q748149, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Kiev",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "ville"
+   ],
+   "reference": [
+    "ukraine",
+    "ville"
+   ],
+   "corrects": [
+    "ville"
+   ],
+   "faux": [],
+   "manquants": [
+    "ukraine"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "ville ← ville (Q7930989, P31, d=0)",
+    "politique ← forme de gouvernement (Q1307214, P17, d=2)"
+   ]
+  },
+  {
+   "titre": "France",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "pays"
+   ],
+   "reference": [
+    "pays"
+   ],
+   "corrects": [
+    "pays"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "pays ← État souverain (Q3624078, P31, d=0)",
+    "politique ← système politique (Q28108, P31, d=2)"
+   ]
+  },
+  {
+   "titre": "Alsace",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "geographie"
+   ],
+   "reference": [
+    "geographie"
+   ],
+   "corrects": [
+    "geographie"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "geographie ← région culturelle (Q3502482, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Mont Everest",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "montagne"
+   ],
+   "reference": [
+    "montagne"
+   ],
+   "corrects": [
+    "montagne"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "montagne ← montagne (Q8502, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Mont Fuji",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "volcan"
+   ],
+   "reference": [
+    "volcan",
+    "montagne"
+   ],
+   "corrects": [
+    "volcan"
+   ],
+   "faux": [],
+   "manquants": [
+    "montagne"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "volcan ← volcan actif (Q1330974, P31, d=0)",
+    "montagne ← montagne (Q8502, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Vésuve",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "volcan",
+    "montagne"
+   ],
+   "reference": [
+    "volcan"
+   ],
+   "corrects": [
+    "volcan"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "volcan ← volcan actif (Q1330974, P31, d=0)",
+    "montagne ← montagne (Q8502, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Nil",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "fleuve"
+   ],
+   "reference": [
+    "fleuve"
+   ],
+   "corrects": [
+    "fleuve"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "fleuve ← fleuve ou rivière (Q4022, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Amazone",
+   "categorie": "lieu",
+   "piege": true,
+   "predits": [
+    "fleuve"
+   ],
+   "reference": [
+    "fleuve"
+   ],
+   "corrects": [
+    "fleuve"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "fleuve ← fleuve ou rivière (Q4022, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Lac Léman",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "lac"
+   ],
+   "reference": [
+    "lac"
+   ],
+   "corrects": [
+    "lac"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "lac ← lac (Q23397, P31, d=1)"
+   ]
+  },
+  {
+   "titre": "Sahara",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "desert"
+   ],
+   "reference": [
+    "desert"
+   ],
+   "corrects": [
+    "desert"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "desert ← désert (Q8514, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Océan Pacifique",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "ocean"
+   ],
+   "reference": [
+    "ocean"
+   ],
+   "corrects": [
+    "ocean"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "ocean ← océan (Q9430, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Madagascar",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "pays",
+    "ile"
+   ],
+   "reference": [
+    "ile",
+    "pays"
+   ],
+   "corrects": [
+    "pays",
+    "ile"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "pays ← État souverain (Q3624078, P31, d=0)",
+    "ile ← État insulaire (Q112099, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Pont de Brooklyn",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "pont"
+   ],
+   "reference": [
+    "pont"
+   ],
+   "corrects": [
+    "pont"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "pont ← pont (Q12280, P31, d=1)"
+   ]
+  },
+  {
+   "titre": "Tour Eiffel",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "tour"
+   ],
+   "reference": [
+    "tour"
+   ],
+   "corrects": [
+    "tour"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "tour ← tour (Q12518, P31, d=1)"
+   ]
+  },
+  {
+   "titre": "Château de Versailles",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "chateau"
+   ],
+   "reference": [
+    "chateau"
+   ],
+   "corrects": [
+    "chateau"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "chateau ← château (Q751876, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Notre-Dame de Paris",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cathedrale"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cathedrale"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "page d’homonymie"
+   ]
+  },
+  {
+   "titre": "Burj Khalifa",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "gratteciel"
+   ],
+   "reference": [
+    "gratteciel"
+   ],
+   "corrects": [
+    "gratteciel"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "gratteciel ← gratte-ciel (Q11303, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Phare d’Alexandrie",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "phare"
+   ],
+   "reference": [
+    "phare",
+    "egypteantique"
+   ],
+   "corrects": [
+    "phare"
+   ],
+   "faux": [],
+   "manquants": [
+    "egypteantique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "phare ← phare (Q39715, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Barrage des Trois-Gorges",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "barrage"
+   ],
+   "reference": [
+    "barrage"
+   ],
+   "corrects": [
+    "barrage"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "barrage ← barrage (Q12323, P31, d=1)"
+   ]
+  },
+  {
+   "titre": "Tunnel sous la Manche",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "tunnel"
+   ],
+   "reference": [
+    "tunnel",
+    "train"
+   ],
+   "corrects": [
+    "tunnel"
+   ],
+   "faux": [],
+   "manquants": [
+    "train"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "tunnel ← tunnel (Q44377, P31, d=1)"
+   ]
+  },
+  {
+   "titre": "Pyramide de Khéops",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "egypteantique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "egypteantique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Colisée",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "romeantique"
+   ],
+   "reference": [
+    "romeantique"
+   ],
+   "corrects": [
+    "romeantique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "romeantique ← amphithéâtre romain (Q7362268, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Parthénon",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "greceantique"
+   ],
+   "reference": [
+    "greceantique"
+   ],
+   "corrects": [
+    "greceantique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "greceantique ← temple grec (Q267596, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Vilar de Nantes",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "ville"
+   ],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [
+    "ville"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "ville ← freguesia (Q1131296, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Brooksburg",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "ville"
+   ],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [
+    "ville"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "ville ← town de l'Indiana (Q135396321, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Rue Charras",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "ville"
+   ],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [
+    "ville"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "ville ← rue (Q79007, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Comté de Floyd (Indiana)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "geographie"
+   ],
+   "reference": [
+    "geographie"
+   ],
+   "corrects": [
+    "geographie"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "geographie ← comté de l’Indiana (Q13410438, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Aéroport de Bario",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "avion"
+   ],
+   "reference": [
+    "avion"
+   ],
+   "corrects": [
+    "avion"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "avion ← aéroport (Q1248784, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Ligne de Raisio à Naantali",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "train"
+   ],
+   "reference": [
+    "train"
+   ],
+   "corrects": [
+    "train"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "train ← ligne de chemin de fer (Q728937, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Camp d’Auschwitz",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "nazis"
+   ],
+   "reference": [
+    "nazis",
+    "secondeguerre"
+   ],
+   "corrects": [
+    "nazis"
+   ],
+   "faux": [],
+   "manquants": [
+    "secondeguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "nazis ← camp de concentration nazi (Q328468, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Mur de Berlin",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "guerrefroide"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "guerrefroide"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Tchernobyl",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "ville",
+    "ukraine"
+   ],
+   "reference": [
+    "ukraine",
+    "ecologie"
+   ],
+   "corrects": [
+    "ukraine"
+   ],
+   "faux": [],
+   "manquants": [
+    "ecologie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "ville ← ville (Q7930989, P31, d=0)",
+    "ukraine ← Ukraine (Q212, P17, d=0)"
+   ]
+  },
+  {
+   "titre": "Voiture",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "vehicule"
+   ],
+   "reference": [
+    "voiture"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "voiture"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "vehicule ← type de véhicule (Q140424465, P31, d=0)",
+    "vehicule ← véhicule (Q42889, P279, d=1)"
+   ]
+  },
+  {
+   "titre": "Locomotive à vapeur",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "vehicule"
+   ],
+   "reference": [
+    "train"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "train"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "vehicule ← véhicule (Q42889, P279, d=0)"
+   ]
+  },
+  {
+   "titre": "TGV",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "train"
+   ],
+   "reference": [
+    "train"
+   ],
+   "corrects": [
+    "train"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "train ← classe de matériel roulant ferroviaire (Q811704, P31, d=0)",
+    "vehicule ← véhicule (Q42889, P279, d=3)"
+   ]
+  },
+  {
+   "titre": "Boeing 747",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "avion"
+   ],
+   "reference": [
+    "avion"
+   ],
+   "corrects": [
+    "avion"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "avion ← famille d'aéronefs (Q15056993, P31, d=0)",
+    "vehicule ← véhicule (Q42889, P279, d=3)"
+   ]
+  },
+  {
+   "titre": "Canadair CL-215",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "avion"
+   ],
+   "reference": [
+    "avion"
+   ],
+   "corrects": [
+    "avion"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "avion ← famille d'aéronefs (Q15056993, P31, d=0)",
+    "vehicule ← véhicule (Q42889, P279, d=2)"
+   ]
+  },
+  {
+   "titre": "Airbus Helicopters H160",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "avion"
+   ],
+   "reference": [
+    "helicoptere"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "helicoptere"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "avion ← type d'avion (Q15056995, P31, d=0)",
+    "vehicule ← véhicule (Q42889, P279, d=4)"
+   ]
+  },
+  {
+   "titre": "Sous-marin",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "bateaux"
+   ],
+   "reference": [
+    "bateaux"
+   ],
+   "corrects": [
+    "bateaux"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "bateaux ← type de sous-marin (Q121289744, P31, d=0)",
+    "vehicule ← type de véhicule (Q140424465, P31, d=2)",
+    "vehicule ← véhicule (Q42889, P279, d=2)"
+   ]
+  },
+  {
+   "titre": "Yamaha YZF-R1",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "moto"
+   ],
+   "reference": [
+    "moto"
+   ],
+   "corrects": [
+    "moto"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "moto ← modèle de moto (Q23866334, P31, d=0)",
+    "vehicule ← véhicule (Q42889, P279, d=4)"
+   ]
+  },
+  {
+   "titre": "Peterbilt 379",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "camion"
+   ],
+   "reference": [
+    "camion"
+   ],
+   "corrects": [
+    "camion"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "camion ← tracteur routier (Q59569, P31, d=0)",
+    "vehicule ← véhicule (Q42889, P31, d=3)"
+   ]
+  },
+  {
+   "titre": "Fusil d’assaut AK-47",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "armes"
+   ],
+   "reference": [
+    "armes"
+   ],
+   "corrects": [
+    "armes"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "armes ← modèle d'arme à feu (Q22704163, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Épée",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "armes"
+   ],
+   "reference": [
+    "armes"
+   ],
+   "corrects": [
+    "armes"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "armes ← classe fonctionnelle d'armes (Q124078422, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Bombe atomique",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "armes"
+   ],
+   "reference": [
+    "armes"
+   ],
+   "corrects": [
+    "armes"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "armes ← classe fonctionnelle d'armes (Q124078422, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Camembert",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "fromage"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "fromage"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Bordeaux",
+   "categorie": "objet",
+   "piege": true,
+   "predits": [
+    "vin"
+   ],
+   "reference": [
+    "vin"
+   ],
+   "corrects": [
+    "vin"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "vin ← région viticole (Q2140699, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Guinness",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "biere"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "biere"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Jack Daniel’s",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "societe"
+   ],
+   "reference": [
+    "whisky"
+   ],
+   "corrects": [],
+   "faux": [
+    "societe"
+   ],
+   "manquants": [
+    "whisky"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "societe ← entreprise (Q4830453, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Mojito",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "cocktail"
+   ],
+   "reference": [
+    "cocktail"
+   ],
+   "corrects": [
+    "cocktail"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "cocktail ← cocktail officiel de l'IBA (Q2536409, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Champagne",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "champagne"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "champagne"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Tarte Tatin",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "dessert"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "dessert"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Jambon de Bayonne",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "charcuterie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "charcuterie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Ratatouille",
+   "categorie": "objet",
+   "piege": true,
+   "predits": [],
+   "reference": [
+    "gastronomie",
+    "legume"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "gastronomie",
+    "legume"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Safran",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "epice"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "epice"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Pomme",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "fruit"
+   ],
+   "reference": [
+    "fruit"
+   ],
+   "corrects": [
+    "fruit"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "fruit ← type of fruit (Q140646522, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Carotte",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "legume"
+   ],
+   "reference": [
+    "legume"
+   ],
+   "corrects": [
+    "legume"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "legume ← type of vegetable (Q140358161, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Café",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "boisson"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "boisson"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Cocaïne",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "drogue"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "drogue"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sante ← médicament (Q12140, P279, d=2)"
+   ]
+  },
+  {
+   "titre": "Cigarette",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "drogue"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "drogue"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Jeu d’échecs",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "jeux"
+   ],
+   "reference": [
+    "echecs"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "echecs"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "jeux ← jeu de société (Q131436, P31, d=0)",
+    "sport ← sport (Q349, P31, d=1)",
+    "biologie ← procédé biologique (Q2996394, P279, d=4)",
+    "physique ← phénomène physique (Q1293220, P279, d=6)"
+   ]
+  },
+  {
+   "titre": "Texas hold’em",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "jeux"
+   ],
+   "reference": [
+    "poker"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "poker"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "jeux ← jeu (Q11410, P31, d=2)",
+    "sport ← sport (Q349, P136, d=3)",
+    "biologie ← procédé biologique (Q2996394, P279, d=5)"
+   ]
+  },
+  {
+   "titre": "Magic: The Gathering",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [
+    "jeux"
+   ],
+   "reference": [
+    "jeux"
+   ],
+   "corrects": [
+    "jeux"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "jeux ← jeu de cartes à collectionner (Q734698, P31, d=0)",
+    "sport ← sport (Q349, P31, d=4)",
+    "litterature ← œuvre littéraire (Q7725634, P136, d=4)"
+   ]
+  },
+  {
+   "titre": "Console de jeu PlayStation",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "jeuvideo"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "jeuvideo"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "informatique ← plateforme informatique (Q241317, P279, d=3)",
+    "jeux ← jeu (Q11410, P279, d=4)"
+   ]
+  },
+  {
+   "titre": "iPhone",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "informatique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "informatique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "informatique ← plateforme informatique (Q241317, P279, d=3)"
+   ]
+  },
+  {
+   "titre": "Robe",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "mode"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "mode"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "page d’homonymie"
+   ]
+  },
+  {
+   "titre": "Guitare électrique",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "musique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "musique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Fusée Saturn V",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "fusee"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "fusee"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Crayon",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "technologie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "technologie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Bataille de Waterloo",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "guerre"
+   ],
+   "reference": [
+    "napoleon",
+    "guerre"
+   ],
+   "corrects": [
+    "guerre"
+   ],
+   "faux": [],
+   "manquants": [
+    "napoleon"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "guerre ← bataille (Q178561, P31, d=0)",
+    "histoire ← événement historique (Q13418847, P31, d=1)",
+    "politique ← politique (Q7163, P31, d=6)"
+   ]
+  },
+  {
+   "titre": "Prise de la Bastille",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "histoire"
+   ],
+   "reference": [
+    "revolutionfr"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "revolutionfr"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "histoire ← événement historique (Q13418847, P31, d=0)",
+    "biologie ← procédé biologique (Q2996394, P31, d=5)",
+    "guerre ← conflit (Q180684, P31, d=6)"
+   ]
+  },
+  {
+   "titre": "Bataille de Verdun",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "premiereguerre"
+   ],
+   "reference": [
+    "premiereguerre"
+   ],
+   "corrects": [
+    "premiereguerre"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "guerre ← bataille (Q178561, P31, d=0)",
+    "premiereguerre ← Q361 (Q361, P361, d=0)",
+    "histoire ← événement historique (Q13418847, P31, d=1)",
+    "politique ← politique (Q7163, P31, d=6)"
+   ]
+  },
+  {
+   "titre": "Débarquement de Normandie",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "guerre"
+   ],
+   "reference": [
+    "secondeguerre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "secondeguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "guerre ← bataille (Q178561, P31, d=0)",
+    "histoire ← événement historique (Q13418847, P31, d=1)",
+    "politique ← politique (Q7163, P31, d=6)"
+   ]
+  },
+  {
+   "titre": "Bataille de Stalingrad",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "guerre"
+   ],
+   "reference": [
+    "secondeguerre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "secondeguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "guerre ← bataille (Q178561, P31, d=0)",
+    "histoire ← événement historique (Q13418847, P31, d=1)",
+    "politique ← politique (Q7163, P31, d=6)"
+   ]
+  },
+  {
+   "titre": "Nuit de Cristal",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "nazis",
+    "crime"
+   ],
+   "reference": [
+    "nazis"
+   ],
+   "corrects": [
+    "nazis"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "nazis ← pogrom (Q177716, P31, d=0)",
+    "crime ← pogrom (Q177716, P31, d=0)",
+    "societe ← mouvement social (Q49773, P31, d=3)",
+    "guerre ← conflit (Q180684, P31, d=3)",
+    "societe ← racisme (Q8461, P31, d=5)"
+   ]
+  },
+  {
+   "titre": "Crise des missiles de Cuba",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "politique",
+    "guerrefroide"
+   ],
+   "reference": [
+    "guerrefroide"
+   ],
+   "corrects": [
+    "guerrefroide"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "politique ← crise politique (Q3002772, P31, d=0)",
+    "guerre ← conflit (Q180684, P31, d=0)",
+    "guerrefroide ← Q8683 (Q8683, P361, d=0)",
+    "biologie ← procédé biologique (Q2996394, P31, d=5)"
+   ]
+  },
+  {
+   "titre": "Guerre du Vietnam",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "guerrevietnam",
+    "guerrefroide",
+    "guerrecivile"
+   ],
+   "reference": [
+    "guerrevietnam"
+   ],
+   "corrects": [
+    "guerrevietnam"
+   ],
+   "faux": [
+    "guerrecivile"
+   ],
+   "manquants": [],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "guerre ← guerre par procuration (Q864113, P31, d=0)",
+    "guerrecivile ← guerre civile (Q8465, P31, d=0)",
+    "guerrefroide ← Q8683 (Q8683, P361, d=0)",
+    "guerrevietnam ← guerre du Vietnam (Q8740, self, d=0)"
+   ]
+  },
+  {
+   "titre": "Première croisade",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "croisades"
+   ],
+   "reference": [
+    "croisades"
+   ],
+   "corrects": [
+    "croisades"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "croisades ← Q12546 (Q12546, P361, d=0)",
+    "guerre ← conflit (Q180684, P31, d=3)"
+   ]
+  },
+  {
+   "titre": "Guerre de Sécession",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "guerrecivile"
+   ],
+   "reference": [
+    "guerrecivile"
+   ],
+   "corrects": [
+    "guerrecivile"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "guerrecivile ← guerre civile (Q8465, P31, d=0)",
+    "histoire ← période historique (Q11514315, P31, d=0)",
+    "guerre ← conflit (Q180684, P31, d=3)"
+   ]
+  },
+  {
+   "titre": "Invasion de l’Ukraine par la Russie en 2022",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "ukraine"
+   ],
+   "reference": [
+    "ukraine",
+    "guerre"
+   ],
+   "corrects": [
+    "ukraine"
+   ],
+   "faux": [],
+   "manquants": [
+    "guerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "ukraine ← Ukraine (Q212, P17, d=0)",
+    "guerre ← conflit (Q180684, P31, d=2)",
+    "politique ← crise politique (Q3002772, P31, d=2)",
+    "biologie ← procédé biologique (Q2996394, P31, d=6)"
+   ]
+  },
+  {
+   "titre": "Tour de France 2019",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "cyclisme"
+   ],
+   "reference": [
+    "cyclisme"
+   ],
+   "corrects": [
+    "cyclisme"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "cyclisme ← Tour de France (Q33881, P31, d=0)",
+    "cyclisme ← cyclisme sur route (Q3609, P641, d=0)",
+    "sport ← sport (Q349, P641, d=2)",
+    "jeux ← jeu (Q11410, P641, d=3)",
+    "physique ← phénomène physique (Q1293220, P641, d=5)"
+   ]
+  },
+  {
+   "titre": "Jeux olympiques de 2024",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "sport"
+   ],
+   "reference": [
+    "sport"
+   ],
+   "corrects": [
+    "sport"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "sport ← événement sportif international (Q14547231, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Coupe du monde de football 1998",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "football"
+   ],
+   "reference": [
+    "football"
+   ],
+   "corrects": [
+    "football"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "football ← football (Q2736, P641, d=0)",
+    "sport ← événement sportif (Q16510064, P31, d=2)",
+    "sport ← sport (Q349, P641, d=2)",
+    "jeux ← jeu (Q11410, P641, d=2)"
+   ]
+  },
+  {
+   "titre": "24 Heures du Mans",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "courseauto"
+   ],
+   "reference": [
+    "courseauto"
+   ],
+   "corrects": [
+    "courseauto"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "courseauto ← endurance (Q1805420, P641, d=0)",
+    "sport ← événement sportif (Q16510064, P31, d=1)",
+    "jeux ← jeu (Q11410, P641, d=3)"
+   ]
+  },
+  {
+   "titre": "Janvier 1849",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "histoire"
+   ],
+   "reference": [
+    "histoire"
+   ],
+   "corrects": [
+    "histoire"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "histoire ← mois calendaire d'une année donnée (Q47018478, P31, d=0)",
+    "idees ← philosophie (Q5891, P31, d=6)"
+   ]
+  },
+  {
+   "titre": "Naufrage du Titanic",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "bateaux",
+    "histoire"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "bateaux",
+    "histoire"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Accident nucléaire de Fukushima",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [
+    "ecologie"
+   ],
+   "reference": [
+    "ecologie",
+    "sciences"
+   ],
+   "corrects": [
+    "ecologie"
+   ],
+   "faux": [],
+   "manquants": [
+    "sciences"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "ecologie ← catastrophe nucléaire (Q15725976, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Démocratie",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "politique"
+   ],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [
+    "politique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "politique ← forme de gouvernement (Q1307214, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Capitalisme",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "societe"
+   ],
+   "reference": [
+    "finance",
+    "societe"
+   ],
+   "corrects": [
+    "societe"
+   ],
+   "faux": [],
+   "manquants": [
+    "finance"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "societe ← formation social (Q1641112, P31, d=0)",
+    "biologie ← procédé biologique (Q2996394, P31, d=4)",
+    "physique ← phénomène physique (Q1293220, P31, d=6)"
+   ]
+  },
+  {
+   "titre": "Théorème de Pythagore",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "mathematiques"
+   ],
+   "reference": [
+    "mathematiques"
+   ],
+   "corrects": [
+    "mathematiques"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "mathematiques ← théorème (Q65943, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Photosynthèse",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "biologie"
+   ],
+   "reference": [
+    "biologie"
+   ],
+   "corrects": [
+    "biologie"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "biologie ← procédé biologique (Q2996394, P31, d=0)",
+    "physique ← phénomène physique (Q1293220, P31, d=2)"
+   ]
+  },
+  {
+   "titre": "Gravitation",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "physique"
+   ],
+   "reference": [
+    "physique"
+   ],
+   "corrects": [
+    "physique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "physique ← interaction élémentaire (Q104934, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Tableau périodique des éléments",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "chimie"
+   ],
+   "reference": [
+    "chimie"
+   ],
+   "corrects": [
+    "chimie"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "chimie ← classification chimique (Q732744, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Réchauffement climatique",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "ecologie"
+   ],
+   "reference": [
+    "ecologie"
+   ],
+   "corrects": [
+    "ecologie"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "ecologie ← Problème global (Q2629720, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Intelligence artificielle",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "informatique"
+   ],
+   "reference": [
+    "ia"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ia"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "informatique ← branche de l'informatique (Q123370638, P31, d=0)",
+    "biologie ← procédé biologique (Q2996394, P279, d=3)",
+    "idees ← philosophie (Q5891, P361, d=4)",
+    "physique ← phénomène physique (Q1293220, P279, d=5)"
+   ]
+  },
+  {
+   "titre": "Bitcoin",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "finance",
+    "informatique"
+   ],
+   "reference": [
+    "finance",
+    "informatique"
+   ],
+   "corrects": [
+    "finance",
+    "informatique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "finance ← chaîne de blocs (Q20514253, P31, d=0)",
+    "informatique ← logiciel (Q7397, P31, d=2)",
+    "litterature ← œuvre littéraire (Q7725634, P31, d=5)"
+   ]
+  },
+  {
+   "titre": "Rock and roll",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "rock"
+   ],
+   "reference": [
+    "rock"
+   ],
+   "corrects": [
+    "rock"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← genre musical (Q188451, P31, d=0)",
+    "rock ← rock (Q11399, P279, d=0)"
+   ]
+  },
+  {
+   "titre": "Blues",
+   "categorie": "notion",
+   "piege": true,
+   "predits": [
+    "blues"
+   ],
+   "reference": [
+    "blues"
+   ],
+   "corrects": [
+    "blues"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← genre musical (Q188451, P31, d=0)",
+    "blues ← blues (Q9759, self, d=0)"
+   ]
+  },
+  {
+   "titre": "Punk rock",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "punk"
+   ],
+   "reference": [
+    "punk"
+   ],
+   "corrects": [
+    "punk"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← genre musical (Q188451, P31, d=0)",
+    "punk ← Q3071 (Q3071, self, d=0)",
+    "rock ← rock (Q11399, P279, d=1)"
+   ]
+  },
+  {
+   "titre": "Impressionnisme",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "peinture"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "peinture"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "societe ← mouvement social (Q49773, P31, d=2)",
+    "biologie ← procédé biologique (Q2996394, P31, d=6)"
+   ]
+  },
+  {
+   "titre": "Bouddhisme",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "bouddhisme"
+   ],
+   "reference": [
+    "bouddhisme"
+   ],
+   "corrects": [
+    "bouddhisme"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "religion ← religion (Q9174, P31, d=0)",
+    "bouddhisme ← bouddhisme (Q748, self, d=0)",
+    "societe ← mouvement social (Q49773, P31, d=1)",
+    "biologie ← procédé biologique (Q2996394, P31, d=5)"
+   ]
+  },
+  {
+   "titre": "Islam",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "islam"
+   ],
+   "reference": [
+    "islam"
+   ],
+   "corrects": [
+    "islam"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "religion ← religion majeure (Q6957341, P31, d=0)",
+    "islam ← islam (Q432, self, d=0)"
+   ]
+  },
+  {
+   "titre": "Judaïsme",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "judaisme"
+   ],
+   "reference": [
+    "judaisme"
+   ],
+   "corrects": [
+    "judaisme"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "religion ← religion (Q9174, P31, d=0)",
+    "judaisme ← judaïsme (Q9268, self, d=0)"
+   ]
+  },
+  {
+   "titre": "Zeus",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "mythologie"
+   ],
+   "reference": [
+    "mythologie",
+    "greceantique"
+   ],
+   "corrects": [
+    "mythologie"
+   ],
+   "faux": [],
+   "manquants": [
+    "greceantique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "mythologie ← divinité du tonnerre (Q842697, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Cunnilingus",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "sexualite"
+   ],
+   "reference": [
+    "sexualite"
+   ],
+   "corrects": [
+    "sexualite"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "sexualite ← comportement sexuel humain (Q608, P31, d=0)",
+    "biologie ← procédé biologique (Q2996394, P31, d=4)",
+    "physique ← phénomène physique (Q1293220, P31, d=5)"
+   ]
+  },
+  {
+   "titre": "Apartheid",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "politique",
+    "societe"
+   ],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [
+    "politique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "politique ← politique (Q1156854, P31, d=0)",
+    "societe ← racisme (Q8461, P31, d=0)",
+    "biologie ← procédé biologique (Q2996394, P31, d=4)",
+    "physique ← phénomène physique (Q1293220, P31, d=6)"
+   ]
+  },
+  {
+   "titre": "Alphabet cyrillique",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "langue"
+   ],
+   "reference": [
+    "langue"
+   ],
+   "corrects": [
+    "langue"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "langue ← système d’écriture (Q8192, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Grippe",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "sante"
+   ],
+   "reference": [
+    "sante"
+   ],
+   "corrects": [
+    "sante"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "sante ← type de maladie (Q112193867, P31, d=0)",
+    "biologie ← procédé biologique (Q2996394, P279, d=3)",
+    "physique ← phénomène physique (Q1293220, P279, d=5)"
+   ]
+  },
+  {
+   "titre": "Black metal",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "metal"
+   ],
+   "reference": [
+    "metal"
+   ],
+   "corrects": [
+    "metal"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← genre musical (Q188451, P31, d=0)",
+    "metal ← black metal (Q132438, self, d=0)",
+    "rock ← rock (Q11399, P279, d=2)"
+   ]
+  },
+  {
+   "titre": "Cyclisme sur route",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "cyclisme"
+   ],
+   "reference": [
+    "cyclisme"
+   ],
+   "corrects": [
+    "cyclisme"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "sport ← discipline sportive (Q2312410, P31, d=0)",
+    "cyclisme ← sport cycliste (Q2215841, P641, d=0)",
+    "jeux ← jeu (Q11410, P641, d=2)",
+    "physique ← phénomène physique (Q1293220, P641, d=4)"
+   ]
+  },
+  {
+   "titre": "Chat domestique",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [
+    "chat",
+    "felin"
+   ],
+   "reference": [
+    "chat"
+   ],
+   "corrects": [
+    "chat"
+   ],
+   "faux": [
+    "felin"
+   ],
+   "manquants": [],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "felin ← félins (Q25265, P279, d=0)",
+    "chat ← chat (Q146, self, d=0)",
+    "animaux ← animal (Q729, P279, d=3)",
+    "animaux ← mammifères (Q7377, P279, d=1.2)"
+   ]
+  },
+  {
+   "titre": "Chien",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [
+    "chien"
+   ],
+   "reference": [
+    "chien"
+   ],
+   "corrects": [
+    "chien"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "chien ← chien (Q144, self, d=0)",
+    "animaux ← animal (Q729, P279, d=3)"
+   ]
+  },
+  {
+   "titre": "Lion",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [
+    "felin"
+   ],
+   "reference": [
+    "felin"
+   ],
+   "corrects": [
+    "felin"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "felin ← félins (Q25265, P279, d=1)",
+    "felin ← félins (Q25265, self, d=0.6000000000000001)",
+    "animaux ← mammifères (Q7377, P279, d=3.4)",
+    "animaux ← mammifères (Q7377, P279, d=2.5999999999999996)",
+    "animaux ← mammifères (Q7377, P279, d=2.1999999999999997)",
+    "animaux ← mammifères (Q7377, self, d=1.7999999999999998)"
+   ]
+  },
+  {
+   "titre": "Orque",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [
+    "cetace"
+   ],
+   "reference": [
+    "cetace"
+   ],
+   "corrects": [
+    "cetace"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "cetace ← cétacé (Q160, P279, d=0.2)",
+    "animaux ← mammifères (Q7377, P279, d=1.2)"
+   ]
+  },
+  {
+   "titre": "Grand requin blanc",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [
+    "requin"
+   ],
+   "reference": [
+    "requin"
+   ],
+   "corrects": [
+    "requin"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "requin ← Chondrichthyes (Q25371, self, d=1.2)"
+   ]
+  },
+  {
+   "titre": "Cobra royal",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [
+    "serpent"
+   ],
+   "reference": [
+    "serpent"
+   ],
+   "corrects": [
+    "serpent"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "serpent ← Ophidia (Q16986904, self, d=1.5999999999999999)"
+   ]
+  },
+  {
+   "titre": "Aigle royal",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [
+    "rapace"
+   ],
+   "reference": [
+    "rapace"
+   ],
+   "corrects": [
+    "rapace"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "rapace ← Accipitriformes (Q21736, self, d=0.8)",
+    "oiseau ← oiseau (Q5113, self, d=2.4)"
+   ]
+  },
+  {
+   "titre": "Tyrannosaurus rex",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [
+    "dinosaure"
+   ],
+   "reference": [
+    "dinosaure"
+   ],
+   "corrects": [
+    "dinosaure"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "dinosaure ← Tyrannosauroidea (Q131396, self, d=1.2)"
+   ]
+  },
+  {
+   "titre": "Abeille",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [
+    "insecte"
+   ],
+   "reference": [
+    "insecte"
+   ],
+   "corrects": [
+    "insecte"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "insecte ← insecte (Q1390, P279, d=0)",
+    "animaux ← animal (Q729, P279, d=3)"
+   ]
+  },
+  {
+   "titre": "Monarque",
+   "categorie": "espece",
+   "piege": true,
+   "predits": [
+    "papillon"
+   ],
+   "reference": [
+    "papillon"
+   ],
+   "corrects": [
+    "papillon"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "papillon ← Papilionoidea (Q756153, self, d=1)"
+   ]
+  },
+  {
+   "titre": "Tarentule",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "araignee"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "araignee"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Gorille",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [
+    "singe"
+   ],
+   "reference": [
+    "singe"
+   ],
+   "corrects": [
+    "singe"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "singe ← primates (Q7380, self, d=1.2)",
+    "animaux ← mammifères (Q7377, self, d=2.2)",
+    "singe ← primates (Q7380, self, d=1)",
+    "animaux ← mammifères (Q7377, self, d=1.9999999999999998)",
+    "animaux ← mammifères (Q7377, self, d=1.7999999999999998)"
+   ]
+  },
+  {
+   "titre": "Ours brun",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [
+    "ours"
+   ],
+   "reference": [
+    "ours"
+   ],
+   "corrects": [
+    "ours"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "ours ← ours (Q11788, P279, d=1)",
+    "animaux ← animal (Q729, P279, d=2)",
+    "ours ← ours (Q11788, self, d=0.6000000000000001)",
+    "animaux ← mammifères (Q7377, self, d=1.7999999999999998)"
+   ]
+  },
+  {
+   "titre": "Pur-sang arabe",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [
+    "cheval"
+   ],
+   "reference": [
+    "cheval"
+   ],
+   "corrects": [
+    "cheval"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "cheval ← race de chevaux (Q1160573, P31, d=0)",
+    "animaux ← animal (Q729, P279, d=2)"
+   ]
+  },
+  {
+   "titre": "Chêne",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [
+    "arbre"
+   ],
+   "reference": [
+    "arbre"
+   ],
+   "corrects": [
+    "arbre"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "arbre ← chêne (Q12004, self, d=0)"
+   ]
+  },
+  {
+   "titre": "Rose",
+   "categorie": "espece",
+   "piege": true,
+   "predits": [],
+   "reference": [
+    "fleur"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "fleur"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Amanita muscaria",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [
+    "champignon"
+   ],
+   "reference": [
+    "champignon"
+   ],
+   "corrects": [
+    "champignon"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "champignon ← Agaricales (Q221448, self, d=0.6000000000000001)"
+   ]
+  },
+  {
+   "titre": "Manchot empereur",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [
+    "oiseau"
+   ],
+   "reference": [
+    "oiseau"
+   ],
+   "corrects": [
+    "oiseau"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "oiseau ← oiseau (Q5113, P279, d=2)",
+    "oiseau ← oiseau (Q5113, P279, d=1.5999999999999999)"
+   ]
+  },
+  {
+   "titre": "Saumon atlantique",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [
+    "poisson"
+   ],
+   "reference": [
+    "poisson"
+   ],
+   "corrects": [
+    "poisson"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "animaux ← animal (Q729, P279, d=3)",
+    "poisson ← Salmoniformes (Q9394365, self, d=1)"
+   ]
+  },
+  {
+   "titre": "Jaguar",
+   "categorie": "homonymie",
+   "piege": true,
+   "predits": [
+    "automobile"
+   ],
+   "reference": [
+    "automobile"
+   ],
+   "corrects": [
+    "automobile"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "automobile ← constructeur automobile (Q786820, P31, d=0)",
+    "societe ← entreprise (Q6881511, P31, d=1)"
+   ]
+  },
+  {
+   "titre": "Jaguar (animal)",
+   "categorie": "homonymie",
+   "piege": false,
+   "predits": [
+    "felin"
+   ],
+   "reference": [
+    "felin"
+   ],
+   "corrects": [
+    "felin"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "felin ← félins (Q25265, P279, d=1)",
+    "felin ← félins (Q25265, self, d=0.6000000000000001)",
+    "animaux ← mammifères (Q7377, P279, d=3.4)",
+    "animaux ← mammifères (Q7377, P279, d=2.5999999999999996)",
+    "animaux ← mammifères (Q7377, P279, d=2.1999999999999997)",
+    "animaux ← mammifères (Q7377, self, d=1.7999999999999998)"
+   ]
+  },
+  {
+   "titre": "Mercure",
+   "categorie": "homonymie",
+   "piege": true,
+   "predits": [
+    "planete"
+   ],
+   "reference": [
+    "planete"
+   ],
+   "corrects": [
+    "planete"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "planete ← planète tellurique du système solaire (Q3504248, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Mercure (élément)",
+   "categorie": "homonymie",
+   "piege": false,
+   "predits": [
+    "chimie"
+   ],
+   "reference": [
+    "chimie"
+   ],
+   "corrects": [
+    "chimie"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "chimie ← élément chimique (Q11344, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Orange",
+   "categorie": "homonymie",
+   "piege": true,
+   "predits": [
+    "fruit"
+   ],
+   "reference": [
+    "fruit"
+   ],
+   "corrects": [
+    "fruit"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "fruit ← fruit comestible (Q3314483, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Orange (entreprise)",
+   "categorie": "homonymie",
+   "piege": true,
+   "predits": [
+    "societe"
+   ],
+   "reference": [
+    "societe"
+   ],
+   "corrects": [
+    "societe"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "societe ← entreprise (Q4830453, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Cygne",
+   "categorie": "homonymie",
+   "piege": false,
+   "predits": [
+    "oiseau"
+   ],
+   "reference": [
+    "oiseau"
+   ],
+   "corrects": [
+    "oiseau"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "oiseau ← oiseau (Q5113, self, d=1.5999999999999999)"
+   ]
+  },
+  {
+   "titre": "Cygne (constellation)",
+   "categorie": "homonymie",
+   "piege": false,
+   "predits": [
+    "espace"
+   ],
+   "reference": [
+    "espace"
+   ],
+   "corrects": [
+    "espace"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "espace ← constellation (Q8928, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Bélier",
+   "categorie": "homonymie",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "animaux"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "animaux"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "animaux ← animal (Q729, P31, d=1)"
+   ]
+  },
+  {
+   "titre": "Taureau",
+   "categorie": "homonymie",
+   "piege": false,
+   "predits": [
+    "espace"
+   ],
+   "reference": [
+    "espace"
+   ],
+   "corrects": [
+    "espace"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "espace ← constellation (Q8928, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Windows",
+   "categorie": "homonymie",
+   "piege": true,
+   "predits": [
+    "informatique"
+   ],
+   "reference": [
+    "informatique"
+   ],
+   "corrects": [
+    "informatique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "informatique ← système d'exploitation propriétaire (Q137396449, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Java",
+   "categorie": "homonymie",
+   "piege": true,
+   "predits": [
+    "informatique"
+   ],
+   "reference": [
+    "informatique"
+   ],
+   "corrects": [
+    "informatique"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "informatique ← logiciel (Q7397, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Java (île)",
+   "categorie": "homonymie",
+   "piege": false,
+   "predits": [
+    "ile"
+   ],
+   "reference": [
+    "ile"
+   ],
+   "corrects": [
+    "ile"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "ile ← île (Q23442, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Georges Lemaître",
+   "categorie": "homonymie",
+   "piege": false,
+   "predits": [
+    "mathematiques"
+   ],
+   "reference": [
+    "espace",
+    "christianisme"
+   ],
+   "corrects": [],
+   "faux": [
+    "mathematiques"
+   ],
+   "manquants": [
+    "espace",
+    "christianisme"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "mathematiques ← mathématicien ou mathématicienne (Q170790, P106, d=0)",
+    "christianisme ← prêtre catholique (Q250867, P106, d=0)",
+    "physique ← physicien ou physicienne (Q169470, P106, d=0)",
+    "espace ← astronome (Q11063, P106, d=0)",
+    "religion ← théologien ou théologienne (Q1234713, P106, d=2)",
+    "religion ← chef religieux (Q15995642, P106, d=4)",
+    "idees ← philosophie (Q5891, P101, d=4)",
+    "biologie ← procédé biologique (Q2996394, P101, d=5)"
+   ]
+  },
+  {
+   "titre": "Maledon",
+   "categorie": "nom-propre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "noms"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "noms"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "page d’homonymie"
+   ]
+  },
+  {
+   "titre": "Martin",
+   "categorie": "nom-propre",
+   "piege": false,
+   "predits": [
+    "noms"
+   ],
+   "reference": [
+    "noms"
+   ],
+   "corrects": [
+    "noms"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "noms ← prénom masculin (Q12308941, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Dupont",
+   "categorie": "nom-propre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "noms"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "noms"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "page d’homonymie"
+   ]
+  },
+  {
+   "titre": "Alexandre",
+   "categorie": "nom-propre",
+   "piege": false,
+   "predits": [
+    "noms"
+   ],
+   "reference": [
+    "noms"
+   ],
+   "corrects": [
+    "noms"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "noms ← prénom masculin (Q12308941, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Tabouret",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [],
+   "corrects": [],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": []
+  },
+  {
+   "titre": "Horloge",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [],
+   "corrects": [],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": []
+  },
+  {
+   "titre": "Parapluie",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [],
+   "corrects": [],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": []
+  },
+  {
+   "titre": "Bleu",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [],
+   "corrects": [],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "physique ← phénomène physique (Q1293220, P361, d=2)",
+    "idees ← philosophie (Q5891, P361, d=6)"
+   ]
+  },
+  {
+   "titre": "Mardi",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [],
+   "corrects": [],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": []
+  },
+  {
+   "titre": "Printemps",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [],
+   "corrects": [],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": []
+  },
+  {
+   "titre": "Silence",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [],
+   "corrects": [],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": []
+  },
+  {
+   "titre": "Ombre",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [
+    "physique"
+   ],
+   "reference": [],
+   "corrects": [],
+   "faux": [
+    "physique"
+   ],
+   "manquants": [],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "physique ← phénomène physique (Q1293220, P279, d=0)"
+   ]
+  }
+ ],
+ "global": {
+  "cartes": 317,
+  "precision": 0.9130434782608695,
+  "rappel": 0.6363636363636364,
+  "f1": 0.75,
+  "tauxFauxThemes": 0.08695652173913049,
+  "tauxCartesAvecFauxTheme": 0.0694006309148265,
+  "tauxSansThemeATort": 0.14563106796116504,
+  "tauxFauxSurCartesVides": 0.125,
+  "tauxPiegesDeclenches": 0,
+  "tauxExactes": 0.5993690851735016,
+  "depassementsMax": 0
+ },
+ "pieges": {
+  "cartes": 39,
+  "precision": 0.8333333333333334,
+  "rappel": 0.5319148936170213,
+  "f1": 0.6493506493506493,
+  "tauxFauxThemes": 0.16666666666666663,
+  "tauxCartesAvecFauxTheme": 0.1282051282051282,
+  "tauxSansThemeATort": 0.23076923076923078,
+  "tauxFauxSurCartesVides": null,
+  "tauxPiegesDeclenches": 0,
+  "tauxExactes": 0.5128205128205128,
+  "depassementsMax": 0
+ },
+ "parCategorie": {
+  "objet": {
+   "cartes": 44,
+   "precision": 0.9,
+   "rappel": 0.4,
+   "f1": 0.5538461538461539,
+   "tauxFauxThemes": 0.09999999999999998,
+   "tauxCartesAvecFauxTheme": 0.045454545454545456,
+   "tauxSansThemeATort": 0.4090909090909091,
+   "tauxFauxSurCartesVides": null,
+   "tauxPiegesDeclenches": 0,
+   "tauxExactes": 0.4090909090909091,
+   "depassementsMax": 0
+  },
+  "notion": {
+   "cartes": 35,
+   "precision": 0.96,
+   "rappel": 0.7741935483870968,
+   "f1": 0.8571428571428571,
+   "tauxFauxThemes": 0.040000000000000036,
+   "tauxCartesAvecFauxTheme": 0.02857142857142857,
+   "tauxSansThemeATort": 0.1111111111111111,
+   "tauxFauxSurCartesVides": 0.125,
+   "tauxPiegesDeclenches": 0,
+   "tauxExactes": 0.7428571428571429,
+   "depassementsMax": 0
+  },
+  "homonymie": {
+   "cartes": 17,
+   "precision": 0.9285714285714286,
+   "rappel": 0.6842105263157895,
+   "f1": 0.7878787878787878,
+   "tauxFauxThemes": 0.0714285714285714,
+   "tauxCartesAvecFauxTheme": 0.058823529411764705,
+   "tauxSansThemeATort": 0.17647058823529413,
+   "tauxFauxSurCartesVides": null,
+   "tauxPiegesDeclenches": 0,
+   "tauxExactes": 0.7647058823529411,
+   "depassementsMax": 0
+  },
+  "organisation": {
+   "cartes": 33,
+   "precision": 0.9629629629629629,
+   "rappel": 0.6341463414634146,
+   "f1": 0.7647058823529412,
+   "tauxFauxThemes": 0.03703703703703709,
+   "tauxCartesAvecFauxTheme": 0.030303030303030304,
+   "tauxSansThemeATort": 0.12121212121212122,
+   "tauxFauxSurCartesVides": null,
+   "tauxPiegesDeclenches": 0,
+   "tauxExactes": 0.6666666666666666,
+   "depassementsMax": 0
+  },
+  "evenement": {
+   "cartes": 19,
+   "precision": 0.9333333333333333,
+   "rappel": 0.5833333333333334,
+   "f1": 0.7179487179487181,
+   "tauxFauxThemes": 0.06666666666666665,
+   "tauxCartesAvecFauxTheme": 0.05263157894736842,
+   "tauxSansThemeATort": 0.10526315789473684,
+   "tauxFauxSurCartesVides": null,
+   "tauxPiegesDeclenches": null,
+   "tauxExactes": 0.42105263157894735,
+   "depassementsMax": 0
+  },
+  "personne": {
+   "cartes": 74,
+   "precision": 0.8333333333333334,
+   "rappel": 0.5729166666666666,
+   "f1": 0.6790123456790123,
+   "tauxFauxThemes": 0.16666666666666663,
+   "tauxCartesAvecFauxTheme": 0.14864864864864866,
+   "tauxSansThemeATort": 0.04054054054054054,
+   "tauxFauxSurCartesVides": null,
+   "tauxPiegesDeclenches": 0,
+   "tauxExactes": 0.5135135135135135,
+   "depassementsMax": 0
+  },
+  "oeuvre": {
+   "cartes": 35,
+   "precision": 0.8709677419354839,
+   "rappel": 0.6923076923076923,
+   "f1": 0.7714285714285716,
+   "tauxFauxThemes": 0.12903225806451613,
+   "tauxCartesAvecFauxTheme": 0.11428571428571428,
+   "tauxSansThemeATort": 0.14285714285714285,
+   "tauxFauxSurCartesVides": null,
+   "tauxPiegesDeclenches": 0,
+   "tauxExactes": 0.6,
+   "depassementsMax": 0
+  },
+  "lieu": {
+   "cartes": 37,
+   "precision": 1,
+   "rappel": 0.7777777777777778,
+   "f1": 0.8750000000000001,
+   "tauxFauxThemes": 0,
+   "tauxCartesAvecFauxTheme": 0,
+   "tauxSansThemeATort": 0.08108108108108109,
+   "tauxFauxSurCartesVides": null,
+   "tauxPiegesDeclenches": 0,
+   "tauxExactes": 0.7027027027027027,
+   "depassementsMax": 0
+  },
+  "espece": {
+   "cartes": 19,
+   "precision": 0.9444444444444444,
+   "rappel": 0.8947368421052632,
+   "f1": 0.918918918918919,
+   "tauxFauxThemes": 0.05555555555555558,
+   "tauxCartesAvecFauxTheme": 0.05263157894736842,
+   "tauxSansThemeATort": 0.10526315789473684,
+   "tauxFauxSurCartesVides": null,
+   "tauxPiegesDeclenches": 0,
+   "tauxExactes": 0.8421052631578947,
+   "depassementsMax": 0
+  },
+  "nom-propre": {
+   "cartes": 4,
+   "precision": 1,
+   "rappel": 0.5,
+   "f1": 0.6666666666666666,
+   "tauxFauxThemes": 0,
+   "tauxCartesAvecFauxTheme": 0,
+   "tauxSansThemeATort": 0.5,
+   "tauxFauxSurCartesVides": null,
+   "tauxPiegesDeclenches": 0,
+   "tauxExactes": 0.5,
+   "depassementsMax": 0
+  }
+ }
+}
