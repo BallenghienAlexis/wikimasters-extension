@@ -214,7 +214,8 @@ export function lireImportThemes(texte: string, titresConnus: ReadonlySet<string
   const lu = objetsJson(texte);
   const objets = lu.objets.filter((o): o is Record<string, unknown> => typeof o === 'object' && o !== null && !Array.isArray(o));
   if (objets.length === 0) return { type: 'invalide', raison: 'Aucun objet JSON { "titre": ["thème", …] } trouvé dans le fichier.' };
-  const json: Record<string, unknown> = Object.assign(Object.create(null) as Record<string, unknown>, ...objets);
+  const json = Object.create(null) as Record<string, unknown>;
+  for (const o of objets) for (const [k, v] of Object.entries(o)) json[k] = v;
   const resultats = new Map<string, string[]>();
   let ignores = lu.illisibles;
   for (const [titre, ids] of Object.entries(json)) {
