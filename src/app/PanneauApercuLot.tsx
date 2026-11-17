@@ -14,7 +14,7 @@ import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/
 import SelectionVenteDefausse from './SelectionVenteDefausse';
 import { choixInitial, precocher, versSelection, type Choix, type ChoixCarte } from '../lib/selectionLot';
 import SelectionFavoris from './SelectionFavoris';
-import { propositionsFavori, sansFavorisDecoches } from '../lib/selectionFavoris';
+import { basculesApresTout, favorisDecoches as calculerDecoches, propositionsFavori, sansFavorisDecoches } from '../lib/selectionFavoris';
 import type { EditionCarte } from '../lib/collection';
 import EtiquettesPrevues from './EtiquettesPrevues';
 import Journal, { type CoupleRetrait } from './Journal';
@@ -238,15 +238,7 @@ const PanneauApercuLot: React.FC<Props> = ({
   );
   const actionsFamillesCochees = useMemo(() => actionsDesLotsCoches(separes?.disponibles ?? [], cochees), [separes, cochees]);
   const propositionsFavoris = useMemo(() => propositionsFavori(actionsFamillesCochees), [actionsFamillesCochees]);
-  const favorisDecoches = useMemo(() => {
-    const d = new Set<string>();
-    for (const p of propositionsFavoris) {
-      const parDefaut = p.origine === 'regle';
-      if (favorisRefuses.has(p.idCarte) && p.origine === 'regle') d.add(p.cle);
-      else if (parDefaut !== favorisBascules.has(p.cle)) d.add(p.cle);
-    }
-    return d;
-  }, [propositionsFavoris, favorisBascules, favorisRefuses]);
+  const favorisDecoches = useMemo(() => calculerDecoches(propositionsFavoris, favorisBascules, favorisRefuses), [propositionsFavoris, favorisBascules, favorisRefuses]);
   const actionsCochees = useMemo(() => sansFavorisDecoches(actionsFamillesCochees, favorisDecoches), [actionsFamillesCochees, favorisDecoches]);
   const basculerFavori = (cle: string): void =>
     setFavorisBascules((d) => {
@@ -255,22 +247,12 @@ const PanneauApercuLot: React.FC<Props> = ({
       else suite.add(cle);
       return suite;
     });
-  const toutFavoris = (cles: readonly string[], cocher: boolean): void =>
-    setFavorisBascules((d) => {
-      const suite = new Set(d);
-      for (const c of cles) {
-        const parDefaut = propositionsFavoris.find((p) => p.cle === c)?.origine === 'regle';
-        // état voulu : coché = !décoché ; une bascule est nécessaire quand il diffère de l’état par défaut (décoché pour la règle).
-        if (cocher === parDefaut) suite.add(c);
-        else suite.delete(c);
-      }
-      return suite;
-    });
+  const toutFavoris = (cles: readonly string[], cocher: boolean): void => setFavorisBascules((d) => basculesApresTout(propositionsFavoris, d, cles, cocher));
   const refuserFavori = (idCarte: string): void => {
     onEdition?.(idCarte, { choixFavori: false });
     setFavorisRefuses((r) => new Set(r).add(idCarte));
   };
-  const lignesLots = useMemo(() => lotsAffiches.map((l, i) => ({ famille: l.famille, nbActions: l.actions.length, ordre: i + 1 })), [lotsAffiches]);
+  const lignesLots = useMemo(() => lotsAffiches.map((l, i) => ({ famille: l.famille, nbActions: sansFavorisDecoches(l.actions, favorisDecoches).length, ordre: i + 1 })), [lotsAffiches, favorisDecoches]);
   const detailsCochees = useMemo(() => detailsDuLot(actionsCochees, cartes), [actionsCochees, cartes]);
   const pageCochees = useMemo(() => pageActions(actionsCochees), [actionsCochees]);
   const ecartsSite = useMemo(() => calculerEcarts(collection.cartes, { amis: preferences.amis, mesThemes: preferences.mesThemes }, registreCourant), [collection.cartes, preferences.amis, preferences.mesThemes, registreCourant]);
@@ -546,7 +528,9 @@ const PanneauApercuLot: React.FC<Props> = ({
                 <Avertissement>Une défausse est définitive : la carte ne peut pas être récupérée.</Avertissement>
               )}
               {actionsCochees.some((a) => a.type === 'favori') && (
-                <Avertissement>Les cartes de vos thèmes gardés sont mises en favori sur le site (étoile). Un favori n’est retiré que si vous avez décoché l’étoile vous-même dans la Collection ; votre choix prime toujours sur les règles.</Avertissement>
+                <Avertissement>
+                  {actionsCochees.some((a) => a.type === 'favori' && a.valeur === undefined) ? 'Les cartes cochées de vos thèmes gardés sont mises en favori sur le site (étoile). ' : ''}Un favori n’est retiré que si vous avez décoché l’étoile vous-même dans la Collection ; votre choix prime toujours sur les règles.
+                </Avertissement>
               )}
               {plafond > PLAFOND_VALEUR_DEFAUSSE && (
                 <Avertissement>

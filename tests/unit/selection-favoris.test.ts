@@ -1,7 +1,7 @@
 // Choix carte par carte des favoris dans l’aperçu (Alexis, 2026-11-17). Données fictives.
 import { describe, expect, it } from 'vitest'
 import type { Action } from '../../src/lib/actions'
-import { type ActionFavori, cleFavori, propositionsFavori, sansFavorisDecoches } from '../../src/lib/selectionFavoris'
+import { basculesApresTout, favorisDecoches, type ActionFavori, cleFavori, propositionsFavori, sansFavorisDecoches } from '../../src/lib/selectionFavoris'
 
 const fav = (idCarte: string, idExemplaire: string, valeur?: boolean): ActionFavori => ({ type: 'favori', idCarte, idExemplaire, ...(valeur === undefined ? {} : { valeur }) }) as ActionFavori
 const pose: Action = { type: 'pose-etiquette', idCarte: 'a', idExemplaire: 'x', nomEtiquette: '#Chien' } as Action
@@ -32,5 +32,29 @@ describe('décocher une proposition', () => {
   })
   it('rien décoché : le lot est inchangé', () => {
     expect(sansFavorisDecoches(actions, new Set())).toEqual(actions)
+  })
+})
+
+describe('état coché par défaut', () => {
+  const props = propositionsFavori(actions)
+  const [regle, choix, retrait] = props.map((p) => p.cle) as [string, string, string]
+  it('la règle est décochée, les choix manuels cochés', () => {
+    expect([...favorisDecoches(props, new Set(), new Set())]).toEqual([regle])
+  })
+  it('une bascule inverse l’état par défaut', () => {
+    expect([...favorisDecoches(props, new Set([regle, choix]), new Set())]).toEqual([choix])
+  })
+  it('une carte « Ne plus proposer » reste décochée même basculée', () => {
+    expect([...favorisDecoches(props, new Set([regle]), new Set(['a']))]).toEqual([regle])
+  })
+  it('tout cocher / tout décocher tient compte de l’état par défaut', () => {
+    const tous = props.map((p) => p.cle)
+    expect(favorisDecoches(props, basculesApresTout(props, new Set(), tous, true), new Set()).size).toBe(0)
+    expect(favorisDecoches(props, basculesApresTout(props, new Set(), tous, false), new Set()).size).toBe(3)
+    expect(retrait).toBeDefined()
+  })
+  it('un lot sans favori décoché envoie la règle seulement une fois cochée', () => {
+    expect(sansFavorisDecoches(actions, favorisDecoches(props, new Set(), new Set())).some((a) => a.type === 'favori' && a.idCarte === 'a')).toBe(false)
+    expect(sansFavorisDecoches(actions, favorisDecoches(props, new Set([regle]), new Set())).some((a) => a.type === 'favori' && a.idCarte === 'a')).toBe(true)
   })
 })

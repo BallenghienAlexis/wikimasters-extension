@@ -48,7 +48,7 @@ const SelectionFavoris: React.FC<Props> = ({ propositions, decochees, cartes, on
   return (
     <SectionRepliable id="choix-favoris" testId="choix-favoris" className="mt-4" titre="Favoris carte par carte" resume={resumeFavoris(propositions, decochees)}>
       <p className="text-sm text-muted">
-        Rien n’est coché pour les mises en favori proposées par la règle des thèmes gardés : cochez celles que vous voulez appliquer. « Ne plus proposer » mémorise « pas favori » pour la carte (« Revenir aux règles » dans la Collection l’annule). Vos propres choix (étoile) sont cochés ; décochés, ils restent proposés au prochain lot.
+        Rien n’est coché pour les mises en favori proposées par la règle des thèmes gardés : cochez celles que vous voulez appliquer. « Ne plus proposer » mémorise « pas favori » pour la carte : si vous posez ensuite l’étoile sur le site, le lot suivant proposera de la retirer (« Revenir aux règles » dans la Collection l’annule). Vos propres choix (étoile) sont cochés ; décochés, ils restent proposés au prochain lot.
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-2" role="group" aria-label="Filtrer les favoris">
         {FILTRES.map((f) => (
@@ -75,7 +75,7 @@ const SelectionFavoris: React.FC<Props> = ({ propositions, decochees, cartes, on
         {visibles.slice(0, 200).map((p) => (
           <li key={p.cle} className="border-b border-line py-1 text-sm">
             <label className="flex min-h-11 cursor-pointer items-center gap-3">
-              <input type="checkbox" className="h-5 w-5" checked={!decochees.has(p.cle)} onChange={() => onBasculer(p.cle)} />
+              <input type="checkbox" className="h-5 w-5" disabled={p.origine === 'regle' && refuses.has(p.idCarte)} checked={!decochees.has(p.cle)} onChange={() => onBasculer(p.cle)} />
               <span className="min-w-0 break-words">
                 {carteTexte(p.idCarte, cartes)}
                 {NB}: {p.sens === 'pose' ? 'mise en favori' : `retrait du favori${p.nbActions > 1 ? ` (${p.nbActions} exemplaires)` : ''}`}{' '}
@@ -86,7 +86,7 @@ const SelectionFavoris: React.FC<Props> = ({ propositions, decochees, cartes, on
               refuses.has(p.idCarte) ? (
                 <p className="pb-1 pl-8 text-muted">Ne sera plus proposée.</p>
               ) : (
-                <button type="button" className={`${CLASSE_BOUTON} ${CLASSE_ACTIF} ml-8 mb-1 border-muted`} onClick={() => onRefuser(p.idCarte)}>
+                <button type="button" aria-label={`Ne plus proposer ${cartes.get(p.idCarte)?.titre ?? p.idCarte} en favori`} className={`${CLASSE_BOUTON} ${CLASSE_ACTIF} ml-8 mb-1 border-muted`} onClick={() => onRefuser(p.idCarte)}>
                   Ne plus proposer
                 </button>
               )
