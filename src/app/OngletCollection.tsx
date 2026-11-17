@@ -84,6 +84,7 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
             cleFiltre={`${filtres.recherche}|${filtres.doublonsSeulement}|${theme}`}
             onTri={setTri}
             onEdition={editer}
+            versionThemes={cacheWiki}
           />
         )}
 

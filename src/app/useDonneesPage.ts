@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { appliquerEdition, collectionVide, type Collection, type EditionCarte } from '../lib/collection';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { appliquerEdition, collectionVide, partagerCartes, type Collection, type EditionCarte } from '../lib/collection';
 import type { Registre } from '../lib/actions';
 import type { EvenementVente } from '../lib/affluence';
 import type { EtiquetteSite } from '../lib/etiquettesPreexistantes';
@@ -30,6 +30,8 @@ import { definirSignauxWikipedia, definirThemesIA, definirThemesWikipedia } from
 import { cacheIAVide, themesIAParTitre, type CacheIA } from '../lib/classificationIA';
 import { preferencesParDefaut, type Preferences } from '../lib/tri';
 import { cacheVide, signauxParTitre, themesParTitre, type CacheWikipedia } from '../lib/wikipedia';
+
+const PERIODE_CACHE_MS = 1500;
 
 interface EtatStockageSynchro {
   registre: Registre | null;
@@ -117,10 +119,28 @@ export function useDonneesPage() {
   }, []);
 
   // La surcouche des thèmes est posée avant l’état : les rendus qui suivent lisent déjà le nouveau cache.
+  const dernierCache = useRef<CacheWikipedia>(cacheVide());
+  const dernierApplication = useRef(0);
+  const minuterie = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (minuterie.current !== null) clearTimeout(minuterie.current);
+  }, []);
   const appliquerCacheWiki = useCallback((cache: CacheWikipedia): void => {
     definirThemesWikipedia(themesParTitre(cache));
     definirSignauxWikipedia(signauxParTitre(cache));
-    setCacheWiki(cache);
+    // Rendus groupés : la lecture de fond envoie un cache par titre ; l’état (donc le tableau) suit au plus tous les 1,5 s.
+    dernierCache.current = cache;
+    const ecoule = Date.now() - dernierApplication.current;
+    if (ecoule >= PERIODE_CACHE_MS) {
+      dernierApplication.current = Date.now();
+      setCacheWiki(cache);
+    } else if (minuterie.current === null) {
+      minuterie.current = setTimeout(() => {
+        minuterie.current = null;
+        dernierApplication.current = Date.now();
+        setCacheWiki(dernierCache.current);
+      }, PERIODE_CACHE_MS - ecoule);
+    }
   }, []);
 
   // Même principe pour les thèmes attribués par l’API Claude : posés avant l’état.
@@ -151,7 +171,7 @@ export function useDonneesPage() {
       })
       .catch((e: unknown) => setBlocage(e instanceof Error ? e.message : 'Chargement impossible.'));
     // La lecture du site, dans un autre onglet, met à jour cette page.
-    return ecouterCollection(setCollection);
+    return ecouterCollection((c) => setCollection((avant) => partagerCartes(avant, c)));
   }, []);
 
   // Purge des ignorées (SC-006) : à l’ouverture, à chaque changement du statut de synchro, de la liste ou de la collection.

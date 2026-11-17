@@ -15,7 +15,10 @@ const CLASSE_PETIT_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center ro
 
 interface Props {
   carte: Carte;
-  onEdition: (edition: EditionCarte) => void;
+  /** Rappel stable (le même à chaque rendu) : la ligne n’est refaite que si sa carte change. */
+  onEdition: (id: string, edition: EditionCarte) => void;
+  /** Change quand les thèmes lus (Wikipédia, IA) changent : seule raison de refaire une ligne dont la carte est la même. */
+  versionThemes?: unknown;
   /** Ref de la ligne, pour le FLIP du tri (T-315). */
   refLigne?: (el: HTMLElement | null) => void;
 }
@@ -28,7 +31,8 @@ const Etiquette: React.FC<{ texte: string }> = ({ texte }) => (
 const CELLULE = 'block px-3 py-1 min-[600px]:table-cell min-[600px]:align-top min-[600px]:py-3';
 
 /** Ligne éditable du tableau de la Collection (T-308) : `tr` empilée sous 600 px. */
-const CarteLigne: React.FC<Props> = ({ carte, onEdition, refLigne }) => {
+const CarteLigne: React.FC<Props> = ({ carte, onEdition: onEditionCarte, refLigne }) => {
+  const onEdition = (edition: EditionCarte): void => onEditionCarte(carte.id, edition);
   // Retourne undefined et rétablit le champ si le nombre saisi est invalide.
   const lireNombre = (champ: HTMLInputElement, actuel: number | null): number | null | undefined => {
     const texte = champ.value.trim();
@@ -160,4 +164,5 @@ const CarteLigne: React.FC<Props> = ({ carte, onEdition, refLigne }) => {
   );
 };
 
-export default CarteLigne;
+// Le comparateur par défaut suffit : carte, rappels et version des thèmes sont stables entre deux rendus sans changement.
+export default React.memo(CarteLigne);
