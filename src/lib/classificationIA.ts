@@ -239,10 +239,17 @@ export function lireImportThemes(texte: string, titresConnus: ReadonlySet<string
   const json = Object.create(null) as Record<string, unknown>;
   for (const o of objets) for (const [k, v] of Object.entries(o)) json[k] = v;
   const parCle = new Map<string, string>();
+  const ambigues = new Set<string>();
+  const noter = (cle: string, t: string): void => {
+    const deja = parCle.get(cle);
+    if (deja !== undefined && deja !== t) ambigues.add(cle);
+    else parCle.set(cle, t);
+  };
   for (const t of titresConnus) {
-    parCle.set(cleTitre(t), t);
-    parCle.set(cleTitre(nettoyer(t, 120)), t);
+    noter(cleTitre(t), t);
+    noter(cleTitre(nettoyer(t, 120)), t);
   }
+  for (const cle of ambigues) parCle.delete(cle); // deux cartes pour une même clé : l’entrée est ignorée, jamais devinée
   const resultats = new Map<string, string[]>();
   let ignores = lu.illisibles;
   for (const [cle, brut] of Object.entries(json)) {

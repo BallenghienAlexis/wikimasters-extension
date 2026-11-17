@@ -75,7 +75,7 @@ const ClassementIA: React.FC<Props> = ({ cartes, cache, onCache }) => {
   const importer = async (fichiers: FileList | null): Promise<void> => {
     const liste = [...(fichiers ?? [])];
     if (liste.length === 0) return;
-    if (liste.some((f) => f.size > TAILLE_MAX_IMPORT)) return void setEtat('Fichier trop volumineux (2 Mo au plus).');
+    if (liste.length > 10 || liste.reduce((n, f) => n + f.size, 0) > TAILLE_MAX_IMPORT) return void setEtat('Fichiers trop volumineux (10 fichiers et 2 Mo au total au plus).');
     // Plusieurs fichiers (un par lot) sont lus ensemble : un seul enregistrement, un seul compte rendu.
     const textes = await Promise.all(liste.map((f) => f.text()));
     await enregistrer(textes.join('\n'));

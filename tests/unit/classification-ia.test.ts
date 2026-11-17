@@ -248,6 +248,13 @@ describe('export / import sans clé', () => {
     expect(r.resultats.get(long)).toEqual(['histoire']);
     expect(r.ignores).toBe(0);
   });
+  it('ignore une clé qui correspond à deux cartes au lieu de deviner', () => {
+    const r = lireImportThemes('{"l’odyssée":["litterature"],"Autre":["jazz"]}', new Set(['L\'Odyssée', 'L’odyssée', 'Autre']));
+    expect(r.type).toBe('ok');
+    if (r.type !== 'ok') return;
+    expect([...r.resultats.keys()]).toEqual(['Autre']);
+    expect(r.ignores).toBe(1);
+  });
   it('fusionne quatre blocs de code de lots successifs avec texte autour', () => {
     const connus = new Set(['A', 'B', 'C', 'D']);
     const texte = ['Lot 1', '```json', '{"A":["moto"]}', '```', 'Lot 2', 'json', '```json', '{"B":["jazz"]}', '```', 'Lot 3 {"C":["rock"]}', 'Lot 4 ```json\n{"D":["pop"],"Zzz":["pop"]}\n```'].join('\n');
