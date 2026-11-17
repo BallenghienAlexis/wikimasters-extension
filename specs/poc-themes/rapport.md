@@ -9,10 +9,11 @@ Statut : **POC isolé, non branché sur la production** (rien dans `src/`, aucun
 | Cinq signaux indépendants (`signaux.ts`) et deux règles de vote (`vote.ts`) | Livré, testé |
 | Banc d'essai : précision, rappel, faux thèmes, abstentions (`evaluation.ts`, `poc.test.ts`) | Livré, testé |
 | Collecteur de pages réelles Wikipédia + Wikidata (`collecter.mjs`) | Livré, **lecteurs testés sur réponses factices, jamais exécuté contre le vrai réseau** |
+| Branchement sur le banc d'essai commun (`benchmark.test.ts`) | Livré, testé pour la ligne de base ; **méthodes de vote non mesurées** (pages non collectées) |
 | Mesure sur des cartes réelles de WikiMasters | **Non faite** : voir ci-dessous |
 | Modèle local gratuit mesuré | **Non fait** : étude de faisabilité seulement |
 
-**Pourquoi pas de mesure réelle.** Le conteneur de développement n'a pas accès à `fr.wikipedia.org` ni `www.wikidata.org` (le proxy refuse la connexion, vérifié). Le jeu de test annoncé dans `tests/benchmark-themes/` n'existait pas encore sur `main` au moment du travail. J'ai donc écrit un **mini-jeu provisoire de 20 cartes, dont les pages Wikipédia sont rédigées à la main** (`poc/jeu-provisoire.json`, origine « ecrit-a-la-main »). Ces textes imitent Wikipédia mais ne sont pas des relevés : les chiffres ci-dessous ne prouvent rien sur la qualité réelle, ils ne servent qu'à vérifier que le banc fonctionne et à faire apparaître des défauts de principe.
+**Pourquoi pas de mesure réelle.** Le conteneur de développement n'a pas accès à `fr.wikipedia.org` ni `www.wikidata.org` (le proxy refuse la connexion, vérifié). Le jeu commun `tests/benchmark-themes/` (PR #193) ne contient que les titres, descriptions et thèmes de référence, pas le contenu des pages Wikipédia : sans accès au réseau, les méthodes de vote ne peuvent pas y être mesurées. J'ai donc écrit un **mini-jeu provisoire de 20 cartes, dont les pages Wikipédia sont rédigées à la main** (`poc/jeu-provisoire.json`, origine « ecrit-a-la-main »). Ces textes imitent Wikipédia mais ne sont pas des relevés : les chiffres ci-dessous ne prouvent rien sur la qualité réelle, ils ne servent qu'à vérifier que le banc fonctionne et à faire apparaître des défauts de principe.
 
 ## Les signaux
 
@@ -67,13 +68,17 @@ Rien ci-dessous n'a été mesuré ici ; ce sont des pistes à évaluer, avec ce 
 
 Ma recommandation, à valider sur le vrai jeu : **ne pas viser un modèle seul**, mais ajouter le script PC (dernière piste) comme signal du vote, avec la table d'identifiants Wikidata comme second signal sans lexique.
 
-## Lancer sur le PC d'Alexis (pages réelles)
+## Lancer sur le PC d'Alexis (banc d'essai commun, pages réelles)
 
-1. Préparer `cartes.json` : `[{ "titre": "…", "description": "…", "attendu": ["train"], "toleres": [] }, …]` (le jeu de `tests/benchmark-themes/` une fois disponible ; le format est à adapter, trois lignes).
-2. `node specs/poc-themes/poc/collecter.mjs cartes.json jeu-reel.json` : 3 à 4 requêtes `GET` par carte, 1 par seconde, un seul fil, arrêt sur 403/429, reprise automatique en relançant. Seul le titre est envoyé. Pour 200 cartes, compter environ 10 à 15 minutes.
-3. `POC_JEU=jeu-reel.json POC_SORTIE=resultats.txt npx vitest run --config specs/poc-themes/poc/vitest.poc.config.ts`.
+Le jeu commun est `tests/benchmark-themes/` (PR #193, 317 cartes) ; `benchmark.test.ts` le branche sur `evaluer` et `formaterRapport` pour des chiffres comparables aux autres POC.
 
-Le collecteur n'a jamais tourné contre le vrai réseau : un premier essai sur 3 cartes est prudent. La forme des réponses suit celle que la production lit déjà (`src/lib/wikipedia.ts`).
+1. Exporter les cartes : `POC_EXPORT_CARTES=cartes.json npx vitest run --config specs/poc-themes/poc/vitest.poc.config.ts`.
+2. Collecter les pages (PC avec internet) : `node specs/poc-themes/poc/collecter.mjs cartes.json pages.json`. 3 à 4 requêtes `GET` par carte, 1 par seconde, un seul fil, arrêt sur 403/429 avec reprise en relançant ; seul le titre de la page est envoyé. Environ 15 à 25 minutes pour 317 cartes. Essayer d'abord sur 3 cartes.
+3. Mesurer : `POC_PAGES=pages.json POC_RAPPORT=resultats.txt npx vitest run --config specs/poc-themes/poc/vitest.poc.config.ts`.
+
+Sans `POC_PAGES`, seule la ligne de base de production est mesurée (précision 94,4 %, rappel 65,5 % sur 313 cartes de fiabilité moyenne ou haute, titre + description seuls, sans page Wikipédia). Les méthodes de vote ont besoin du contenu des pages : **elles ne sont pas encore mesurées sur ce jeu**.
+
+Le collecteur n'a jamais tourné contre le vrai réseau (lecteurs testés sur réponses factices). La forme des réponses suit celle que la production lit déjà (`src/lib/wikipedia.ts`).
 
 ## Suites proposées
 

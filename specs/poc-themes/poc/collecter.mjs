@@ -4,8 +4,9 @@
 // arrêt immédiat sur 403 ou 429. Seul le titre d'une carte est envoyé : ni compte, ni cookie, ni jeton. Aucune dépendance.
 //
 // Usage : node specs/poc-themes/poc/collecter.mjs <cartes.json> <sortie.json> [reprise.jsonl]
-//   cartes.json : [{ "titre": "...", "description": "...", "attendu": ["train"], "toleres": [] }, ...]
-//                 (ou { "cartes": [...] } ; « descriptionSite » accepté à la place de « description »)
+//   cartes.json : [{ "titre": "...", "description": "...", "wikipedia": "titre de la page (facultatif)", "attendu": ["train"], "toleres": [] }, ...]
+//                 (ou { "cartes": [...] } ; « descriptionSite » accepté à la place de « description »).
+//                 Le jeu de tests/benchmark-themes/ s'exporte dans ce format : POC_EXPORT_CARTES=cartes.json npx vitest run --config specs/poc-themes/poc/vitest.poc.config.ts
 //   sortie.json : jeu au format de types.ts (origine « reel »), à passer au banc d'essai par POC_JEU=<sortie.json>
 //   reprise.jsonl : fichier de reprise (une page par ligne) ; relancer la commande saute les titres déjà collectés.
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -68,7 +69,7 @@ async function lire(url, journal) {
 }
 
 export async function collecterPage(carte, journal = () => {}) {
-  const w = lirePageWikipedia(await lire(urlWikipedia(carte.titre), journal));
+  const w = lirePageWikipedia(await lire(urlWikipedia(carte.wikipedia ?? carte.titre), journal));
   let wd = { description: '', humain: false, ids: [] };
   let classes = [];
   if (w.qid) {
