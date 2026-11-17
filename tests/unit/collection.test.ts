@@ -378,3 +378,26 @@ describe('stockage : migration à la lecture (faux chrome.storage)', () => {
     expect(set).not.toHaveBeenCalled();
   });
 });
+
+describe('partagerCartes', () => {
+  const carte = (id: string, quantite = 1) =>
+    ({ id, titre: id, rarete: null, description: '', quantite, url: null, favori: false, idsSite: null, etiquettesSite: [], prixCible: null, note: '', ami: null, valeurMarchande: null }) as unknown as import('../../src/lib/collection').Carte;
+
+  it('rend la même collection quand rien n’a changé', async () => {
+    const { partagerCartes } = await import('../../src/lib/collection');
+    const avant = { version: 3, cartes: [carte('a'), carte('b')] } as unknown as import('../../src/lib/collection').Collection;
+    const apres = JSON.parse(JSON.stringify(avant));
+    expect(partagerCartes(avant, apres)).toBe(avant);
+  });
+
+  it('garde les objets des cartes inchangées et remplace seulement celle qui change', async () => {
+    const { partagerCartes } = await import('../../src/lib/collection');
+    const avant = { version: 3, cartes: [carte('a'), carte('b')] } as unknown as import('../../src/lib/collection').Collection;
+    const apres = JSON.parse(JSON.stringify(avant));
+    apres.cartes[1].quantite = 4;
+    const res = partagerCartes(avant, apres);
+    expect(res).not.toBe(avant);
+    expect(res.cartes[0]).toBe(avant.cartes[0]);
+    expect(res.cartes[1]?.quantite).toBe(4);
+  });
+});

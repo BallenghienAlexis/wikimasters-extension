@@ -86,7 +86,7 @@ const CAS: Cas[] = [
   {
     titre: 'Golden Dream',
     site: 'cocktail alcoolisé',
-    attendus: ['alcool'],
+    attendus: ['cocktail'],
     interdits: ['autres'],
   },
   {

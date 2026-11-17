@@ -1,5 +1,6 @@
 // Vérification des thèmes d'une carte d'après les catégories de sa vraie page Wikipédia.
 // Logique pure (URL, lecture de la réponse, cache) : l'appel réseau est dans `src/app/verifierWikipedia.ts`.
+import { normaliser } from './collection';
 import { definition, genreDe, type Genre } from './sens';
 import { IDS_THEMES, themesDeTexte, themesDirectsDeTexte, type SignauxPage } from './themes';
 import { estObjet } from './valider';
@@ -27,6 +28,8 @@ export interface EntreeWikipedia {
   avecHomonymie?: true;
   /** Vrai quand le thème « Noms et prénoms » existait au moment de la lecture ; sans lui, une entrée sans thème est relue une fois (2026-11-17). */
   avecNoms?: true;
+  /** Catégories utiles de la page (titres publics de Wikipédia, 40 au plus) : base des thèmes appris ; absentes des entrées plus anciennes, relues une fois (2026-11-17). */
+  categories?: string[];
   /** Vrai quand les thèmes ont été calculés sans compter les noms propres composés (« Bee Train ») ; sinon relue une fois (2026-11-14). */
   nomsPropres?: true;
 }
@@ -264,13 +267,24 @@ export function validerCache(brut: unknown): CacheWikipedia | null {
       ...(e.avecHomonymie === true ? { avecHomonymie: true as const } : {}),
       ...(e.avecNoms === true ? { avecNoms: true as const } : {}),
       ...(e.nomsPropres === true ? { nomsPropres: true as const } : {}),
+      ...(Array.isArray(e.categories) ? { categories: e.categories.filter((c): c is string => typeof c === 'string' && c.length <= 120).slice(0, MAX_CATEGORIES_GARDEES) } : {}),
     };
   }
   return { version: 1, entrees: { ...entrees } };
 }
 
-export function ajouterEntree(cache: CacheWikipedia, titre: string, themes: string[], maintenant: number, wikidata = false, signaux?: SignauxPage): CacheWikipedia {
-  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, avecHomonymie: true, avecNoms: true, nomsPropres: true, ...(wikidata ? { avecWikidata: true as const } : {}), ...(signaux ? { signaux } : {}) };
+/** Catégories gardées dans le cache pour les thèmes appris. */
+const MAX_CATEGORIES_GARDEES = 40;
+
+/** Catégories utiles (sans maintenance du site), bornées, pour le cache. */
+export function categoriesUtiles(categories: readonly string[]): string[] {
+  return categories
+    .filter((c) => !CATEGORIE_TECHNIQUE.test(c.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()) && c.length <= 120)
+    .slice(0, MAX_CATEGORIES_GARDEES);
+}
+
+export function ajouterEntree(cache: CacheWikipedia, titre: string, themes: string[], maintenant: number, wikidata = false, signaux?: SignauxPage, categories: readonly string[] = []): CacheWikipedia {
+  const entree: EntreeWikipedia = { themes: [...themes], verifieLe: maintenant, avecResume: true, avecHomonymie: true, avecNoms: true, nomsPropres: true, categories: categoriesUtiles(categories), ...(wikidata ? { avecWikidata: true as const } : {}), ...(signaux ? { signaux } : {}) };
   return { version: 1, entrees: { ...cache.entrees, [titre]: entree } };
 }
 
@@ -283,7 +297,7 @@ export function titresAVerifier(titres: string[], cache: CacheWikipedia, mainten
     vus.add(titre);
     const entree = Object.hasOwn(cache.entrees, titre) ? cache.entrees[titre] : undefined;
     // Une entrée calculée avant le filtre des noms propres est relue une fois.
-    if (entree !== undefined && entree.nomsPropres !== true) { resultat.push(titre); continue }
+    if (entree !== undefined && (entree.nomsPropres !== true || entree.categories === undefined)) { resultat.push(titre); continue }
     // Une entrée sans thème et sans résumé (ancienne version) est relue une fois pour profiter du résumé.
     if (entree === undefined || entree.signaux === undefined || maintenant - entree.verifieLe >= DUREE_CACHE_MS || (entree.themes.length === 0 && (entree.avecResume !== true || entree.avecWikidata !== true || entree.avecHomonymie !== true || entree.avecNoms !== true))) resultat.push(titre);
   }
@@ -298,4 +312,11 @@ export function signauxParTitre(cache: CacheWikipedia): Map<string, SignauxPage>
 
 export function themesParTitre(cache: CacheWikipedia): Map<string, string[]> {
   return new Map(Object.entries(cache.entrees).map(([titre, e]) => [titre, e.themes]));
+}
+
+/** Catégories normalisées de chaque titre (celles du cache), pour reconnaître les thèmes appris. */
+export function categoriesParTitre(cache: CacheWikipedia): Map<string, string[]> {
+  const m = new Map<string, string[]>();
+  for (const [titre, e] of Object.entries(cache.entrees)) if (e.categories && e.categories.length > 0) m.set(titre, e.categories.map(normaliser));
+  return m;
 }

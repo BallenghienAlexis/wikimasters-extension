@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { appliquerEdition, collectionVide, type Collection, type EditionCarte } from '../lib/collection';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { appliquerEdition, collectionVide, partagerCartes, type Collection, type EditionCarte } from '../lib/collection';
 import type { Registre } from '../lib/actions';
 import type { EvenementVente } from '../lib/affluence';
 import type { EtiquetteSite } from '../lib/etiquettesPreexistantes';
@@ -9,6 +9,8 @@ import {
   chargerAffluenceSite,
   chargerCacheIA,
   chargerCacheWikipedia,
+  chargerThemesAppris,
+  enregistrerThemesAppris,
   chargerCollection,
   chargerEtiquettesSite,
   chargerExecution,
@@ -26,10 +28,13 @@ import {
   enregistrerPreferences,
   noterEvenementVente,
 } from '../lib/stockage';
-import { definirSignauxWikipedia, definirThemesIA, definirThemesWikipedia } from '../lib/themes';
+import { definirCategoriesWikipedia, definirSignauxWikipedia, definirThemesAppris, definirThemesIA, definirThemesWikipedia } from '../lib/themes';
+import { etatApprisVide, proposerThemes, type EtatAppris } from '../lib/themesAppris';
 import { cacheIAVide, themesIAParTitre, type CacheIA } from '../lib/classificationIA';
 import { preferencesParDefaut, type Preferences } from '../lib/tri';
-import { cacheVide, signauxParTitre, themesParTitre, type CacheWikipedia } from '../lib/wikipedia';
+import { cacheVide, categoriesParTitre, signauxParTitre, themesParTitre, type CacheWikipedia } from '../lib/wikipedia';
+
+const PERIODE_CACHE_MS = 1500;
 
 interface EtatStockageSynchro {
   registre: Registre | null;
@@ -48,6 +53,15 @@ export function useDonneesPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [cacheWiki, setCacheWiki] = useState<CacheWikipedia>(cacheVide);
   const [cacheIA, setCacheIA] = useState<CacheIA>(cacheIAVide);
+  // Thèmes appris des catégories Wikipédia : posés avant l’état, comme les autres surcouches.
+  const [apprisEtat, setApprisEtat] = useState<EtatAppris>(etatApprisVide);
+  const [apprisLu, setApprisLu] = useState(false);
+  const appliquerApprisEtat = useCallback((etat: EtatAppris, enregistrer = true): void => {
+    definirThemesAppris(etat.themes);
+    setApprisEtat(etat);
+    setCacheWiki((c) => ({ ...c }));
+    if (enregistrer) void enregistrerThemesAppris(etat).catch(() => setMessage('Les thèmes appris n’ont pas pu être enregistrés (stockage indisponible).'));
+  }, []);
   // L’aperçu des lots attend la lecture du cache IA : sans lui, des cartes classées par l’IA sembleraient sans thème (retraits à tort).
   const [cacheIALu, setCacheIALu] = useState(false);
   const [preferences, setPreferences] = useState<Preferences>(preferencesParDefaut);
@@ -117,10 +131,29 @@ export function useDonneesPage() {
   }, []);
 
   // La surcouche des thèmes est posée avant l’état : les rendus qui suivent lisent déjà le nouveau cache.
+  const dernierCache = useRef<CacheWikipedia>(cacheVide());
+  const dernierApplication = useRef(0);
+  const minuterie = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (minuterie.current !== null) clearTimeout(minuterie.current);
+  }, []);
   const appliquerCacheWiki = useCallback((cache: CacheWikipedia): void => {
     definirThemesWikipedia(themesParTitre(cache));
     definirSignauxWikipedia(signauxParTitre(cache));
-    setCacheWiki(cache);
+    definirCategoriesWikipedia(categoriesParTitre(cache));
+    // Rendus groupés : la lecture de fond envoie un cache par titre ; l’état (donc le tableau) suit au plus tous les 1,5 s.
+    dernierCache.current = cache;
+    const ecoule = Date.now() - dernierApplication.current;
+    if (ecoule >= PERIODE_CACHE_MS) {
+      dernierApplication.current = Date.now();
+      setCacheWiki(cache);
+    } else if (minuterie.current === null) {
+      minuterie.current = setTimeout(() => {
+        minuterie.current = null;
+        dernierApplication.current = Date.now();
+        setCacheWiki(dernierCache.current);
+      }, PERIODE_CACHE_MS - ecoule);
+    }
   }, []);
 
   // Même principe pour les thèmes attribués par l’API Claude : posés avant l’état.
@@ -132,6 +165,26 @@ export function useDonneesPage() {
   }, []);
 
   useEffect(() => {
+    void chargerThemesAppris().then((e) => appliquerApprisEtat(e, false)).finally(() => setApprisLu(true));
+  }, [appliquerApprisEtat]);
+
+  // Un thème naît quand une catégorie atteint le seuil de cartes (pose automatique). Le calcul attend la fin d’une rafale de lectures,
+  // mais jamais plus de 60 s : la lecture de fond change le cache toutes les secondes pendant des heures.
+  const dernierCalculApprentis = useRef(0);
+  useEffect(() => {
+    if (!apprisLu) return;
+    const calculer = (): void => {
+      dernierCalculApprentis.current = Date.now();
+      const suivant = proposerThemes(cacheWiki.entrees, apprisEtat, Date.now());
+      const change = suivant.themes.length !== apprisEtat.themes.length || suivant.themes.some((t, i) => t.cartes !== apprisEtat.themes[i]?.cartes);
+      if (change) appliquerApprisEtat(suivant);
+    };
+    const attente = Math.max(0, Math.min(5000, dernierCalculApprentis.current + 60_000 - Date.now()));
+    const minuteur = setTimeout(calculer, attente);
+    return () => clearTimeout(minuteur);
+  }, [apprisLu, cacheWiki, apprisEtat, appliquerApprisEtat]);
+
+  useEffect(() => {
     void chargerCacheIA().then(appliquerCacheIA).finally(() => setCacheIALu(true));
   }, [appliquerCacheIA]);
 
@@ -139,6 +192,7 @@ export function useDonneesPage() {
     void chargerCacheWikipedia().then((c) => {
       definirThemesWikipedia(themesParTitre(c));
       definirSignauxWikipedia(signauxParTitre(c));
+      definirCategoriesWikipedia(categoriesParTitre(c));
       setCacheWiki(c);
     });
   }, []);
@@ -151,7 +205,7 @@ export function useDonneesPage() {
       })
       .catch((e: unknown) => setBlocage(e instanceof Error ? e.message : 'Chargement impossible.'));
     // La lecture du site, dans un autre onglet, met à jour cette page.
-    return ecouterCollection(setCollection);
+    return ecouterCollection((c) => setCollection((avant) => partagerCartes(avant, c)));
   }, []);
 
   // Purge des ignorées (SC-006) : à l’ouverture, à chaque changement du statut de synchro, de la liste ou de la collection.
@@ -192,7 +246,7 @@ export function useDonneesPage() {
 
   return {
     collection, setCollection, chargee, setChargee, blocage, setBlocage, message, setMessage,
-    cacheWiki, appliquerCacheWiki, cacheIA, cacheIALu, appliquerCacheIA, preferences, setPreferences, preferencesLues, enregistrerLesPreferences,
+    apprisEtat, appliquerApprisEtat, cacheWiki, appliquerCacheWiki, cacheIA, cacheIALu, appliquerCacheIA, preferences, setPreferences, preferencesLues, enregistrerLesPreferences,
     ventes, setVentes, etiquettesSite, registre, executionEnCours, registreIllisible, executionIllisible,
     stockageSynchroLu, relireStockageSynchro, noterVente, appliquer, editer,
   };

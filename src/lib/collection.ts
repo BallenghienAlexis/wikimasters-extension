@@ -304,3 +304,20 @@ export function resumer(cartes: Carte[]): Resume {
   }
   return resume;
 }
+
+/**
+ * Réutilise les objets des cartes inchangées (comparaison par contenu) : une relecture du stockage par une tâche
+ * de fond ne recrée alors ni la collection ni les lignes du tableau si rien n’a changé. Pure.
+ */
+export function partagerCartes(ancienne: Collection, nouvelle: Collection): Collection {
+  const parId = new Map(ancienne.cartes.map((c) => [c.id, c]));
+  let identique = ancienne.cartes.length === nouvelle.cartes.length;
+  const cartes = nouvelle.cartes.map((carte, i) => {
+    const avant = parId.get(carte.id);
+    const garde = avant !== undefined && JSON.stringify(avant) === JSON.stringify(carte) ? avant : carte;
+    if (garde !== ancienne.cartes[i]) identique = false;
+    return garde;
+  });
+  if (identique && ancienne.version === nouvelle.version) return ancienne;
+  return { ...nouvelle, cartes };
+}
