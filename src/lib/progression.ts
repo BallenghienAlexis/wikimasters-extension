@@ -6,7 +6,7 @@
  *   `precedent` garantit un pourcent monotone.
  * - `progressionLot`, `progressionExecution`, `progressionSynchro` : barres d’un lot, de l’exécution, de la synchro.
  * - `annoncer(precedent, courant, maintenant)` : au plus une annonce toutes les 2 s, sur changement de clé ou palier de 10 %.
- * - `secondesExecution`, `secondesSynchro`, `dureeRestante` : durée restante H4 (0,25 s par requête).
+ * - `secondesExecution`, `secondesSynchro`, `dureeRestante` : durée restante H4 (0,25 s par requête, 1,65 s par prix).
  * - `listesTaches({ statut, execution, journal })` : listes En cours, À venir, Terminées.
  */
 import type { EntreeJournal, EtatExecutionV2, FamilleLot, LotExecution } from './actions'
@@ -21,6 +21,8 @@ export interface Barre {
 }
 
 export const SECONDES_PAR_ACTION = 0.25
+/** Rythme réel d’une demande de prix : 0,2 s + gigue moyenne 0,05 s + pause de prix 1,2 s + variation moyenne 0,2 s. */
+export const SECONDES_PAR_PRIX = 1.65
 export const INTERVALLE_ANNONCE_MS = 2000
 export const ETAPES_SYNCHRO: readonly EtapeSynchro[] = ['stats', 'pages', 'prix', 'ventes']
 
@@ -134,7 +136,7 @@ export function secondesSynchro(statut: StatutSynchroV2): number {
   const enLecture = statut.etape === 'stats' || statut.etape === 'pages'
   const pages = enLecture && statut.page !== null && statut.pages !== null ? Math.max(0, statut.pages - statut.page + 1) : 0
   const prix = statut.prixPrevus === null ? 0 : Math.max(0, statut.prixPrevus - (statut.prixFaits ?? 0))
-  return (pages + prix + 1) * SECONDES_PAR_ACTION
+  return (pages + 1) * SECONDES_PAR_ACTION + prix * SECONDES_PAR_PRIX
 }
 
 /** « moins d’une minute » sous 60 s, sinon « environ N min » (N arrondi au supérieur). */

@@ -4,6 +4,7 @@
  */
 
 import type { AttentePrix, RaisonArretSynchro } from './ordonnanceur'
+import { estEntier as entier, estObjet as objet } from './valider'
 
 export type EtapeSynchro = 'stats' | 'pages' | 'prix' | 'ventes'
 
@@ -51,8 +52,6 @@ const ETATS = ['en-cours', 'termine', 'arret']
 const RAISONS = ['manuel', 'code-http', 'echecs']
 const ETAPES = ['stats', 'pages', 'prix', 'ventes']
 
-const objet = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
-const entier = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0
 const nullOuEntier = (v: unknown): v is number | null => v === null || entier(v)
 
 /** Valide un statut v1 ou v2 et le rend en v2 ; `null` si version inconnue ou forme inattendue. */

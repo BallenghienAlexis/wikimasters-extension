@@ -2,6 +2,7 @@
 // POST d’un lot de cartes (titre et description publics, rien du compte) avec la clé API d’Alexis, saisie à chaque utilisation
 // et jamais stockée, journalisée ni recopiée dans un message d’erreur. Voir AGENTS.md § Classement par l’API Claude.
 import { ajouterAuCache, corpsRequete, decouperEnLotsIA, lireReponseIA, URL_API_IA, VERSION_API_IA, type CacheIA, type CarteAClasser } from '../lib/classificationIA';
+import { attendreReel } from './attente';
 
 export type TransportIA = (url: string, init: { headers: Record<string, string>; body: string }, signal: AbortSignal) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
@@ -52,12 +53,6 @@ export interface OptionsClassement {
 export const PAUSE_IA_MS = 500;
 /** Échecs d’affilée tolérés (réponse mal formée, erreur réseau ou serveur) : le lot en cause est sauté, la suite continue. */
 const MAX_ECHECS = 5;
-
-const attendreReel = (ms: number, signal: AbortSignal): Promise<void> =>
-  new Promise((resolve) => {
-    const minuteur = setTimeout(resolve, ms);
-    signal.addEventListener('abort', () => { clearTimeout(minuteur); resolve(); }, { once: true });
-  });
 
 export async function classerCartes(options: OptionsClassement): Promise<ResultatClassement> {
   const { cartes, cle, signal, surProgres, transport = transportReel, attendre = attendreReel } = options;

@@ -756,7 +756,7 @@ describe('relevé d’affluence du marché', () => {
     expect(b.chemins).toEqual([]);
   });
 
-  it('relevé récent (autre onglet) : pas de nouvelle requête ; 3 échecs consécutifs : pause de 30 min', async () => {
+  it('relevé récent (autre onglet) : pas de nouvelle requête ; échecs ordinaires : pas de pause ; refus 403 : pause de 30 min', async () => {
     const recent = banc({ reponse: reponseMarche });
     recent.deps.routeMarche = ROUTE;
     recent.deps.noterAffluence = async () => undefined;
@@ -770,7 +770,14 @@ describe('relevé d’affluence du marché', () => {
     const suivi = avecReleve(b, { le: null, echecs: 2 });
     await creerSynchroAuto(b.deps).declencher();
     expect(suivi.courant.echecs).toBe(0);
-    expect(b.stockage.etat?.arretJusqua).toBe(b.horloge.t + 30 * 60_000);
+    expect(b.stockage.etat?.arretJusqua ?? null).toBeNull();
+
+    const r = banc({ reponse: (c) => (c === ROUTE ? { statut: 403, json: null } : siteFictif(2)(c)) });
+    r.deps.routeMarche = ROUTE;
+    r.deps.noterAffluence = async () => undefined;
+    avecReleve(r);
+    await creerSynchroAuto(r.deps).declencher();
+    expect(r.stockage.etat?.arretJusqua).toBe(r.horloge.t + 30 * 60_000);
   });
 });
 

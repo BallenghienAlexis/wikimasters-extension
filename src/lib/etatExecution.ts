@@ -7,6 +7,7 @@ import {
   CAUSES_JOURNAL, FAMILLES_LOT, TYPES_ACTION,
   type CauseJournal, type ErreurExecution, type EtatExecution, type EtatExecutionV2, type FamilleLot, type LotExecution, type TypeAction,
 } from './actions'
+import { estEntier as entier, estObjet as objet, tronquer } from './valider'
 
 export const VERSION_EXECUTION = 2
 const ETATS: readonly string[] = ['en-cours', 'terminee', 'arretee']
@@ -14,9 +15,6 @@ const MAX_LOTS = 5
 const MAX_CHAINE = 300
 const MAX_ID_CARTE = 400
 
-const entier = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0
-const objet = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
-const tronquer = (s: string, max: number): string => Array.from(s).slice(0, max).join('')
 const dans = (liste: readonly string[], v: unknown): v is string => typeof v === 'string' && liste.includes(v)
 
 function validerLots(brut: unknown): LotExecution[] | null {

@@ -15,6 +15,7 @@ import type { EtatOrdonnanceur } from './ordonnanceur';
 import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../config/amis';
 import { ajouterEvenement, validerEvenements, VERSION_VENTES, type EvenementVente } from './affluence';
 import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, type Preferences } from './tri';
+import { estObjet } from './valider';
 
 const CLE = 'collection';
 const CLE_PREFERENCES = 'preferences';
@@ -228,7 +229,6 @@ export const chargerBailSynchro = (): Promise<number | null> => chargerHorodatag
 export const enregistrerBailSynchro = (expiration: number | null): Promise<void> => enregistrerHorodatage(CLE_BAIL_SYNCHRO, expiration);
 
 const MAX_ENTREES_ETAT = 100_000;
-const estObjet = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const nullOuHorodatage = (v: unknown): v is number | null => v === null || horodatageValide(v);
 const nullOuEntier = (v: unknown): v is number | null => v === null || (typeof v === 'number' && Number.isSafeInteger(v) && v >= 0);
 

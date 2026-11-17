@@ -1,6 +1,7 @@
 // Exécuteur de la vérification Wikipédia : seul fichier de l'application qui appelle `fetch` vers Wikipédia.
 // GET en lecture seule vers fr.wikipedia.org (et www.wikidata.org si Wikipédia ne donne aucun thème), un titre de carte par requête, sans cookie ni en-tête ajouté.
 import { ajouterEntree, lireEntiteWikidata, lireLibellesWikidata, lireReponse, lireReponseWikidata, themesDepuisCategories, themesDepuisWikidata, signauxWikipedia, titresAVerifier, urlEntiteWikidata, urlLibellesWikidata, urlRequete, urlRequeteWikidata, type CacheWikipedia } from '../lib/wikipedia';
+import { attendreReel } from './attente';
 
 export type Transport = (url: string, signal: AbortSignal) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
@@ -28,12 +29,6 @@ export interface OptionsVerification {
 /** Cadence fixe : une requête à la fois, une par seconde. */
 export const PAUSE_MS = 1000;
 const MAX_ECHECS = 3;
-
-const attendreReel = (ms: number, signal: AbortSignal): Promise<void> =>
-  new Promise((resolve) => {
-    const minuteur = setTimeout(resolve, ms);
-    signal.addEventListener('abort', () => { clearTimeout(minuteur); resolve(); }, { once: true });
-  });
 
 export async function verifierTitres(options: OptionsVerification): Promise<ResultatVerification> {
   const { titres, signal, surProgres, maintenant = Date.now, attendre = attendreReel, transport = transportReel } = options;

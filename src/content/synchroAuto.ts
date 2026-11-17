@@ -40,7 +40,6 @@ import { CONFIG_AFFLUENCE } from '../config/affluence';
 
 /** Délai minimal entre deux synchronisations, et période du minuteur tant que l'onglet est visible. */
 export const DELAI_SYNCHRO_MS = 30 * 60_000;
-const MAX_ECHECS_RELEVE = 3;
 /** Délai minimal entre deux relances demandées par le joueur. */
 export const DELAI_RELANCE_MS = 60_000;
 
@@ -179,7 +178,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
   /**
    * Une requête `GET` vers le listing du marché, seulement après une synchro terminée, hors pause, bail pris,
    * 0,2 s après la précédente et au plus toutes les 30 min (horodatage commun aux onglets). Seuls les horodatages
-   * des annonces sont conservés. 401, 403, 429 ou 3 échecs consécutifs : pause de 30 min.
+   * des annonces sont conservés. 401, 403 ou 429 : pause de 30 min ; un autre échec est ignoré.
    */
   async function releverMarche(): Promise<void> {
     const journaliser = (e: EvenementSynchro): Promise<void> => (deps.journaliser?.(e) ?? Promise.resolve()).catch(() => undefined);
@@ -203,20 +202,19 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
       const debut = deps.horloge.now();
       const reponse = await deps.transport(route);
       const refus = [401, 403, 429].includes(reponse.statut);
-      const echec = !refus && reponse.statut !== 200;
-      const echecs = echec ? precedent.echecs + 1 : 0;
-      const pause = refus || echecs >= MAX_ECHECS_RELEVE;
+      // Plus d’arrêt sur les échecs ordinaires (Alexis, 2026-11-17) : seuls 401, 403 et 429 mettent en pause.
+      const pause = refus;
       const etat = (await deps.chargerEtat()) ?? etatInitial();
       await deps.enregistrerEtat({
         ...etat,
         requetes: [...etat.requetes, debut].slice(-20),
         arretJusqua: pause ? deps.horloge.now() + PAUSE_APRES_ARRET_MS : etat.arretJusqua,
       });
-      await deps.releve.ecrire({ le: debut, echecs: pause ? 0 : echecs });
+      await deps.releve.ecrire({ le: debut, echecs: 0 });
       if (pause) {
         await journaliser({
           titre: 'Relevé d’affluence : arrêt',
-          parametre: refus ? 'le site a refusé' : '3 échecs consécutifs',
+          parametre: 'le site a refusé',
           resultat: 'interrompue',
           codeHttp: refus ? reponse.statut : null,
         });
