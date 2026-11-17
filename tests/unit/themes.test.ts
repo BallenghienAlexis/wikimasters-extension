@@ -1,7 +1,7 @@
 import { meilleureDuree } from './duree';
 import { describe, expect, it } from 'vitest';
 import type { Carte } from '../../src/lib/collection';
-import { compterThemes, definirThemesWikipedia, LIBELLES_THEMES, themesDeCarte, themesPrincipaux } from '../../src/lib/themes';
+import { compterThemes, definirThemesWikipedia, LIBELLES_THEMES, libellesThemesAffiches, themesDeCarte, themesPrincipaux } from '../../src/lib/themes';
 
 const themes = (description: string, titre = 'Titre fictif'): string[] => themesDeCarte({ titre, description });
 
@@ -403,5 +403,18 @@ describe('themesPrincipaux avec le cache Wikipédia', () => {
 
   it('un article en majuscule ne fait pas un nom propre : « Le Chat botté »', () => {
     expect(themesPrincipaux({ titre: 'Le Chat botté', description: 'conte' })).toContain('chat');
+  });
+});
+
+describe('libellesThemesAffiches', () => {
+  it('affiche les thèmes posés (4 au plus, sans parents) et non tous les thèmes déduits', () => {
+    const carte = { titre: 'Malibu (alcool)', description: 'Malibu est une liqueur de rhum à la noix de coco, produite dans une ville des Caraïbes.' };
+    const affiches = libellesThemesAffiches(carte);
+    expect(affiches.length).toBeLessThanOrEqual(4);
+    expect(affiches).toEqual(themesPrincipaux(carte).map((id) => LIBELLES_THEMES[id]));
+    expect(affiches).not.toContain('#Gastronomie');
+  });
+  it('est vide sans thème fiable', () => {
+    expect(libellesThemesAffiches({ titre: 'Xyzzy', description: '' })).toEqual([]);
   });
 });

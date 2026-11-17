@@ -325,6 +325,15 @@ export function themesDeCarte(carte: Pick<Carte, 'titre' | 'description'>): stri
   return themes.size > 0 ? [...themes] : [THEME_AUTRES];
 }
 
+/**
+ * Libellés affichés dans la Collection : exactement les thèmes qui seront posés comme étiquettes (4 au plus, les mieux établis,
+ * sans parents ni « Autres »), pour que la ligne d’une carte corresponde à l’appli. `themesDeCarte`, qui ajoute les parents,
+ * reste réservé aux filtres, aux amis et à « Mes thèmes ».
+ */
+export function libellesThemesAffiches(carte: Pick<Carte, 'titre' | 'description'>): string[] {
+  return themesPrincipaux(carte).map((id) => LIBELLES_THEMES[id] ?? id);
+}
+
 export function compterThemes(cartes: Carte[]): Record<string, number> {
   const compte: Record<string, number> = Object.fromEntries(IDS_THEMES.map((id) => [id, 0]));
   for (const carte of cartes) {
