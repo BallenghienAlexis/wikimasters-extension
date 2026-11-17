@@ -7,7 +7,8 @@ import {
   type Carte,
   type EditionCarte,
 } from '../lib/collection';
-import { libellesThemesAffiches, themesPrincipaux } from '../lib/themes';
+import { themesPrincipaux } from '../lib/themes';
+import { tagsDeCarte } from '../lib/tagsCarte';
 import EditeurThemes from './EditeurThemes';
 
 const CLASSE_CHAMP = 'min-h-11 w-full rounded border border-line bg-ink px-3';
@@ -60,6 +61,7 @@ const CarteLigne: React.FC<Props> = ({ carte, onEdition: onEditionCarte, refLign
     if (valeur !== undefined && valeur !== carte.valeurMarchande) onEdition({ valeurMarchande: valeur });
   };
 
+  const tags = tagsDeCarte(carte);
   return (
     <tr
       ref={refLigne}
@@ -74,7 +76,9 @@ const CarteLigne: React.FC<Props> = ({ carte, onEdition: onEditionCarte, refLign
           )}
         </p>
         <p className="text-sm text-muted break-words">
-          {libellesThemesAffiches(carte).join(', ') || 'Sans thème fiable'}
+          {tags.poses.length > 0 ? tags.poses.join(', ') : tags.aPoser.join(', ') || 'Sans thème fiable'}
+          {tags.poses.length > 0 && tags.aPoser.length > 0 ? ` · Prévu, pas encore posé sur le site : ${tags.aPoser.join(', ')}` : ''}
+          {tags.poses.length === 0 && tags.aPoser.length > 0 ? ' · Prévus, pas encore posés' : ''}
           {carte.ami ? ` · À échanger avec ${carte.ami}` : ''}
           {excedent(carte) > 0 ? ` · ${excedent(carte)} en double` : ''}
           {favori ? ' · Favori, verrouillé sur le site' : ''}

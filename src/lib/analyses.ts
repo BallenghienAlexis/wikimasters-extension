@@ -1,6 +1,7 @@
 /** Analyses de l’onglet Collection. Fonctions pures : `doublons`, `plusCheres` (10 au plus), `themesFrequents` (10 au plus). */
 import type { Carte } from './collection'
-import { compterThemes } from './themes'
+import { IDS_THEMES } from './themes'
+import { compterParTheme } from './tagsCarte'
 
 const LIMITE = 10
 
@@ -17,7 +18,7 @@ export function plusCheres(cartes: readonly Carte[]): Carte[] {
 }
 
 export function themesFrequents(cartes: readonly Carte[]): { theme: string; nombre: number }[] {
-  return Object.entries(compterThemes([...cartes]))
+  return Object.entries(compterParTheme(cartes, IDS_THEMES))
     .filter(([, nombre]) => nombre > 0)
     .map(([theme, nombre]) => ({ theme, nombre }))
     .sort((a, b) => b.nombre - a.nombre || (a.theme < b.theme ? -1 : a.theme > b.theme ? 1 : 0))
