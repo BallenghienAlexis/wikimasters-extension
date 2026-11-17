@@ -152,4 +152,54 @@ premiereguerre : Première Guerre mondiale
 secondeguerre : Seconde Guerre mondiale
 mythologie : Mythologie
 superheros : Super-héros
+rhum : Rhum
+whisky : Whisky
+cocktail : Cocktail
+champagne : Champagne
+vodka : Vodka
+tequila : Tequila
+courseauto : Course automobile
+coursepied : Course à pied
+coursehippique : Course hippique
+coursenautique : Course nautique
+athletisme : Athlétisme
+baseball : Baseball
+volleyball : Volley-ball
+handball : Handball
+equitation : Équitation
+guerrefroide : Guerre froide
+guerrevietnam : Guerre du Vietnam
+guerrecivile : Guerre civile
+croisades : Croisades
+napoleon : Napoléon
+revolutionfr : Révolution française
+punk : Punk
+blues : Blues
+reggae : Reggae
+folk : Folk
+countrymusique : Country
+chimie : Chimie
+mathematiques : Mathématiques
+biologie : Biologie
+geologie : Géologie
+psychologie : Psychologie
+christianisme : Christianisme
+islam : Islam
+bouddhisme : Bouddhisme
+judaisme : Judaïsme
+peinture : Peinture
+photographie : Photographie
+sculpture : Sculpture
+animation : Animation
+poesie : Poésie
+theatre : Théâtre
+echecs : Échecs
+poker : Poker
+oiseau : Oiseau
+poisson : Poisson
+legume : Légume
+epice : Épice
+charcuterie : Charcuterie
+helicoptere : Hélicoptère
+ia : Intelligence artificielle
 ```

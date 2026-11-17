@@ -10,6 +10,7 @@ import OngletCollection, { TAILLE_PAGE } from './OngletCollection';
 import OngletLots from './OngletLots';
 import OngletMiseEnVente from './OngletMiseEnVente';
 import OngletReglages from './OngletReglages';
+import OngletThemes from './OngletThemes';
 import OngletSynchro from './OngletSynchro';
 import OngletTableauDeBord from './OngletTableauDeBord';
 import { idOnglet, idPanneau } from './definitionOnglets';
@@ -64,6 +65,9 @@ const App: React.FC = () => {
             onLimite={setLimite}
           />
         );
+        break;
+      case 'themes':
+        panneau = <OngletThemes donnees={donnees} />;
         break;
       case 'reglages':
         panneau = (

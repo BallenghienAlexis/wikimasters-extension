@@ -171,7 +171,7 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
         }
         echecsWikidata = 0;
       }
-      cache = ajouterEntree(cache, titre, themes, maintenant(), wikidata || enrichi || homonymie, signaux);
+      cache = ajouterEntree(cache, titre, themes, maintenant(), wikidata || enrichi || homonymie, signaux, lecture.type === 'ok' ? lecture.categories : []);
       verifiees += 1;
       await surProgres(cache, verifiees);
     }

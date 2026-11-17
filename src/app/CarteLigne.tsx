@@ -7,7 +7,7 @@ import {
   type Carte,
   type EditionCarte,
 } from '../lib/collection';
-import { LIBELLES_THEMES, themesDeCarte, themesPrincipaux } from '../lib/themes';
+import { libellesThemesAffiches, themesPrincipaux } from '../lib/themes';
 import EditeurThemes from './EditeurThemes';
 
 const CLASSE_CHAMP = 'min-h-11 w-full rounded border border-line bg-ink px-3';
@@ -74,7 +74,7 @@ const CarteLigne: React.FC<Props> = ({ carte, onEdition: onEditionCarte, refLign
           )}
         </p>
         <p className="text-sm text-muted break-words">
-          {themesDeCarte(carte).map((theme) => LIBELLES_THEMES[theme]).join(', ')}
+          {libellesThemesAffiches(carte).join(', ') || 'Sans thème fiable'}
           {carte.ami ? ` · À échanger avec ${carte.ami}` : ''}
           {excedent(carte) > 0 ? ` · ${excedent(carte)} en double` : ''}
           {favori ? ' · Favori, verrouillé sur le site' : ''}
