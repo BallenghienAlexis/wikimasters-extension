@@ -62,7 +62,14 @@ export class ArretSite extends Error {}
 
 async function lire(url, journal) {
   await new Promise((r) => setTimeout(r, PAUSE_MS));
-  const rep = await fetch(url, { headers: { 'User-Agent': 'poc-themes (script de recherche, lecture seule)', Accept: 'application/json' } });
+  let rep = await fetch(url, { headers: { 'User-Agent': 'poc-themes (script de recherche, lecture seule)', Accept: 'application/json' } });
+  // POC_ATTENDRE_429=1 : sur une IP partagée, attendre le délai demandé par Wikimedia (Retry-After, 120 s au plus) puis réessayer, 5 fois au plus.
+  for (let essai = 0; rep.status === 429 && process.env.POC_ATTENDRE_429 === '1' && essai < 5; essai++) {
+    const attente = Math.min(120, Number(rep.headers.get('retry-after')) || 30);
+    journal(`  429 : attente de ${attente} s (essai ${essai + 1}/5)`);
+    await new Promise((r) => setTimeout(r, attente * 1000));
+    rep = await fetch(url, { headers: { 'User-Agent': 'poc-themes (script de recherche, lecture seule)', Accept: 'application/json' } });
+  }
   if (rep.status === 403 || rep.status === 429) throw new ArretSite(`${rep.status} sur ${new URL(url).host} : arrêt, relancer plus tard (reprise automatique)`);
   if (!rep.ok) { journal(`  HTTP ${rep.status} ignoré`); return null; }
   return rep.json();

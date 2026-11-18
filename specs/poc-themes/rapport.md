@@ -8,12 +8,12 @@ Statut : **POC isolé, non branché sur la production** (rien dans `src/`, aucun
 |---|---|
 | Cinq signaux indépendants (`signaux.ts`) et deux règles de vote (`vote.ts`) | Livré, testé |
 | Banc d'essai : précision, rappel, faux thèmes, abstentions (`evaluation.ts`, `poc.test.ts`) | Livré, testé |
-| Collecteur de pages réelles Wikipédia + Wikidata (`collecter.mjs`) | Livré, **lecteurs testés sur réponses factices, jamais exécuté contre le vrai réseau** |
-| Branchement sur le banc d'essai commun (`benchmark.test.ts`) | Livré, testé pour la ligne de base ; **méthodes de vote non mesurées** (pages non collectées) |
-| Mesure sur des cartes réelles de WikiMasters | **Non faite** : voir ci-dessous |
+| Collecteur de pages réelles Wikipédia + Wikidata (`collecter.mjs`) | Livré, exécuté sur les 317 cartes depuis le conteneur (réseau ouvert depuis le 2026-11-17 soir ; 429 de Wikimedia sur IP partagée, attente de `Retry-After` via `POC_ATTENDRE_429=1`, `NODE_USE_ENV_PROXY=1` pour que Node passe par le proxy) |
+| Branchement sur le banc d'essai commun (`benchmark.test.ts`) | Livré et exécuté |
+| Mesure sur le jeu commun avec pages Wikipédia et Wikidata réelles (313 cartes) | **Faite le 2026-11-18** (section « Résultats sur le jeu commun ») |
 | Modèle local gratuit mesuré | **Non fait** : étude de faisabilité seulement |
 
-**Pourquoi pas de mesure réelle.** Le conteneur de développement n'a pas accès à `fr.wikipedia.org` ni `www.wikidata.org` (le proxy refuse la connexion, vérifié). Le jeu commun `tests/benchmark-themes/` (PR #193) ne contient que les titres, descriptions et thèmes de référence, pas le contenu des pages Wikipédia : sans accès au réseau, les méthodes de vote ne peuvent pas y être mesurées. J'ai donc écrit un **mini-jeu provisoire de 20 cartes, dont les pages Wikipédia sont rédigées à la main** (`poc/jeu-provisoire.json`, origine « ecrit-a-la-main »). Ces textes imitent Wikipédia mais ne sont pas des relevés : les chiffres ci-dessous ne prouvent rien sur la qualité réelle, ils ne servent qu'à vérifier que le banc fonctionne et à faire apparaître des défauts de principe.
+**Historique.** Le premier jet a été écrit sans accès à Wikipédia ni Wikidata (proxy fermé) : le mini-jeu provisoire de 20 cartes, dont les pages étaient rédigées à la main, ne servait qu'à valider le banc. Le réseau s'est ouvert ensuite : les 317 cartes du jeu commun (`tests/benchmark-themes/`, PR #193) ont été collectées avec `collecter.mjs` et mesurées, voir « Résultats sur le jeu commun ». Seuls ces derniers chiffres comptent.
 
 ## Les signaux
 
@@ -30,9 +30,36 @@ Règle de vote : un signal qui propose un thème soutient aussi ses ancêtres ; 
 - **V1** : au moins 2 signaux sur 5.
 - **V2** : définition et Wikidata pèsent 2, les autres 1, seuil 3.
 - **V3** : V2, et s'il ne retient rien, les thèmes de la production actuelle ne passent que s'ils sont portés par la définition.
+- **V4** : V2 avec ancrage (un thème doit être porté par la définition, Wikidata ou la description du site). **V5** : V4 et seuil relatif de 60 % du meilleur score. **V6** : un seul signal classificatoire suffit, seuil relatif de 60 %. **V7** : production sur titre + description, sinon V6.
 - **A** : production actuelle (`themesPrincipaux`), alimentée par les mêmes données.
 
-## Résultats sur le mini-jeu provisoire (20 cartes écrites à la main : indicatif seulement)
+## Résultats sur le jeu commun (313 cartes de fiabilité moyenne ou haute, pages réelles collectées le 2026-11-18)
+
+Mesures par `evaluer` (`tests/benchmark-themes/`), sortie brute dans `resultats-benchmark.txt`. « Production » = titre + description du site seuls, comme la ligne de base du jeu ; « A » = production alimentée en plus par les signaux Wikipédia et Wikidata de la page (ce que fait la production quand son cache est rempli).
+
+| Méthode | Précision | Rappel | F1 | Sans thème à tort | Pièges déclenchés |
+|---|---|---|---|---|---|
+| Production (titre + description) | 95,1 % | 65,2 % | 77,4 % | 12,5 % | 0 % |
+| A production + pages Wikipédia/Wikidata | 72,7 % | 75,5 % | 74,0 % | 1,6 % | 0 % |
+| V1 accord de 2 signaux | 67,4 % | 72,4 % | 69,8 % | 8,9 % | 0 % |
+| V2 pondéré (seuil 3) | 70,0 % | 65,7 % | 67,8 % | 11,1 % | 0 % |
+| V4 V2 + ancrage (définition, Wikidata ou site) | 70,0 % | 65,7 % | 67,8 % | 11,1 % | 0 % |
+| V5 V4 + 60 % du meilleur score | 80,7 % | 58,2 % | 67,6 % | 11,1 % | 0 % |
+| V6 un signal classificatoire + 60 % du meilleur | 85,6 % | 64,6 % | 73,7 % | 5,2 % | 0 % |
+| **V7 production titre+description, sinon V6** | 90,1 % | 68,8 % | **78,0 %** | 3,6 % | 0 % |
+
+Pour comparaison (rapporté par le fil du POC B, PR #197, non remesuré ici) : Wikidata seul 91,3 % / 63,6 % ; hybride Wikidata puis production 91,3 % / 71,9 % / 3,2 % sans thème à tort.
+
+**Conclusions**
+
+1. **Le vote « au moins deux signaux » ne marche pas.** V1, V2 et V4 sont moins précis que la production seule (67 à 70 % contre 95 %) : l'idée de départ est invalidée sur ce jeu. Raison : les faux thèmes dominants ne sont pas des erreurs de mot isolées mais des rôles secondaires que plusieurs signaux confirment (littérature pour Hitler, éducation pour Einstein, arts pour Kurt Cobain, politique pour Victor Hugo). Les catégories Wikipédia d'une personne listent tous ses rôles, et le texte complet répète les mêmes mots : les signaux s'accordent donc sur un thème secondaire. Plus de signaux ne donne pas plus de précision.
+2. **Ce qui aide est de ne faire confiance qu'à ce que la page dit être le sujet** (définition, classes Wikidata, description) et d'écarter ce qui pèse moins de 60 % du meilleur thème (V6 : 85,6 % contre 72,7 % pour A, à rappel proche). C'est la même logique que le POC B, qui fait mieux (91,3 % de précision à 71,9 % de rappel).
+3. **Aucune de mes méthodes ne bat le meilleur résultat du POC B.** V7 gagne un peu en F1 sur la production (78,0 % contre 77,4 %) en divisant par plus de trois les cartes sans thème à tort, mais perd 5 points de précision. Je ne recommande pas de brancher le vote.
+4. **Alerte sur la production avec pages (A) : 27 % de faux thèmes** sur ce jeu quand le cache Wikipédia est rempli, contre 5 % sans. Ce sont presque tous des thèmes secondaires posés en plus du principal (littérature ×14, éducation ×9, idées ×7, arts ×7, politique ×7 pour A). À vérifier dans le fil qui suit les faux thèmes : la pondération de `themesPrincipaux` laisse passer des thèmes de catégories jusqu'à 4 par carte.
+
+**Limites** : le jeu est un jugement (thèmes de référence 1 à 4 sans parents ; un thème secondaire défendable compte comme faux s'il n'est pas dans `acceptables`), ses descriptions sont reconstruites et riches en mots-clés (la ligne de base « titre + description » est optimiste), 313 cartes. Les pages ont été lues le 2026-11-18 : Wikipédia change. Le jeu réel d'Alexis (export de sa collection) reste à mesurer.
+
+## Mini-jeu provisoire (20 cartes écrites à la main, avant l'accès réseau : indicatif seulement)
 
 | Méthode | Précision | Rappel | Faux thèmes / posés | Cartes avec faux thème | Sans thème | Abstentions correctes |
 |---|---|---|---|---|---|---|
@@ -48,13 +75,6 @@ Reproduire : `npx vitest run --config specs/poc-themes/poc/vitest.poc.config.ts`
 1. **L'accord entre signaux n'est indépendant que si les signaux n'utilisent pas le même lexique.** Les cinq signaux passent tous par les mêmes motifs de `themes.ts` ; une erreur du lexique est donc « confirmée » par plusieurs signaux et le vote la laisse passer. Exemple vérifié : « opérateur de télécommunications » donne `#Musique classique` (le motif `opera` n'a pas de borne de mot et trouve « *opéra*teur »), « opérateur historique » donne en plus `#Histoire` ; « entreprise » donne `#Société`. Sur « Orange (entreprise) », le vote retient donc `classique` et `societe` (site, Wikidata et catégories s'accordent… sur une erreur). **C'est un défaut du catalogue de production, à corriger à part** (non touché ici, POC isolé).
 2. **Le vote ne crée pas de rappel.** « Charles Lindbergh » (aviateur) reste sans thème avec toutes les méthodes : aucun motif ne relie « aviateur » à `#Avion`. Un trou de lexique ne se comble pas en comptant les signaux.
 3. **Le seuil de 2 signaux coûte du rappel sur les thèmes précis** : « Hitler » garde `nazis` avec V1 (catégories + lexical) mais le perd avec V2 (deux signaux faibles = 2 < 3). Le choix du seuil est un arbitrage précision/rappel à régler sur le vrai jeu.
-
-## Ce qu'il faut pour trancher : un signal vraiment indépendant
-
-Pour qu'un accord vaille quelque chose, au moins un signal doit ne **pas** reposer sur les motifs de texte du catalogue :
-
-- **Table d'identifiants Wikidata → thème** : la collecte garde déjà les identifiants des classes (`idsClassesWikidata`). Une table courte et vérifiée à la main (film, groupe de musique, constructeur automobile, aéroport, montagne, taxon…) donnerait un signal sans lexique, donc sans erreur de type « opérateur ». Non faite ici : je ne veux pas écrire d'identifiants Wikidata de mémoire sans pouvoir les vérifier.
-- **Modèle local** (voir ci-dessous) comme signal supplémentaire, branché par une simple fonction `page → thèmes`.
 
 ## Faisabilité d'un modèle gratuit plus fiable que Gemini Nano
 
@@ -82,6 +102,7 @@ Le collecteur n'a jamais tourné contre le vrai réseau (lecteurs testés sur r�
 
 ## Suites proposées
 
-1. Corriger le lexique de production signalé en 1 (`opera` sans borne, `entreprise` → `societe`) : correctif séparé, petit, avec test.
-2. Mesurer A, V1, V2, V3 sur le vrai jeu (collecte sur le PC), ajuster les seuils.
-3. Ajouter la table d'identifiants Wikidata et, si Alexis le valide, le script PC avec modèle local comme signaux indépendants ; ne brancher en production qu'une méthode qui bat A sur les faux thèmes **sans** perdre trop de rappel.
+1. Ne pas brancher le vote. Garder du POC l'enseignement : ancrer les thèmes sur la définition, Wikidata et la description, et limiter les thèmes secondaires (seuil relatif).
+2. Enquêter sur les 27 % de faux thèmes de la production avec pages remplies (point 4 ci-dessus) : c'est probablement le levier le plus rentable, et il touche `themesPrincipaux`.
+3. Table d'identifiants Wikidata → thème (`idsClassesWikidata` est déjà collecté) comme signal sans lexique, avec le POC B.
+4. Mesurer sur l'export réel de la collection d'Alexis quand il existe.
