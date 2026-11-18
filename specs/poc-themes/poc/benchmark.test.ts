@@ -3,7 +3,7 @@
 // 1. Export des cartes pour le collecteur : POC_EXPORT_CARTES=cartes.json npx vitest run --config specs/poc-themes/poc/vitest.poc.config.ts
 // 2. Collecte sur un PC avec internet : node specs/poc-themes/poc/collecter.mjs cartes.json pages.json
 // 3. Mesure : POC_PAGES=pages.json POC_RAPPORT=rapport-benchmark.txt npx vitest run --config specs/poc-themes/poc/vitest.poc.config.ts
-// Sans POC_PAGES, seule la ligne de base de production est mesurée : les méthodes de vote ont besoin du contenu des pages.
+// Sans POC_PAGES, seule la production (titre + description) est mesurée : les méthodes de vote ont besoin du contenu des pages.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { CARTES_REFERENCE } from '../../../tests/benchmark-themes/cartes';

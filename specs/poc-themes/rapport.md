@@ -88,17 +88,17 @@ Rien ci-dessous n'a été mesuré ici ; ce sont des pistes à évaluer, avec ce 
 
 Ma recommandation, à valider sur le vrai jeu : **ne pas viser un modèle seul**, mais ajouter le script PC (dernière piste) comme signal du vote, avec la table d'identifiants Wikidata comme second signal sans lexique.
 
-## Lancer sur le PC d'Alexis (banc d'essai commun, pages réelles)
+## Reproduire et rejouer sur d'autres cartes
 
-Le jeu commun est `tests/benchmark-themes/` (PR #193, 317 cartes) ; `benchmark.test.ts` le branche sur `evaluer` et `formaterRapport` pour des chiffres comparables aux autres POC.
+Le jeu commun est `tests/benchmark-themes/` (PR #193, 317 cartes) ; `benchmark.test.ts` le branche sur `evaluer` et `formaterRapport`.
 
-1. Exporter les cartes : `POC_EXPORT_CARTES=cartes.json npx vitest run --config specs/poc-themes/poc/vitest.poc.config.ts`.
-2. Collecter les pages (PC avec internet) : `node specs/poc-themes/poc/collecter.mjs cartes.json pages.json`. 3 à 4 requêtes `GET` par carte, 1 par seconde, un seul fil, arrêt sur 403/429 avec reprise en relançant ; seul le titre de la page est envoyé. Environ 15 à 25 minutes pour 317 cartes. Essayer d'abord sur 3 cartes.
-3. Mesurer : `POC_PAGES=pages.json POC_RAPPORT=resultats.txt npx vitest run --config specs/poc-themes/poc/vitest.poc.config.ts`.
+1. Exporter les cartes : `POC_EXPORT_CARTES=/chemin/hors/depot/cartes.json npx vitest run --config specs/poc-themes/poc/vitest.poc.config.ts`.
+2. Collecter les pages : `NODE_USE_ENV_PROXY=1 POC_ATTENDRE_429=1 node specs/poc-themes/poc/collecter.mjs cartes.json pages.json` (sur un PC avec internet, `NODE_USE_ENV_PROXY` est inutile). 3 à 4 requêtes `GET` par carte, 1 par seconde, un seul fil, seul le titre de la page est envoyé, reprise automatique en relançant. Sur les 317 cartes, la collecte a tourné le 2026-11-18 depuis le conteneur : l'adresse sortante est partagée avec d'autres fils et Wikimedia a répondu des 429 (attente de `Retry-After`).
+3. Mesurer : `POC_PAGES=pages.json POC_RAPPORT=resultats.txt npx vitest run --config specs/poc-themes/poc/vitest.poc.config.ts` (`POC_ANALYSE=analyse.txt` écrit aussi les faux thèmes les plus fréquents par méthode ; celui du 2026-11-18 est dans `analyse-faux-themes.txt`, c'est la source des décomptes cités en conclusion 4).
 
-Sans `POC_PAGES`, seule la ligne de base de production est mesurée (précision 94,4 %, rappel 65,5 % sur 313 cartes de fiabilité moyenne ou haute, titre + description seuls, sans page Wikipédia). Les méthodes de vote ont besoin du contenu des pages : **elles ne sont pas encore mesurées sur ce jeu**.
+Sans `POC_PAGES`, seule la production (titre + description) est mesurée.
 
-Le collecteur n'a jamais tourné contre le vrai réseau (lecteurs testés sur réponses factices). La forme des réponses suit celle que la production lit déjà (`src/lib/wikipedia.ts`).
+**Attention.** `POC_ATTENDRE_429=1` déroge à la règle de production « arrêt sur 429 » (`AGENTS.md`, ligne Wikipédia / Wikidata) : il sert à ce script de recherche, hors extension, et ne doit pas être repris dans le code de l'extension. Si le script est rejoué sur l'export réel de la collection d'Alexis, écrire `cartes.json`, `pages.json` et `*.reprise.jsonl` **hors du dépôt** : ils contiendraient des données du compte et ne doivent jamais être commités.
 
 ## Suites proposées
 

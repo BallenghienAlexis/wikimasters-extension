@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-// POC thèmes — collecte des données publiques de Wikipédia et Wikidata pour un jeu de cartes, À LANCER SUR UN PC AVEC INTERNET
-// (le conteneur de développement n'a pas accès à fr.wikipedia.org). Lecture seule (GET), un seul fil, 1 requête par seconde,
+// POC thèmes — collecte des données publiques de Wikipédia et Wikidata pour un jeu de cartes (PC avec internet, ou conteneur si le proxy autorise ces hôtes). Lecture seule (GET), un seul fil, 1 requête par seconde,
 // arrêt immédiat sur 403 ou 429. Seul le titre d'une carte est envoyé : ni compte, ni cookie, ni jeton. Aucune dépendance.
 //
 // Usage : node specs/poc-themes/poc/collecter.mjs <cartes.json> <sortie.json> [reprise.jsonl]
