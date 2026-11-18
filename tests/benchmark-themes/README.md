@@ -40,7 +40,7 @@ console.log(formaterRapport(rapport, 'mon POC'));
 import { readFileSync } from 'node:fs';
 import { appliquerDescriptions, cartesAReferencer, lireSauvegarde } from './sauvegarde';
 
-const lues = lireSauvegarde(readFileSync('wm-sauvegarde.json', 'utf8'));
+const lues = lireSauvegarde(readFileSync('wm-sauvegarde.json' /* ignoré par git */, 'utf8'));
 const { cartes, remplacees, absentes } = appliquerDescriptions(lues);
 const nouvelles = cartesAReferencer(lues); // candidates à de nouvelles références
 ```
@@ -51,7 +51,7 @@ Le fichier de sauvegarde lui-même ne doit **pas** être commité.
 
 - Les cartes **reconstruites** ont des descriptions inventées d’après des pages publiques : plus riches que celles du site, elles flattent les méthodes à base de mots-clés. Préférer `source: 'reelle'` pour comparer. Les cartes `a-verifier` (Malibu, Crayon, Shoobidoo Labs…) n’existent pas dans la collection : leur description reste à confirmer ou à retirer.
 - Les thèmes de référence sont un jugement (pas une vérité du site) ; ils ne contiennent jamais les parents. Le catalogue peut évoluer : le test vérifie que chaque thème existe.
-- Les 277 cartes réelles sont un échantillon (190 avec description, 90 sans, tirage fixe) ; la collection en compte 4 733. Thèmes de référence = jugement, comme pour le reste.
+- Les 277 cartes réelles sont un échantillon (202 avec description, 75 sans, tirage fixe) ; la collection est bien plus grande. Thèmes de référence = jugement, comme pour le reste.
 
 ## Ligne de base (production, titre + description, sans cache Wikipédia ni Wikidata)
 
