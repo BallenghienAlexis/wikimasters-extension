@@ -1,0 +1,190 @@
+== production (titre + description, sans page Wikipédia) — 313 cartes ==
+précision 95.1 % · rappel 65.2 % · F1 77.4 %
+faux thèmes 4.9 % (cartes touchées 3.8 %) · « sans thème » à tort 12.5 % · exactes 59.7 %
+pièges déclenchés 0.0 % · fausses propositions sur cartes vides 0.0 % · dépassements de 4 : 0
+cartes piégeuses (37) : précision 96.6 %, rappel 62.2 %
+  Four crématoire : prédit [] attendu [technologie]
+  Solution de Dakin : prédit [] attendu [sante, chimie]
+  Regelbau 602 : prédit [] attendu [secondeguerre]
+  Joseph Staline : prédit [] attendu [politique]
+  Philippe Pétain : prédit [] attendu [secondeguerre, premiereguerre]
+  Steve Jobs : prédit [] attendu [informatique]
+  Elon Musk : prédit [] attendu [technologie, fusee]
+  Gandhi : prédit [] attendu [politique]
+  Saint Paul : prédit [litterature, religion] attendu [christianisme]
+  Sigmund Freud : prédit [] attendu [psychologie]
+  Neil Armstrong : prédit [] attendu [espace]
+  Youri Gagarine : prédit [] attendu [espace]
+  Usain Bolt : prédit [] attendu [athletisme]
+  La Joconde : prédit [] attendu [peinture]
+  Star Wars : prédit [] attendu [cinema]
+
+Pages collectées : 317 / 317 (0 sans page : leurs thèmes comptent comme « sans thème »).
+
+== A production actuelle — 313 cartes ==
+précision 72.7 % · rappel 75.5 % · F1 74.0 %
+faux thèmes 27.3 % (cartes touchées 24.9 %) · « sans thème » à tort 1.6 % · exactes 54.6 %
+pièges déclenchés 0.0 % · fausses propositions sur cartes vides 0.0 % · dépassements de 4 : 0
+cartes piégeuses (37) : précision 78.4 %, rappel 64.4 %
+  Four crématoire : prédit [nazis] attendu [technologie]
+  Chevrolet Malibu : prédit [voiture, finance] attendu [voiture]
+  Solution de Dakin : prédit [sante, biologie] attendu [sante, chimie]
+  Adolf Hitler : prédit [politique, nazis, litterature] attendu [nazis, secondeguerre, politique]
+  Albert Einstein : prédit [physique, education, idees, litterature] attendu [physique]
+  Marie Curie : prédit [chimie, physique, education] attendu [physique, chimie]
+  Charles Darwin : prédit [geologie] attendu [biologie]
+  Jimi Hendrix : prédit [blues, rock, litterature] attendu [rock]
+  Kurt Cobain : prédit [grunge, arts, litterature] attendu [grunge]
+  Bob Marley : prédit [reggae, litterature] attendu [reggae]
+  Eminem : prédit [rap, rock, cinema] attendu [rap]
+  Jules César : prédit [politique, histoire, litterature] attendu [romeantique]
+  Charles de Gaulle : prédit [politique, guerre, litterature] attendu [politique]
+  Winston Churchill : prédit [politique, secondeguerre, litterature] attendu [politique, secondeguerre]
+  Joseph Staline : prédit [politique, langue] attendu [politique]
+
+== V1 accord de 2 signaux — 313 cartes ==
+précision 67.4 % · rappel 72.4 % · F1 69.8 %
+faux thèmes 32.6 % (cartes touchées 29.1 %) · « sans thème » à tort 8.9 % · exactes 49.8 %
+pièges déclenchés 0.0 % · fausses propositions sur cartes vides 0.0 % · dépassements de 4 : 0
+cartes piégeuses (37) : précision 71.4 %, rappel 55.6 %
+  Four crématoire : prédit [] attendu [technologie]
+  Malibu (rhum) : prédit [] attendu [rhum, alcool]
+  Solution de Dakin : prédit [sciences] attendu [sante, chimie]
+  Annexion de l’Alsace-Moselle (1940) : prédit [] attendu [secondeguerre, nazis]
+  Adolf Hitler : prédit [politique, nazis, societe, litterature] attendu [nazis, secondeguerre, politique]
+  Regelbau 602 : prédit [] attendu [secondeguerre]
+  Honda CB 900 F Bol d’Or : prédit [] attendu [moto]
+  Camille-Laurin (circonscription provinciale) : prédit [politique, geographie] attendu [politique]
+  Albert Einstein : prédit [physique, education, royaute, idees] attendu [physique]
+  Marie Curie : prédit [chimie, physique, education] attendu [physique, chimie]
+  Charles Darwin : prédit [geologie] attendu [biologie]
+  Jimi Hendrix : prédit [blues, rock, litterature] attendu [rock]
+  Kurt Cobain : prédit [litterature, grunge, arts] attendu [grunge]
+  Bob Marley : prédit [reggae, litterature] attendu [reggae]
+  Eminem : prédit [rap, rock, cinema] attendu [rap]
+
+== V2 pondéré (déf. et Wikidata = 2, seuil 3) — 313 cartes ==
+précision 70.0 % · rappel 65.7 % · F1 67.8 %
+faux thèmes 30.0 % (cartes touchées 24.9 %) · « sans thème » à tort 11.1 % · exactes 48.6 %
+pièges déclenchés 0.0 % · fausses propositions sur cartes vides 0.0 % · dépassements de 4 : 0
+cartes piégeuses (37) : précision 72.4 %, rappel 46.7 %
+  Four crématoire : prédit [] attendu [technologie]
+  Malibu (rhum) : prédit [] attendu [rhum, alcool]
+  Solution de Dakin : prédit [sciences] attendu [sante, chimie]
+  Croix de saint André : prédit [] attendu [religion]
+  Annexion de l’Alsace-Moselle (1940) : prédit [] attendu [secondeguerre, nazis]
+  Adolf Hitler : prédit [politique, nazis, societe, litterature] attendu [nazis, secondeguerre, politique]
+  Der Angriff : prédit [] attendu [nazis]
+  Regelbau 602 : prédit [] attendu [secondeguerre]
+  Honda CB 900 F Bol d’Or : prédit [] attendu [moto]
+  Albert Einstein : prédit [physique, education, idees, litterature] attendu [physique]
+  Marie Curie : prédit [chimie, physique, education] attendu [physique, chimie]
+  Charles Darwin : prédit [geologie] attendu [biologie]
+  Jimi Hendrix : prédit [blues, rock, litterature] attendu [rock]
+  Kurt Cobain : prédit [litterature, grunge, arts] attendu [grunge]
+  Bob Marley : prédit [reggae, litterature] attendu [reggae]
+
+== V4 V2 + ancrage définition/Wikidata/site — 313 cartes ==
+précision 70.0 % · rappel 65.7 % · F1 67.8 %
+faux thèmes 30.0 % (cartes touchées 24.9 %) · « sans thème » à tort 11.1 % · exactes 48.6 %
+pièges déclenchés 0.0 % · fausses propositions sur cartes vides 0.0 % · dépassements de 4 : 0
+cartes piégeuses (37) : précision 72.4 %, rappel 46.7 %
+  Four crématoire : prédit [] attendu [technologie]
+  Malibu (rhum) : prédit [] attendu [rhum, alcool]
+  Solution de Dakin : prédit [sciences] attendu [sante, chimie]
+  Croix de saint André : prédit [] attendu [religion]
+  Annexion de l’Alsace-Moselle (1940) : prédit [] attendu [secondeguerre, nazis]
+  Adolf Hitler : prédit [politique, nazis, societe, litterature] attendu [nazis, secondeguerre, politique]
+  Der Angriff : prédit [] attendu [nazis]
+  Regelbau 602 : prédit [] attendu [secondeguerre]
+  Honda CB 900 F Bol d’Or : prédit [] attendu [moto]
+  Albert Einstein : prédit [physique, education, idees, litterature] attendu [physique]
+  Marie Curie : prédit [chimie, physique, education] attendu [physique, chimie]
+  Charles Darwin : prédit [geologie] attendu [biologie]
+  Jimi Hendrix : prédit [blues, rock, litterature] attendu [rock]
+  Kurt Cobain : prédit [litterature, grunge, arts] attendu [grunge]
+  Bob Marley : prédit [reggae, litterature] attendu [reggae]
+
+== V5 V4 + 60 % du meilleur score — 313 cartes ==
+précision 80.7 % · rappel 58.2 % · F1 67.6 %
+faux thèmes 19.3 % (cartes touchées 13.1 %) · « sans thème » à tort 11.1 % · exactes 51.1 %
+pièges déclenchés 0.0 % · fausses propositions sur cartes vides 0.0 % · dépassements de 4 : 0
+cartes piégeuses (37) : précision 80.8 %, rappel 46.7 %
+  Four crématoire : prédit [] attendu [technologie]
+  Malibu (rhum) : prédit [] attendu [rhum, alcool]
+  Solution de Dakin : prédit [sciences] attendu [sante, chimie]
+  Croix de saint André : prédit [] attendu [religion]
+  Annexion de l’Alsace-Moselle (1940) : prédit [] attendu [secondeguerre, nazis]
+  Der Angriff : prédit [] attendu [nazis]
+  Regelbau 602 : prédit [] attendu [secondeguerre]
+  Honda CB 900 F Bol d’Or : prédit [] attendu [moto]
+  Kurt Cobain : prédit [musique, litterature] attendu [grunge]
+  Jules César : prédit [politique, histoire, litterature] attendu [romeantique]
+  Charles de Gaulle : prédit [guerre, politique] attendu [politique]
+  Winston Churchill : prédit [politique, litterature] attendu [politique, secondeguerre]
+  Heinrich Himmler : prédit [nazis, politique, societe] attendu [nazis, secondeguerre]
+  Joseph Goebbels : prédit [nazis, politique, societe] attendu [nazis]
+  Hayao Miyazaki : prédit [television] attendu [animation, cinema]
+
+== V6 un signal classificatoire + 60 % du meilleur — 313 cartes ==
+précision 85.6 % · rappel 64.6 % · F1 73.7 %
+faux thèmes 14.4 % (cartes touchées 10.2 %) · « sans thème » à tort 5.2 % · exactes 57.2 %
+pièges déclenchés 0.0 % · fausses propositions sur cartes vides 0.0 % · dépassements de 4 : 0
+cartes piégeuses (37) : précision 89.7 %, rappel 57.8 %
+  Four crématoire : prédit [] attendu [technologie]
+  Croix de saint André : prédit [] attendu [religion]
+  Annexion de l’Alsace-Moselle (1940) : prédit [] attendu [secondeguerre, nazis]
+  Regelbau 602 : prédit [] attendu [secondeguerre]
+  Honda CB 900 F Bol d’Or : prédit [] attendu [moto]
+  Kurt Cobain : prédit [musique, litterature] attendu [grunge]
+  Charles de Gaulle : prédit [guerre, politique] attendu [politique]
+  Winston Churchill : prédit [politique, histoire, litterature] attendu [politique, secondeguerre]
+  Joseph Goebbels : prédit [nazis, politique, societe] attendu [nazis]
+  Hayao Miyazaki : prédit [television] attendu [animation, cinema]
+  Elon Musk : prédit [finance, informatique, politique] attendu [technologie, fusee]
+  Gandhi : prédit [idees, litterature, politique, religion] attendu [politique]
+  Sigmund Freud : prédit [psychologie, idees] attendu [psychologie]
+  Volodymyr Zelensky : prédit [ukraine, cinema, politique] attendu [ukraine, politique]
+  Neil Armstrong : prédit [education, technologie] attendu [espace]
+
+== V7 production titre+description, sinon V6 — 313 cartes ==
+précision 90.1 % · rappel 68.8 % · F1 78.0 %
+faux thèmes 9.9 % (cartes touchées 6.7 %) · « sans thème » à tort 3.6 % · exactes 62.6 %
+pièges déclenchés 0.0 % · fausses propositions sur cartes vides 0.0 % · dépassements de 4 : 0
+cartes piégeuses (37) : précision 93.8 %, rappel 66.7 %
+  Four crématoire : prédit [] attendu [technologie]
+  Regelbau 602 : prédit [] attendu [secondeguerre]
+  Elon Musk : prédit [finance, informatique, politique] attendu [technologie, fusee]
+  Gandhi : prédit [idees, litterature, politique, religion] attendu [politique]
+  Saint Paul : prédit [litterature, religion] attendu [christianisme]
+  Sigmund Freud : prédit [psychologie, idees] attendu [psychologie]
+  Neil Armstrong : prédit [education, technologie] attendu [espace]
+  Youri Gagarine : prédit [politique] attendu [espace]
+  Star Wars : prédit [] attendu [cinema]
+  Amazon : prédit [] attendu [societe, informatique]
+  Wikipédia : prédit [] attendu [informatique]
+  Gestapo : prédit [nazis, politique] attendu [nazis]
+  Schutzstaffel : prédit [nazis, politique] attendu [nazis, secondeguerre]
+  Organisation des Nations unies : prédit [] attendu [politique]
+  NASA : prédit [informatique, arts] attendu [espace]
+
+== V3 vote V2 + repli défini par la définition — 313 cartes ==
+précision 70.0 % · rappel 65.7 % · F1 67.8 %
+faux thèmes 30.0 % (cartes touchées 24.9 %) · « sans thème » à tort 11.1 % · exactes 48.6 %
+pièges déclenchés 0.0 % · fausses propositions sur cartes vides 0.0 % · dépassements de 4 : 0
+cartes piégeuses (37) : précision 72.4 %, rappel 46.7 %
+  Four crématoire : prédit [] attendu [technologie]
+  Malibu (rhum) : prédit [] attendu [rhum, alcool]
+  Solution de Dakin : prédit [sciences] attendu [sante, chimie]
+  Croix de saint André : prédit [] attendu [religion]
+  Annexion de l’Alsace-Moselle (1940) : prédit [] attendu [secondeguerre, nazis]
+  Adolf Hitler : prédit [politique, nazis, societe, litterature] attendu [nazis, secondeguerre, politique]
+  Der Angriff : prédit [] attendu [nazis]
+  Regelbau 602 : prédit [] attendu [secondeguerre]
+  Honda CB 900 F Bol d’Or : prédit [] attendu [moto]
+  Albert Einstein : prédit [physique, education, idees, litterature] attendu [physique]
+  Marie Curie : prédit [chimie, physique, education] attendu [physique, chimie]
+  Charles Darwin : prédit [geologie] attendu [biologie]
+  Jimi Hendrix : prédit [blues, rock, litterature] attendu [rock]
+  Kurt Cobain : prédit [litterature, grunge, arts] attendu [grunge]
+  Bob Marley : prédit [reggae, litterature] attendu [reggae]

@@ -1,0 +1,514 @@
+{
+  "origine": "ecrit-a-la-main",
+  "cartes": [
+    {
+      "page": {
+        "titre": "Wagon",
+        "descriptionSite": "Véhicule ferroviaire sans moteur destiné au transport de marchandises ou de voyageurs.",
+        "resume": "Un wagon est un véhicule ferroviaire sans moteur, destiné au transport de marchandises. Le terme de voiture est réservé aux véhicules à voyageurs. Les wagons sont attelés à une locomotive pour former un train.",
+        "categories": [
+          "Wagon",
+          "Matériel roulant ferroviaire",
+          "Transport ferroviaire de marchandises",
+          "Article de qualité"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "véhicule ferroviaire"
+        ],
+        "classesWikidata": [
+          "véhicule ferroviaire"
+        ],
+        "humain": false
+      },
+      "attendu": [
+        "train"
+      ],
+      "note": "Piège cité par Alexis : wagon → Voiture."
+    },
+    {
+      "page": {
+        "titre": "Four crématoire",
+        "descriptionSite": "Four conçu pour incinérer les corps des défunts.",
+        "resume": "Un four crématoire est un four destiné à la crémation des défunts. Il fonctionne à haute température au gaz ou à l'électricité. Les cendres sont ensuite recueillies dans une urne.",
+        "categories": [
+          "Crémation",
+          "Four",
+          "Rite funéraire"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "four"
+        ],
+        "classesWikidata": [
+          "four",
+          "équipement funéraire"
+        ],
+        "humain": false
+      },
+      "attendu": [],
+      "note": "Piège cité par Alexis : four crématoire → Animaux. Aucun thème du catalogue ne convient : « sans thème fiable » est la bonne réponse."
+    },
+    {
+      "page": {
+        "titre": "Novelists",
+        "descriptionSite": "Groupe de metalcore français formé à Paris.",
+        "resume": "Novelists est un groupe de metalcore français, originaire de Paris. Formé en 2009, il sort son premier album en 2013. Le groupe mêle metalcore et métal progressif.",
+        "categories": [
+          "Groupe français de metalcore",
+          "Groupe musical formé en 2009",
+          "Groupe musical de Paris"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "groupe de musique français"
+        ],
+        "classesWikidata": [
+          "groupe de musique"
+        ],
+        "humain": false
+      },
+      "attendu": [
+        "metalcore"
+      ],
+      "toleres": [
+        "metal",
+        "musique"
+      ]
+    },
+    {
+      "page": {
+        "titre": "Lion Air",
+        "descriptionSite": "Compagnie aérienne indonésienne à bas coût.",
+        "resume": "Lion Air est une compagnie aérienne à bas coût indonésienne, dont le siège est à Jakarta. Elle dessert des destinations en Asie du Sud-Est. Son logo représente un lion ailé.",
+        "categories": [
+          "Compagnie aérienne ayant son siège en Indonésie",
+          "Entreprise fondée en 2000"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "compagnie aérienne indonésienne"
+        ],
+        "classesWikidata": [
+          "compagnie aérienne"
+        ],
+        "humain": false
+      },
+      "attendu": [
+        "avion"
+      ],
+      "note": "Piège : lion → Animaux."
+    },
+    {
+      "page": {
+        "titre": "Jaguar Cars",
+        "descriptionSite": "Constructeur automobile britannique de voitures de luxe.",
+        "resume": "Jaguar Cars est un constructeur automobile britannique de voitures de luxe et de sport, fondé en 1922. Son emblème est un jaguar bondissant. Le félin a donné son nom à la marque.",
+        "categories": [
+          "Constructeur automobile ayant son siège au Royaume-Uni",
+          "Entreprise fondée en 1922"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "constructeur automobile britannique"
+        ],
+        "classesWikidata": [
+          "constructeur automobile"
+        ],
+        "humain": false
+      },
+      "attendu": [
+        "automobile"
+      ],
+      "toleres": [
+        "voiture"
+      ],
+      "note": "Piège : jaguar → Animaux ou Félin."
+    },
+    {
+      "page": {
+        "titre": "Lion",
+        "descriptionSite": "Grand félin carnivore vivant en Afrique.",
+        "resume": "Le lion est une espèce de mammifères carnivores de la famille des félidés. Il vit en groupe dans la savane africaine. Il est surnommé le roi des animaux.",
+        "categories": [
+          "Panthera",
+          "Faune d'Afrique",
+          "Taxon décrit par Linné"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "espèce de mammifères"
+        ],
+        "classesWikidata": [
+          "taxon"
+        ],
+        "humain": false
+      },
+      "attendu": [
+        "felin"
+      ],
+      "toleres": [
+        "animaux",
+        "nature"
+      ],
+      "note": "Contre-piège : un vrai animal doit rester classé."
+    },
+    {
+      "page": {
+        "titre": "Marie Curie",
+        "descriptionSite": "Physicienne et chimiste polonaise naturalisée française, pionnière de l'étude de la radioactivité.",
+        "resume": "Marie Curie, née Maria Skłodowska en 1867, est une physicienne et chimiste polonaise naturalisée française. Elle a mené des recherches pionnières sur la radioactivité. Elle est la première personne à recevoir deux prix Nobel.",
+        "categories": [
+          "Physicienne polonaise",
+          "Chimiste française",
+          "Lauréat du prix Nobel de physique",
+          "Naissance en 1867"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "physicienne et chimiste polonaise et française"
+        ],
+        "classesWikidata": [
+          "physicien",
+          "chimiste"
+        ],
+        "humain": true
+      },
+      "attendu": [
+        "physique",
+        "chimie"
+      ]
+    },
+    {
+      "page": {
+        "titre": "Adolf Hitler",
+        "descriptionSite": "Dictateur allemand, chef du parti nazi et chancelier du Reich.",
+        "resume": "Adolf Hitler est un homme d'État allemand, chef du parti nazi et dictateur du Troisième Reich de 1933 à 1945. Il est responsable de la Seconde Guerre mondiale et de la Shoah.",
+        "categories": [
+          "Personnalité du Troisième Reich",
+          "Dictateur",
+          "Chancelier d'Allemagne"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "dictateur allemand"
+        ],
+        "classesWikidata": [
+          "personnalité politique",
+          "dictateur"
+        ],
+        "humain": true
+      },
+      "attendu": [
+        "nazis",
+        "politique"
+      ],
+      "toleres": [
+        "histoire",
+        "guerre",
+        "secondeguerre"
+      ]
+    },
+    {
+      "page": {
+        "titre": "Mont Blanc",
+        "descriptionSite": "Plus haut sommet des Alpes.",
+        "resume": "Le mont Blanc est un sommet du massif du même nom, dans les Alpes, culminant à 4 805 mètres. C'est le point culminant de l'Europe occidentale. Il est partagé entre la France et l'Italie.",
+        "categories": [
+          "Sommet des Alpes françaises",
+          "Sommet des Alpes italiennes",
+          "Point culminant d'un pays"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "montagne des Alpes"
+        ],
+        "classesWikidata": [
+          "montagne"
+        ],
+        "humain": false
+      },
+      "attendu": [
+        "montagne"
+      ],
+      "toleres": [
+        "geographie"
+      ]
+    },
+    {
+      "page": {
+        "titre": "Pink Floyd",
+        "descriptionSite": "Groupe britannique de rock progressif.",
+        "resume": "Pink Floyd est un groupe de rock britannique, formé à Londres en 1965. Il est l'un des représentants majeurs du rock progressif et du rock psychédélique. Son album The Dark Side of the Moon est l'un des plus vendus au monde.",
+        "categories": [
+          "Groupe britannique de rock progressif",
+          "Groupe musical de Londres",
+          "Groupe musical formé en 1965"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "groupe de rock britannique"
+        ],
+        "classesWikidata": [
+          "groupe de musique"
+        ],
+        "humain": false
+      },
+      "attendu": [
+        "rock"
+      ],
+      "toleres": [
+        "musique",
+        "poprock"
+      ]
+    },
+    {
+      "page": {
+        "titre": "Dupont",
+        "descriptionSite": "Nom de famille français.",
+        "resume": "Dupont est un nom de famille français très répandu, formé sur « du pont ». Il désigne à l'origine une personne vivant près d'un pont.",
+        "categories": [
+          "Patronyme français"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "nom de famille"
+        ],
+        "classesWikidata": [
+          "nom de famille"
+        ],
+        "humain": false
+      },
+      "attendu": [
+        "noms"
+      ],
+      "note": "Dupont : la vraie page est une homonymie ; ici le cas du patronyme seul."
+    },
+    {
+      "page": {
+        "titre": "Apple",
+        "descriptionSite": "Entreprise américaine de matériel informatique et de logiciels.",
+        "resume": "Apple est une entreprise multinationale américaine qui conçoit et commercialise des produits électroniques grand public, des ordinateurs personnels et des logiciels. Son logo est une pomme croquée.",
+        "categories": [
+          "Entreprise fondée en 1976",
+          "Entreprise informatique ayant son siège aux États-Unis",
+          "Constructeur informatique"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "entreprise américaine"
+        ],
+        "classesWikidata": [
+          "entreprise",
+          "constructeur informatique"
+        ],
+        "humain": false
+      },
+      "attendu": [
+        "informatique"
+      ],
+      "toleres": [
+        "technologie"
+      ],
+      "note": "Piège : pomme → Gastronomie ou Fruit."
+    },
+    {
+      "page": {
+        "titre": "Spirou",
+        "descriptionSite": "Personnage de bande dessinée belge créé en 1938.",
+        "resume": "Spirou est un personnage de bande dessinée belge créé par Rob-Vel en 1938. Groom d'un grand hôtel, il vit des aventures avec son écureuil Spip. Le personnage a donné son nom à un journal hebdomadaire.",
+        "categories": [
+          "Personnage de bande dessinée",
+          "Série de bande dessinée belge",
+          "Spirou et Fantasio"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "personnage de bande dessinée"
+        ],
+        "classesWikidata": [
+          "personnage de bande dessinée"
+        ],
+        "humain": false
+      },
+      "attendu": [
+        "bd"
+      ],
+      "note": "Piège : écureuil → Animaux."
+    },
+    {
+      "page": {
+        "titre": "Charles Lindbergh",
+        "descriptionSite": "Aviateur américain, premier à avoir traversé l'Atlantique Nord en solitaire sans escale.",
+        "resume": "Charles Lindbergh est un aviateur américain. Il est connu pour avoir réalisé la première traversée de l'Atlantique Nord en solitaire sans escale à bord du Spirit of St. Louis, en 1927. Son fils a été victime d'un célèbre enlèvement.",
+        "categories": [
+          "Aviateur américain",
+          "Pionnier de l'aviation",
+          "Naissance en 1902"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "aviateur américain"
+        ],
+        "classesWikidata": [
+          "aviateur"
+        ],
+        "humain": true
+      },
+      "attendu": [
+        "avion"
+      ],
+      "toleres": [
+        "histoire"
+      ],
+      "note": "Contre-piège : un thème physique est juste quand la définition le porte (aviateur)."
+    },
+    {
+      "page": {
+        "titre": "Jean Martin",
+        "descriptionSite": "Homonymie.",
+        "resume": "Jean Martin est un nom porté par plusieurs personnalités : Jean Martin, comédien ; Jean Martin, homme politique ; Jean Martin, footballeur.",
+        "categories": [
+          "Homonymie de personnes"
+        ],
+        "homonymie": true,
+        "descriptionWikidata": [
+          "page d'homonymie de Wikimédia"
+        ],
+        "classesWikidata": [],
+        "humain": false
+      },
+      "attendu": [],
+      "note": "Homonymie sans domaine dominant : sans thème fiable."
+    },
+    {
+      "page": {
+        "titre": "Tigre (hélicoptère)",
+        "descriptionSite": "Hélicoptère de combat franco-allemand.",
+        "resume": "Le Tigre est un hélicoptère d'attaque et de reconnaissance franco-allemand, développé par Eurocopter. Il est en service dans plusieurs armées européennes.",
+        "categories": [
+          "Hélicoptère d'attaque",
+          "Hélicoptère français",
+          "Hélicoptère militaire"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "hélicoptère d'attaque"
+        ],
+        "classesWikidata": [
+          "hélicoptère d'attaque"
+        ],
+        "humain": false
+      },
+      "attendu": [
+        "helicoptere"
+      ],
+      "toleres": [
+        "avion",
+        "vehicule",
+        "guerre"
+      ],
+      "note": "Piège : tigre → Félin."
+    },
+    {
+      "page": {
+        "titre": "Papillon (film)",
+        "descriptionSite": "Film américain de 1973 adapté d'un récit autobiographique.",
+        "resume": "Papillon est un film américain réalisé par Franklin J. Schaffner, sorti en 1973. Il est adapté du récit autobiographique d'Henri Charrière, surnommé Papillon, bagnard évadé de Guyane.",
+        "categories": [
+          "Film américain sorti en 1973",
+          "Film réalisé par Franklin J. Schaffner",
+          "Film sur la prison"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "film américain"
+        ],
+        "classesWikidata": [
+          "film"
+        ],
+        "humain": false
+      },
+      "attendu": [
+        "cinema"
+      ],
+      "note": "Piège : papillon → Insecte."
+    },
+    {
+      "page": {
+        "titre": "Le Chat (Geluck)",
+        "descriptionSite": "Personnage de bande dessinée créé par Philippe Geluck.",
+        "resume": "Le Chat est un personnage de bande dessinée créé par le dessinateur belge Philippe Geluck. Il apparaît dans de courts gags humoristiques.",
+        "categories": [
+          "Personnage de bande dessinée",
+          "Chat de fiction",
+          "Série de bande dessinée belge"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "personnage de bande dessinée"
+        ],
+        "classesWikidata": [
+          "personnage de bande dessinée"
+        ],
+        "humain": false
+      },
+      "attendu": [
+        "bd"
+      ],
+      "note": "Piège : chat → Chat. La catégorie « Chat de fiction » est un faux ami."
+    },
+    {
+      "page": {
+        "titre": "Python (langage)",
+        "descriptionSite": "Langage de programmation interprété.",
+        "resume": "Python est un langage de programmation interprété, multiparadigme et multiplateformes. Il favorise la programmation impérative structurée et orientée objet. Son nom vient des Monty Python.",
+        "categories": [
+          "Langage de programmation",
+          "Logiciel libre",
+          "Langage orienté objet"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "langage de programmation"
+        ],
+        "classesWikidata": [
+          "langage de programmation"
+        ],
+        "humain": false
+      },
+      "attendu": [
+        "informatique"
+      ],
+      "note": "Piège : python → Serpent."
+    },
+    {
+      "page": {
+        "titre": "Orange (entreprise)",
+        "descriptionSite": "Opérateur de télécommunications français.",
+        "resume": "Orange est une entreprise française de télécommunications, héritière de France Télécom. Elle est l'un des principaux opérateurs en Europe. Son logo est un carré orange.",
+        "categories": [
+          "Opérateur de télécommunications",
+          "Entreprise ayant son siège à Paris",
+          "Entreprise du CAC 40"
+        ],
+        "homonymie": false,
+        "descriptionWikidata": [
+          "entreprise française"
+        ],
+        "classesWikidata": [
+          "opérateur de télécommunications"
+        ],
+        "humain": false
+      },
+      "attendu": [
+        "technologie"
+      ],
+      "toleres": [
+        "informatique",
+        "societe"
+      ],
+      "note": "Piège : orange → Fruit ou Gastronomie."
+    }
+  ]
+}
