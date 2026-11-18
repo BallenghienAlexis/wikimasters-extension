@@ -43,6 +43,17 @@ export const TABLE = {
   Q25265: ['felin'], Q160: ['cetace'], Q25371: ['requin:0.7'], Q16986904: ['serpent'], Q21736: ['rapace'], Q5113: ['oiseau'], Q430: ['dinosaure'], Q131396: ['dinosaure'], Q1390: ['insecte'], Q28319: ['papillon'],
   Q1357: ['araignee'], Q7380: ['singe'], Q11788: ['ours'], Q144: ['chien'], Q146: ['chat'], Q1160573: ['cheval'], Q127282: ['poisson'], Q9394365: ['poisson'], Q12004: ['arbre'], Q764: ['champignon'], Q221448: ['champignon'], Q7377: ['animaux:0.5'], Q729: ['animaux:0.5'],
   Q756153: ['papillon'], // (?) Q430, Q1390, Q28319, Q1357, Q127282 : à confirmer
+  // ---- Ajouts guidés par la fréquence des classes non couvertes dans l'export réel (1 077 cartes tirées de la collection), sans regarder les cartes de référence ----
+  Q532: ['ville'], Q486972: ['ville'], Q15284: ['ville'], Q3558970: ['ville'], Q123964505: ['ville'], Q498162: ['ville'], Q17343829: ['ville'], Q116457956: ['ville'], Q747074: ['ville'], Q3184121: ['ville'], Q1802801: ['ville'],
+  Q667509: ['ville'], Q2074737: ['ville'], Q5153359: ['ville'], Q3266850: ['ville'], Q1852859: ['ville'], Q1115575: ['ville:0.7'], Q4976993: ['ville:0.7'],
+  Q14757767: ['geographie'], Q12357920: ['geographie'], Q12357832: ['geographie'], Q15042037: ['geographie'], Q1048835: ['geographie'], Q56061: ['geographie'], Q11618417: ['geographie'], Q192498: ['geographie'], Q4835091: ['geographie:0.6'], Q192611: ['politique'],
+  Q41466: ['hockey'], Q11774891: ['hockey'], Q5849: ['rugby'], Q14089670: ['rugby'], Q212434: ['sport:0.6'],
+  Q201788: ['histoire'], Q3621491: ['histoire:0.7'], Q1622272: ['education:0.5'], Q5428874: ['education:0.4'], Q37226: ['education:0.5'], Q901: ['sciences:0.6'], Q1650915: ['sciences:0.5'],
+  Q16970: ['christianisme', 'architecture:0.6'], Q24398318: ['religion'], Q44539: ['religion'], Q831474: ['christianisme'], Q191808: ['christianisme'], Q733786: ['religion'], Q140909609: ['christianisme:0.6'],
+  Q5633421: ['sciences'], Q591041: ['sciences:0.7'], Q737498: ['sciences'], Q35127: ['informatique'], Q3427877: ['informatique:0.6'], Q17376908: ['langue'],
+  Q55488: ['train'], Q695850: ['guerre', 'avion:0.6'], Q62447: ['avion'], Q245016: ['guerre'], Q645883: ['guerre'], Q350604: ['guerre'],
+  Q473972: ['nature'], Q46169: ['nature'], Q46831: ['montagne'], Q90834785: ['courseauto'], Q29048322: ['vehicule:0.6'], Q131569: ['politique:0.6'],
+  Q2385804: ['education'], Q5341295: ['education'], Q2085381: ['litterature:0.5'],
   // ---- Sport ----
   Q349: ['sport'], Q2312410: ['sport'], Q14547231: ['sport'], Q16510064: ['sport'], Q2066131: ['sport:0.6'],
   Q937857: ['football'], Q476028: ['football'], Q2736: ['football'], Q3665646: ['basketball'], Q13393265: ['basketball'], Q5372: ['basketball'],

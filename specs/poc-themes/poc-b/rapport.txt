@@ -1,54 +1,13 @@
-== POC B — Wikidata (toutes les cartes) — 317 cartes ==
-précision 91.3 % · rappel 63.6 % · F1 75.0 %
-faux thèmes 8.7 % (cartes touchées 6.9 %) · « sans thème » à tort 14.6 % · exactes 59.9 %
-pièges déclenchés 0.0 % · fausses propositions sur cartes vides 12.5 % · dépassements de 4 : 0
-cartes piégeuses (39) : précision 83.3 %, rappel 53.2 %
-  Four crématoire : prédit [] attendu [technologie]
-  Cambuses nord-américaines : prédit [] attendu [histoire]
+== POC B — Wikidata (toutes les cartes) — 575 cartes ==
+précision 91.3 % · rappel 36.3 % · F1 51.9 %
+faux thèmes 8.7 % (cartes touchées 3.8 %) · « sans thème » à tort 52.2 % · exactes 34.8 %
+pièges déclenchés 0.0 % · fausses propositions sur cartes vides 5.9 % · dépassements de 4 : 0
+cartes piégeuses (41) : précision 84.4 %, rappel 55.1 %
   Malibu : prédit [] attendu [ville]
   Malibu (rhum) : prédit [] attendu [rhum, alcool]
-  Maitrank : prédit [cocktail] attendu [alcool]
   Croix de saint André : prédit [] attendu [religion]
   Annexion de l’Alsace-Moselle (1940) : prédit [] attendu [secondeguerre, nazis]
-  Vera Salvequart : prédit [crime, sante] attendu [nazis, crime, secondeguerre]
-  Der Angriff : prédit [] attendu [nazis]
   Morcilla : prédit [] attendu [charcuterie]
-  Charles Darwin : prédit [] attendu [biologie]
-  Jules César : prédit [] attendu [romeantique]
-  Louis XIV : prédit [politique] attendu [royaute]
-  Heinrich Himmler : prédit [politique] attendu [nazis, secondeguerre]
-  Ted Bundy : prédit [psychologie] attendu [crime]
-
-== POC B — Wikidata (fiabilité moyenne ou haute) — 313 cartes ==
-précision 91.3 % · rappel 64.3 % · F1 75.5 %
-faux thèmes 8.7 % (cartes touchées 7.0 %) · « sans thème » à tort 13.4 % · exactes 60.7 %
-pièges déclenchés 0.0 % · fausses propositions sur cartes vides 12.5 % · dépassements de 4 : 0
-cartes piégeuses (37) : précision 83.3 %, rappel 55.6 %
-  Four crématoire : prédit [] attendu [technologie]
-  Malibu (rhum) : prédit [] attendu [rhum, alcool]
-  Maitrank : prédit [cocktail] attendu [alcool]
-  Croix de saint André : prédit [] attendu [religion]
-  Annexion de l’Alsace-Moselle (1940) : prédit [] attendu [secondeguerre, nazis]
-  Vera Salvequart : prédit [crime, sante] attendu [nazis, crime, secondeguerre]
-  Der Angriff : prédit [] attendu [nazis]
-  Morcilla : prédit [] attendu [charcuterie]
-  Charles Darwin : prédit [] attendu [biologie]
-  Jules César : prédit [] attendu [romeantique]
-  Louis XIV : prédit [politique] attendu [royaute]
-  Heinrich Himmler : prédit [politique] attendu [nazis, secondeguerre]
-  Ted Bundy : prédit [psychologie] attendu [crime]
-  Alan Turing : prédit [athletisme, informatique] attendu [informatique, mathematiques]
-  Elon Musk : prédit [informatique] attendu [technologie, fusee]
-
-== Hybride : B, sinon production — 317 cartes ==
-précision 91.3 % · rappel 71.9 % · F1 80.4 %
-faux thèmes 8.7 % (cartes touchées 7.9 %) · « sans thème » à tort 3.2 % · exactes 66.9 %
-pièges déclenchés 0.0 % · fausses propositions sur cartes vides 12.5 % · dépassements de 4 : 0
-cartes piégeuses (39) : précision 86.5 %, rappel 68.1 %
-  Four crématoire : prédit [] attendu [technologie]
-  Cambuses nord-américaines : prédit [] attendu [histoire]
-  Maitrank : prédit [cocktail] attendu [alcool]
-  Vera Salvequart : prédit [crime, sante] attendu [nazis, crime, secondeguerre]
   Louis XIV : prédit [politique] attendu [royaute]
   Heinrich Himmler : prédit [politique] attendu [nazis, secondeguerre]
   Ted Bundy : prédit [psychologie] attendu [crime]
@@ -57,27 +16,68 @@ cartes piégeuses (39) : précision 86.5 %, rappel 68.1 %
   Dalaï-lama : prédit [politique] attendu [bouddhisme, tibet]
   Saint Paul : prédit [litterature] attendu [christianisme]
   Neil Armstrong : prédit [espace, guerre] attendu [espace]
-  Rosa Parks : prédit [litterature] attendu [politique]
+  Rosa Parks : prédit [litterature, histoire] attendu [politique]
   Tiger Woods : prédit [litterature] attendu [golf]
-  Les Misérables : prédit [theatre] attendu [litterature]
 
-== Hybride : thèmes communs B ∩ production (sinon B) — 317 cartes ==
-précision 91.9 % · rappel 62.5 % · F1 74.4 %
-faux thèmes 8.1 % (cartes touchées 6.3 %) · « sans thème » à tort 14.6 % · exactes 60.3 %
-pièges déclenchés 0.0 % · fausses propositions sur cartes vides 12.5 % · dépassements de 4 : 0
-cartes piégeuses (39) : précision 86.2 %, rappel 53.2 %
-  Four crématoire : prédit [] attendu [technologie]
-  Cambuses nord-américaines : prédit [] attendu [histoire]
-  Malibu : prédit [] attendu [ville]
+== POC B — Wikidata (fiabilité moyenne ou haute) — 572 cartes ==
+précision 91.3 % · rappel 36.4 % · F1 52.1 %
+faux thèmes 8.7 % (cartes touchées 3.8 %) · « sans thème » à tort 51.9 % · exactes 35.0 %
+pièges déclenchés 0.0 % · fausses propositions sur cartes vides 5.9 % · dépassements de 4 : 0
+cartes piégeuses (40) : précision 84.4 %, rappel 56.3 %
   Malibu (rhum) : prédit [] attendu [rhum, alcool]
-  Maitrank : prédit [cocktail] attendu [alcool]
   Croix de saint André : prédit [] attendu [religion]
   Annexion de l’Alsace-Moselle (1940) : prédit [] attendu [secondeguerre, nazis]
-  Vera Salvequart : prédit [crime, sante] attendu [nazis, crime, secondeguerre]
-  Der Angriff : prédit [] attendu [nazis]
   Morcilla : prédit [] attendu [charcuterie]
-  Charles Darwin : prédit [] attendu [biologie]
-  Jules César : prédit [] attendu [romeantique]
   Louis XIV : prédit [politique] attendu [royaute]
   Heinrich Himmler : prédit [politique] attendu [nazis, secondeguerre]
   Ted Bundy : prédit [psychologie] attendu [crime]
+  Alan Turing : prédit [athletisme, informatique] attendu [informatique, mathematiques]
+  Elon Musk : prédit [informatique] attendu [technologie, fusee]
+  Dalaï-lama : prédit [politique] attendu [bouddhisme, tibet]
+  Saint Paul : prédit [litterature] attendu [christianisme]
+  Neil Armstrong : prédit [espace, guerre] attendu [espace]
+  Rosa Parks : prédit [litterature, histoire] attendu [politique]
+  Tiger Woods : prédit [litterature] attendu [golf]
+  Les Misérables : prédit [theatre] attendu [litterature]
+
+== Hybride : B, sinon production — 575 cartes ==
+précision 92.4 % · rappel 63.0 % · F1 74.9 %
+faux thèmes 7.6 % (cartes touchées 5.7 %) · « sans thème » à tort 16.1 % · exactes 61.4 %
+pièges déclenchés 1.7 % · fausses propositions sur cartes vides 5.9 % · dépassements de 4 : 0
+cartes piégeuses (41) : précision 86.8 %, rappel 67.3 %
+  Louis XIV : prédit [politique] attendu [royaute]
+  Heinrich Himmler : prédit [politique] attendu [nazis, secondeguerre]
+  Ted Bundy : prédit [psychologie] attendu [crime]
+  Alan Turing : prédit [athletisme, informatique] attendu [informatique, mathematiques]
+  Elon Musk : prédit [informatique] attendu [technologie, fusee]
+  Dalaï-lama : prédit [politique] attendu [bouddhisme, tibet]
+  Saint Paul : prédit [litterature] attendu [christianisme]
+  Neil Armstrong : prédit [espace, guerre] attendu [espace]
+  Rosa Parks : prédit [litterature, histoire] attendu [politique]
+  Tiger Woods : prédit [litterature] attendu [golf]
+  Les Misérables : prédit [theatre] attendu [litterature]
+  Batman : prédit [bd, combat] attendu [superheros]
+  Spider-Man : prédit [superheros, photographie] attendu [superheros]
+  Thriller : prédit [pop, rock] attendu [pop]
+  Tesla : prédit [societe] attendu [automobile]
+
+== Hybride : thèmes communs B ∩ production (sinon B) — 575 cartes ==
+précision 91.9 % · rappel 35.5 % · F1 51.2 %
+faux thèmes 8.1 % (cartes touchées 3.5 %) · « sans thème » à tort 52.2 % · exactes 34.8 %
+pièges déclenchés 0.0 % · fausses propositions sur cartes vides 5.9 % · dépassements de 4 : 0
+cartes piégeuses (41) : précision 87.1 %, rappel 55.1 %
+  Malibu : prédit [] attendu [ville]
+  Malibu (rhum) : prédit [] attendu [rhum, alcool]
+  Croix de saint André : prédit [] attendu [religion]
+  Annexion de l’Alsace-Moselle (1940) : prédit [] attendu [secondeguerre, nazis]
+  Morcilla : prédit [] attendu [charcuterie]
+  Louis XIV : prédit [politique] attendu [royaute]
+  Heinrich Himmler : prédit [politique] attendu [nazis, secondeguerre]
+  Ted Bundy : prédit [psychologie] attendu [crime]
+  Alan Turing : prédit [athletisme, informatique] attendu [informatique, mathematiques]
+  Elon Musk : prédit [informatique] attendu [technologie, fusee]
+  Dalaï-lama : prédit [politique] attendu [bouddhisme, tibet]
+  Saint Paul : prédit [litterature] attendu [christianisme]
+  Neil Armstrong : prédit [espace, guerre] attendu [espace]
+  Rosa Parks : prédit [litterature, histoire] attendu [politique]
+  Tiger Woods : prédit [litterature] attendu [golf]

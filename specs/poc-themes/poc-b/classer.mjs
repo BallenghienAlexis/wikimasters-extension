@@ -53,10 +53,25 @@ export function candidats(graphe, qid, options = {}) {
   return { scores, trace };
 }
 
+const REGNES = { Q729: 'animaux', Q756: 'plantes', Q764: 'champignon' };
+function chaineTaxon(graphe, qid) {
+  let n = qid;
+  for (let i = 0; i < 30 && n; i++) {
+    if (REGNES[n]) return REGNES[n];
+    n = graphe.entites[n]?.P171?.[0];
+  }
+  return null;
+}
+
 /** Choix final : seuil de score, parents retirés (on garde le plus précis), 4 au plus. */
 export function themesDe(graphe, qid, options = {}) {
   const { scores, trace } = candidats(graphe, qid, options);
   const seuil = options.seuil ?? 0.3;
+  // Repli taxon : aucune classe précise (félin, rapace…) mais la chaîne P171 mène au règne des animaux ou des plantes.
+  if (!scores.size) {
+    const regne = chaineTaxon(graphe, qid);
+    if (regne) scores.set(regne, 1);
+  }
   const tries = [...scores.entries()].filter(([, s]) => s >= seuil).sort((a, b) => b[1] - a[1]);
   const meilleur = tries[0]?.[1] ?? 0;
   // Relatif : un thème nettement moins soutenu que le meilleur est écarté (précision avant rappel).
@@ -70,7 +85,7 @@ export function themesDe(graphe, qid, options = {}) {
 }
 
 export function themesDuTitre(graphe, titreWikipedia, options) {
-  const info = graphe.titres[titreWikipedia];
+  const info = graphe.titres[titreWikipedia] ?? graphe.titres[titreWikipedia.replaceAll("'", '’')] ?? graphe.titres[titreWikipedia.replaceAll('’', "'")];
   if (!info || !info.qid || info.homonymie) return { themes: [], trace: [info?.homonymie ? 'page d’homonymie' : 'sans identifiant Wikidata'] };
   return themesDe(graphe, info.qid, options);
 }

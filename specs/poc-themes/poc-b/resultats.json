@@ -1,23 +1,6 @@
 {
  "details": [
   {
-   "titre": "Four crématoire",
-   "categorie": "objet",
-   "piege": true,
-   "predits": [],
-   "reference": [
-    "technologie"
-   ],
-   "corrects": [],
-   "faux": [],
-   "manquants": [
-    "technologie"
-   ],
-   "interdits": [],
-   "exacte": false,
-   "trace": []
-  },
-  {
    "titre": "Wagon",
    "categorie": "objet",
    "piege": true,
@@ -37,25 +20,6 @@
    "trace": [
     "train ← type of rail vehicle (Q137735383, P31, d=0)",
     "vehicule ← véhicule (Q42889, P279, d=3)"
-   ]
-  },
-  {
-   "titre": "Cambuses nord-américaines",
-   "categorie": "notion",
-   "piege": true,
-   "predits": [],
-   "reference": [
-    "histoire"
-   ],
-   "corrects": [],
-   "faux": [],
-   "manquants": [
-    "histoire"
-   ],
-   "interdits": [],
-   "exacte": false,
-   "trace": [
-    "vehicule ← véhicule (Q42889, P279, d=5)"
    ]
   },
   {
@@ -96,7 +60,7 @@
    "exacte": true,
    "trace": [
     "voiture ← modèle d'automobile (Q3231690, P31, d=0)",
-    "vehicule ← véhicule (Q42889, P279, d=3)"
+    "vehicule ← modèle de véhicule (Q29048322, P31, d=1)"
    ]
   },
   {
@@ -118,74 +82,6 @@
    "exacte": false,
    "trace": [
     "sans identifiant Wikidata"
-   ]
-  },
-  {
-   "titre": "Longmorn",
-   "categorie": "organisation",
-   "piege": true,
-   "predits": [
-    "whisky"
-   ],
-   "reference": [
-    "whisky"
-   ],
-   "corrects": [
-    "whisky"
-   ],
-   "faux": [],
-   "manquants": [],
-   "interdits": [],
-   "exacte": true,
-   "trace": [
-    "whisky ← distillerie de whisky (Q10373548, P31, d=0)"
-   ]
-  },
-  {
-   "titre": "Maitrank",
-   "categorie": "objet",
-   "piege": true,
-   "predits": [
-    "cocktail"
-   ],
-   "reference": [
-    "alcool"
-   ],
-   "corrects": [],
-   "faux": [
-    "cocktail"
-   ],
-   "manquants": [
-    "alcool"
-   ],
-   "interdits": [],
-   "exacte": false,
-   "trace": [
-    "cocktail ← cocktail avec alcool (Q134768, P279, d=1)"
-   ]
-  },
-  {
-   "titre": "Solution de Dakin",
-   "categorie": "notion",
-   "piege": true,
-   "predits": [
-    "sante"
-   ],
-   "reference": [
-    "sante",
-    "chimie"
-   ],
-   "corrects": [
-    "sante"
-   ],
-   "faux": [],
-   "manquants": [
-    "chimie"
-   ],
-   "interdits": [],
-   "exacte": false,
-   "trace": [
-    "sante ← médicament (Q12140, P31, d=0)"
    ]
   },
   {
@@ -227,130 +123,6 @@
    ]
   },
   {
-   "titre": "Adolf Hitler",
-   "categorie": "personne",
-   "piege": false,
-   "predits": [
-    "guerre"
-   ],
-   "reference": [
-    "nazis",
-    "secondeguerre",
-    "politique"
-   ],
-   "corrects": [],
-   "faux": [],
-   "manquants": [
-    "nazis",
-    "secondeguerre",
-    "politique"
-   ],
-   "interdits": [],
-   "exacte": false,
-   "trace": [
-    "guerre ← soldat (Q4991371, P106, d=0)",
-    "peinture ← artiste peintre (Q1028181, P106, d=0)",
-    "politique ← personnalité politique (Q82955, P106, d=0)",
-    "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
-    "nazis ← nazisme (Q7310, P101, d=0)",
-    "societe ← racisme (Q8461, P101, d=2)",
-    "biologie ← procédé biologique (Q2996394, P101, d=4)",
-    "physique ← phénomène physique (Q1293220, P101, d=6)"
-   ]
-  },
-  {
-   "titre": "Vera Salvequart",
-   "categorie": "personne",
-   "piege": true,
-   "predits": [
-    "crime",
-    "sante"
-   ],
-   "reference": [
-    "nazis",
-    "crime",
-    "secondeguerre"
-   ],
-   "corrects": [
-    "crime"
-   ],
-   "faux": [
-    "sante"
-   ],
-   "manquants": [
-    "nazis",
-    "secondeguerre"
-   ],
-   "interdits": [],
-   "exacte": false,
-   "trace": [
-    "sante ← infirmière ou infirmier (Q186360, P106, d=0)",
-    "crime ← tortionnaire (Q20725072, P106, d=0)"
-   ]
-  },
-  {
-   "titre": "Der Angriff",
-   "categorie": "oeuvre",
-   "piege": true,
-   "predits": [],
-   "reference": [
-    "nazis"
-   ],
-   "corrects": [],
-   "faux": [],
-   "manquants": [
-    "nazis"
-   ],
-   "interdits": [],
-   "exacte": false,
-   "trace": []
-  },
-  {
-   "titre": "Regelbau 602",
-   "categorie": "objet",
-   "piege": true,
-   "predits": [
-    "nazis"
-   ],
-   "reference": [
-    "secondeguerre"
-   ],
-   "corrects": [],
-   "faux": [],
-   "manquants": [
-    "secondeguerre"
-   ],
-   "interdits": [],
-   "exacte": false,
-   "trace": [
-    "nazis ← Troisième Reich (Q7318, P495, d=0)"
-   ]
-  },
-  {
-   "titre": "Novelists",
-   "categorie": "organisation",
-   "piege": false,
-   "predits": [
-    "metalcore"
-   ],
-   "reference": [
-    "metalcore"
-   ],
-   "corrects": [
-    "metalcore"
-   ],
-   "faux": [],
-   "manquants": [],
-   "interdits": [],
-   "exacte": true,
-   "trace": [
-    "musique ← groupe de musique (Q215380, P31, d=0)",
-    "metalcore ← metalcore (Q183862, P136, d=0)",
-    "punk ← Q3071 (Q3071, P136, d=2)",
-    "rock ← rock (Q11399, P136, d=3)"
-   ]
-  },
-  {
    "titre": "Morcilla",
    "categorie": "objet",
    "piege": false,
@@ -366,28 +138,6 @@
    "interdits": [],
    "exacte": false,
    "trace": []
-  },
-  {
-   "titre": "Tesla Semi",
-   "categorie": "objet",
-   "piege": false,
-   "predits": [
-    "camion"
-   ],
-   "reference": [
-    "camion"
-   ],
-   "corrects": [
-    "camion"
-   ],
-   "faux": [],
-   "manquants": [],
-   "interdits": [],
-   "exacte": true,
-   "trace": [
-    "camion ← modèle de camion (Q21546143, P31, d=0)",
-    "vehicule ← véhicule (Q42889, P279, d=2)"
-   ]
   },
   {
    "titre": "Hydravion",
@@ -433,49 +183,6 @@
    ]
   },
   {
-   "titre": "Leslie Van Houten",
-   "categorie": "personne",
-   "piege": false,
-   "predits": [
-    "crime"
-   ],
-   "reference": [
-    "crime"
-   ],
-   "corrects": [
-    "crime"
-   ],
-   "faux": [],
-   "manquants": [],
-   "interdits": [],
-   "exacte": true,
-   "trace": [
-    "crime ← meurtrier ou meurtrière (Q931260, P106, d=0)"
-   ]
-  },
-  {
-   "titre": "Honda CB 900 F Bol d’Or",
-   "categorie": "objet",
-   "piege": false,
-   "predits": [
-    "moto"
-   ],
-   "reference": [
-    "moto"
-   ],
-   "corrects": [
-    "moto"
-   ],
-   "faux": [],
-   "manquants": [],
-   "interdits": [],
-   "exacte": true,
-   "trace": [
-    "moto ← modèle de moto (Q23866334, P31, d=0)",
-    "vehicule ← véhicule (Q42889, P279, d=5)"
-   ]
-  },
-  {
    "titre": "Camille-Laurin (circonscription provinciale)",
    "categorie": "lieu",
    "piege": false,
@@ -493,7 +200,8 @@
    "interdits": [],
    "exacte": true,
    "trace": [
-    "politique ← circonscription électorale provinciale du Québec (Q2973931, P31, d=0)"
+    "politique ← circonscription électorale provinciale du Québec (Q2973931, P31, d=0)",
+    "geographie ← entité territoriale administrative (Q56061, P31, d=4)"
    ]
   },
   {
@@ -515,9 +223,11 @@
    "exacte": true,
    "trace": [
     "physique ← physicien théoricien ou physicienne théoricienne (Q19350898, P106, d=0)",
+    "education ← professeur d'université (Q1622272, P106, d=0)",
     "idees ← philosophe (Q4964182, P106, d=0)",
     "technologie ← ingénieur ou ingénieure (Q81096, P106, d=1)",
     "litterature ← écrivain ou écrivaine (Q36180, P106, d=1)",
+    "sciences ← scientifique (Q901, P106, d=1)",
     "biologie ← procédé biologique (Q2996394, P101, d=6)"
    ]
   },
@@ -544,6 +254,8 @@
    "trace": [
     "physique ← physicien ou physicienne (Q169470, P106, d=0)",
     "chimie ← chimiste (Q593644, P106, d=0)",
+    "education ← professeur d'université (Q1622272, P106, d=0)",
+    "sciences ← scientifique (Q901, P106, d=1)",
     "idees ← philosophie (Q5891, P101, d=4)",
     "biologie ← procédé biologique (Q2996394, P101, d=5)"
    ]
@@ -552,7 +264,9 @@
    "titre": "Charles Darwin",
    "categorie": "personne",
    "piege": false,
-   "predits": [],
+   "predits": [
+    "sciences"
+   ],
    "reference": [
     "biologie"
    ],
@@ -566,6 +280,7 @@
    "trace": [
     "idees ← philosophe (Q4964182, P106, d=0)",
     "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
+    "sciences ← scientifique (Q901, P106, d=1)",
     "biologie ← biologiste (Q864503, P106, d=1)"
    ]
   },
@@ -666,7 +381,9 @@
     "cinema ← acteur ou actrice (Q33999, P106, d=0)",
     "jazz ← jazz (Q8341, P136, d=0)",
     "litterature ← auteur ou autrice (Q482980, P106, d=1)",
-    "cinema ← réalisateur ou réalisatrice (Q3455803, P106, d=2)"
+    "cinema ← réalisateur ou réalisatrice (Q3455803, P106, d=2)",
+    "histoire ← historien ou historienne (Q201788, P106, d=2)",
+    "sciences ← scientifique (Q901, P106, d=4)"
    ]
   },
   {
@@ -770,7 +487,9 @@
    "titre": "Jules César",
    "categorie": "personne",
    "piege": false,
-   "predits": [],
+   "predits": [
+    "histoire"
+   ],
    "reference": [
     "romeantique"
    ],
@@ -782,10 +501,12 @@
    "interdits": [],
    "exacte": false,
    "trace": [
+    "histoire ← historien ou historienne (Q201788, P106, d=0)",
     "poesie ← poète ou poétesse (Q49757, P106, d=0)",
     "politique ← personnalité politique (Q82955, P106, d=0)",
     "guerre ← militaire (Q47064, P106, d=0)",
     "litterature ← écrivain ou écrivaine (Q36180, P106, d=1)",
+    "sciences ← scientifique (Q901, P106, d=2)",
     "religion ← chef religieux (Q15995642, P106, d=3)"
    ]
   },
@@ -835,6 +556,8 @@
     "politique ← personne d'État (Q372436, P106, d=0)",
     "guerre ← officier (Q189290, P106, d=0)",
     "litterature ← auteur ou autrice (Q482980, P106, d=0)",
+    "sciences ← scientifique (Q901, P106, d=2)",
+    "histoire ← historien ou historienne (Q201788, P106, d=3)",
     "biologie ← procédé biologique (Q2996394, P101, d=4)",
     "physique ← phénomène physique (Q1293220, P101, d=6)"
    ]
@@ -862,8 +585,10 @@
    "trace": [
     "politique ← personnalité politique (Q82955, P106, d=0)",
     "peinture ← artiste peintre (Q1028181, P106, d=0)",
+    "histoire ← historien ou historienne (Q201788, P106, d=0)",
     "cinema ← scénariste (Q28389, P106, d=0)",
-    "litterature ← auteur ou autrice (Q482980, P106, d=1)"
+    "litterature ← auteur ou autrice (Q482980, P106, d=1)",
+    "sciences ← scientifique (Q901, P106, d=2)"
    ]
   },
   {
@@ -885,7 +610,8 @@
    "exacte": true,
    "trace": [
     "politique ← personnalité politique (Q82955, P106, d=0)",
-    "litterature ← auteur ou autrice (Q482980, P106, d=2)"
+    "litterature ← auteur ou autrice (Q482980, P106, d=2)",
+    "sciences ← scientifique (Q901, P106, d=3)"
    ]
   },
   {
@@ -935,6 +661,8 @@
     "politique ← personnalité politique (Q82955, P106, d=0)",
     "litterature ← romancier ou romancière (Q6625963, P106, d=0)",
     "cinema ← scénariste (Q28389, P106, d=0)",
+    "histoire ← historien ou historienne (Q201788, P106, d=2)",
+    "sciences ← scientifique (Q901, P106, d=4)",
     "idees ← philosophie (Q5891, P101, d=6)"
    ]
   },
@@ -1060,10 +788,13 @@
     "sport ← sportif ou sportive (Q2066131, P106, d=0)",
     "basketball ← basket-ball (Q5372, P641, d=0)",
     "baseball ← baseball (Q5369, P641, d=0)",
+    "sport ← sport olympique (Q212434, P641, d=1)",
     "litterature ← auteur ou autrice (Q482980, P106, d=2)",
+    "histoire ← historien ou historienne (Q201788, P106, d=2)",
     "litterature ← écrivain ou écrivaine (Q36180, P106, d=2)",
     "sport ← sport (Q349, P641, d=2)",
-    "jeux ← jeu (Q11410, P641, d=2)"
+    "jeux ← jeu (Q11410, P641, d=2)",
+    "sciences ← scientifique (Q901, P106, d=4)"
    ]
   },
   {
@@ -1087,6 +818,7 @@
     "tennis ← joueur ou joueuse de tennis (Q10833314, P106, d=0)",
     "tennis ← tennis (Q847, P641, d=0)",
     "sport ← sportif ou sportive (Q2066131, P106, d=1)",
+    "sport ← sport olympique (Q212434, P641, d=1)",
     "sport ← sport (Q349, P641, d=2)",
     "jeux ← jeu (Q11410, P641, d=2)"
    ]
@@ -1165,7 +897,9 @@
     "litterature ← auteur ou autrice (Q482980, P106, d=0)",
     "sport ← sportif ou sportive (Q2066131, P106, d=0)",
     "combat ← boxe (Q32112, P641, d=0)",
-    "sport ← sport (Q349, P641, d=3)",
+    "sport ← sport olympique (Q212434, P641, d=1)",
+    "histoire ← historien ou historienne (Q201788, P106, d=2)",
+    "sciences ← scientifique (Q901, P106, d=4)",
     "jeux ← jeu (Q11410, P641, d=4)"
    ]
   },
@@ -1348,7 +1082,7 @@
     "cinema ← producteur ou productrice de cinéma (Q3282637, P106, d=0)",
     "guerre ← soldat (Q4991371, P106, d=0)",
     "bd ← bande dessinée (Q1004, P136, d=0)",
-    "litterature ← auteur ou autrice (Q482980, P106, d=1)",
+    "litterature ← maison d'édition (Q2085381, P101, d=0)",
     "litterature ← écrivain ou écrivaine (Q36180, P106, d=1)",
     "litterature ← œuvre littéraire (Q7725634, P136, d=1)",
     "societe ← entreprise (Q6881511, P101, d=1)"
@@ -1380,8 +1114,11 @@
    "trace": [
     "informatique ← informaticien ou informaticienne (Q82594, P106, d=0)",
     "mathematiques ← mathématicien ou mathématicienne (Q170790, P106, d=0)",
+    "education ← professeur d'université (Q1622272, P106, d=0)",
     "athletisme ← athlétisme (Q542, P641, d=0)",
+    "sciences ← scientifique (Q901, P106, d=1)",
     "idees ← philosophe (Q4964182, P106, d=1)",
+    "sport ← sport olympique (Q212434, P641, d=1)",
     "sport ← sport (Q349, P641, d=2)",
     "jeux ← jeu (Q11410, P641, d=3)",
     "biologie ← procédé biologique (Q2996394, P101, d=5)",
@@ -1408,7 +1145,8 @@
    "trace": [
     "informatique ← informaticien ou informaticienne (Q82594, P106, d=0)",
     "cinema ← producteur ou productrice de cinéma (Q3282637, P106, d=0)",
-    "technologie ← ingénieur ou ingénieure (Q81096, P106, d=1)"
+    "technologie ← ingénieur ou ingénieure (Q81096, P106, d=1)",
+    "sciences ← scientifique (Q901, P106, d=1)"
    ]
   },
   {
@@ -1462,6 +1200,8 @@
     "idees ← philosophe (Q4964182, P106, d=0)",
     "idees ← philosophie (Q5891, P101, d=0)",
     "litterature ← écrivain ou écrivaine (Q36180, P106, d=1)",
+    "sciences ← scientifique (Q901, P106, d=2)",
+    "histoire ← historien ou historienne (Q201788, P106, d=2)",
     "societe ← mouvement social (Q49773, P101, d=3)",
     "biologie ← procédé biologique (Q2996394, P101, d=5)"
    ]
@@ -1534,7 +1274,8 @@
    "exacte": false,
    "trace": [
     "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
-    "religion ← théologien ou théologienne (Q1234713, P106, d=0)"
+    "religion ← théologien ou théologienne (Q1234713, P106, d=0)",
+    "sciences ← scientifique (Q901, P106, d=2)"
    ]
   },
   {
@@ -1559,7 +1300,10 @@
     "idees ← philosophe (Q4964182, P106, d=0)",
     "religion ← chef religieux (Q15995642, P106, d=0)",
     "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
-    "religion ← religion (Q9174, P101, d=0)"
+    "religion ← religion (Q9174, P101, d=0)",
+    "religion ← moine ou moniale (Q733786, P106, d=1)",
+    "education ← enseignant ou enseignante (Q37226, P106, d=1)",
+    "sciences ← scientifique (Q901, P106, d=2)"
    ]
   },
   {
@@ -1587,6 +1331,8 @@
     "poesie ← poète ou poétesse (Q49757, P106, d=0)",
     "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
     "politique ← politique (Q7163, P101, d=0)",
+    "sciences ← scientifique (Q901, P106, d=2)",
+    "sport ← sport olympique (Q212434, P641, d=2)",
     "sport ← sport (Q349, P641, d=3)",
     "jeux ← jeu (Q11410, P641, d=4)",
     "guerre ← conflit (Q180684, P641, d=4)",
@@ -1616,6 +1362,7 @@
     "sante ← neurologue (Q783906, P106, d=0)",
     "biologie ← biologiste (Q864503, P106, d=2)",
     "litterature ← écrivain ou écrivaine (Q36180, P106, d=2)",
+    "sciences ← scientifique (Q901, P106, d=3)",
     "idees ← philosophie (Q5891, P101, d=4)"
    ]
   },
@@ -1707,7 +1454,9 @@
     "politique ← personnalité politique (Q82955, P106, d=0)",
     "cinema ← scénariste (Q28389, P106, d=0)",
     "litterature ← auteur ou autrice (Q482980, P106, d=1)",
-    "litterature ← écrivain ou écrivaine (Q36180, P106, d=2)"
+    "histoire ← historien ou historienne (Q201788, P106, d=2)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=2)",
+    "sciences ← scientifique (Q901, P106, d=4)"
    ]
   },
   {
@@ -1760,7 +1509,9 @@
    "interdits": [],
    "exacte": false,
    "trace": [
+    "education ← professeur d'université (Q1622272, P106, d=0)",
     "espace ← astronaute (Q11631, P106, d=0)",
+    "sciences ← scientifique (Q901, P106, d=1)",
     "technologie ← ingénieur ou ingénieure (Q81096, P106, d=1)",
     "guerre ← officier (Q189290, P106, d=2)",
     "idees ← philosophie (Q5891, P101, d=5)",
@@ -1787,7 +1538,8 @@
    "trace": [
     "espace ← astronaute (Q11631, P106, d=0)",
     "guerre ← officier (Q189290, P106, d=0)",
-    "politique ← personnalité politique (Q82955, P106, d=0)"
+    "politique ← personnalité politique (Q82955, P106, d=0)",
+    "sciences ← scientifique (Q901, P106, d=1)"
    ]
   },
   {
@@ -1818,7 +1570,8 @@
    "categorie": "personne",
    "piege": false,
    "predits": [
-    "litterature"
+    "litterature",
+    "histoire"
    ],
    "reference": [
     "politique"
@@ -1834,8 +1587,10 @@
    "exacte": false,
    "trace": [
     "litterature ← auteur ou autrice (Q482980, P106, d=2)",
+    "histoire ← historien ou historienne (Q201788, P106, d=2)",
     "litterature ← écrivain ou écrivaine (Q36180, P106, d=2)",
     "societe ← mouvement social (Q49773, P101, d=2)",
+    "sciences ← scientifique (Q901, P106, d=4)",
     "biologie ← procédé biologique (Q2996394, P101, d=6)"
    ]
   },
@@ -1860,74 +1615,9 @@
     "baseball ← joueur ou joueuse de baseball (Q10871364, P106, d=0)",
     "baseball ← baseball (Q5369, P641, d=0)",
     "sport ← sportif ou sportive (Q2066131, P106, d=1)",
+    "sport ← sport olympique (Q212434, P641, d=1)",
     "jeux ← jeu (Q11410, P641, d=2)",
     "sport ← sport (Q349, P641, d=2)"
-   ]
-  },
-  {
-   "titre": "Unni Birkrem",
-   "categorie": "personne",
-   "piege": false,
-   "predits": [
-    "handball"
-   ],
-   "reference": [
-    "handball"
-   ],
-   "corrects": [
-    "handball"
-   ],
-   "faux": [],
-   "manquants": [],
-   "interdits": [],
-   "exacte": true,
-   "trace": [
-    "handball ← handballeur ou handballeuse (Q12840545, P106, d=0)",
-    "handball ← handball (Q8418, P641, d=0)",
-    "sport ← sportif ou sportive (Q2066131, P106, d=1)",
-    "sport ← sport (Q349, P641, d=2)",
-    "jeux ← jeu (Q11410, P641, d=2)"
-   ]
-  },
-  {
-   "titre": "Johann Siegfried Hufnagel",
-   "categorie": "personne",
-   "piege": false,
-   "predits": [],
-   "reference": [
-    "insecte"
-   ],
-   "corrects": [],
-   "faux": [],
-   "manquants": [
-    "insecte"
-   ],
-   "interdits": [],
-   "exacte": false,
-   "trace": [
-    "biologie ← biologiste (Q864503, P106, d=3)"
-   ]
-  },
-  {
-   "titre": "Pierre Ier de Cros",
-   "categorie": "personne",
-   "piege": false,
-   "predits": [
-    "christianisme"
-   ],
-   "reference": [
-    "christianisme"
-   ],
-   "corrects": [
-    "christianisme"
-   ],
-   "faux": [],
-   "manquants": [],
-   "interdits": [],
-   "exacte": true,
-   "trace": [
-    "christianisme ← prélat (Q725440, P106, d=0)",
-    "religion ← chef religieux (Q15995642, P106, d=3)"
    ]
   },
   {
@@ -1951,10 +1641,11 @@
     "combat ← boxeur ou boxeuse (Q11338576, P106, d=0)",
     "cinema ← acteur ou actrice (Q33999, P106, d=0)",
     "combat ← boxe (Q32112, P641, d=0)",
-    "sport ← sportif ou sportive (Q2066131, P106, d=2)",
+    "sport ← sport olympique (Q212434, P641, d=1)",
     "litterature ← auteur ou autrice (Q482980, P106, d=2)",
+    "histoire ← historien ou historienne (Q201788, P106, d=2)",
     "litterature ← écrivain ou écrivaine (Q36180, P106, d=2)",
-    "sport ← sport (Q349, P641, d=3)",
+    "sciences ← scientifique (Q901, P106, d=4)",
     "jeux ← jeu (Q11410, P641, d=4)"
    ]
   },
@@ -1981,8 +1672,11 @@
     "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
     "sport ← sportif ou sportive (Q2066131, P106, d=0)",
     "tennis ← tennis (Q847, P641, d=0)",
+    "sport ← sport olympique (Q212434, P641, d=1)",
+    "histoire ← historien ou historienne (Q201788, P106, d=2)",
     "sport ← sport (Q349, P641, d=2)",
-    "jeux ← jeu (Q11410, P641, d=2)"
+    "jeux ← jeu (Q11410, P641, d=2)",
+    "sciences ← scientifique (Q901, P106, d=4)"
    ]
   },
   {
@@ -2008,6 +1702,7 @@
     "sport ← sportif ou sportive (Q2066131, P106, d=0)",
     "athletisme ← athlétisme (Q542, P641, d=0)",
     "football ← football (Q2736, P641, d=0)",
+    "sport ← sport olympique (Q212434, P641, d=1)",
     "sport ← sport (Q349, P641, d=2)",
     "jeux ← jeu (Q11410, P641, d=2)",
     "physique ← phénomène physique (Q1293220, P641, d=6)"
@@ -2034,6 +1729,7 @@
     "natation ← nageur ou nageuse (Q10843402, P106, d=0)",
     "natation ← natation sportive (Q31920, P641, d=0)",
     "sport ← sportif ou sportive (Q2066131, P106, d=1)",
+    "sport ← sport olympique (Q212434, P641, d=1)",
     "sport ← sport (Q349, P641, d=2)",
     "jeux ← jeu (Q11410, P641, d=3)",
     "biologie ← procédé biologique (Q2996394, P641, d=4)",
@@ -2088,7 +1784,9 @@
    "trace": [
     "biologie ← microbiologiste (Q3779582, P106, d=0)",
     "chimie ← chimiste (Q593644, P106, d=0)",
+    "education ← professeur d'université (Q1622272, P106, d=0)",
     "technologie ← ingénieur ou ingénieure (Q81096, P106, d=1)",
+    "sciences ← scientifique (Q901, P106, d=1)",
     "idees ← philosophie (Q5891, P101, d=4)"
    ]
   },
@@ -2119,6 +1817,7 @@
     "espace ← astronome (Q11063, P106, d=0)",
     "religion ← théologien ou théologienne (Q1234713, P106, d=0)",
     "politique ← personnalité politique (Q82955, P106, d=0)",
+    "sciences ← scientifique (Q901, P106, d=1)",
     "technologie ← ingénieur ou ingénieure (Q81096, P106, d=1)",
     "biologie ← procédé biologique (Q2996394, P101, d=4)"
    ]
@@ -2219,7 +1918,10 @@
     "cinema ← scénariste (Q28389, P106, d=0)",
     "poesie ← poète ou poétesse (Q49757, P106, d=0)",
     "theatre ← dramaturge (Q214917, P106, d=0)",
+    "sport ← sport olympique (Q212434, P641, d=1)",
+    "histoire ← historien ou historienne (Q201788, P106, d=2)",
     "sport ← sport (Q349, P641, d=2)",
+    "sciences ← publication scientifique (Q591041, P136, d=3)",
     "jeux ← jeu (Q11410, P641, d=3)",
     "biologie ← procédé biologique (Q2996394, P101, d=6)"
    ]
@@ -2251,6 +1953,7 @@
     "mathematiques ← mathématicien ou mathématicienne (Q170790, P106, d=0)",
     "sculpture ← sculpteur ou sculptrice (Q1281618, P106, d=0)",
     "architecture ← architecte (Q42973, P106, d=0)",
+    "sciences ← scientifique (Q901, P106, d=1)",
     "biologie ← biologiste (Q864503, P106, d=2)",
     "idees ← philosophe (Q4964182, P106, d=2)"
    ]
@@ -2305,8 +2008,10 @@
    "trace": [
     "informatique ← informaticien ou informaticienne (Q82594, P106, d=0)",
     "physique ← physicien ou physicienne (Q169470, P106, d=0)",
+    "education ← professeur d'université (Q1622272, P106, d=0)",
     "technologie ← ingénieur ou ingénieure (Q81096, P106, d=0)",
     "litterature ← auteur ou autrice (Q482980, P106, d=0)",
+    "sciences ← scientifique (Q901, P106, d=1)",
     "idees ← philosophie (Q5891, P101, d=5)",
     "biologie ← procédé biologique (Q2996394, P101, d=6)"
    ]
@@ -2553,6 +2258,7 @@
     "animation ← film d'animation (Q202866, P31, d=0)",
     "cinema ← film (Q11424, P31, d=1)",
     "felin ← félins (Q25265, P921, d=2)",
+    "geographie ← division politique (Q1048835, P921, d=2)",
     "felin ← félins (Q25265, P921, d=0.6000000000000001)",
     "animaux ← mammifères (Q7377, P921, d=4.4)",
     "animaux ← mammifères (Q7377, P921, d=3.6000000000000005)",
@@ -2690,7 +2396,7 @@
     "combat ← boxe (Q32112, P641, d=0)",
     "guerre ← soldat (Q4991371, P106, d=1)",
     "sport ← sportif ou sportive (Q2066131, P106, d=1)",
-    "sport ← sport (Q349, P641, d=3)",
+    "sport ← sport olympique (Q212434, P641, d=1)",
     "jeux ← jeu (Q11410, P641, d=4)"
    ]
   },
@@ -2718,6 +2424,8 @@
     "superheros ← muté (Q14831768, P31, d=0)",
     "bd ← personnage de bande dessinée (Q1114461, P31, d=0)",
     "photographie ← photographe (Q33231, P106, d=0)",
+    "sciences ← scientifique (Q901, P106, d=0)",
+    "education ← enseignant ou enseignante (Q37226, P106, d=0)",
     "technologie ← ingénieur ou ingénieure (Q81096, P106, d=1)"
    ]
   },
@@ -3020,7 +2728,7 @@
    "trace": [
     "cinema ← film (Q11424, P31, d=0)",
     "secondeguerre ← Seconde Guerre mondiale (Q362, P921, d=0)",
-    "guerre ← conflit (Q180684, P921, d=3)"
+    "guerre ← conflit armé (Q350604, P921, d=2)"
    ]
   },
   {
@@ -3044,6 +2752,7 @@
     "litterature ← œuvre littéraire (Q7725634, P31, d=0)",
     "idees ← philosophie (Q5891, P136, d=1)",
     "societe ← racisme (Q8461, P921, d=1)",
+    "sciences ← publication scientifique (Q591041, P136, d=3)",
     "biologie ← procédé biologique (Q2996394, P921, d=5)"
    ]
   },
@@ -3394,7 +3103,7 @@
    "exacte": false,
    "trace": [
     "societe ← entreprise (Q6881511, P31, d=0)",
-    "informatique ← logiciel (Q7397, P31, d=3)"
+    "informatique ← site web (Q35127, P31, d=1)"
    ]
   },
   {
@@ -3415,7 +3124,8 @@
    "interdits": [],
    "exacte": true,
    "trace": [
-    "informatique ← langage de programmation orienté objet (Q899523, P31, d=0)"
+    "informatique ← langage de programmation orienté objet (Q899523, P31, d=0)",
+    "langue ← languoïde (Q17376908, P31, d=5)"
    ]
   },
   {
@@ -3529,7 +3239,8 @@
    "interdits": [],
    "exacte": false,
    "trace": [
-    "nazis ← camp de concentration nazi (Q328468, P31, d=0)"
+    "nazis ← camp de concentration nazi (Q328468, P31, d=0)",
+    "ville ← établissement humain (Q486972, P31, d=4)"
    ]
   },
   {
@@ -3751,7 +3462,9 @@
    "titre": "Marvel Comics",
    "categorie": "organisation",
    "piege": false,
-   "predits": [],
+   "predits": [
+    "litterature"
+   ],
    "reference": [
     "superheros",
     "bd"
@@ -3765,6 +3478,7 @@
    "interdits": [],
    "exacte": false,
    "trace": [
+    "litterature ← maison d'édition (Q2085381, P31, d=0)",
     "societe ← entreprise (Q6881511, P31, d=1)"
    ]
   },
@@ -3809,7 +3523,9 @@
    "interdits": [],
    "exacte": true,
    "trace": [
-    "ville ← commune française (Q484170, P31, d=0)"
+    "ville ← commune française (Q484170, P31, d=0)",
+    "politique ← circonscription électorale (Q192611, P31, d=1)",
+    "geographie ← LAU 2 (Q11618417, P31, d=1)"
    ]
   },
   {
@@ -3831,7 +3547,8 @@
    "exacte": true,
    "trace": [
     "ville ← métropole (Q200250, P31, d=0)",
-    "geographie ← région historique (Q1620908, P31, d=5)"
+    "geographie ← entité territoriale administrative (Q56061, P31, d=2)",
+    "geographie ← division politique (Q1048835, P31, d=3)"
    ]
   },
   {
@@ -3852,7 +3569,8 @@
    "interdits": [],
    "exacte": true,
    "trace": [
-    "ville ← cité aux États-Unis (Q1093829, P31, d=0)"
+    "ville ← cité aux États-Unis (Q1093829, P31, d=0)",
+    "geographie ← entité territoriale administrative (Q56061, P31, d=1)"
    ]
   },
   {
@@ -3876,7 +3594,9 @@
    "interdits": [],
    "exacte": false,
    "trace": [
-    "ville ← ville-préfecture de Chine (Q748149, P31, d=0)"
+    "ville ← ville-préfecture de Chine (Q748149, P31, d=0)",
+    "geographie ← entité territoriale administrative (Q56061, P31, d=1)",
+    "geographie ← division administrative de deuxième niveau (Q12357832, P31, d=2)"
    ]
   },
   {
@@ -3901,6 +3621,7 @@
    "exacte": false,
    "trace": [
     "ville ← ville (Q7930989, P31, d=0)",
+    "geographie ← entité territoriale administrative (Q56061, P31, d=2)",
     "politique ← forme de gouvernement (Q1307214, P17, d=2)"
    ]
   },
@@ -3923,6 +3644,8 @@
    "exacte": true,
    "trace": [
     "pays ← État souverain (Q3624078, P31, d=0)",
+    "geographie ← territoire (Q4835091, P31, d=1)",
+    "geographie ← division politique (Q1048835, P31, d=1)",
     "politique ← système politique (Q28108, P31, d=2)"
    ]
   },
@@ -4034,7 +3757,8 @@
    "interdits": [],
    "exacte": true,
    "trace": [
-    "fleuve ← fleuve ou rivière (Q4022, P31, d=0)"
+    "fleuve ← fleuve ou rivière (Q4022, P31, d=0)",
+    "geographie ← territoire (Q4835091, P31, d=3)"
    ]
   },
   {
@@ -4055,7 +3779,8 @@
    "interdits": [],
    "exacte": true,
    "trace": [
-    "fleuve ← fleuve ou rivière (Q4022, P31, d=0)"
+    "fleuve ← fleuve ou rivière (Q4022, P31, d=0)",
+    "geographie ← territoire (Q4835091, P31, d=3)"
    ]
   },
   {
@@ -4076,7 +3801,8 @@
    "interdits": [],
    "exacte": true,
    "trace": [
-    "lac ← lac (Q23397, P31, d=1)"
+    "lac ← lac (Q23397, P31, d=1)",
+    "geographie ← territoire (Q4835091, P31, d=4)"
    ]
   },
   {
@@ -4097,7 +3823,8 @@
    "interdits": [],
    "exacte": true,
    "trace": [
-    "desert ← désert (Q8514, P31, d=0)"
+    "desert ← désert (Q8514, P31, d=0)",
+    "geographie ← territoire (Q4835091, P31, d=2)"
    ]
   },
   {
@@ -4143,7 +3870,9 @@
    "exacte": true,
    "trace": [
     "pays ← État souverain (Q3624078, P31, d=0)",
-    "ile ← État insulaire (Q112099, P31, d=0)"
+    "ile ← État insulaire (Q112099, P31, d=0)",
+    "geographie ← territoire (Q4835091, P31, d=1)",
+    "geographie ← division politique (Q1048835, P31, d=1)"
    ]
   },
   {
@@ -4185,7 +3914,9 @@
    "interdits": [],
    "exacte": true,
    "trace": [
-    "tour ← tour (Q12518, P31, d=1)"
+    "tour ← tour (Q12518, P31, d=1)",
+    "geographie ← territoire (Q4835091, P31, d=3)",
+    "geographie ← entité territoriale administrative (Q56061, P31, d=4)"
    ]
   },
   {
@@ -4374,7 +4105,8 @@
    "interdits": [],
    "exacte": true,
    "trace": [
-    "greceantique ← temple grec (Q267596, P31, d=0)"
+    "greceantique ← temple grec (Q267596, P31, d=0)",
+    "religion ← temple (Q44539, P31, d=1)"
    ]
   },
   {
@@ -4395,7 +4127,8 @@
    "interdits": [],
    "exacte": true,
    "trace": [
-    "ville ← freguesia (Q1131296, P31, d=0)"
+    "ville ← freguesia (Q1131296, P31, d=0)",
+    "geographie ← division administrative de troisième niveau (Q12357920, P31, d=1)"
    ]
   },
   {
@@ -4416,7 +4149,8 @@
    "interdits": [],
    "exacte": true,
    "trace": [
-    "ville ← town de l'Indiana (Q135396321, P31, d=0)"
+    "ville ← town de l'Indiana (Q135396321, P31, d=0)",
+    "geographie ← entité territoriale administrative (Q56061, P31, d=2)"
    ]
   },
   {
@@ -4438,48 +4172,6 @@
    "exacte": true,
    "trace": [
     "ville ← rue (Q79007, P31, d=0)"
-   ]
-  },
-  {
-   "titre": "Comté de Floyd (Indiana)",
-   "categorie": "lieu",
-   "piege": false,
-   "predits": [
-    "geographie"
-   ],
-   "reference": [
-    "geographie"
-   ],
-   "corrects": [
-    "geographie"
-   ],
-   "faux": [],
-   "manquants": [],
-   "interdits": [],
-   "exacte": true,
-   "trace": [
-    "geographie ← comté de l’Indiana (Q13410438, P31, d=0)"
-   ]
-  },
-  {
-   "titre": "Aéroport de Bario",
-   "categorie": "lieu",
-   "piege": false,
-   "predits": [
-    "avion"
-   ],
-   "reference": [
-    "avion"
-   ],
-   "corrects": [
-    "avion"
-   ],
-   "faux": [],
-   "manquants": [],
-   "interdits": [],
-   "exacte": true,
-   "trace": [
-    "avion ← aéroport (Q1248784, P31, d=0)"
    ]
   },
   {
@@ -4524,7 +4216,8 @@
    "interdits": [],
    "exacte": false,
    "trace": [
-    "nazis ← camp de concentration nazi (Q328468, P31, d=0)"
+    "nazis ← camp de concentration nazi (Q328468, P31, d=0)",
+    "ville ← établissement humain (Q486972, P31, d=4)"
    ]
   },
   {
@@ -4542,7 +4235,9 @@
    ],
    "interdits": [],
    "exacte": false,
-   "trace": []
+   "trace": [
+    "geographie ← entité territoriale administrative (Q56061, P31, d=3)"
+   ]
   },
   {
    "titre": "Tchernobyl",
@@ -4567,7 +4262,8 @@
    "exacte": false,
    "trace": [
     "ville ← ville (Q7930989, P31, d=0)",
-    "ukraine ← Ukraine (Q212, P17, d=0)"
+    "ukraine ← Ukraine (Q212, P17, d=0)",
+    "geographie ← territoire (Q4835091, P31, d=1)"
    ]
   },
   {
@@ -4632,6 +4328,7 @@
    "exacte": true,
    "trace": [
     "train ← classe de matériel roulant ferroviaire (Q811704, P31, d=0)",
+    "vehicule ← modèle de véhicule (Q29048322, P31, d=1)",
     "vehicule ← véhicule (Q42889, P279, d=3)"
    ]
   },
@@ -4698,7 +4395,7 @@
    "exacte": false,
    "trace": [
     "avion ← type d'avion (Q15056995, P31, d=0)",
-    "vehicule ← véhicule (Q42889, P279, d=4)"
+    "vehicule ← modèle de véhicule (Q29048322, P31, d=1)"
    ]
   },
   {
@@ -4743,7 +4440,7 @@
    "exacte": true,
    "trace": [
     "moto ← modèle de moto (Q23866334, P31, d=0)",
-    "vehicule ← véhicule (Q42889, P279, d=4)"
+    "vehicule ← modèle de véhicule (Q29048322, P31, d=1)"
    ]
   },
   {
@@ -4866,7 +4563,8 @@
    "interdits": [],
    "exacte": true,
    "trace": [
-    "vin ← région viticole (Q2140699, P31, d=0)"
+    "vin ← région viticole (Q2140699, P31, d=0)",
+    "geographie ← entité territoriale administrative (Q56061, P31, d=1)"
    ]
   },
   {
@@ -5344,8 +5042,8 @@
    "exacte": false,
    "trace": [
     "histoire ← événement historique (Q13418847, P31, d=0)",
-    "biologie ← procédé biologique (Q2996394, P31, d=5)",
-    "guerre ← conflit (Q180684, P31, d=6)"
+    "guerre ← opération militaire (Q645883, P31, d=3)",
+    "biologie ← procédé biologique (Q2996394, P31, d=5)"
    ]
   },
   {
@@ -5441,7 +5139,8 @@
     "crime ← pogrom (Q177716, P31, d=0)",
     "societe ← mouvement social (Q49773, P31, d=3)",
     "guerre ← conflit (Q180684, P31, d=3)",
-    "societe ← racisme (Q8461, P31, d=5)"
+    "societe ← racisme (Q8461, P31, d=5)",
+    "guerre ← conflit armé (Q350604, P31, d=6)"
    ]
   },
   {
@@ -5516,7 +5215,7 @@
    "exacte": true,
    "trace": [
     "croisades ← Q12546 (Q12546, P361, d=0)",
-    "guerre ← conflit (Q180684, P31, d=3)"
+    "guerre ← conflit armé (Q350604, P31, d=2)"
    ]
   },
   {
@@ -5539,7 +5238,7 @@
    "trace": [
     "guerrecivile ← guerre civile (Q8465, P31, d=0)",
     "histoire ← période historique (Q11514315, P31, d=0)",
-    "guerre ← conflit (Q180684, P31, d=3)"
+    "guerre ← conflit armé (Q350604, P31, d=2)"
    ]
   },
   {
@@ -5547,6 +5246,7 @@
    "categorie": "evenement",
    "piege": false,
    "predits": [
+    "guerre",
     "ukraine"
    ],
    "reference": [
@@ -5554,17 +5254,16 @@
     "guerre"
    ],
    "corrects": [
+    "guerre",
     "ukraine"
    ],
    "faux": [],
-   "manquants": [
-    "guerre"
-   ],
+   "manquants": [],
    "interdits": [],
-   "exacte": false,
+   "exacte": true,
    "trace": [
+    "guerre ← opération militaire (Q645883, P31, d=0)",
     "ukraine ← Ukraine (Q212, P17, d=0)",
-    "guerre ← conflit (Q180684, P31, d=2)",
     "politique ← crise politique (Q3002772, P31, d=2)",
     "biologie ← procédé biologique (Q2996394, P31, d=6)"
    ]
@@ -5701,7 +5400,9 @@
    ],
    "interdits": [],
    "exacte": false,
-   "trace": []
+   "trace": [
+    "informatique ← ressource du World Wide Web (Q3427877, P31, d=5)"
+   ]
   },
   {
    "titre": "Accident nucléaire de Fukushima",
@@ -6917,7 +6618,8 @@
    "interdits": [],
    "exacte": true,
    "trace": [
-    "informatique ← logiciel (Q7397, P31, d=0)"
+    "informatique ← logiciel (Q7397, P31, d=0)",
+    "langue ← languoïde (Q17376908, P31, d=4)"
    ]
   },
   {
@@ -6965,31 +6667,14 @@
    "trace": [
     "mathematiques ← mathématicien ou mathématicienne (Q170790, P106, d=0)",
     "christianisme ← prêtre catholique (Q250867, P106, d=0)",
+    "education ← professeur d'université (Q1622272, P106, d=0)",
     "physique ← physicien ou physicienne (Q169470, P106, d=0)",
     "espace ← astronome (Q11063, P106, d=0)",
+    "sciences ← scientifique (Q901, P106, d=1)",
     "religion ← théologien ou théologienne (Q1234713, P106, d=2)",
     "religion ← chef religieux (Q15995642, P106, d=4)",
     "idees ← philosophie (Q5891, P101, d=4)",
     "biologie ← procédé biologique (Q2996394, P101, d=5)"
-   ]
-  },
-  {
-   "titre": "Maledon",
-   "categorie": "nom-propre",
-   "piege": false,
-   "predits": [],
-   "reference": [
-    "noms"
-   ],
-   "corrects": [],
-   "faux": [],
-   "manquants": [
-    "noms"
-   ],
-   "interdits": [],
-   "exacte": false,
-   "trace": [
-    "page d’homonymie"
    ]
   },
   {
@@ -7165,150 +6850,5496 @@
    "trace": [
     "physique ← phénomène physique (Q1293220, P279, d=0)"
    ]
+  },
+  {
+   "titre": "Four crématoire",
+   "categorie": "objet",
+   "piege": true,
+   "predits": [],
+   "reference": [
+    "technologie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "technologie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Cambuses nord-américaines",
+   "categorie": "objet",
+   "piege": true,
+   "predits": [],
+   "reference": [
+    "train"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "train"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "vehicule ← véhicule (Q42889, P279, d=5)"
+   ]
+  },
+  {
+   "titre": "Longmorn",
+   "categorie": "organisation",
+   "piege": true,
+   "predits": [
+    "whisky"
+   ],
+   "reference": [
+    "whisky"
+   ],
+   "corrects": [
+    "whisky"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "whisky ← distillerie de whisky (Q10373548, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Maitrank",
+   "categorie": "objet",
+   "piege": true,
+   "predits": [
+    "cocktail"
+   ],
+   "reference": [
+    "alcool"
+   ],
+   "corrects": [],
+   "faux": [
+    "cocktail"
+   ],
+   "manquants": [
+    "alcool"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "cocktail ← cocktail avec alcool (Q134768, P279, d=1)"
+   ]
+  },
+  {
+   "titre": "Solution de Dakin",
+   "categorie": "notion",
+   "piege": true,
+   "predits": [
+    "sante"
+   ],
+   "reference": [
+    "sante",
+    "chimie"
+   ],
+   "corrects": [
+    "sante"
+   ],
+   "faux": [],
+   "manquants": [
+    "chimie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sante ← médicament (Q12140, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Adolf Hitler",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "guerre"
+   ],
+   "reference": [
+    "nazis",
+    "secondeguerre",
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "nazis",
+    "secondeguerre",
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "guerre ← soldat (Q4991371, P106, d=0)",
+    "peinture ← artiste peintre (Q1028181, P106, d=0)",
+    "politique ← personnalité politique (Q82955, P106, d=0)",
+    "litterature ← écrivain ou écrivaine (Q36180, P106, d=0)",
+    "nazis ← nazisme (Q7310, P101, d=0)",
+    "societe ← racisme (Q8461, P101, d=2)",
+    "biologie ← procédé biologique (Q2996394, P101, d=4)",
+    "physique ← phénomène physique (Q1293220, P101, d=6)"
+   ]
+  },
+  {
+   "titre": "Vera Salvequart",
+   "categorie": "personne",
+   "piege": true,
+   "predits": [
+    "crime",
+    "sante"
+   ],
+   "reference": [
+    "nazis",
+    "crime",
+    "secondeguerre"
+   ],
+   "corrects": [
+    "crime"
+   ],
+   "faux": [
+    "sante"
+   ],
+   "manquants": [
+    "nazis",
+    "secondeguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sante ← infirmière ou infirmier (Q186360, P106, d=0)",
+    "crime ← tortionnaire (Q20725072, P106, d=0)",
+    "ville ← établissement humain (Q486972, P101, d=3)"
+   ]
+  },
+  {
+   "titre": "Der Angriff",
+   "categorie": "oeuvre",
+   "piege": true,
+   "predits": [],
+   "reference": [
+    "nazis"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "nazis"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": []
+  },
+  {
+   "titre": "Regelbau 602",
+   "categorie": "objet",
+   "piege": true,
+   "predits": [
+    "nazis"
+   ],
+   "reference": [
+    "secondeguerre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "secondeguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "nazis ← Troisième Reich (Q7318, P495, d=0)",
+    "geographie ← entité territoriale administrative (Q56061, P279, d=4)"
+   ]
+  },
+  {
+   "titre": "Novelists",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [
+    "metalcore"
+   ],
+   "reference": [
+    "metalcore"
+   ],
+   "corrects": [
+    "metalcore"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "musique ← groupe de musique (Q215380, P31, d=0)",
+    "metalcore ← metalcore (Q183862, P136, d=0)",
+    "punk ← Q3071 (Q3071, P136, d=2)",
+    "rock ← rock (Q11399, P136, d=3)"
+   ]
+  },
+  {
+   "titre": "Tesla Semi",
+   "categorie": "objet",
+   "piege": true,
+   "predits": [
+    "camion"
+   ],
+   "reference": [
+    "camion"
+   ],
+   "corrects": [
+    "camion"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "camion ← modèle de camion (Q21546143, P31, d=0)",
+    "vehicule ← modèle de véhicule (Q29048322, P31, d=1)"
+   ]
+  },
+  {
+   "titre": "Leslie Van Houten",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "crime"
+   ],
+   "reference": [
+    "crime"
+   ],
+   "corrects": [
+    "crime"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "crime ← meurtrier ou meurtrière (Q931260, P106, d=0)"
+   ]
+  },
+  {
+   "titre": "Honda CB 900 F Bol d'Or",
+   "categorie": "objet",
+   "piege": true,
+   "predits": [
+    "moto"
+   ],
+   "reference": [
+    "moto"
+   ],
+   "corrects": [
+    "moto"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "moto ← modèle de moto (Q23866334, P31, d=0)",
+    "vehicule ← modèle de véhicule (Q29048322, P31, d=1)"
+   ]
+  },
+  {
+   "titre": "Unni Birkrem",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "handball"
+   ],
+   "reference": [
+    "handball"
+   ],
+   "corrects": [
+    "handball"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "handball ← handballeur ou handballeuse (Q12840545, P106, d=0)",
+    "handball ← handball (Q8418, P641, d=0)",
+    "sport ← sportif ou sportive (Q2066131, P106, d=1)",
+    "sport ← sport (Q349, P641, d=2)",
+    "jeux ← jeu (Q11410, P641, d=2)"
+   ]
+  },
+  {
+   "titre": "Johann Siegfried Hufnagel",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "insecte"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "insecte"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sciences ← scientifique (Q901, P106, d=1)",
+    "biologie ← biologiste (Q864503, P106, d=3)"
+   ]
+  },
+  {
+   "titre": "Pierre Ier de Cros",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [
+    "christianisme"
+   ],
+   "reference": [
+    "christianisme"
+   ],
+   "corrects": [
+    "christianisme"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "christianisme ← prélat (Q725440, P106, d=0)",
+    "religion ← chef religieux (Q15995642, P106, d=3)"
+   ]
+  },
+  {
+   "titre": "Comté de Floyd (Indiana)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "geographie"
+   ],
+   "reference": [
+    "geographie"
+   ],
+   "corrects": [
+    "geographie"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "geographie ← comté de l’Indiana (Q13410438, P31, d=0)",
+    "ville ← municipalité (Q15284, P31, d=3)"
+   ]
+  },
+  {
+   "titre": "Aéroport de Bario",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [
+    "avion"
+   ],
+   "reference": [
+    "avion"
+   ],
+   "corrects": [
+    "avion"
+   ],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "avion ← aéroport (Q1248784, P31, d=0)"
+   ]
+  },
+  {
+   "titre": "Maledon",
+   "categorie": "nom-propre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "noms"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "noms"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "page d’homonymie"
+   ]
+  },
+  {
+   "titre": "(37698) 1995 YL8",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "espace"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "espace"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "0,30 franc Blason de Paris",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [],
+   "corrects": [],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "1917 en Italie",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "histoire",
+    "premiereguerre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "histoire",
+    "premiereguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "1925 en cyclisme",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cyclisme"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cyclisme"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "66e régiment d'infanterie territoriale",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "guerre",
+    "premiereguerre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "guerre",
+    "premiereguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "ALCO MRS-1",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "train"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "train"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Abiadisaurus",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "animaux"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "animaux"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Affaire des rockers satanistes de Casablanca",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "rock",
+    "societe"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "rock",
+    "societe"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Alan Bleasdale",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "television"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "television"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Alec Garden Fraser",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "education",
+    "christianisme"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "education",
+    "christianisme"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Alexander Piorkowski",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "nazis",
+    "crime",
+    "secondeguerre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "nazis",
+    "crime",
+    "secondeguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Alice au Canada",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "litterature"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "litterature"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Amand de Bordeaux",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "christianisme"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "christianisme"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Amédée de Beauplan",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "theatre",
+    "peinture",
+    "musique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "theatre",
+    "peinture",
+    "musique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Anastasia Nichita",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "sport"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "sport"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Andromaque (Euripide)",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "theatre",
+    "greceantique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "theatre",
+    "greceantique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Anthony Wilding",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "tennis"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "tennis"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Aomar Mohammedi",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "litterature"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "litterature"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Arcangela Girlani",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "christianisme"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "christianisme"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Argueil-Fry",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Arrondissement de Diekirch",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "geographie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "geographie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Artióm Kiouregkián",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "sport"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "sport"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Au secours du petit panda",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cinema"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Auguste Ricard de Montferrand",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "architecture"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "architecture"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Baqet III",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "egypteantique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "egypteantique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Base aérienne 110 Creil",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "avion"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "avion"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Bataille d'Agordat (1941)",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "secondeguerre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "secondeguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Bataille d'Edirne",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "guerre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "guerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Bataille de Belgique (1918)",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "premiereguerre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "premiereguerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Between Friends",
+   "categorie": "homonymie",
+   "piege": false,
+   "predits": [],
+   "reference": [],
+   "corrects": [],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Boven-Leeuwen",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Bundeszentrale für politische Bildung",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique",
+    "education"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique",
+    "education"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Buta Singh",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Campagne d'Édouard Bruce en Irlande",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "guerre",
+    "moyenage"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "guerre",
+    "moyenage"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Canton de Bohain-en-Vermandois",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "geographie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "geographie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Carmichaelieae",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "plantes"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "plantes"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Chambre de commerce et d'industrie de Charente-Maritime",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "societe"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "societe"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Championnat de Belgique de football de deuxième division 2005-2006",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "football"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "football"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Championnat de Côte d'Ivoire de football 2026-2027",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "football"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "football"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Championnat de France Pro B de tennis de table 2007-2008",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "sport"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "sport"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Championnat du Niger de football 2010-2011",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "football"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "football"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Championnat du monde des voitures de sport 1984",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "courseauto"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "courseauto"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Championnats pan-pacifiques 1987",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "natation"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "natation"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Chana Masson de Souza",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "handball"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "handball"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Chantal Galladé",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Chthonius caprai",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "animaux"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "animaux"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Château de Schönering",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "chateau"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "chateau"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Clan Ciołek",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "histoire"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "histoire"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Classe Tiger",
+   "categorie": "homonymie",
+   "piege": false,
+   "predits": [],
+   "reference": [],
+   "corrects": [],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Clayton Pachal",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "hockey"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "hockey"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Colli Etruschi Viterbesi Sangiovese rosato",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "vin"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "vin"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Commission consultative des services publics locaux",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Coupe des clubs champions arabes de football 1998",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "football"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "football"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Coupe du Liechtenstein de football 2002-2003",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "football"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "football"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Crassodontidanus",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "requin"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "requin"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Czarnorzeczka",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Daisuki",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "pop"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "pop"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "David Bell (hockey sur gazon)",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "hockey"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "hockey"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "David Cage",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "jeuvideo"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "jeuvideo"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "David Copperfield (téléfilm, 1983)",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "television"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "television"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "De quoi tu te mêles, Daniela !",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cinema"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Denis Savard",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "hockey"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "hockey"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Des vents contraires",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "litterature"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "litterature"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Deuxième circonscription du Pirée",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Division Est de la LCF",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "sport"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "sport"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Don Creech",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cinema"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Double dames de l'Open d'Australie 1980",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "tennis"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "tennis"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Drągówek",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "EPrix de São Paulo 2025",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "courseauto"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "courseauto"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Ecatepec de Morelos (ville)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "El Heraldo",
+   "categorie": "homonymie",
+   "piege": false,
+   "predits": [],
+   "reference": [],
+   "corrects": [],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Elizabeth Hanna",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cinema"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Ensemble Alarius",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "classique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "classique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Ernest Déjardin-Verkinder",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Esnes (Nord)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Essex Junto",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Ethnophaulisme",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "langue"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "langue"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Eukoenenia lundi",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "animaux"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "animaux"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Europe (métro de Paris)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "train"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "train"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "European Nature Information System",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ecologie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ecologie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "FAW (homonymie)",
+   "categorie": "homonymie",
+   "piege": false,
+   "predits": [],
+   "reference": [],
+   "corrects": [],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "FFE",
+   "categorie": "homonymie",
+   "piege": false,
+   "predits": [],
+   "reference": [],
+   "corrects": [],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Fernand Tardy",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Ferrari 248 F1",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "formule1"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "formule1"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Ferrari 296 GTB",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "voiture"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "voiture"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Formula Renault 3.5 Series 2011",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "courseauto"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "courseauto"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Friedrich Delitzsch",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "histoire",
+    "langue"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "histoire",
+    "langue"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Gabalfa",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Gare de Châtillon-sur-Seine",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "train"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "train"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Gaël Assumani",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "combat"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "combat"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Geogarypus italicus",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "animaux"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "animaux"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Germain-André Soufflot de Palotte",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Gertrud Leutenegger",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "litterature"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "litterature"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Glenn Buchanan",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "natation"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "natation"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Golfino",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "golf",
+    "mode"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "golf",
+    "mode"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Goriano Sicoli",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Grand Prix automobile de Turquie 2006",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "formule1"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "formule1"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Gustave de Beaucorps",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "photographie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "photographie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Gustavo Chams",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "photographie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "photographie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Guy Bertrand Momo Soffack Ier",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "royaute"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "royaute"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Guy Lecluyse",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cinema"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Guyon Boudeville",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "litterature"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "litterature"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Hamad Ndikumana",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "football"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "football"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Hana yori dango (film, 1995)",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cinema"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Hardware (homonymie)",
+   "categorie": "homonymie",
+   "piege": false,
+   "predits": [],
+   "reference": [],
+   "corrects": [],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Hassan El-Far",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "football"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "football"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Hauffiosaurus",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "animaux"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "animaux"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Heiban",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "langue"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "langue"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Henderson (Michigan)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Hispano Aviación",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "avion"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "avion"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Hugo Pérez",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "football"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "football"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Hôtel de préfecture de la Drôme",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "architecture"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "architecture"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Ibrox Park (1887-1899)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "football"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "football"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Ifakara",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Igor Tchibirev",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "hockey"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "hockey"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Illorai",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Insert (SQL)",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "informatique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "informatique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Interprète militaire en France",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "guerre",
+    "langue"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "guerre",
+    "langue"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "It's Five O'Clock (chanson)",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "rock"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "rock"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Jaakko Hämeen-Anttila",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "islam"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "islam"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Jabłoniec",
+   "categorie": "homonymie",
+   "piege": false,
+   "predits": [],
+   "reference": [],
+   "corrects": [],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "James Douglas (3e comte d'Angus)",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "royaute"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "royaute"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Jason Piper",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cinema"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Jaśki (Varmie-Mazurie)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Jean de Mirecourt",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "idees",
+    "moyenage"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "idees",
+    "moyenage"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Jean-Claude Bertrand (peintre)",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "peinture"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "peinture"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Jean-Paul Amoudry",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Jean-Pierre Jabouille",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "formule1"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "formule1"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Jennifer Isacco",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "sport"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "sport"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Jeune homme (chanson de Johnny Hallyday)",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "musique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "musique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Jim O'Brien (hockey sur glace)",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "hockey"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "hockey"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "John Ross (homme politique)",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Joseph Thys",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "football"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "football"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Josiane Barbier",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "histoire"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "histoire"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Karl Komzak",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "classique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "classique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Kelley Township",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Ko Yong-hui",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "danse"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "danse"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Koro (Mali)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "L'Heure de la vérité",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cinema"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "La Chute d'Arthur",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "litterature"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "litterature"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Lac Kénogamichiche",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "lac"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "lac"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Laevius",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "poesie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "poesie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Lawrence Lemieux",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "sport"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "sport"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Le Dernier Amour d'Aramis ou les Vrais Mémoires du chevalier René d'Herblay",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "litterature"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "litterature"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Leonardo Rodríguez (cyclisme)",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cyclisme"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cyclisme"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Lepidodactylus balioburius",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "animaux"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "animaux"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Les Fleurs de Forest",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "pop"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "pop"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Les Paradis de sable",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "litterature"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "litterature"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Lidia Karamtshakova",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "sport"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "sport"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Ligbi",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "langue"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "langue"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Liste des monuments nationaux de Garnich",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "architecture",
+    "histoire"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "architecture",
+    "histoire"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Liste des équipes continentales en 2016",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cyclisme"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cyclisme"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Louise Lawrence",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "societe"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "societe"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Luebo",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Lug (Jablanica)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Major Vieira",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Makunudhoo (Kaafu)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ile"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ile"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Mamokimo",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Manufacture des tabacs de Strasbourg",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "architecture"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "architecture"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Maurice du Palatinat",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "guerre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "guerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Mayhem",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "metal"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "metal"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "McGaheysville (Virginie)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Mechtilde de Diessen",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "christianisme"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "christianisme"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Meskiana",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Meyrav Wurmser",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Michel Lagrée",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "histoire"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "histoire"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Misilmeri",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Mon cher sujet",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cinema"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Mostra de Venise 1935",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cinema"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Natolewiczki",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Nether Earth",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "jeuvideo"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "jeuvideo"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "New England (album)",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "rock"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "rock"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Nikolaï Kamenski",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "guerre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "guerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Nocturne en fa majeur de Bizet",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "classique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "classique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Nécropole nationale du Pétant",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "guerre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "guerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Ober Kostenz",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Ordre allemand",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "moyenage",
+    "religion"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "moyenage",
+    "religion"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Orval (bière)",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "biere"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "biere"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "PH (complexité)",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "informatique",
+    "mathematiques"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "informatique",
+    "mathematiques"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Palais Abatellis",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "arts",
+    "architecture"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "arts",
+    "architecture"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Palais du Luxembourg",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "architecture",
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "architecture",
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Parc national de la Marahoué",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "nature"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "nature"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Pascal Riché",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "societe"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "societe"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Patricia Blanquer",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Petropavlovo (oblast de Tver)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Phylée",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "mythologie",
+    "greceantique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "mythologie",
+    "greceantique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Piraïkí",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Pizzetta",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "gastronomie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "gastronomie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Pohjola (Turku)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Primel",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Ralf Pönitzsch",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "athletisme"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "athletisme"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Raymond Barre",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Red Bull RB3",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "formule1"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "formule1"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Reddy Reddy Go !",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "television"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "television"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Reichsmarine",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "guerre",
+    "bateaux"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "guerre",
+    "bateaux"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Relais 4 × 400 mètres féminin aux championnats du monde d'athlétisme 1997",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "athletisme"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "athletisme"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Relations entre la Géorgie et la Sierra Leone",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Renault R.S.18",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "formule1"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "formule1"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Rhétorique sémitique",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "langue"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "langue"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Richard Lortz",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "theatre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "theatre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Rita Brantalou",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "theatre",
+    "cinema"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "theatre",
+    "cinema"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Rivière Coaticook",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "fleuve"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "fleuve"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Route P36 (Lettonie)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "geographie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "geographie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Rutkowskie Duże",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Régiment de tirailleurs sénégalais de Guinée",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "guerre"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "guerre"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Saison 1996-1997 de la LHSPQ",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "hockey"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "hockey"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Saison 2011-2012 du MO Constantine",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "football"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "football"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Saison 4 de Skam France",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "television"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "television"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "San Michele di Serino",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Santa Cruz de Grío",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Santo Amaro do Maranhão",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Sarah Lévy",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cinema"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Sdot Yam",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Selenops lucibel",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "araignee"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "araignee"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Serveur d'applications",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "informatique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "informatique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Servicio Geológico Colombiano",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "geologie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "geologie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Sim Var",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Société des mines d'Albi",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "societe"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "societe"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Sophie Curtil",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "arts"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "arts"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Sparrmannia africana",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "plantes"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "plantes"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Stiphodon rubromaculatus",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "poisson"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "poisson"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Sylvie Van Brabant",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cinema"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Szerokie (Lublin)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Sénat du Maine",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Sławomir Mocek",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "sport"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "sport"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Tetragenococcus",
+   "categorie": "espece",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "biologie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "biologie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "The Ford Show",
+   "categorie": "oeuvre",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "television"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "television"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Tobias Stephan",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "hockey"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "hockey"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Tony Njiké",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "football"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "football"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Toro Rosso STR2",
+   "categorie": "objet",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "formule1"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "formule1"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Tour de France 1969",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cyclisme"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cyclisme"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Tour du Haut-Var 2014",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cyclisme"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cyclisme"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Tournoi de tennis de Virginie",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "tennis"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "tennis"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Tournoi de transition du championnat du Chili de football 2013",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "football"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "football"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Tovste (oblast de Ternopil)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Tunnel de la deuxième rue de Los Angeles",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "tunnel"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "tunnel"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "UTB",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "tracteur"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "tracteur"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Valeri Barinov",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "cinema"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "cinema"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Vava",
+   "categorie": "homonymie",
+   "piege": false,
+   "predits": [],
+   "reference": [],
+   "corrects": [],
+   "faux": [],
+   "manquants": [],
+   "interdits": [],
+   "exacte": true,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Vicomte Gormanston",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "royaute"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "royaute"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Volley-ball dans le monde",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "volleyball"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "volleyball"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Waidhofen an der Thaya-Land",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Wardrobing",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "societe"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "societe"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Willy Aeschlimann",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "histoire",
+    "litterature"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "histoire",
+    "litterature"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "XETRA",
+   "categorie": "organisation",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "finance"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "finance"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "XVIe congrès du Parti populaire",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Xerém (Brésil)",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ville"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ville"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Échion (Thèbes)",
+   "categorie": "personne",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "mythologie",
+    "greceantique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "mythologie",
+    "greceantique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Écosculpture",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "sculpture",
+    "ecologie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "sculpture",
+    "ecologie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Église Saint-François de Saronno",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "christianisme",
+    "architecture"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "christianisme",
+    "architecture"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Église Saint-Joseph-Artisan de Birkirkara",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "christianisme",
+    "architecture"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "christianisme",
+    "architecture"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Élections régionales de 1995 en Vénétie",
+   "categorie": "evenement",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "politique"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "politique"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Énergie renouvelable en Afrique",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ecologie"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ecologie"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Équipe de la décennie 1992-2002 du championnat d'Angleterre de football",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "football"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "football"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Études d'ingénieurs en Algérie",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "education"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "education"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Île Maurelle",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ile"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ile"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Île Phwa Jep",
+   "categorie": "lieu",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "ile"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "ile"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
+  },
+  {
+   "titre": "Ḛ̀",
+   "categorie": "notion",
+   "piege": false,
+   "predits": [],
+   "reference": [
+    "langue"
+   ],
+   "corrects": [],
+   "faux": [],
+   "manquants": [
+    "langue"
+   ],
+   "interdits": [],
+   "exacte": false,
+   "trace": [
+    "sans identifiant Wikidata"
+   ]
   }
  ],
  "global": {
-  "cartes": 317,
-  "precision": 0.9130434782608695,
-  "rappel": 0.6363636363636364,
-  "f1": 0.75,
-  "tauxFauxThemes": 0.08695652173913049,
-  "tauxCartesAvecFauxTheme": 0.0694006309148265,
-  "tauxSansThemeATort": 0.14563106796116504,
-  "tauxFauxSurCartesVides": 0.125,
+  "cartes": 575,
+  "precision": 0.9133858267716536,
+  "rappel": 0.3625,
+  "f1": 0.5190156599552572,
+  "tauxFauxThemes": 0.08661417322834641,
+  "tauxCartesAvecFauxTheme": 0.03826086956521739,
+  "tauxSansThemeATort": 0.521505376344086,
+  "tauxFauxSurCartesVides": 0.058823529411764705,
   "tauxPiegesDeclenches": 0,
-  "tauxExactes": 0.5993690851735016,
+  "tauxExactes": 0.34782608695652173,
   "depassementsMax": 0
  },
  "pieges": {
-  "cartes": 39,
-  "precision": 0.8333333333333334,
-  "rappel": 0.5319148936170213,
-  "f1": 0.6493506493506493,
-  "tauxFauxThemes": 0.16666666666666663,
-  "tauxCartesAvecFauxTheme": 0.1282051282051282,
-  "tauxSansThemeATort": 0.23076923076923078,
+  "cartes": 41,
+  "precision": 0.84375,
+  "rappel": 0.5510204081632653,
+  "f1": 0.6666666666666666,
+  "tauxFauxThemes": 0.15625,
+  "tauxCartesAvecFauxTheme": 0.12195121951219512,
+  "tauxSansThemeATort": 0.21951219512195122,
   "tauxFauxSurCartesVides": null,
   "tauxPiegesDeclenches": 0,
-  "tauxExactes": 0.5128205128205128,
+  "tauxExactes": 0.5365853658536586,
   "depassementsMax": 0
  },
  "parCategorie": {
   "objet": {
-   "cartes": 44,
+   "cartes": 56,
    "precision": 0.9,
-   "rappel": 0.4,
-   "f1": 0.5538461538461539,
+   "rappel": 0.32142857142857145,
+   "f1": 0.4736842105263158,
    "tauxFauxThemes": 0.09999999999999998,
-   "tauxCartesAvecFauxTheme": 0.045454545454545456,
-   "tauxSansThemeATort": 0.4090909090909091,
-   "tauxFauxSurCartesVides": null,
+   "tauxCartesAvecFauxTheme": 0.03571428571428571,
+   "tauxSansThemeATort": 0.5272727272727272,
+   "tauxFauxSurCartesVides": 0,
    "tauxPiegesDeclenches": 0,
-   "tauxExactes": 0.4090909090909091,
-   "depassementsMax": 0
-  },
-  "notion": {
-   "cartes": 35,
-   "precision": 0.96,
-   "rappel": 0.7741935483870968,
-   "f1": 0.8571428571428571,
-   "tauxFauxThemes": 0.040000000000000036,
-   "tauxCartesAvecFauxTheme": 0.02857142857142857,
-   "tauxSansThemeATort": 0.1111111111111111,
-   "tauxFauxSurCartesVides": 0.125,
-   "tauxPiegesDeclenches": 0,
-   "tauxExactes": 0.7428571428571429,
+   "tauxExactes": 0.3392857142857143,
    "depassementsMax": 0
   },
   "homonymie": {
-   "cartes": 17,
+   "cartes": 25,
    "precision": 0.9285714285714286,
    "rappel": 0.6842105263157895,
    "f1": 0.7878787878787878,
    "tauxFauxThemes": 0.0714285714285714,
-   "tauxCartesAvecFauxTheme": 0.058823529411764705,
+   "tauxCartesAvecFauxTheme": 0.04,
    "tauxSansThemeATort": 0.17647058823529413,
-   "tauxFauxSurCartesVides": null,
+   "tauxFauxSurCartesVides": 0,
    "tauxPiegesDeclenches": 0,
-   "tauxExactes": 0.7647058823529411,
+   "tauxExactes": 0.84,
    "depassementsMax": 0
   },
-  "organisation": {
-   "cartes": 33,
-   "precision": 0.9629629629629629,
-   "rappel": 0.6341463414634146,
-   "f1": 0.7647058823529412,
-   "tauxFauxThemes": 0.03703703703703709,
-   "tauxCartesAvecFauxTheme": 0.030303030303030304,
-   "tauxSansThemeATort": 0.12121212121212122,
-   "tauxFauxSurCartesVides": null,
+  "notion": {
+   "cartes": 52,
+   "precision": 0.96,
+   "rappel": 0.47058823529411764,
+   "f1": 0.631578947368421,
+   "tauxFauxThemes": 0.040000000000000036,
+   "tauxCartesAvecFauxTheme": 0.019230769230769232,
+   "tauxSansThemeATort": 0.45454545454545453,
+   "tauxFauxSurCartesVides": 0.125,
    "tauxPiegesDeclenches": 0,
-   "tauxExactes": 0.6666666666666666,
+   "tauxExactes": 0.5,
    "depassementsMax": 0
   },
   "evenement": {
-   "cartes": 19,
-   "precision": 0.9333333333333333,
-   "rappel": 0.5833333333333334,
-   "f1": 0.7179487179487181,
-   "tauxFauxThemes": 0.06666666666666665,
-   "tauxCartesAvecFauxTheme": 0.05263157894736842,
-   "tauxSansThemeATort": 0.10526315789473684,
-   "tauxFauxSurCartesVides": null,
-   "tauxPiegesDeclenches": null,
-   "tauxExactes": 0.42105263157894735,
-   "depassementsMax": 0
-  },
-  "personne": {
-   "cartes": 74,
-   "precision": 0.8333333333333334,
-   "rappel": 0.5729166666666666,
-   "f1": 0.6790123456790123,
-   "tauxFauxThemes": 0.16666666666666663,
-   "tauxCartesAvecFauxTheme": 0.14864864864864866,
-   "tauxSansThemeATort": 0.04054054054054054,
+   "cartes": 48,
+   "precision": 0.9375,
+   "rappel": 0.26785714285714285,
+   "f1": 0.41666666666666663,
+   "tauxFauxThemes": 0.0625,
+   "tauxCartesAvecFauxTheme": 0.020833333333333332,
+   "tauxSansThemeATort": 0.6458333333333334,
    "tauxFauxSurCartesVides": null,
    "tauxPiegesDeclenches": 0,
-   "tauxExactes": 0.5135135135135135,
-   "depassementsMax": 0
-  },
-  "oeuvre": {
-   "cartes": 35,
-   "precision": 0.8709677419354839,
-   "rappel": 0.6923076923076923,
-   "f1": 0.7714285714285716,
-   "tauxFauxThemes": 0.12903225806451613,
-   "tauxCartesAvecFauxTheme": 0.11428571428571428,
-   "tauxSansThemeATort": 0.14285714285714285,
-   "tauxFauxSurCartesVides": null,
-   "tauxPiegesDeclenches": 0,
-   "tauxExactes": 0.6,
+   "tauxExactes": 0.1875,
    "depassementsMax": 0
   },
   "lieu": {
-   "cartes": 37,
+   "cartes": 96,
    "precision": 1,
-   "rappel": 0.7777777777777778,
-   "f1": 0.8750000000000001,
+   "rappel": 0.32407407407407407,
+   "f1": 0.48951048951048953,
    "tauxFauxThemes": 0,
    "tauxCartesAvecFauxTheme": 0,
-   "tauxSansThemeATort": 0.08108108108108109,
+   "tauxSansThemeATort": 0.6458333333333334,
    "tauxFauxSurCartesVides": null,
    "tauxPiegesDeclenches": 0,
-   "tauxExactes": 0.7027027027027027,
+   "tauxExactes": 0.2708333333333333,
+   "depassementsMax": 0
+  },
+  "personne": {
+   "cartes": 152,
+   "precision": 0.8333333333333334,
+   "rappel": 0.2972972972972973,
+   "f1": 0.4382470119521913,
+   "tauxFauxThemes": 0.16666666666666663,
+   "tauxCartesAvecFauxTheme": 0.07236842105263158,
+   "tauxSansThemeATort": 0.5197368421052632,
+   "tauxFauxSurCartesVides": null,
+   "tauxPiegesDeclenches": 0,
+   "tauxExactes": 0.25,
+   "depassementsMax": 0
+  },
+  "oeuvre": {
+   "cartes": 57,
+   "precision": 0.8709677419354839,
+   "rappel": 0.43548387096774194,
+   "f1": 0.5806451612903226,
+   "tauxFauxThemes": 0.12903225806451613,
+   "tauxCartesAvecFauxTheme": 0.07017543859649122,
+   "tauxSansThemeATort": 0.47368421052631576,
+   "tauxFauxSurCartesVides": null,
+   "tauxPiegesDeclenches": 0,
+   "tauxExactes": 0.3684210526315789,
+   "depassementsMax": 0
+  },
+  "organisation": {
+   "cartes": 54,
+   "precision": 0.9629629629629629,
+   "rappel": 0.38235294117647056,
+   "f1": 0.5473684210526316,
+   "tauxFauxThemes": 0.03703703703703709,
+   "tauxCartesAvecFauxTheme": 0.018518518518518517,
+   "tauxSansThemeATort": 0.4444444444444444,
+   "tauxFauxSurCartesVides": null,
+   "tauxPiegesDeclenches": 0,
+   "tauxExactes": 0.4074074074074074,
    "depassementsMax": 0
   },
   "espece": {
-   "cartes": 19,
+   "cartes": 31,
    "precision": 0.9444444444444444,
-   "rappel": 0.8947368421052632,
-   "f1": 0.918918918918919,
+   "rappel": 0.5483870967741935,
+   "f1": 0.6938775510204082,
    "tauxFauxThemes": 0.05555555555555558,
-   "tauxCartesAvecFauxTheme": 0.05263157894736842,
-   "tauxSansThemeATort": 0.10526315789473684,
+   "tauxCartesAvecFauxTheme": 0.03225806451612903,
+   "tauxSansThemeATort": 0.45161290322580644,
    "tauxFauxSurCartesVides": null,
    "tauxPiegesDeclenches": 0,
-   "tauxExactes": 0.8421052631578947,
+   "tauxExactes": 0.5161290322580645,
    "depassementsMax": 0
   },
   "nom-propre": {
