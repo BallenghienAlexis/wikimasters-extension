@@ -1,0 +1,20 @@
+== Production (titre + description) — 317 cartes ==
+précision 95.2 % · rappel 65.0 % · F1 77.3 %
+faux thèmes 4.8 % (cartes touchées 3.8 %) · « sans thème » à tort 12.9 % · exactes 59.6 %
+pièges déclenchés 0.0 % · fausses propositions sur cartes vides 0.0 % · dépassements de 4 : 0
+cartes piégeuses (39) : précision 96.7 %, rappel 61.7 %
+  Four crématoire : prédit [] attendu [technologie]
+  Cambuses nord-américaines : prédit [] attendu [histoire]
+  Solution de Dakin : prédit [] attendu [sante, chimie]
+  Regelbau 602 : prédit [] attendu [secondeguerre]
+  Joseph Staline : prédit [] attendu [politique]
+  Philippe Pétain : prédit [] attendu [secondeguerre, premiereguerre]
+  Steve Jobs : prédit [] attendu [informatique]
+  Elon Musk : prédit [] attendu [technologie, fusee]
+  Gandhi : prédit [] attendu [politique]
+  Saint Paul : prédit [litterature, religion] attendu [christianisme]
+  Sigmund Freud : prédit [] attendu [psychologie]
+  Neil Armstrong : prédit [] attendu [espace]
+  Youri Gagarine : prédit [] attendu [espace]
+  Usain Bolt : prédit [] attendu [athletisme]
+  La Joconde : prédit [] attendu [peinture]
