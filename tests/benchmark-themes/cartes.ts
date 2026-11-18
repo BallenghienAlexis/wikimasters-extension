@@ -1,6 +1,7 @@
-// Jeu de référence du banc d’essai des thèmes. Les titres sont ceux de pages Wikipédia publiques (cartes de type WikiMasters) ;
-// les descriptions sont des descriptions courtes de style Wikidata, reconstruites d’après ces pages publiques : aucune donnée du compte.
+// Jeu de référence du banc d’essai des thèmes. Ici : les cartes RECONSTRUITES (titres de pages Wikipédia publiques, descriptions courtes
+// de style Wikidata reconstruites d’après ces pages). Les cartes RÉELLES (descriptions du site) sont dans cartes-reelles.ts.
 // Les thèmes sont le jugement de référence (le plus précis du catalogue, 1 à 4, jamais les parents), fixé par déduction approfondie.
+import { CARTES_REELLES } from './cartes-reelles';
 import type { CarteReference, Categorie, Fiabilite } from './types';
 
 type Options = { ok?: string[]; non?: string[]; piege?: boolean; f?: Fiabilite };
@@ -16,34 +17,22 @@ const c = (categorie: Categorie, titre: string, description: string, themes: str
   categorie,
   ...(o.piege ? { piege: true } : {}),
   fiabilite: o.f ?? 'haute',
+  source: 'reconstruite',
 });
 
-export const CARTES_REFERENCE: CarteReference[] = [
+export const CARTES_RECONSTRUITES: CarteReference[] = [
   // ---- Cas piégeux connus (relevés d’Alexis et des retouches) ----
-  c('objet', 'Four crématoire', 'four destiné à l’incinération des corps', ['technologie'], 'Équipement funéraire et industriel : ni animal ni véhicule (faux thèmes relevés).', { piege: true, non: ['animaux', 'vehicule', 'nature'], ok: ['societe'] }),
   c('objet', 'Wagon', 'véhicule ferroviaire non motorisé', ['train'], 'Matériel roulant ferroviaire, pas une voiture.', { piege: true, non: ['voiture', 'automobile'] }),
-  c('notion', 'Cambuses nord-américaines', 'abris de chantier forestier d’Amérique du Nord', ['histoire'], 'Description du site à relever sur la vraie carte : thème provisoire.', { piege: true, f: 'a-verifier', ok: ['architecture'] }),
   c('homonymie', 'Malibu', 'ville de Californie, aux États-Unis', ['ville'], 'Description réelle de la carte à confirmer ; les autres sens (voiture, rhum) ont leurs propres cartes ci-dessous.', { piege: true, non: ['voiture', 'rhum'], f: 'a-verifier' }),
   c('homonymie', 'Chevrolet Malibu', 'modèle de berline du constructeur Chevrolet', ['voiture'], 'Sens « automobile » de Malibu.', { piege: true, non: ['ville'], ok: ['automobile'] }),
   c('homonymie', 'Malibu (rhum)', 'liqueur de rhum aromatisée à la noix de coco', ['rhum', 'alcool'], 'Sens « boisson » de Malibu.', { piege: true, non: ['ville', 'voiture'] }),
-  c('organisation', 'Longmorn', 'distillerie de whisky écossaise du Speyside', ['whisky'], 'Distillerie : whisky, pas un village.', { piege: true, non: ['ville', 'geographie'], ok: ['alcool', 'boisson'] }),
-  c('objet', 'Maitrank', 'apéritif à base de vin blanc aromatisé à l’aspérule odorante', ['alcool'], 'Vin aromatisé traditionnel (Luxembourg, Belgique, Alsace).', { piege: true, ok: ['vin', 'boisson'], non: ['plantes', 'fleur'] }),
-  c('notion', 'Solution de Dakin', 'antiseptique à base d’hypochlorite de sodium', ['sante', 'chimie'], 'Solution antiseptique médicale : santé et chimie, pas « société ».', { piege: true, non: ['societe'] }),
   c('notion', 'Croix de saint André', 'croix en forme de X, attribut de l’apôtre André', ['religion'], 'Symbole attaché à saint André (aussi drapeaux) ; le christianisme est défendable.', { piege: true, ok: ['christianisme', 'histoire'], non: ['vehicule', 'automobile'] }),
   c('evenement', 'Annexion de l’Alsace-Moselle (1940)', 'annexion de fait de l’Alsace-Moselle par l’Allemagne nazie', ['secondeguerre', 'nazis'], 'Événement de la Seconde Guerre mondiale, régime nazi.', { piege: true, f: 'moyenne', ok: ['histoire', 'guerre'] }, 'Annexion de l’Alsace-Lorraine par l’Allemagne nazie'),
-  c('personne', 'Adolf Hitler', 'dictateur allemand, chancelier du Troisième Reich', ['nazis', 'secondeguerre', 'politique'], 'Figure centrale du nazisme et de la guerre.', { ok: ['histoire', 'guerre'] }),
-  c('personne', 'Vera Salvequart', 'détenue-fonctionnaire du camp de Ravensbrück, condamnée après la guerre', ['nazis', 'crime', 'secondeguerre'], 'Criminelle de guerre jugée à Ravensbrück.', { piege: true, ok: ['histoire', 'guerre'] }),
-  c('oeuvre', 'Der Angriff', 'journal nazi fondé par Joseph Goebbels', ['nazis'], 'Organe de propagande du parti nazi.', { piege: true, ok: ['histoire', 'secondeguerre', 'politique'] }),
-  c('objet', 'Regelbau 602', 'type standardisé d’ouvrage fortifié de la Wehrmacht', ['secondeguerre'], 'Fortification type de la Seconde Guerre mondiale.', { piege: true, f: 'moyenne', ok: ['guerre', 'architecture', 'nazis'] }),
 
   // ---- Cas relevés dans le dépôt (tests de précision) ----
-  c('organisation', 'Novelists', 'groupe français de metalcore', ['metalcore'], 'Le plus précis : metalcore (Métal et Musique sont ses parents).', { ok: ['metal', 'musique'] }),
   c('objet', 'Morcilla', 'charcuterie espagnole à base de sang de porc', ['charcuterie'], 'Boudin noir espagnol.', { ok: ['gastronomie'], non: ['animaux'] }),
-  c('objet', 'Tesla Semi', 'camion électrique de Tesla', ['camion'], 'Un camion tracteur n’est pas un tracteur agricole.', { non: ['tracteur'], ok: ['automobile', 'vehicule'] }),
   c('objet', 'Hydravion', 'avion capable de décoller et amerrir sur l’eau', ['avion'], 'Aéronef.', { ok: ['vehicule'] }),
   c('notion', 'Longueur de Planck', 'unité de longueur du système des unités de Planck', ['physique'], 'Constante physique fondamentale.', { ok: ['sciences'], non: ['geographie'] }),
-  c('personne', 'Leslie Van Houten', 'membre de la « famille » de Charles Manson condamnée pour meurtre', ['crime'], 'Criminelle condamnée.', { ok: ['societe'] }),
-  c('objet', 'Honda CB 900 F Bol d’Or', 'modèle de moto sportive de Honda', ['moto'], 'Moto, pas du sport.', { non: ['sport'], ok: ['vehicule'] }),
   c('lieu', 'Camille-Laurin (circonscription provinciale)', 'circonscription électorale provinciale du Québec', ['politique'], 'Circonscription électorale : politique, pas histoire.', { non: ['histoire'] }),
 
   // ---- Personnes ----
@@ -101,9 +90,6 @@ export const CARTES_REFERENCE: CarteReference[] = [
   c('personne', 'Jean-Pierre Foucault', 'animateur français de télévision', ['television'], 'Animateur.', {}),
   c('personne', 'Rosa Parks', 'militante américaine des droits civiques', ['politique'], 'Droits civiques.', { ok: ['histoire', 'societe'] }),
   c('personne', 'Jarrett Parker', 'joueur américain de baseball', ['baseball'], 'Baseball.', { ok: ['sport'] }),
-  c('personne', 'Unni Birkrem', 'handballeuse norvégienne', ['handball'], 'Handball.', { ok: ['sport'] }),
-  c('personne', 'Johann Siegfried Hufnagel', 'entomologiste allemand (1724-1795)', ['insecte'], 'Entomologiste : science des insectes, pas animaux.', { ok: ['sciences', 'biologie'], non: ['animaux'] }, 'Johann Siegfried Hufnagel'),
-  c('personne', 'Pierre Ier de Cros', 'prélat catholique († 1361)', ['christianisme'], 'Prélat catholique.', { ok: ['religion', 'moyenage'] }),
   c('personne', 'Mike Tyson', 'boxeur américain, champion du monde poids lourds', ['combat'], 'Boxe.', { ok: ['sport'] }),
   c('personne', 'Serena Williams', 'joueuse de tennis américaine', ['tennis'], 'Tennis.', { ok: ['sport'] }),
   c('personne', 'Usain Bolt', 'sprinteur jamaïcain', ['athletisme'], 'Athlétisme.', { ok: ['sport', 'coursepied'] }),
@@ -219,8 +205,6 @@ export const CARTES_REFERENCE: CarteReference[] = [
   c('lieu', 'Vilar de Nantes', 'freguesia du Portugal', ['ville'], 'Division administrative locale.', { ok: ['geographie'] }),
   c('lieu', 'Brooksburg', 'établissement humain dans l’Indiana, aux États-Unis', ['ville'], 'Localité.', { ok: ['geographie'] }),
   c('lieu', 'Rue Charras', 'rue de Paris', ['ville'], 'Voie urbaine.', { ok: ['geographie'] }),
-  c('lieu', 'Comté de Floyd (Indiana)', 'comté de l’Indiana, aux États-Unis', ['geographie'], 'Division administrative.', { ok: ['ville'] }),
-  c('lieu', 'Aéroport de Bario', 'aéroport malaisien', ['avion'], 'Aéroport.', { ok: ['vehicule', 'geographie'] }),
   c('lieu', 'Ligne de Raisio à Naantali', 'ligne de chemin de fer finlandaise', ['train'], 'Ligne ferroviaire.', { ok: ['vehicule'] }),
   c('lieu', 'Camp d’Auschwitz', 'complexe de camps de concentration et d’extermination nazi', ['nazis', 'secondeguerre'], 'Camp nazi.', { ok: ['histoire', 'crime', 'guerre'] }),
   c('lieu', 'Mur de Berlin', 'mur séparant Berlin-Est et Berlin-Ouest', ['guerrefroide'], 'Guerre froide.', { ok: ['histoire', 'politique'] }),
@@ -345,7 +329,6 @@ export const CARTES_REFERENCE: CarteReference[] = [
   c('homonymie', 'Java', 'langage de programmation', ['informatique'], 'Langage : pas l’île.', { piege: true, non: ['ile', 'geographie'], ok: ['technologie'] }, 'Java (langage)'),
   c('homonymie', 'Java (île)', 'île d’Indonésie', ['ile'], 'Île.', { non: ['informatique'], ok: ['geographie'] }, 'Java (île)'),
   c('homonymie', 'Georges Lemaître', 'prêtre et astronome belge, père du Big Bang', ['espace', 'christianisme'], 'Astronome et prêtre.', { ok: ['sciences', 'physique', 'religion'] }),
-  c('nom-propre', 'Maledon', 'nom de famille', ['noms'], 'Patronyme sans autre sens dominant.', { f: 'moyenne' }),
   c('nom-propre', 'Martin', 'prénom masculin français', ['noms'], 'Prénom (le saint et les personnes ont leurs pages).', { f: 'moyenne', non: ['religion'] }, 'Martin (prénom)'),
   c('nom-propre', 'Dupont', 'nom de famille français', ['noms'], 'Patronyme.', { f: 'moyenne' }, 'Dupont'),
   c('nom-propre', 'Alexandre', 'prénom masculin', ['noms'], 'Prénom.', { f: 'moyenne' }, 'Alexandre (prénom)'),
@@ -359,3 +342,8 @@ export const CARTES_REFERENCE: CarteReference[] = [
   c('notion', 'Silence', 'absence de bruit', [], 'Notion sans thème du catalogue.', { f: 'moyenne', non: ['musique'] }),
   c('notion', 'Ombre', 'zone non éclairée derrière un objet', [], 'Notion sans thème du catalogue.', { f: 'moyenne' }),
 ];
+
+/** Jeu complet : cartes reconstruites (descriptions d’après des pages publiques) puis cartes réelles (descriptions lues dans la collection d’Alexis). */
+export const CARTES_REFERENCE: CarteReference[] = [...CARTES_RECONSTRUITES, ...CARTES_REELLES];
+
+export { CARTES_REELLES };
