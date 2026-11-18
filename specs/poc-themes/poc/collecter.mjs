@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // POC thèmes — collecte des données publiques de Wikipédia et Wikidata pour un jeu de cartes (PC avec internet, ou conteneur si le proxy autorise ces hôtes). Lecture seule (GET), un seul fil, 1 requête par seconde,
-// arrêt immédiat sur 403 ou 429. Seul le titre d'une carte est envoyé : ni compte, ni cookie, ni jeton. Aucune dépendance.
+// arrêt immédiat sur 403 ou 429 (sauf 429 avec POC_ATTENDRE_429=1 : attente du Retry-After, 5 essais au plus). Seul le titre d'une carte est envoyé : ni compte, ni cookie, ni jeton. Aucune dépendance.
 //
 // Usage : node specs/poc-themes/poc/collecter.mjs <cartes.json> <sortie.json> [reprise.jsonl]
 //   cartes.json : [{ "titre": "...", "description": "...", "wikipedia": "titre de la page (facultatif)", "attendu": ["train"], "toleres": [] }, ...]
