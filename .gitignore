@@ -25,3 +25,4 @@ npm-debug.log*
 /.idea/
 /.mcp.json
 /.vitest/
+/wm-sauvegarde*.json

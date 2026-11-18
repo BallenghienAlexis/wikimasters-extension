@@ -16,6 +16,9 @@ export type Categorie =
   | 'homonymie'
   | 'nom-propre';
 
+/** Origine des cartes : « reelle » = titre et description lus dans la collection (sauvegarde de l’extension), « reconstruite » = d’après des pages publiques. */
+export type SourceCarte = 'reelle' | 'reconstruite';
+
 export interface CarteReference {
   /** Titre de la carte sur WikiMasters (= titre de la page Wikipédia, éventuellement désambiguïsé). */
   titre: string;
@@ -35,6 +38,7 @@ export interface CarteReference {
   /** Cas piégeux connu (homonymie, faux ami, motif trompeur). */
   piege?: boolean;
   fiabilite: Fiabilite;
+  source: SourceCarte;
 }
 
 /** Une fonction de déduction : titre + description (+ titre Wikipédia) → identifiants de thème. Peut être asynchrone (POC avec réseau). */

@@ -2,7 +2,7 @@
 // Aucune dépendance à la logique de production : les POC l’appellent avec n’importe quelle fonction (synchrone ou asynchrone)
 // ou lui passent des prédictions déjà calculées (`scorerPredictions`).
 import { CARTES_REFERENCE } from './cartes';
-import type { CarteReference, Categorie, Fiabilite, FonctionDeduction } from './types';
+import type { CarteReference, Categorie, Fiabilite, FonctionDeduction, SourceCarte } from './types';
 
 export const MAX_THEMES = 4;
 
@@ -57,6 +57,8 @@ export interface Rapport {
 export interface OptionsEvaluation {
   /** Cartes à évaluer (par défaut tout le jeu de référence). */
   cartes?: readonly CarteReference[];
+  /** Ne garde que les cartes de cette origine (« reelle » : descriptions du site ; « reconstruite » : d’après des pages publiques). */
+  source?: SourceCarte;
   /** Exclut les cartes moins fiables que ce niveau (par défaut : tout est gardé). */
   fiabiliteMin?: Fiabilite;
   /** Erreur de la fonction sur une carte : la carte compte comme « aucun thème ». Par défaut : l’erreur est propagée. */
@@ -64,6 +66,12 @@ export interface OptionsEvaluation {
 }
 
 const RANG_FIABILITE: Record<Fiabilite, number> = { 'a-verifier': 0, moyenne: 1, haute: 2 };
+
+/** Cartes évaluées : jeu complet (ou `cartes`), filtré par origine puis par fiabilité. */
+function retenues(options: OptionsEvaluation): CarteReference[] {
+  const minimum = RANG_FIABILITE[options.fiabiliteMin ?? 'a-verifier'];
+  return (options.cartes ?? CARTES_REFERENCE).filter((c) => RANG_FIABILITE[c.fiabilite] >= minimum && (options.source === undefined || c.source === options.source));
+}
 
 const unique = (ids: readonly string[]): string[] => [...new Set(ids)];
 const ratio = (a: number, b: number, vide = 0): number => (b === 0 ? vide : a / b);
@@ -145,8 +153,7 @@ export function mesurer(cartes: readonly CarteReference[], details: readonly Det
 /** Score des prédictions déjà calculées (titre → identifiants de thème). Un titre absent compte comme « aucun thème ». */
 export function scorerPredictions(predictions: ReadonlyMap<string, readonly string[]> | Readonly<Record<string, readonly string[]>>, options: OptionsEvaluation = {}): Rapport {
   const lire = (titre: string): readonly string[] => (predictions instanceof Map ? predictions.get(titre) : (predictions as Readonly<Record<string, readonly string[]>>)[titre]) ?? [];
-  const minimum = RANG_FIABILITE[options.fiabiliteMin ?? 'a-verifier'];
-  const cartes = (options.cartes ?? CARTES_REFERENCE).filter((c) => RANG_FIABILITE[c.fiabilite] >= minimum);
+  const cartes = retenues(options);
   const details = cartes.map((c) => comparer(c, lire(c.titre)));
   const parCategorie: Partial<Record<Categorie, Mesures>> = {};
   for (const categorie of new Set(cartes.map((c) => c.categorie))) {
@@ -164,8 +171,7 @@ export function scorerPredictions(predictions: ReadonlyMap<string, readonly stri
 
 /** Évalue une fonction de déduction sur le jeu de référence (une carte à la fois, dans l’ordre : pas de rafale de requêtes). */
 export async function evaluer(deduire: FonctionDeduction, options: OptionsEvaluation = {}): Promise<Rapport> {
-  const minimum = RANG_FIABILITE[options.fiabiliteMin ?? 'a-verifier'];
-  const cartes = (options.cartes ?? CARTES_REFERENCE).filter((c) => RANG_FIABILITE[c.fiabilite] >= minimum);
+  const cartes = retenues(options);
   const predictions = new Map<string, string[]>();
   for (const carte of cartes) {
     try {

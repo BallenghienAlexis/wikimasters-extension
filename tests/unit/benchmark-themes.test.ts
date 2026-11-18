@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { CARTES_REFERENCE } from '../benchmark-themes/cartes';
 import { deductionProduction } from '../benchmark-themes/production';
 import { comparer, evaluer, formaterRapport, scorerPredictions } from '../benchmark-themes/scoring';
+import { appliquerDescriptions, cartesAReferencer, cleTitre, lireSauvegarde } from '../benchmark-themes/sauvegarde';
 import { IDS_THEMES_CHOISISSABLES } from '../../src/lib/themes';
 
 const CATALOGUE = new Set(IDS_THEMES_CHOISISSABLES);
@@ -19,7 +20,8 @@ describe('jeu de référence', () => {
       for (const id of [...c.themes, ...(c.acceptables ?? []), ...(c.interdits ?? [])]) expect(CATALOGUE.has(id), `${c.titre} : ${id}`).toBe(true);
       expect(new Set(c.themes).size, c.titre).toBe(c.themes.length);
       expect(c.justification.length, c.titre).toBeGreaterThan(3);
-      expect(c.description.length, c.titre).toBeGreaterThan(3);
+      // Une carte réelle peut n’avoir aucune description sur le site (c’est un cas à part entière).
+      if (c.source === 'reconstruite') expect(c.description.length, c.titre).toBeGreaterThan(3);
     }
   });
   it('un thème n’est ni attendu, ni toléré, ni interdit à la fois', () => {
@@ -42,6 +44,68 @@ describe('jeu de référence', () => {
       expect(titres.has(t), t).toBe(true);
     }
     expect(titres.has('Annexion de l’Alsace-Moselle (1940)')).toBe(true);
+  });
+});
+
+describe('cartes réelles', () => {
+  it('portent la source « reelle », sans doublon avec les cartes reconstruites', () => {
+    const reelles = CARTES_REFERENCE.filter((c) => c.source === 'reelle');
+    expect(reelles.length).toBeGreaterThanOrEqual(150);
+    const cles = CARTES_REFERENCE.map((c) => cleTitre(c.titre));
+    expect(new Set(cles).size).toBe(cles.length);
+  });
+  it('contiennent des cartes sans description, comme sur le site', () => {
+    const vides = CARTES_REFERENCE.filter((c) => c.source === 'reelle' && c.description === '');
+    expect(vides.length).toBeGreaterThanOrEqual(20);
+  });
+  it('filtrent par source', async () => {
+    const r = await evaluer(() => [], { source: 'reelle' });
+    expect(r.global.cartes).toBe(CARTES_REFERENCE.filter((c) => c.source === 'reelle').length);
+  });
+});
+
+describe('conversion d’une sauvegarde', () => {
+  // Sauvegarde fictive : mêmes champs que le vrai format, avec des données de compte qui ne doivent jamais passer.
+  const sauvegarde = {
+    format: 'wm-collection-sauvegarde',
+    version: 1,
+    cartes: [
+      { id: 'L|Wagon', titre: 'Wagon', rarete: 'C', description: 'véhicule ferroviaire de test', quantite: 3, prixCible: 12, note: 'secret', ami: 'Benjamin', valeurMarchande: 99, favori: true },
+      { id: 'C|Carte inconnue', titre: 'Carte inconnue', description: 'autre chose' },
+      { id: 'x', titre: '  ' },
+      'pas une carte',
+    ],
+    preferences: { amis: ['Benjamin'] },
+  };
+  it('ne lit que le titre et la description', () => {
+    const lues = lireSauvegarde(JSON.stringify(sauvegarde));
+    expect(lues).toEqual([
+      { titre: 'Wagon', description: 'véhicule ferroviaire de test' },
+      { titre: 'Carte inconnue', description: 'autre chose' },
+    ]);
+    expect(JSON.stringify(lues)).not.toMatch(/secret|Benjamin|prixCible|rarete/);
+  });
+  it('refuse un format ou une forme inattendus', () => {
+    expect(() => lireSauvegarde({ format: 'autre', cartes: [] })).toThrow(/Format/);
+    expect(() => lireSauvegarde({ format: 'wm-collection-sauvegarde' })).toThrow(/cartes/);
+    expect(() => lireSauvegarde('42')).toThrow();
+  });
+  it('remplace les descriptions, garde les thèmes et signale les absentes', () => {
+    const wagon = CARTES_REFERENCE.find((c) => c.titre === 'Wagon')!;
+    const r = appliquerDescriptions(lireSauvegarde(sauvegarde), [wagon, CARTES_REFERENCE.find((c) => c.titre === 'Malibu')!]);
+    const converti = r.cartes.find((c) => c.titre === 'Wagon')!;
+    expect(converti.description).toBe('véhicule ferroviaire de test');
+    expect(converti.themes).toEqual(wagon.themes);
+    expect(converti.source).toBe('reelle');
+    expect(r.remplacees).toEqual(['Wagon']);
+    expect(r.absentes).toEqual(['Malibu']);
+  });
+  it('retrouve un titre malgré l’apostrophe typographique, la casse et les accents', () => {
+    expect(cleTitre('Honda CB 900 F Bol d’Or')).toBe(cleTitre("honda cb 900 f bol d'or"));
+    expect(cleTitre('Café')).toBe(cleTitre('cafe'));
+  });
+  it('liste les cartes de la sauvegarde absentes du jeu', () => {
+    expect(cartesAReferencer(lireSauvegarde(sauvegarde)).map((c) => c.titre)).toEqual(['Carte inconnue']);
   });
 });
 
@@ -94,6 +158,8 @@ describe('ligne de base de production', () => {
   it('s’exécute et se formate (aucun seuil : c’est le point de comparaison des POC)', async () => {
     const rapport = await evaluer(deductionProduction);
     expect(rapport.global.cartes).toBe(CARTES_REFERENCE.length);
-    console.info(formaterRapport(rapport, 'production (titre + description)'));
+    console.info(formaterRapport(rapport, 'production (titre + description), jeu complet'));
+    console.info(formaterRapport(await evaluer(deductionProduction, { source: 'reelle' }), 'production, cartes réelles'));
+    console.info(formaterRapport(await evaluer(deductionProduction, { source: 'reconstruite' }), 'production, cartes reconstruites'));
   });
 });
