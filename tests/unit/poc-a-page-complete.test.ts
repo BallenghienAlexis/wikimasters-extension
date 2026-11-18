@@ -7,6 +7,7 @@ import { analyserReponseParse, enTexteBrut, lireInfobox } from '../../specs/poc-
 import { deduirePage, VARIANTES } from '../../specs/poc-themes/poc-a-page-complete/methode';
 import { urlParse, lireTitres } from '../../specs/poc-themes/poc-a-page-complete/collecter.mjs';
 import { evaluer, formaterRapport } from '../benchmark-themes/scoring';
+import { deductionProduction } from '../benchmark-themes/production';
 
 const WIKITEXTE = `{{Infobox Musique (artiste)
 | nom = Groupe fictif
@@ -90,5 +91,18 @@ describe.skipIf(!CHEMIN)('évaluation sur pages réelles (POC_PAGES)', () => {
     }
     if (process.env.POC_SORTIE) writeFileSync(process.env.POC_SORTIE, JSON.stringify(sortie, null, 1));
     expect(Object.keys(sortie).length).toBe(Object.keys(VARIANTES).length);
-  });
+  }, 300_000);
+  it('compare les hybrides production + page', async () => {
+    const brut = JSON.parse(readFileSync(CHEMIN!, 'utf8')) as Record<string, unknown>;
+    const A = (w: string, v: string): string[] => { const p = analyserReponseParse(brut[w], w); return p ? deduirePage(p, VARIANTES[v]!).themes : []; };
+    const A3 = 'A3 page complète';
+    const A5 = 'A5 complète, 2 canaux forts, seuil 5';
+    const methodes: Record<string, (c: { titre: string; description: string; wikipedia: string }) => string[]> = {
+      'P production': (c) => deductionProduction(c) as string[],
+      'H1 production, puis A5 si vide': (c) => { const p = deductionProduction(c) as string[]; return p.length > 0 ? p : A(c.wikipedia, A5); },
+      'H2 production filtrée par A3': (c) => { const a = new Set(A(c.wikipedia, A3)); return (deductionProduction(c) as string[]).filter((x) => a.has(x)); },
+      'H3 H2, puis A5 si vide': (c) => { const a = new Set(A(c.wikipedia, A3)); const r = (deductionProduction(c) as string[]).filter((x) => a.has(x)); return r.length > 0 ? r : A(c.wikipedia, A5); },
+    };
+    for (const [nom, f] of Object.entries(methodes)) console.log(formaterRapport(await evaluer(f), nom, 0));
+  }, 300_000);
 });

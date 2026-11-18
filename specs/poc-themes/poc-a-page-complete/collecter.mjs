@@ -21,6 +21,8 @@ export function lireTitres(brut) {
   return [...new Set(liste.map((x) => (typeof x === 'string' ? x : x?.wikipedia ?? x?.titre)).filter((t) => typeof t === 'string' && t.length > 0))];
 }
 
+const lireUneFois = (titre) => fetch(urlParse(titre), { headers: { 'User-Agent': 'poc-themes (script de recherche, lecture seule)', Accept: 'application/json' } });
+
 async function main() {
   const [, , entree, sortie, reprise = `${sortie}.jsonl`] = process.argv;
   if (!entree || !sortie) { console.error('Usage : node collecter.mjs <titres.json> <pages.json> [reprise.jsonl]'); process.exit(2); }
@@ -32,7 +34,14 @@ async function main() {
     i += 1;
     if (faits.has(titre)) continue;
     await new Promise((r) => setTimeout(r, PAUSE_MS + Math.random() * GIGUE_MS));
-    const rep = await fetch(urlParse(titre), { headers: { 'User-Agent': 'poc-themes (script de recherche, lecture seule)', Accept: 'application/json' } });
+    let rep = await lireUneFois(titre);
+    // 429 : on respecte `Retry-After` (adresse partagée par d'autres usages) et on réessaie 4 fois au plus avant d'arrêter.
+    for (let essai = 1; rep.status === 429 && essai <= 4; essai += 1) {
+      const attente = Math.min(120, Number(rep.headers.get('retry-after')) || 30 * essai);
+      console.log(`429 sur « ${titre} » : attente de ${attente} s (essai ${essai}/4)`);
+      await new Promise((r) => setTimeout(r, (attente + 2) * 1000));
+      rep = await lireUneFois(titre);
+    }
     if (rep.status === 403 || rep.status === 429) { console.error(`${rep.status} : arrêt à « ${titre} », relancer plus tard (reprise automatique).`); break; }
     const reponse = rep.ok ? await rep.json() : { erreurHttp: rep.status };
     faits.set(titre, reponse);
