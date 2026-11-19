@@ -10,11 +10,12 @@
 // Relance : quand une place se libère, une mise aux enchères (`POST /api/marketplace`, même contrat que les lots) pour la
 // carte choisie par `choisirProchaineEnchere`, sans clic « Lancer », seulement si l’interrupteur est activé.
 // N’appelle jamais `fetch` lui-même : le transport de lecture et l’émetteur d’écriture sont injectés.
-import { CAUSE_VERIFICATION_HUMAINE, estLimiteEncheres, type Action, type ResultatAction } from '../lib/actions';
+import { CAUSE_VERIFICATION_HUMAINE, CODE_VERIFICATION_HUMAINE, estLimiteEncheres, type Action, type ResultatAction } from '../lib/actions';
 import type { Collection } from '../lib/collection';
 import type { Horloge } from '../lib/file';
 import { CONFIG_PRIX } from '../config/prix';
 import { routeMarcheValide } from '../lib/affluence';
+import { PAUSE_LOTS_MS } from '../lib/reprise';
 import { DUREE_BAIL_MS, PAUSE_APRES_ARRET_MS, etatInitial, type Bail, type EtatOrdonnanceur, type ReponseApi } from '../lib/ordonnanceur';
 import type { AvecVerrouRequete } from '../lib/verrouRequete';
 import { choisirProchaineEnchere } from '../lib/relanceVentes';
@@ -39,7 +40,7 @@ import {
 } from '../lib/ventes';
 
 /** Pause de la relance après un 401 ou un 429 (règle de sécurité des lots d’écriture). */
-export const PAUSE_ECRITURE_MS = 30 * 60_000;
+export const PAUSE_ECRITURE_MS = PAUSE_LOTS_MS;
 /** Un exemplaire refusé (403 ou 404 : vendu, défaussé) n’est pas retenté avant 1 jour. */
 export const ECART_REFUS_MS = 24 * 3600_000;
 /** Échecs de suite d’une même carte à partir desquels l’onglet affiche un avertissement avec choix (jamais d’arrêt automatique). */
@@ -106,7 +107,7 @@ const libelleLecture = (r: ReponseApi): string => {
   if (r.statut === 429) return 'Le site demande de ralentir (429)';
   if (r.statut === 403) {
     const j = r.json as { code?: unknown } | null;
-    return j && typeof j === 'object' && j.code === 'human_verification_required'
+    return j && typeof j === 'object' && j.code === CODE_VERIFICATION_HUMAINE
       ? 'Vérification anti-bot du site requise : résous-la à la main sur wiki-masters.com'
       : 'Le site a refusé la lecture (403)';
   }
