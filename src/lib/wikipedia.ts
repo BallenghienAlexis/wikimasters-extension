@@ -37,7 +37,7 @@ export interface EntreeWikipedia {
 }
 
 /** À incrémenter quand une règle de mots-clés change : les entrées en cache sont alors relues par la lecture de fond. */
-export const VERSION_REGLES = 3;
+export const VERSION_REGLES = 4;
 
 export interface CacheWikipedia {
   version: 1;
@@ -234,13 +234,13 @@ export function themesDepuisCategories(categories: string[], resume = ''): strin
 function lireSignaux(brut: unknown, connus: Set<string>): SignauxPage | null {
   if (!estObjet(brut) || !Array.isArray(brut.fortes) || !Array.isArray(brut.faibles) || !GENRES.includes(brut.genre as Genre)) return null;
   const ids = (a: unknown[]): string[] => a.filter((t): t is string => typeof t === 'string' && connus.has(t));
-  return { fortes: ids(brut.fortes), faibles: ids(brut.faibles), genre: brut.genre as Genre };
+  return { fortes: ids(brut.fortes), faibles: ids(brut.faibles), genre: brut.genre as Genre, ...(Array.isArray(brut.wikidata) && ids(brut.wikidata).length > 0 ? { wikidata: ids(brut.wikidata) } : {}) };
 }
 
 const GENRES: readonly Genre[] = ['personne', 'oeuvre', 'organisation', 'produit', 'notion', 'lieu', 'espece', 'autre'];
 
 /** Signaux par le sens : thèmes de la définition (fiables) et des catégories (à recouper), nature du sujet. */
-export function signauxWikipedia(categories: string[], resume: string, descriptionsWikidata: string[] = [], classes: string[] = [], humain = false): SignauxPage {
+export function signauxWikipedia(categories: string[], resume: string, descriptionsWikidata: string[] = [], classes: string[] = [], humain = false, themesClasses: string[] = []): SignauxPage {
   const utiles = categories.filter((c) => !CATEGORIE_TECHNIQUE.test(c.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()));
   const def = definition(resume);
   const fortes = new Set(themesDirectsDeTexte(def));
@@ -250,7 +250,7 @@ export function signauxWikipedia(categories: string[], resume: string, descripti
   for (const d of textes) for (const id of themesDirectsDeTexte(d)) fortes.add(id);
   const depuisResume = genreDe(resume, def);
   const genre: Genre = humain ? 'personne' : (classes.map((d) => genreDe(d)).find((g) => g !== 'autre') ?? (depuisResume !== 'autre' ? depuisResume : (descriptionsWikidata.map((d) => genreDe(d)).find((g) => g !== 'autre') ?? 'autre')));
-  return { fortes: [...fortes], faibles: themesDirectsDeTexte(utiles.join(' . '), true), genre };
+  return { fortes: [...fortes], faibles: themesDirectsDeTexte(utiles.join(' . '), true), genre, ...(themesClasses.length > 0 ? { wikidata: themesClasses } : {}) };
 }
 
 export function validerCache(brut: unknown): CacheWikipedia | null {
