@@ -8,6 +8,7 @@ import { validerIgnorees, type Ignoree } from './ignorees';
 import { validerHistorique, type PointHistorique } from './historique';
 import { AFFICHAGE_DEFAUT, validerAffichage, type Affichage } from './affichage';
 import { cacheVide, validerCache, type CacheWikipedia } from './wikipedia';
+import { validerGraphe, type GrapheWikidata } from './classesWikidata';
 import { etatApprisVide, validerEtatAppris, type EtatAppris } from './themesAppris';
 import { cacheIAVide, validerCacheIA, type CacheIA } from './classificationIA';
 import { registreVide, validerRegistre } from './registre';
@@ -37,6 +38,7 @@ const CLE_PASSER_CARTE = 'passerCarteSynchro';
 const CLE_DERNIERE_RELANCE = 'derniereRelance';
 const CLE_STATUT_SYNCHRO = 'statutSynchro';
 const CLE_WIKIPEDIA = 'wikipedia';
+const CLE_GRAPHE_WIKIDATA = 'grapheWikidata';
 const CLE_CLASSEMENT_IA = 'classementIA';
 const CLE_THEMES_APPRIS = 'themesAppris';
 const CLE_VENTES = 'ventes';
@@ -135,6 +137,17 @@ export async function chargerCacheWikipedia(): Promise<CacheWikipedia> {
 export async function enregistrerCacheWikipedia(cache: CacheWikipedia): Promise<void> {
   if (validerCache(cache) === null) throw new Error('Cache Wikipédia invalide.');
   await chrome.storage.local.set({ [CLE_WIKIPEDIA]: cache });
+}
+
+/** Graphe des classes Wikidata déjà lues (ancêtres des classes de chaque carte) : illisible vaut « vide », il se reconstruit à la lecture de fond. */
+export async function chargerGrapheWikidata(maxEntites: number): Promise<GrapheWikidata> {
+  const contenu = await chrome.storage.local.get(CLE_GRAPHE_WIKIDATA);
+  return validerGraphe(contenu[CLE_GRAPHE_WIKIDATA], maxEntites) ?? {};
+}
+
+export async function enregistrerGrapheWikidata(graphe: GrapheWikidata, maxEntites: number): Promise<void> {
+  if (validerGraphe(graphe, maxEntites) === null) throw new Error('Graphe Wikidata invalide.');
+  await chrome.storage.local.set({ [CLE_GRAPHE_WIKIDATA]: graphe });
 }
 
 /** Cache du classement par l’API Claude (titre → thèmes) : illisible vaut « vide » (il se refait, au prix d’un nouveau classement). */

@@ -2,7 +2,9 @@
 // GET en lecture seule vers fr.wikipedia.org (et www.wikidata.org si Wikipédia ne donne aucun thème), un titre de carte par requête, sans cookie ni en-tête ajouté.
 import { avecParents } from '../lib/themes';
 import { ajouterEntree, lireEntiteWikidata, lireHomonymie, themesDepuisHomonymie, urlRequeteHomonymie, lireLibellesWikidata, lireReponse, lireReponseWikidata, themesDepuisCategories, themesDepuisWikidata, signauxWikipedia, titresAVerifier, urlEntiteWikidata, urlLibellesWikidata, urlRequete, urlRequeteWikidata, type CacheWikipedia } from '../lib/wikipedia';
+import { lireEntitesWikidata, PROPRIETES_CARTE, type EntiteGraphe, type GrapheWikidata } from '../lib/classesWikidata';
 import { attendreReel } from './attente';
+import { themesWikidataDe } from './grapheWikidata';
 
 export type Transport = (url: string, signal: AbortSignal) => Promise<{ status: number; json: () => Promise<unknown> }>;
 
@@ -25,6 +27,10 @@ export interface OptionsVerification {
   maintenant?: () => number;
   attendre?: (ms: number, signal: AbortSignal) => Promise<void>;
   transport?: Transport;
+  /** Graphe des classes Wikidata déjà lues (ancêtres), complété sur place ; absent = les thèmes par classes ne sont pas calculés. */
+  graphe?: GrapheWikidata;
+  /** Appelé quand le graphe a grandi, pour l'enregistrer. */
+  surGraphe?: (graphe: GrapheWikidata) => void | Promise<void>;
 }
 
 /** Cadence fixe : une requête à la fois, une par seconde. */
@@ -32,7 +38,7 @@ export const PAUSE_MS = 1000;
 const MAX_ECHECS = 3;
 
 export async function verifierTitres(options: OptionsVerification): Promise<ResultatVerification> {
-  const { titres, signal, surProgres, maintenant = Date.now, attendre = attendreReel, transport = transportReel } = options;
+  const { titres, signal, surProgres, maintenant = Date.now, attendre = attendreReel, transport = transportReel, graphe, surGraphe } = options;
   let cache = options.cache;
   let verifiees = 0;
   let echecs = 0;
@@ -59,14 +65,27 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
       return null;
     }
   };
-  // Lit les classes de l'entité Wikidata (2 GET). null = rien d'exploitable (on continue sans) ; 'arret' = 403/429 ou arrêt manuel.
-  const lireEnrichissement = async (qid: string): Promise<{ classes: string[]; humain: boolean } | 'arret' | null> => {
+  // Lit les classes de l'entité Wikidata (2 GET, plus les ancêtres des classes par lots de 50 : une même classe n'est jamais redemandée).
+  // null = rien d'exploitable (on continue sans) ; 'arret' = 403/429 ou arrêt manuel.
+  const lireEnrichissement = async (qid: string): Promise<{ classes: string[]; humain: boolean; themesClasses: string[] } | 'arret' | null> => {
     try {
-      const entite = lireEntiteWikidata(await appeler(urlEntiteWikidata(qid)), qid);
+      const brut = await appeler(urlEntiteWikidata(qid));
+      const entite = lireEntiteWikidata(brut, qid);
       if (entite === null) return null;
-      if (entite.classes.length === 0) return { classes: [], humain: entite.humain };
+      // Thèmes par la table classe → thème (2026-11-19) : lecture du graphe de la carte, sans effet si l'appelant n'en fournit pas.
+      let themesClasses: string[] = [];
+      if (graphe !== undefined) {
+        const racine: EntiteGraphe | undefined = lireEntitesWikidata(brut, [...PROPRIETES_CARTE, 'P171'])?.[qid];
+        const lus = racine === undefined ? null : await themesWikidataDe(qid, racine, graphe, appeler);
+        if (lus !== null) {
+          themesClasses = lus.themes;
+          // Un enregistrement impossible (quota) n'est pas un refus du site : les thèmes de la carte sont gardés, le graphe se relira.
+          if (lus.ajoutees > 0) await Promise.resolve(surGraphe?.(graphe)).catch(() => undefined);
+        }
+      }
+      if (entite.classes.length === 0) return { classes: [], humain: entite.humain, themesClasses };
       const libelles = lireLibellesWikidata(await appeler(urlLibellesWikidata(entite.classes)));
-      return libelles === null ? null : { classes: libelles, humain: entite.humain };
+      return libelles === null ? null : { classes: libelles, humain: entite.humain, themesClasses };
     } catch {
       return 'arret';
     }
@@ -105,6 +124,7 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
       // Type et métier d'après Wikidata (instance de, occupation, genre, sport) : deux GET de plus, seulement si la page a un identifiant.
       // Un échec de cette étape n'en est pas un : la carte garde ce que Wikipédia a donné (403 et 429 arrêtent toujours).
       let classes: string[] = [];
+      let themesClasses: string[] = [];
       let humain = false;
       let enrichi = false;
       if (lecture.type === 'ok' && lecture.qid !== undefined) {
@@ -112,11 +132,12 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
         if (lu === 'arret') return { verifiees, arret: signal.aborted ? 'manuel' : 'code-http', codeHttp: signal.aborted ? null : codeArret };
         if (lu !== null) {
           classes = lu.classes;
+          themesClasses = lu.themesClasses;
           humain = lu.humain;
           enrichi = true;
         }
       }
-      if (enrichi && signaux !== undefined && lecture.type === 'ok') signaux = signauxWikipedia(lecture.categories, lecture.resume, [], classes, humain);
+      if (enrichi && signaux !== undefined && lecture.type === 'ok') signaux = signauxWikipedia(lecture.categories, lecture.resume, [], classes, humain, themesClasses);
       let themes = lecture.type === 'ok' ? themesDepuisCategories(lecture.categories, lecture.resume) : [];
       // Page d'homonymie (Zidane, Renault, B612…) : les entrées listées donnent les thèmes dominants (un GET de plus, même route).
       let homonymie = false;
@@ -136,6 +157,8 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
         }
       }
       if (enrichi) themes = [...new Set([...themes, ...themesDepuisWikidata(classes)])];
+      // Les thèmes des classes ne sont qu'un repli : ils n'entrent dans la liste des thèmes de la carte (amis, favoris, pré-coche) que si rien d'autre n'en donne.
+      if (enrichi && themes.length === 0) themes = avecParents(themesClasses);
       // Wikipédia n'a rien donné : courte description Wikidata (même cadence, titre seul), sinon l'entrée sera relue une fois.
       let wikidata = false;
       if (themes.length === 0) {
@@ -197,6 +220,10 @@ export interface OptionsPlanificateur {
   maintenant?: () => number;
   attendre?: (ms: number, signal: AbortSignal) => Promise<void>;
   transport?: Transport;
+  /** Charge le graphe des classes Wikidata mémorisé (une fois) ; absent = pas de thèmes par classes. */
+  chargerGraphe?: () => Promise<GrapheWikidata>;
+  /** Enregistre le graphe quand il a grandi. */
+  surGraphe?: (graphe: GrapheWikidata) => void | Promise<void>;
 }
 
 export interface Planificateur {
@@ -220,7 +247,7 @@ const MESSAGE_ECHECS = 'Vérification suspendue : trop d’échecs de lecture. E
  * suspension définitive (jusqu'au rechargement) sur 403/429 ou 3 échecs de suite. À créer une seule fois par page.
  */
 export function creerPlanificateur(options: OptionsPlanificateur): Planificateur {
-  const { chargerCache, surCache, maintenant = Date.now, attendre = attendreReel, transport = transportReel } = options;
+  const { chargerCache, surCache, maintenant = Date.now, attendre = attendreReel, transport = transportReel, chargerGraphe, surGraphe } = options;
   // Début de la dernière requête réellement partie : la cadence d'une par seconde tient même après une annulation.
   let dernierDepart = Number.NEGATIVE_INFINITY;
   const transportHorodate: Transport = (url, signal) => {
@@ -240,6 +267,7 @@ export function creerPlanificateur(options: OptionsPlanificateur): Planificateur
   const ecouteurs = new Set<() => void>();
   let etat: EtatPlanificateur = { enCours: false, suspendue: null, faites: 0, total: 0, fond: 0 };
   let cache: CacheWikipedia | null = null;
+  let graphe: GrapheWikidata | undefined;
   // Annulé quand la vue liste est quittée : coupe la requête en vol et la suite (Wikidata) du titre en cours.
   let controleur = new AbortController();
 
@@ -253,6 +281,7 @@ export function creerPlanificateur(options: OptionsPlanificateur): Planificateur
     let echecs = 0;
     try {
       cache ??= await chargerCache();
+      if (chargerGraphe !== undefined) graphe ??= await chargerGraphe();
       while (file.length > 0 || fileFond.length > 0) {
         courantFond = file.length === 0;
         const titre = (courantFond ? fileFond.shift() : file.shift()) as string;
@@ -267,6 +296,8 @@ export function creerPlanificateur(options: OptionsPlanificateur): Planificateur
           maintenant,
           attendre,
           transport: transportHorodate,
+          graphe,
+          surGraphe,
           surProgres: async (nouveau) => {
             cache = nouveau;
             await surCache(nouveau);

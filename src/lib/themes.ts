@@ -305,8 +305,31 @@ function occurrencesDirectes(texte: string, categories = false): ReadonlyMap<str
   return resultat;
 }
 
+/**
+ * Noms propres de lieux composés (2026-11-19) : leurs mots ne disent rien du sujet. « Saint-Denis » n’est pas de la religion,
+ * « Mont-de-Marsan » pas une montagne, « Fond du Lac » pas un lac, « Pays-Bas » pas un thème de pays, « outre-mer » pas la mer.
+ * Seules les formes écrites avec une majuscule (ou le trait d’union d’un toponyme) sont neutralisées ; « un saint », « le mont Blanc est une montagne » restent lus.
+ */
+const NOMS_PROPRES_DE_LIEUX = new RegExp(
+  [
+    String.raw`\bSaint(?:es?)?-(?!(?:Siège|Esprit|Empire|Père|Sacrement|Office)\b)\p{Lu}[\p{L}'-]*(?:-[\p{L}']+)*`,
+    String.raw`\bMont-\p{Lu}[\p{L}'-]*(?:-[\p{L}']+)*`,
+    String.raw`\bMont-(?:de|du|des|la|le|aux?)-\p{L}[\p{L}'-]*(?:-[\p{L}']+)*`,
+    String.raw`\bLac-\p{Lu}[\p{L}'-]*`,
+    String.raw`\bFond du Lac\b`,
+    String.raw`\bPays-Bas\b`,
+    String.raw`\bPays (?:de Galles|de la Loire|basque)\b`,
+    String.raw`\b[Oo]utre-mer\b`,
+    String.raw`-sur-[Mm]er\b`,
+  ].join('|'),
+  'gu',
+);
+
+/** Remplace chaque nom propre de lieu par des « x » de même longueur : les indices du texte restent alignés. */
+const neutraliserLieux = (texte: string): string => texte.replace(NOMS_PROPRES_DE_LIEUX, (m) => 'x'.repeat(m.length));
+
 function calculerOccurrences(texte: string, categories: boolean): Map<string, number> {
-  const brut = texte.replaceAll('’', "'");
+  const brut = neutraliserLieux(texte.replaceAll('’', "'"));
   const normalise = `${normaliser(brut)} `;
   // Les indices ne correspondent à l’original que si la normalisation conserve la longueur.
   const memeLongueur = normalise.length === brut.length + 1;
@@ -455,9 +478,11 @@ export const themesDirectsDeTexte = (texte: string, categories = false): string[
 export interface SignauxPage {
   /** Thèmes de la définition (« X est un film d’animation… ») et des classes Wikidata : fiables. */
   fortes: string[];
-  /** Thèmes des catégories : utiles, mais seulement s’ils sont compatibles avec la nature du sujet. */
+  /** Thèmes des catégories : ils ne font que confirmer un thème déjà établi par une autre source (2026-11-19), sauf si rien d’autre n’existe. */
   faibles: string[];
   genre: Genre;
+  /** Thèmes déduits des classes de l’entité Wikidata (table classe → thème, `classesWikidata.ts`) : repli quand rien d’autre ne donne de thème. */
+  wikidata?: string[];
 }
 
 let signauxWikipedia: ReadonlyMap<string, SignauxPage> = new Map();
@@ -585,21 +610,47 @@ function themesPrincipauxLocaux(carte: Pick<Carte, 'titre' | 'description'>): st
   };
   ajouter(themesDirectsDeTexte(defSite), 5);
   ajouter(page?.fortes ?? [], 5);
+  const fortsPoses = new Set(poids.keys());
   const finPhrase = description.search(/[.!?](\s|$)/);
   const premiere = finPhrase === -1 ? description : description.slice(0, finPhrase + 1);
   faible(themesDirectsDeTexte(carte.titre), 1);
   faible(themesDirectsDeTexte(premiere), 1.5);
   faible(themesDirectsDeTexte(description.slice(premiere.length)), 0.5);
   faible(themesApprisDe(carte.titre), 2);
-  if (page) faible(page.faibles, 2);
+  // Catégories Wikipédia (2026-11-19) : elles confirment un thème déjà établi, elles n’en apportent pas de secondaire. Pour une personne,
+  // seul un thème de la définition ou des classes Wikidata peut être confirmé (« rôles secondaires » : éducation, littérature, politique…).
+  let categories: readonly string[];
+  if (page) categories = page.faibles;
   else {
     // Entrée de cache ancienne (sans signaux) : elle contient les parents et le résumé, les ancêtres n'y comptent pas.
     const wiki = themesWikipedia.get(carte.titre) ?? [];
     const ancetresWiki = new Set(wiki.flatMap((id) => [...ancetres(id)]));
-    faible(wiki.filter((id) => !ancetresWiki.has(id)), 2);
+    categories = wiki.filter((id) => !ancetresWiki.has(id));
   }
-  const meilleur = Math.max(0, ...poids.values());
-  const retenus = [...poids.entries()].filter(([, p]) => p * 5 >= meilleur * 2);
+  const wikidata = page?.wikidata ?? [];
+  if (poids.size === 0 && wikidata.length > 0) return wikidata.slice(0, MAX_THEMES_PAR_CARTE);
+  const personne = genre === 'personne' || page?.genre === 'personne';
+  const confirmables = personne ? fortsPoses : new Set([...poids.keys(), ...wikidata]);
+  // Une catégorie confirme aussi en précisant : « Espèce de félins » précise « animaux » (le thème établi) et prend sa place, elle n’ajoute pas un autre sujet.
+  let confirmees = 0;
+  for (const id of categories) {
+    if (confirmables.has(id)) {
+      faible([id], 2);
+      confirmees += 1;
+      continue;
+    }
+    // Une personne ne reçoit aucune précision venue des catégories (« République islamique d’Iran » ne fait pas un « #Islam »).
+    const ancetre = personne ? undefined : [...ancetres(id)].find((a) => confirmables.has(a));
+    if (ancetre === undefined) continue;
+    faible([id], Math.max(poids.get(ancetre) ?? 0, 5));
+    confirmees += 1;
+  }
+  // Seule source : les catégories restent un dernier recours (ni définition, ni mot-clé, ni Wikidata), jamais un thème de plus.
+  if (confirmees === 0 && poids.size === 0) faible(categories, 2);
+  // Un thème dit par plusieurs canaux forts (site et Wikipédia) ne dépasse pas 5 : il ne doit pas écraser un thème plus précis dit une fois.
+  const meilleur = Math.min(5, Math.max(0, ...poids.values()));
+  // Seuil de 60 % du meilleur (Alexis, 2026-11-19 : « seuil 60 % accepté ») : un thème secondaire doit être presque aussi bien établi que le premier.
+  const retenus = [...poids.entries()].filter(([, p]) => p * 5 >= meilleur * 3);
   // Un thème qui est l'ancêtre d'un autre thème retenu est écarté : « #Chien » suffit, pas « #Animaux » en plus.
   const ancetresRetenus = new Set(retenus.flatMap(([id]) => [...ancetres(id)]));
   return retenus

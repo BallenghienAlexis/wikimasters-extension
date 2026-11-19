@@ -80,7 +80,7 @@ const CAS: Cas[] = [
     site: 'liqueur à base de noix de coco',
     categories: ['Malibu', 'Marque de rhum', 'Boisson alcoolisée à base de noix de coco'],
     resume: 'Malibu est une liqueur à base de rhum et de noix de coco, produite à la Barbade.',
-    attendus: ['alcool'],
+    attendus: ['rhum'], // « Marque de rhum » précise « alcool » (le thème établi) et prend sa place (2026-11-19) : le plus précis suffit
     interdits: ['ville', 'geographie'],
   },
   {
