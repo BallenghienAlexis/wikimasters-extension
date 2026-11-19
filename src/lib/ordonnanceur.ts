@@ -14,6 +14,8 @@
  * au prix, `valeurMarchande` — sans écraser une valeur saisie à la main.
  */
 import { PAUSE_LOTS_MS } from './reprise';
+import { CODE_VERIFICATION_HUMAINE } from './actions';
+import { PAS_ATTENTE_MS } from './ventes';
 import { CODES_ARRET, INTERVALLE_MS, type Horloge } from './file';
 import { VERSION_SCHEMA, aEditionLocale, type Carte, type Collection } from './collection';
 import { analyserPage, analyserPrix, sensDuPrix, type SensPrix, decrireForme, diagnosticStats, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
@@ -33,13 +35,11 @@ export const PAUSE_PRIX_MS = 1_200;
  * à chaque nouvel échec de la même carte, sans plafond, jusqu’à ce que la requête réussisse (Alexis, 2026-11-16).
  * Aucun arrêt automatique : seul le joueur arrête.
  */
-export const PAS_ATTENTE_PRIX_MS = 5_000;
+export const PAS_ATTENTE_PRIX_MS = PAS_ATTENTE_MS;
 /** Après ce nombre d’échecs de la même carte, un avertissement propose au joueur de la passer (Alexis, 2026-11-16) ; jamais de passage automatique. */
 export const SEUIL_AVERTISSEMENT_PRIX = 5;
 /** Ralentissement supplémentaire maximal entre deux demandes de prix, appris des échecs (réduit de moitié à chaque prix lu). */
 export const RALENTISSEMENT_PRIX_MAX_MS = 2_000;
-/** Code de la réponse 403 du site qui exige une vérification humaine : jamais contournée (le joueur la franchit à la main). */
-const CODE_VERIFICATION_HUMAINE = 'human_verification_required';
 const PREMIERE_PAGE = 0;
 const CARTES_PAR_PAGE = 50;
 /** Retrait automatique des cartes disparues : au plus ce nombre, ou 10 % de la collection si plus. */
@@ -495,7 +495,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     // Réponse « stats » inexploitable (vide, HTML, forme changée) : souvent un rythme trop rapide. Pauses de 5 s puis 10 s et
     // jusqu’à 3 essais ; si elle reste inexploitable, l’élément est sauté et les pages sont lues quand même (jamais d’arrêt).
     for (let essai = 1; ; essai++) {
-      const r = await requete(cheminStats(), false, essai === 1 ? 0 : 5000 * (essai - 1));
+      const r = await requete(cheminStats(), false, essai === 1 ? 0 : PAS_ATTENTE_MS * (essai - 1));
       if (r === null) return null;
       const stats = analyserStats(r.json);
       if (stats !== null) return stats;
