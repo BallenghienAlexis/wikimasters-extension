@@ -1,0 +1,5 @@
+# Retouches à reprendre
+
+## À reprendre
+- `src/app/planificateurWikipedia.ts:21` : le graphe Wikidata complet est réécrit après chaque carte qui l'agrandit (jusqu'à 1 à 2 Mo). Regrouper les écritures (toutes les N cartes ou en fin de file) si la lecture de fond se montre lente.
+- Mesure avec pages Wikipédia réelles (`specs/poc-themes/poc-b/mesure-pages.test.ts`) : dépend de la collecte `poc/collecter.mjs`, ralentie par les 429 de Wikimedia.

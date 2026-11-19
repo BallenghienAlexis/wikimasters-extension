@@ -24,7 +24,9 @@ export type Appeler = (url: string) => Promise<unknown>;
 
 /** Charge les entités inconnues de `ids` dans `graphe` ; false si une requête n’a rien donné d’exploitable. */
 async function charger(graphe: GrapheWikidata, ids: readonly string[], appeler: Appeler, ajoutees: { n: number }): Promise<boolean> {
-  const inconnues = ids.filter((id) => !(id in graphe));
+  // Graphe plein : rien ne serait gardé, on ne redemande pas (les classes inconnues comptent pour rien).
+  const place = MAX_ENTITES_GRAPHE - Object.keys(graphe).length;
+  const inconnues = ids.filter((id) => !(id in graphe)).slice(0, Math.max(0, place));
   for (let i = 0; i < inconnues.length; i += PAR_REQUETE) {
     const lot = inconnues.slice(i, i + PAR_REQUETE);
     const lues = lireEntitesWikidata(await appeler(urlEntitesWikidata(lot)), PROPRIETES_ANCETRE);

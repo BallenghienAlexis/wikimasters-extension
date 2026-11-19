@@ -79,7 +79,8 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
         const lus = racine === undefined ? null : await themesWikidataDe(qid, racine, graphe, appeler);
         if (lus !== null) {
           themesClasses = lus.themes;
-          if (lus.ajoutees > 0) await surGraphe?.(graphe);
+          // Un enregistrement impossible (quota) n'est pas un refus du site : les thèmes de la carte sont gardés, le graphe se relira.
+          if (lus.ajoutees > 0) await Promise.resolve(surGraphe?.(graphe)).catch(() => undefined);
         }
       }
       if (entite.classes.length === 0) return { classes: [], humain: entite.humain, themesClasses };
