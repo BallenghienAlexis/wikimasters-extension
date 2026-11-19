@@ -24,6 +24,9 @@ describe('noms propres de lieux composés', () => {
     expect(themesDirectsDeTexte('Le mont Blanc est une montagne des Alpes')).toContain('montagne');
     expect(themesDirectsDeTexte('Le lac Léman est un lac')).toContain('lac');
   });
+  it('garde Saint-Siège et Saint-Empire', () => {
+    expect(themesDirectsDeTexte('Le Saint-Siège')).toContain('religion');
+  });
   it('ne décale pas les indices : un nom propre à côté d’un mot-clé ne le fait pas disparaître', () => {
     expect(themesDeTexte('Saint-Denis, un barrage hydroélectrique')).toContain('barrage');
   });

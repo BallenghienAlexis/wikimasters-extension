@@ -312,7 +312,7 @@ function occurrencesDirectes(texte: string, categories = false): ReadonlyMap<str
  */
 const NOMS_PROPRES_DE_LIEUX = new RegExp(
   [
-    String.raw`\bSaint(?:es?)?-\p{Lu}[\p{L}'-]*(?:-[\p{L}']+)*`,
+    String.raw`\bSaint(?:es?)?-(?!(?:Siège|Esprit|Empire|Père|Sacrement|Office)\b)\p{Lu}[\p{L}'-]*(?:-[\p{L}']+)*`,
     String.raw`\bMont-\p{Lu}[\p{L}'-]*(?:-[\p{L}']+)*`,
     String.raw`\bMont-(?:de|du|des|la|le|aux?)-\p{L}[\p{L}'-]*(?:-[\p{L}']+)*`,
     String.raw`\bLac-\p{Lu}[\p{L}'-]*`,

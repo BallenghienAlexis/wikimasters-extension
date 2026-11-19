@@ -6,7 +6,7 @@ import { BARRIERES, TABLE } from './tableWikidata';
 import { estObjet } from './valider';
 
 /** Propriétés lues sur l’entité de la carte (liste fermée) : ce que la carte est, son métier, son genre, son sport, son domaine, sa place. */
-export const PROPRIETES_CARTE = ['P31', 'P106', 'P136', 'P641', 'P101', 'P921', 'P495', 'P17', 'P279', 'P2578', 'P361'] as const;
+export const PROPRIETES_CARTE = ['P31', 'P106', 'P136', 'P641', 'P101', 'P921', 'P495', 'P17', 'P279', 'P361'] as const;
 /** Propriétés retenues pour une entité ancêtre : de quoi remonter le graphe, rien d’autre. */
 export const PROPRIETES_ANCETRE = ['P279', 'P171', 'P361'] as const;
 type Propriete = (typeof PROPRIETES_CARTE)[number] | 'P171';

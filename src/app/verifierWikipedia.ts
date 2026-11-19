@@ -156,7 +156,9 @@ export async function verifierTitres(options: OptionsVerification): Promise<Resu
           homonymie = true;
         }
       }
-      if (enrichi) themes = [...new Set([...themes, ...themesDepuisWikidata(classes), ...avecParents(themesClasses)])];
+      if (enrichi) themes = [...new Set([...themes, ...themesDepuisWikidata(classes)])];
+      // Les thèmes des classes ne sont qu'un repli : ils n'entrent dans la liste des thèmes de la carte (amis, favoris, pré-coche) que si rien d'autre n'en donne.
+      if (enrichi && themes.length === 0) themes = avecParents(themesClasses);
       // Wikipédia n'a rien donné : courte description Wikidata (même cadence, titre seul), sinon l'entrée sera relue une fois.
       let wikidata = false;
       if (themes.length === 0) {

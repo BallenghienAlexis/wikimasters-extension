@@ -206,3 +206,21 @@ describe('verifierTitres avec le graphe Wikidata', () => {
     expect(urls.filter((u) => new URL(u).searchParams.get('props') === 'claims')).toHaveLength(1); // l’entité de la carte seulement, aucun ancêtre
   });
 });
+
+describe('thèmes de la carte (amis, favoris)', () => {
+  it('les thèmes des classes ne s’ajoutent pas à ceux d’une carte déjà classée', async () => {
+    const { verifierTitres } = await import('../../src/app/verifierWikipedia');
+    const { cacheVide } = await import('../../src/lib/wikipedia');
+    const t: import('../../src/app/verifierWikipedia').Transport = async (url) => {
+      const u = new URL(url);
+      if (u.hostname === 'fr.wikipedia.org') return { status: 200, json: async () => ({ query: { pages: [{ title: 'B', pageprops: { wikibase_item: 'Q1' }, categories: [{ title: 'Catégorie:Barrage en France' }] }] } }) };
+      if (u.searchParams.get('props') === 'labels') return { status: 200, json: async () => ({ entities: { Q7000900: { labels: { fr: { value: 'x' } } } } }) };
+      return { status: 200, json: async () => ({ entities: Object.fromEntries((u.searchParams.get('ids') ?? '').split('|').map((id) => [id, id === 'Q1' ? entite({ P31: ['Q7000900'] }) : id === 'Q7000900' ? entite({ P279: ['Q183862'] }) : entite({})])) }) };
+    };
+    let dernier = cacheVide();
+    await verifierTitres({ titres: ['B'], cache: cacheVide(), signal: new AbortController().signal, surProgres: (c) => { dernier = c; }, attendre: async () => undefined, transport: t, graphe: {} });
+    expect(dernier.entrees.B?.themes).toContain('barrage');
+    expect(dernier.entrees.B?.themes).not.toContain('metalcore');
+    expect(dernier.entrees.B?.signaux?.wikidata).toEqual(['metalcore']);
+  });
+});
