@@ -81,7 +81,8 @@ const ReinitialisationGlobale: React.FC<Props> = ({ etiquettesSite, registre, oc
 
   const nbSupprimees = plan?.aSupprimer.length ?? 0;
   const armeSite = !occupe && sauvegarde && plan !== null && nbSupprimees > 0 && motSite === MOT_CONFIRMATION_SITE;
-  const armeLocal = !occupe && sauvegarde && motLocal === MOT_CONFIRMATION_LOCAL;
+  // Le site d’abord : l’effacement local supprime la liste des étiquettes du site, donc il attend que plus aucune ne reste à supprimer.
+  const armeLocal = !occupe && sauvegarde && plan !== null && nbSupprimees === 0 && motLocal === MOT_CONFIRMATION_LOCAL;
 
   return (
     <section aria-labelledby="titre-reinit" className="py-2" data-testid="reinitialisation">
@@ -137,7 +138,7 @@ const ReinitialisationGlobale: React.FC<Props> = ({ etiquettesSite, registre, oc
       <h5 className="mt-3 font-medium">4. Effacer les données de l’extension</h5>
       <p className="text-sm text-muted">
         Garde seulement vos thèmes aimés, ceux de vos amis et vos choix de favori (étoiles de la Collection). Efface le reste de la collection (exemplaires, notes, prix cibles, thèmes choisis), les caches, le journal, le registre, l’historique et les autres préférences.
-        À faire après l’étape 3 (la liste des étiquettes du site est aussi effacée).
+        Disponible quand plus aucune étiquette n’est à supprimer sur le site (étape 3 faite, liste relue).
       </p>
       {apercuLocal === null ? null : (
         <details className="mt-1 text-sm">

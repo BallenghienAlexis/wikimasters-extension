@@ -54,7 +54,7 @@ describe('réinitialisation : volet site', () => {
 });
 
 describe('réinitialisation : volet local', () => {
-  it('garde seulement preferences et amisInitiaux', () => {
+  it('garde preferences, amisInitiaux et collection (réduite)', () => {
     const p = planLocal({ collection: { a: 1 }, preferences: {}, amisInitiaux: 1, journal: [], registre: {} });
     expect(p.gardees).toEqual(['amisInitiaux', 'collection', 'preferences']);
     expect(p.supprimees.map((c) => c.cle).sort()).toEqual(['journal', 'registre']);
