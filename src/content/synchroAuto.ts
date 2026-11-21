@@ -307,7 +307,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         const page = /[?&]page=(\d+)/.exec(chemin);
         if (chemin.startsWith('/api/my-collection/stats')) etape = 'stats';
         else if (page) etape = 'pages';
-        else if (/scope=summary$/.test(chemin)) etape = 'prix';
+        else if (/\/price-history$/.test(chemin)) etape = 'prix';
         else if (chemin.startsWith('/api/marketplace/mine')) etape = 'ventes';
         if (page) await noter({ etat: 'en-cours', page: pages === null ? Number(page[1]) + 1 : Math.min(Number(page[1]) + 1, pages) });
         else await noter({ etat: 'en-cours' });

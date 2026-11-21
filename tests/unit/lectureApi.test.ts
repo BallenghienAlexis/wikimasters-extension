@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyserPage, analyserPrix, sensDuPrix, analyserStats, decrireForme, diagnosticStats } from '../../src/lib/lectureApi';
+import { analyserTendance, analyserPage, analyserPrix, sensDuPrix, analyserStats, decrireForme, diagnosticStats } from '../../src/lib/lectureApi';
 
 // Réponses fictives, conformes à specs/synchro-auto/releve-api.md.
 const etiquette = (id: string, name: string) => ({ id, name, color: '#112233', user_id: 'u-fictif', created_at: '2026-01-01' });
@@ -190,5 +190,32 @@ describe('sensDuPrix', () => {
     expect(sensDuPrix({}, 'L')).toBe('vide');
     expect(sensDuPrix(reponse(null), 'L')).toBe('vide');
     expect(sensDuPrix(reponse({ L: { average: '5' } }), 'L')).toBe('vide');
+  });
+});
+
+describe('prix : price-history (2026-11-21)', () => {
+  const maintenant = Date.parse('2026-11-21T14:00:00Z'); // samedi ; semaine en cours : lundi 2026-11-16
+  const sem = (start: string, avg: number, min: number, max: number, count: number) => ({ start, avg, min, max, count });
+  const json = (weekly: unknown) => ({ computed_at: 'x', by_rarity: { UR: { weekly, monthly: [] } } });
+  const ur = json([sem('2026-06-01', 999, 1, 999, 1), sem('2026-10-26', 30, 3, 100, 4), sem('2026-11-09', 26, 5, 60, 6), sem('2026-11-16', 40, 20, 446, 9)]);
+  it('prix moyen de la semaine, variation et fourchette sur 4 semaines', () => {
+    expect(sensDuPrix(ur, 'UR', maintenant)).toBe('valeur');
+    expect(analyserPrix(ur, 'UR', maintenant)).toBe(40);
+    expect(analyserTendance(ur, 'UR', maintenant)).toEqual({ variationPct: 53.8, min4: 3, max4: 446, ventes4: 19 });
+  });
+  it('sans semaine d’avant, pas de variation ; sans vente sur 4 semaines, aucune vente', () => {
+    expect(analyserTendance(json([sem('2026-11-16', 40, 20, 60, 2)]), 'UR', maintenant)?.variationPct).toBeNull();
+    expect(sensDuPrix(json([sem('2026-06-01', 9, 9, 9, 1)]), 'UR', maintenant)).toBe('aucune-vente');
+    expect(sensDuPrix(ur, 'SR', maintenant)).toBe('aucune-vente');
+  });
+  it('une semaine illisible ou sans vente est ignorée, pas toute la réponse', () => {
+    const j = json([{ start: 'x', avg: 'a' }, sem('2026-11-09', 0, 0, 0, 0), sem('2026-11-16', 40.4, 20, 60, 2)]);
+    expect(analyserPrix(j, 'UR', maintenant)).toBe(40);
+    expect(analyserTendance(j, 'UR', maintenant)?.variationPct).toBeNull();
+    expect(sensDuPrix(json([sem('2026-11-16', 0, 0, 0, 0)]), 'UR', maintenant)).toBe('aucune-vente');
+  });
+  it('une forme illisible reste « vide »', () => {
+    expect(sensDuPrix({ by_rarity: { UR: {} } }, 'UR', maintenant)).toBe('vide');
+    expect(analyserTendance({ by_rarity: { UR: {} } }, 'UR', maintenant)).toBeNull();
   });
 });

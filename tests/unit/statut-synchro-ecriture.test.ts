@@ -37,7 +37,7 @@ const site = (n: number) => (chemin: string): ReponseApi => {
     const p = Number(page[1]);
     return { statut: 200, json: { collection: Array.from({ length: n }, (_, i) => exemplaire(i + 1)).slice(p * 50, (p + 1) * 50) } };
   }
-  if (/\/sales\?scope=summary$/.test(chemin)) return { statut: 200, json: { summary: { R: { average: 120 } }, isPro: false } };
+  if (/\/price-history$/.test(chemin)) return { statut: 200, json: { by_rarity: { R: { weekly: [{ start: '1970-04-20', avg: 120, min: 1, max: 500, count: 3 }], monthly: [] } } } };
   if (chemin === '/api/marketplace/mine') return { statut: 200, json: { listings: [] } };
   return { statut: 404, json: null };
 };
@@ -173,7 +173,7 @@ describe('SC-019 / SC-002 : statut v2 écrit par synchroAuto', () => {
     const b = banc(2);
     await creerSynchroAuto(b.deps).declencher();
     for (const c of b.chemins) {
-      expect(/^\/api\/(my-collection\/stats|my-collection\?.*page=\d+|marketplace\/cards\/[^/]+\/sales\?scope=summary|marketplace\/mine)/.test(c), c).toBe(true);
+      expect(/^\/api\/(my-collection\/stats|my-collection\?.*page=\d+|marketplace\/cards\/[^/]+\/price-history|marketplace\/mine)/.test(c), c).toBe(true);
     }
   });
 });
@@ -189,7 +189,7 @@ describe('SC-002 : crochet annoncerPrix de l’ordonnanceur', () => {
       transport: async (c) => {
         chemins.push(c);
         // Le crochet doit avoir été appelé avant la première requête de prix.
-        if (/scope=summary/.test(c) && options.avecCrochet) expect(annonces.length).toBe(1);
+        if (/price-history/.test(c) && options.avecCrochet) expect(annonces.length).toBe(1);
         return reponse(c);
       },
       collection: { version: VERSION_SCHEMA, cartes: [] },

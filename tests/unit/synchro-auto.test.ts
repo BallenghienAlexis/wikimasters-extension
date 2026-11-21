@@ -47,7 +47,7 @@ const siteFictif = (nCartes: number) => (chemin: string): ReponseApi => {
     const p = Number(page[1]);
     return { statut: 200, json: { collection: Array.from({ length: nCartes }, (_, i) => exemplaire(i + 1)).slice(p * 50, (p + 1) * 50) } };
   }
-  if (/\/sales\?scope=summary$/.test(chemin)) return { statut: 200, json: { summary: { R: { average: 120 } }, isPro: false } };
+  if (/\/price-history$/.test(chemin)) return { statut: 200, json: { by_rarity: { R: { weekly: [{ start: '1970-04-20', avg: 120, min: 1, max: 500, count: 3 }], monthly: [] } } } };
   return { statut: 404, json: null };
 };
 
@@ -149,7 +149,7 @@ describe('T-205 AC1 : déclenchement', () => {
     expect(resultat?.issue).toBe('termine');
     expect(b.chemins[0]).toBe('/api/my-collection/stats?sort=added');
     expect(b.chemins[1]).toBe('/api/my-collection?sort=added&page=0&stats=0');
-    expect(b.chemins.some((c) => c.endsWith('/sales?scope=summary'))).toBe(true);
+    expect(b.chemins.some((c) => c.endsWith('/price-history'))).toBe(true);
     expect(b.stockage.collection.cartes.map((c) => c.id).sort()).toEqual(['R|Carte 1', 'R|Carte 2']);
     expect(b.stockage.etat?.derniereComplete).not.toBeNull();
     expect(b.stockage.derniere).not.toBeNull();

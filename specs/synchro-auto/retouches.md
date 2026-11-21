@@ -21,3 +21,8 @@
 
 - `src/app/ProgressionSynchro.tsx` (`AttentePrixLigne`) : aucun test de composant ni e2e pour l’avertissement (affiché dès l’essai 5), le bouton `passer-carte` (appelle `enregistrerPasserCarteSynchro`) et `continuer-attente` (masquage). Pas de captures aux 3 breakpoints.
 - `ProgressionSynchro.tsx` : « Continuer d’attendre » masque par titre ; ajouter la rareté à `AttentePrix` pour distinguer deux cartes de même titre consécutives en échec.
+
+## À reprendre (2026-11-21, PR #206)
+
+- `specs/synchro-auto/spec.md:17,46`, `plan.md:9`, `tasks.md:7` (G2) citent encore `sales?scope=summary` comme route des prix : lire « `price-history` » (voir `releve-api.md`, relevé du 2026-11-21 et AGENTS.md).
+- Retirer le repli sur `summary` de `src/lib/lectureApi.ts` (`analyserPrix`, `sensDuPrix`) et des faux sites de tests si `price-history` tient.

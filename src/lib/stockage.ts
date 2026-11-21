@@ -295,7 +295,12 @@ function validerEtatSynchro(brut: unknown): EtatOrdonnanceur | null {
   const releves: EtatOrdonnanceur['prix'] = {};
   for (const [id, r] of Object.entries(prix)) {
     if (!estObjet(r) || !nullOuEntier(r.valeur) || !horodatageValide(r.releveLe)) return null;
-    releves[id] = { valeur: r.valeur, releveLe: r.releveLe };
+    const t = r.tendance;
+    const tendance =
+      estObjet(t) && (t.variationPct === null || typeof t.variationPct === 'number') && Number.isInteger(t.min4) && (t.min4 as number) >= 0 && Number.isInteger(t.max4) && (t.max4 as number) >= 0 && Number.isInteger(t.ventes4) && (t.ventes4 as number) >= 0
+        ? { variationPct: t.variationPct as number | null, min4: t.min4 as number, max4: t.max4 as number, ventes4: t.ventes4 as number }
+        : null;
+    releves[id] = tendance ? { valeur: r.valeur, releveLe: r.releveLe, tendance } : { valeur: r.valeur, releveLe: r.releveLe };
   }
   const vs = brut.ventesSite;
   const ventesSite =

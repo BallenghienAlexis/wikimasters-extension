@@ -521,6 +521,17 @@ describe('T-205 : état de l’ordonnanceur et demande d’arrêt', () => {
     expect(await chargerEtatSynchro()).toBeNull();
   });
 
+  it('tendance de prix : valide conservée, malformée écartée sans invalider l’état, ancien état lisible', async () => {
+    const tendance = { variationPct: 53.8, min4: 3, max4: 446, ventes4: 19 };
+    await enregistrerEtatSynchro({ ...etat(), prix: { 'R|Carte 1': { valeur: 40, releveLe: 1700000000000, tendance } } });
+    expect((await chargerEtatSynchro())?.prix['R|Carte 1']?.tendance).toEqual(tendance);
+    faux.donnees.set('etatSynchro', { ...etat(), prix: { 'R|Carte 1': { valeur: 40, releveLe: 1700000000000, tendance: { min4: 'x' } } } });
+    const lu = await chargerEtatSynchro();
+    expect(lu?.prix['R|Carte 1']).toEqual({ valeur: 40, releveLe: 1700000000000 });
+    faux.donnees.set('etatSynchro', etat());
+    expect((await chargerEtatSynchro())?.prix['R|Carte 1']).toEqual({ valeur: 120, releveLe: 1700000000000 });
+  });
+
   it('ventesSite : valeur valide conservée, invalide ignorée sans exception', async () => {
     await enregistrerEtatSynchro({ ...etat(), ventesSite: { enCours: 2, max: 5, releveLe: 1700000000000 } });
     expect((await chargerEtatSynchro())?.ventesSite).toEqual({ enCours: 2, max: 5, releveLe: 1700000000000 });
