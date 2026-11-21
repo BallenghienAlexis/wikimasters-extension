@@ -256,6 +256,12 @@ export const verdictEnAttente = (suivi: Pick<SuiviVentes, 'sansVerdict'>, mainte
 /** Nombre de prolongations de 60 s déjà subies (0 si aucune). */
 export const prolongations = (v: Pick<VenteActive, 'finLe' | 'finInitiale'>): number => Math.max(0, Math.round((v.finLe - v.finInitiale) / PROLONGATION_MS))
 
+/**
+ * Enchères réellement en cours : celles dont la fin n’est pas dépassée. Le site garde parfois une enchère terminée dans `selling`
+ * jusqu’à son règlement : elle ne compte plus comme occupant une place et n’est plus affichée (Alexis, 2026-11-21).
+ */
+export const encheresEnCours = <T extends Pick<VenteActive, 'finLe'>>(actives: readonly T[], maintenant: number): T[] => actives.filter((v) => v.finLe > maintenant)
+
 /** Millisecondes avant la fin (négatif : dépassée). */
 export const resteMs = (v: Pick<VenteActive, 'finLe'>, maintenant: number): number => v.finLe - maintenant
 

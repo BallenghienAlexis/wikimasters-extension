@@ -3,6 +3,7 @@ import type { Carte } from '../../src/lib/collection'
 import { collectionVide } from '../../src/lib/collection'
 import { choisirProchaineEnchere } from '../../src/lib/relanceVentes'
 import { preferencesParDefaut } from '../../src/lib/tri'
+import { encheresEnCours } from '../../src/lib/ventes'
 import {
   DELAI_FINAL_MS,
   DELAI_NORMAL_MS,
@@ -194,5 +195,11 @@ describe('non-ventes et prix de départ divisé par deux', () => {
     expect(nonVentesDe(v1, 'C|X')).toBe(2)
     const v2 = fusionnerSuivi(v1, lecture([fin('c', 'X', 3000, 60), ...lecture([fin('b', 'X', 2000, null), fin('a', 'X', 1000, null)]).terminees]), 3)
     expect(nonVentesDe(v2, 'C|X')).toBe(0)
+  })
+})
+
+describe('encheresEnCours', () => {
+  it('écarte les enchères dont la fin est dépassée', () => {
+    expect(encheresEnCours([{ finLe: 100 }, { finLe: 5000 }], 1000)).toEqual([{ finLe: 5000 }])
   })
 })

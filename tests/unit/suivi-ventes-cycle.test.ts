@@ -110,6 +110,35 @@ describe('cycle de suivi des mises en vente', () => {
     expect(m.etat.lancements[0]).toMatchObject({ resultat: 'reussie', titre: 'Berger allemand' })
     expect(delai).toBe(2000)
   })
+  it('relance : maximum absent de la réponse du site, la limite de 5 de la configuration s’applique et la relance part', async () => {
+    const m = monde({ reponses: [{ statut: 200, json: { selling: [], history: [] } }], relance: true })
+    await m.suivi.cycle()
+    expect(m.etat.ordres).toHaveLength(1)
+  })
+  it('relance : une enchère dont la fin est dépassée mais encore listée ne prend plus de place (5/5 retrouvé)', async () => {
+    const m = monde({ reponses: [ok([vente('a', -5_000), vente('b', 3_600_000), vente('v', 3_600_000), vente('d', 3_600_000), vente('e', 3_600_000)])], relance: true })
+    await m.suivi.cycle()
+    expect(m.etat.ordres).toHaveLength(1)
+  })
+  it('relance : pause des lots en cours, la place libre est retentée à la fin de la pause', async () => {
+    const m = monde({ reponses: [ok([vente('a', 3_600_000)])], relance: true, pauseLots: T0 + 20_000 })
+    const attente = await m.suivi.cycle()
+    expect(m.etat.ordres).toHaveLength(0)
+    expect(attente).toBeLessThanOrEqual(20_000)
+  })
+  it('relance : prix introuvable (passée), nouvelle tentative sous 10 s', async () => {
+    const m = monde({ reponses: [ok([])], relance: true, resultat: { classe: 'passee', codeHttp: 404, cause: 'prix du marché indisponible' } })
+    expect(await m.suivi.cycle()).toBeLessThanOrEqual(10_000)
+  })
+  it('relance : envoi en échec (500), la place libre est retentée dès la fin de l’attente, pas 5 min plus tard', async () => {
+    const m = monde({ reponses: [ok([vente('a', 3_600_000)]), ok([vente('a', 3_600_000)])], relance: true, resultat: { classe: 'echec', codeHttp: 500, cause: 'erreur serveur' } })
+    const attente = await m.suivi.cycle()
+    expect(attente).toBeLessThanOrEqual(10_000)
+    m.avancer(attente)
+    await m.suivi.cycle()
+    expect(m.etat.lectures).toBe(2)
+    expect(m.etat.ordres.length).toBeGreaterThanOrEqual(1)
+  })
   it('relance : le prix de départ est divisé par deux autant de fois que la carte est restée non vendue', async () => {
     const m = monde({ reponses: [ok([])], relance: true })
     await m.suivi.cycle()
