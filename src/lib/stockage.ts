@@ -19,7 +19,7 @@ import { ajouterEvenement, validerEvenements, VERSION_VENTES, type EvenementVent
 import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, type Preferences } from './tri';
 import { estObjet } from './valider';
 import type { EtatVerrouRequete } from './verrouRequete';
-import { CLES_GARDEES, preferencesGardees } from './reinitialisation';
+import { CLES_GARDEES, collectionReduite, preferencesGardees } from './reinitialisation';
 import { VERSION_SUIVI, suiviVide, validerLancements, type LancementVente, type SuiviVentes } from './ventes';
 
 const CLE = 'collection';
@@ -795,7 +795,7 @@ export async function lireToutLeStockage(): Promise<Record<string, unknown>> {
 
 /**
  * Efface tout `chrome.storage.local` sauf les thèmes aimés et ceux des amis (préférences réduites à `mesThemes` et
- * `amis`, plus le drapeau `amisInitiaux`). Les préférences sont réécrites avant tout retrait : en cas d’échec, rien
+ * `amis`, plus le drapeau `amisInitiaux`) et les choix de favori (collection réduite aux cartes qui en portent un). Les préférences sont réécrites avant tout retrait : en cas d’échec, rien
  * n’est perdu. Des préférences illisibles sont gardées telles quelles (jamais écrasées). Rend les clés effacées.
  */
 export async function effacerStockageSaufThemes(): Promise<string[]> {
@@ -804,7 +804,15 @@ export async function effacerStockageSaufThemes(): Promise<string[]> {
   const lues = lirePreferences(brut);
   const illisible = brut !== undefined && JSON.stringify(lues) !== JSON.stringify(brut) && JSON.stringify(lues) === JSON.stringify(preferencesParDefaut());
   const lisibles = !illisible;
-  if (lisibles) await chrome.storage.local.set({ [CLE_PREFERENCES]: preferencesGardees(lues) });
+  const aEcrire: Record<string, unknown> = {};
+  if (lisibles) aEcrire[CLE_PREFERENCES] = preferencesGardees(lues);
+  // Choix de favori gardés : collection réduite avant tout retrait. Collection illisible : gardée telle quelle, jamais écrasée.
+  try {
+    aEcrire[CLE] = collectionReduite(lireContenu(contenu[CLE]));
+  } catch {
+    /* illisible : laissée intacte */
+  }
+  if (Object.keys(aEcrire).length > 0) await chrome.storage.local.set(aEcrire);
   const aRetirer = Object.keys(contenu).filter((cle) => !(CLES_GARDEES as readonly string[]).includes(cle));
   if (aRetirer.length > 0) await chrome.storage.local.remove(aRetirer);
   return aRetirer;

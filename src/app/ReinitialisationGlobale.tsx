@@ -73,7 +73,7 @@ const ReinitialisationGlobale: React.FC<Props> = ({ etiquettesSite, registre, oc
     effacerStockageSaufThemes().then(
       (cles) => {
         setMotLocal('');
-        setMessage(`${cles.length} clé(s) effacée(s). Rechargez la page : tout repart de zéro, seuls vos thèmes aimés et ceux de vos amis sont gardés.`);
+        setMessage(`${cles.length} clé(s) effacée(s). Rechargez la page : tout repart de zéro, seuls vos thèmes aimés, ceux de vos amis et vos choix de favori sont gardés.`);
       },
       () => setMessage('Effacement impossible : rien n’a été retiré.'),
     );
@@ -136,7 +136,7 @@ const ReinitialisationGlobale: React.FC<Props> = ({ etiquettesSite, registre, oc
 
       <h5 className="mt-3 font-medium">4. Effacer les données de l’extension</h5>
       <p className="text-sm text-muted">
-        Garde seulement vos thèmes aimés et ceux de vos amis. Efface la collection, les choix de favori faits dans l’extension, les prix, les caches, le journal, le registre, l’historique et les autres préférences.
+        Garde seulement vos thèmes aimés, ceux de vos amis et vos choix de favori (étoiles de la Collection). Efface le reste de la collection (exemplaires, notes, prix cibles, thèmes choisis), les caches, le journal, le registre, l’historique et les autres préférences.
         À faire après l’étape 3 (la liste des étiquettes du site est aussi effacée).
       </p>
       {apercuLocal === null ? null : (

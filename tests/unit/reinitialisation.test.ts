@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { registreVide, enregistrerEtiquette } from '../../src/lib/registre';
 import { ID_CARTE_ETIQUETTES } from '../../src/lib/actions';
-import { OPTIONS_REINIT_PAR_DEFAUT, actionsReinitSite, categorieEtiquette, garantirSansFavori, planLocal, planSite, preferencesGardees } from '../../src/lib/reinitialisation';
+import type { Carte } from '../../src/lib/collection';
+import { collectionReduite, OPTIONS_REINIT_PAR_DEFAUT, actionsReinitSite, categorieEtiquette, garantirSansFavori, planLocal, planSite, preferencesGardees } from '../../src/lib/reinitialisation';
 
 // Données fictives uniquement.
 const id = (n: number): string => `${String(n).padStart(8, '0')}-1111-4111-8111-111111111111`;
@@ -26,10 +27,10 @@ describe('réinitialisation : volet site', () => {
     expect(categorieEtiquette('constructor', libelles, registre)).toBe('autre');
   });
 
-  it('par défaut ne supprime que les thèmes', () => {
+  it('par défaut supprime thèmes, statut et échange, garde les inconnues', () => {
     const p = planSite(site, libelles, registre, OPTIONS_REINIT_PAR_DEFAUT);
-    expect(p.aSupprimer.map((e) => e.nom)).toEqual(['#À classer', '#Appris truc', '#Musique']);
-    expect(p.gardees.map((e) => e.nom).sort()).toEqual(['#À échanger Benjamin', 'Ma liste perso', 'Statut · Vendre']);
+    expect(p.aSupprimer.map((e) => e.nom)).toEqual(['#À classer', '#À échanger Benjamin', '#Appris truc', '#Musique', 'Statut · Vendre']);
+    expect(p.gardees.map((e) => e.nom)).toEqual(['Ma liste perso']);
   });
 
   it('les options ajoutent statut, échange, inconnues', () => {
@@ -48,15 +49,23 @@ describe('réinitialisation : volet site', () => {
 
   it('relancer après interruption ne reprend que les étiquettes restantes', () => {
     const restantes = site.filter((e) => e.id !== id(1));
-    expect(actionsReinitSite(planSite(restantes, libelles, registre, OPTIONS_REINIT_PAR_DEFAUT))).toHaveLength(2);
+    expect(actionsReinitSite(planSite(restantes, libelles, registre, OPTIONS_REINIT_PAR_DEFAUT))).toHaveLength(4);
   });
 });
 
 describe('réinitialisation : volet local', () => {
   it('garde seulement preferences et amisInitiaux', () => {
     const p = planLocal({ collection: { a: 1 }, preferences: {}, amisInitiaux: 1, journal: [], registre: {} });
-    expect(p.gardees).toEqual(['amisInitiaux', 'preferences']);
-    expect(p.supprimees.map((c) => c.cle).sort()).toEqual(['collection', 'journal', 'registre']);
+    expect(p.gardees).toEqual(['amisInitiaux', 'collection', 'preferences']);
+    expect(p.supprimees.map((c) => c.cle).sort()).toEqual(['journal', 'registre']);
+  });
+
+  it('réduit la collection aux choix de favori, vidés du reste', () => {
+    const c = (id: string, choix: boolean | null): Carte => ({ id, titre: id, rarete: 'commune', description: 'd', quantite: 2, url: 'u', favori: true, choixFavori: choix, themesChoisis: ['rock'], idsSite: ['x'], etiquettesSite: ['#Rock'], prixCible: 5, note: 'n', ami: 'Tom', valeurMarchande: 9 });
+    const r = collectionReduite({ version: 2 as never, cartes: [c('a', true), c('b', null), c('c', false)] });
+    expect(r.cartes.map((x) => [x.id, x.choixFavori])).toEqual([['a', true], ['c', false]]);
+    expect(r.cartes[0]).toMatchObject({ idsSite: null, etiquettesSite: [], prixCible: null, note: '', ami: null, valeurMarchande: null, favori: false });
+    expect(r.cartes[0]?.themesChoisis).toBeUndefined();
   });
 
   it('réduit les préférences aux thèmes aimés et aux amis', () => {

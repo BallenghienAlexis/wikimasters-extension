@@ -5,11 +5,12 @@
  * - **site** : liste des étiquettes du compte à supprimer (RPC `delete_tag`, action `suppression-etiquette`). Seules des
  *   étiquettes sont visées : les favoris (colonne `starred` de `user_cards`) ne passent par aucune de ces routes ;
  *   `garantirSansFavori` refuse tout plan qui contiendrait autre chose qu’une suppression d’étiquette ;
- * - **local** : tout `chrome.storage.local` est effacé, sauf les thèmes aimés et ceux des amis (préférences réduites à
+ * - **local** : tout `chrome.storage.local` est effacé, sauf les thèmes aimés, ceux des amis et les choix de favori (collection réduite ; préférences réduites à
  *   `mesThemes` et `amis`) et le drapeau `amisInitiaux` (sinon les amis initiaux seraient refusionnés).
  */
 import { ID_CARTE_ETIQUETTES, type Action, type Registre } from './actions';
 import type { EtiquetteSite } from './etiquettesPreexistantes';
+import type { Carte, Collection } from './collection';
 import type { Preferences } from './tri';
 
 /** Catégorie d’une étiquette du compte. */
@@ -34,15 +35,16 @@ export function categorieEtiquette(nom: string, libellesThemes: ReadonlySet<stri
 }
 
 export interface OptionsReinitSite {
-  /** Supprimer aussi les étiquettes « Statut · … » (défaut : non, à confirmer par Alexis). */
+  /** Supprimer aussi les étiquettes « Statut · … » (défaut : oui). */
   statut: boolean;
-  /** Supprimer aussi les étiquettes « #À échanger … » (défaut : non, à confirmer par Alexis). */
+  /** Supprimer aussi les étiquettes « #À échanger … » (défaut : oui). */
   echange: boolean;
   /** Supprimer aussi les étiquettes inconnues de l’extension (défaut : non). */
   autres: boolean;
 }
 
-export const OPTIONS_REINIT_PAR_DEFAUT: OptionsReinitSite = { statut: false, echange: false, autres: false };
+/** Alexis, 2026-11-21 : « repartir de 0 » : « Statut · » et « #À échanger » partent aussi ; les étiquettes inconnues restent à cocher. */
+export const OPTIONS_REINIT_PAR_DEFAUT: OptionsReinitSite = { statut: true, echange: true, autres: false };
 
 export interface PlanSite {
   /** Étiquettes qui seront supprimées. */
@@ -98,11 +100,26 @@ export function garantirSansFavori(actions: readonly Action[]): void {
 // ───────────────────────── Volet local ─────────────────────────
 
 /** Clés conservées telles quelles (le drapeau empêche de refusionner les amis initiaux déjà décidés). */
-export const CLES_GARDEES = ['preferences', 'amisInitiaux'] as const;
+export const CLES_GARDEES = ['preferences', 'amisInitiaux', 'collection'] as const;
 
 /** Préférences réduites à ce qui est gardé : thèmes aimés et amis (avec leurs thèmes). Le reste revient au défaut. */
 export function preferencesGardees(p: Preferences): Preferences {
   return { version: 2, mesThemes: [...p.mesThemes], amis: p.amis.map((a) => ({ ...a, themes: [...a.themes] })) };
+}
+
+/**
+ * Collection réduite aux choix de favori du joueur (Alexis, 2026-11-21 : « repartir de 0 à part les choix de favori ») :
+ * seules les cartes avec un `choixFavori` (vrai ou faux) restent, vidées de tout le reste (exemplaires, étiquettes,
+ * prix, note, ami, thèmes choisis). La synchro les relie de nouveau au site.
+ */
+export function collectionReduite(collection: Collection): Collection {
+  const cartes: Carte[] = collection.cartes
+    .filter((c) => (c.choixFavori ?? null) !== null)
+    .map((c) => ({
+      id: c.id, titre: c.titre, rarete: c.rarete, description: c.description, quantite: Math.max(1, c.quantite), url: null,
+      favori: false, choixFavori: c.choixFavori, idsSite: null, etiquettesSite: [], prixCible: null, note: '', ami: null, valeurMarchande: null,
+    }));
+  return { ...collection, cartes };
 }
 
 export interface PlanLocal {
@@ -121,6 +138,7 @@ const taille = (v: unknown): number => {
 };
 
 export function planLocal(contenu: Readonly<Record<string, unknown>>): PlanLocal {
+  // La collection est réduite aux choix de favori, pas effacée : elle compte parmi les clés gardées (en version réduite).
   const gardees: string[] = [];
   const supprimees: PlanLocal['supprimees'] = [];
   for (const [cle, valeur] of Object.entries(contenu)) {
