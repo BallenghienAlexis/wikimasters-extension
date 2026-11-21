@@ -209,7 +209,8 @@ function lireHistorique(json: unknown, rarete: string, maintenant: number): Hist
   }
   const fenetre = [...semaines.entries()].filter(([t]) => t >= debutCourante - 3 * SEMAINE_MS && t <= debutCourante).sort((a, b) => a[0] - b[0]);
   if (fenetre.length === 0) return null;
-  const [debutRef, ref] = fenetre[fenetre.length - 1];
+  const derniere = fenetre[fenetre.length - 1] as [number, { avg: number; min: number; max: number; count: number }];
+  const [debutRef, ref] = derniere;
   const avant = semaines.get(debutRef - SEMAINE_MS);
   const variationPct = avant && avant.avg > 0 ? Math.round(((ref.avg - avant.avg) / avant.avg) * 1000) / 10 : null;
   return {
