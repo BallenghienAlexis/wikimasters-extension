@@ -7,6 +7,8 @@ import type { Collection } from '../lib/collection';
 import type { Journal } from '../lib/journal';
 import { DUREE_BAIL_MS } from '../lib/ordonnanceur';
 import { CODES_ARRET, INTERVALLE_MS, SUPPLEMENT_MAX_MS, creerFile, type ContexteErreur, type ContexteJournal, type File as FileLot, type SuiteExecution } from '../lib/file';
+import { LIBELLES_THEMES } from '../lib/themes';
+import { actionsReinitSite, planSite, type OptionsReinitSite } from '../lib/reinitialisation';
 import { familleDe } from '../lib/familles';
 import { ajouterIgnoree } from '../lib/ignorees';
 import { LIBELLE_VERIFICATION_HUMAINE, completerEntree, ouvrirEntree, ouvrirEntreePassee, passerEntree } from '../lib/journal';
@@ -345,6 +347,25 @@ async function executerLot(ctx: ContexteExecution, preparer: () => Promise<Lance
       await ctx.ecritures;
     }
   });
+}
+
+/** Libellés des étiquettes de thème du catalogue (thèmes appris compris, une fois chargés). */
+export const libellesThemesConnus = (): ReadonlySet<string> => new Set(Object.values(LIBELLES_THEMES));
+
+/**
+ * Volet site de la réinitialisation globale : supprime les étiquettes du plan (RPC `delete_tag`), rien d'autre, jamais un
+ * favori. Plan recalculé ici depuis la liste du site lue à la dernière synchro, donc relancer après une interruption ne
+ * reprend que les étiquettes restantes. Même file, cadence, jitter et arrêts (401, 403, 429, 3 échecs) que les autres
+ * écritures. `limite` borne un essai. À n'appeler qu'après la sauvegarde et la confirmation saisie par le joueur.
+ */
+export async function lancerReinitialisationSite(options: OptionsReinitSite, limite?: number): Promise<number> {
+  await verifierPause();
+  const [site, registre] = await Promise.all([chargerEtiquettesSite(), chargerRegistre()]);
+  if (site === null) throw new Error('La liste des étiquettes du site n’est pas lue : lancez une synchronisation.');
+  const actions = actionsReinitSite(planSite(site, libellesThemesConnus(), registre, options), limite);
+  if (actions.length === 0) throw new Error('Aucune étiquette à supprimer.');
+  await lancerLot(actions, nouvelIdLot('reinit'));
+  return actions.length;
 }
 
 export const nouvelIdLot = (prefixe: string): string => `${prefixe}-${Date.now()}`;
