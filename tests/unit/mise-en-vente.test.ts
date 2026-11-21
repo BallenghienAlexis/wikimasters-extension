@@ -196,3 +196,10 @@ describe('non-ventes et prix de départ divisé par deux', () => {
     expect(nonVentesDe(v2, 'C|X')).toBe(0)
   })
 })
+
+import { encheresEnCours } from '../../src/lib/ventes'
+describe('encheresEnCours', () => {
+  it('écarte les enchères dont la fin est dépassée', () => {
+    expect(encheresEnCours([{ finLe: 100 }, { finLe: 5000 }], 1000)).toEqual([{ finLe: 5000 }])
+  })
+})

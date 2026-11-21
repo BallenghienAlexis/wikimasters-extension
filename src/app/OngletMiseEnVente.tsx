@@ -12,6 +12,7 @@ import {
   origineDe,
   prolongations,
   resteMs,
+  encheresEnCours,
   type Origine,
 } from '../lib/ventes';
 import SectionRepliable from './SectionRepliable';
@@ -46,7 +47,8 @@ const OngletMiseEnVente: React.FC = () => {
     .map((c) => c.slice('carte:'.length));
   const terminees = suivi.terminees;
   const vendues = terminees.filter((v) => etatTerminee(v, lancements) === 'vendue').length;
-  const enDirect = suivi.actives.some((v) => resteMs(v, maintenant) <= DERNIERE_MINUTE_MS);
+  const actives = encheresEnCours(suivi.actives, maintenant);
+  const enDirect = actives.some((v) => resteMs(v, maintenant) <= DERNIERE_MINUTE_MS);
 
   return (
     <div className="mt-6 flex flex-col gap-4" data-testid="onglet-mise-en-vente">
@@ -156,8 +158,8 @@ const OngletMiseEnVente: React.FC = () => {
         </SectionRepliable>
       )}
 
-      <SectionRepliable id="encheres-en-cours" titre="Enchères en cours" resume={`${suivi.actives.length} sur ${max}`} testId="encheres-en-cours">
-        {suivi.actives.length === 0 ? (
+      <SectionRepliable id="encheres-en-cours" titre="Enchères en cours" resume={`${actives.length} sur ${max}`} testId="encheres-en-cours">
+        {actives.length === 0 ? (
           <p className="text-sm text-muted">Aucune enchère en cours au dernier relevé.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -172,7 +174,7 @@ const OngletMiseEnVente: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {[...suivi.actives]
+                {[...actives]
                   .sort((a, b) => a.finLe - b.finLe)
                   .map((v) => {
                     const reste = resteMs(v, maintenant);
