@@ -247,3 +247,88 @@ describe('reseau : lecture des enchères en cours (marketplace/mine)', () => {
     expect(r.ventes).toBeUndefined()
   })
 })
+
+describe('reseau : enchère avec relecture de la tendance (2026-11-21)', () => {
+  const CARTE_SITE = '00000000-0000-4000-8000-000000000001'
+  const enchereTendance: Action = { type: 'enchere', idCarte: 'UR|Yoga', idExemplaire: EX, prix: 5, idCarteSite: CARTE_SITE, rarete: 'UR' }
+  const lundi = (): string => {
+    const d = new Date()
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - ((d.getUTCDay() + 6) % 7))).toISOString().slice(0, 10)
+  }
+  const historique = (avg: number, count = 6) => JSON.stringify({ by_rarity: { UR: { weekly: [{ start: lundi(), avg, min: 2, max: 480, count }], monthly: [] } } })
+  const creer = (f: unknown, attendre = vi.fn(async () => undefined)) =>
+    creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: ORIGINE, fetchImpl: f as typeof fetch, attendre, gigue: () => 7 })
+
+  it('relit price-history puis envoie l’enchère au prix de la tendance, après 0,2 s plus gigue', async () => {
+    const f = vi.fn(async (url: string) => (String(url).endsWith('/price-history') ? reponse(200, historique(100)) : reponse(201, JSON.stringify({ auction_id: 'x' }))))
+    const attendre = vi.fn(async () => undefined)
+    const r = await creer(f, attendre)(enchereTendance)
+    expect(r).toMatchObject({ classe: 'reussie', prix: 25 })
+    const appels = f.mock.calls as unknown as [string, RequestInit][]
+    expect(appels[0]![0]).toBe(`${ORIGINE}/api/marketplace/cards/${CARTE_SITE}/price-history`)
+    expect(appels[0]![1].method).toBe('GET')
+    expect(appels[0]![1].headers).toBeUndefined()
+    expect(appels[0]![1].credentials).toBe('same-origin')
+    expect(attendre).toHaveBeenCalledWith(207)
+    expect(JSON.parse(appels[1]![1].body as string).base_amount).toBe(25)
+  })
+
+  it('garantit 0,2 s plus gigue après le départ de l’enchère avant de rendre la main', async () => {
+    const f = vi.fn(async (url: string) => (String(url).endsWith('/price-history') ? reponse(200, historique(100)) : reponse(201, JSON.stringify({ auction_id: 'x' }))))
+    const attendre = vi.fn(async () => undefined)
+    await creer(f, attendre)(enchereTendance)
+    // 1er attendre : entre la relecture et l'envoi ; 2e : après l'envoi (réponse immédiate, donc presque tout l'écart reste à attendre).
+    expect(attendre).toHaveBeenCalledTimes(2)
+    const reste = (attendre.mock.calls as unknown as number[][])[1]![0]!
+    expect(reste).toBeGreaterThan(150)
+    expect(reste).toBeLessThanOrEqual(207)
+  })
+
+  it('erreur réseau à la relecture : échec ordinaire, rien n’est envoyé', async () => {
+    const f = vi.fn(async () => { throw new TypeError('réseau') })
+    expect(await creer(f)(enchereTendance)).toMatchObject({ classe: 'echec', cause: 'erreur réseau' })
+    expect(f).toHaveBeenCalledTimes(1)
+  })
+
+  it('divise le prix relu par deux autant de fois que de non-ventes', async () => {
+    const f = vi.fn(async (url: string) => (String(url).endsWith('/price-history') ? reponse(200, historique(100)) : reponse(201, JSON.stringify({ auction_id: 'x' }))))
+    const r = await creer(f)({ ...enchereTendance, reductions: 2 } as Action)
+    expect(r).toMatchObject({ classe: 'reussie', prix: 6 })
+  })
+
+  it('prix cible du joueur (prixFixe) ou ordre sans carte du site : aucune relecture', async () => {
+    const f = vi.fn(async () => reponse(201, JSON.stringify({ auction_id: 'x' })))
+    await creer(f)({ ...enchereTendance, prix: 12, prixFixe: true } as Action)
+    await creer(f)({ type: 'enchere', idCarte: 'UR|Yoga', idExemplaire: EX, prix: 12 })
+    expect(f).toHaveBeenCalledTimes(2)
+    expect((f.mock.calls as unknown as [string][]).every(([u]) => !String(u).includes('price-history'))).toBe(true)
+  })
+
+  it('prix du marché introuvable, vide ou trop bas : enchère passée, jamais envoyée', async () => {
+    for (const r of [reponse(404), reponse(200, JSON.stringify({ by_rarity: {} })), reponse(200, historique(5))]) {
+      const f = vi.fn(async () => r.clone())
+      const res = await creer(f)(enchereTendance)
+      expect(res.classe).toBe('passee')
+      expect(f).toHaveBeenCalledTimes(1)
+    }
+  })
+
+  it('401, 429 et vérification anti-bot à la relecture : échec comme pour toute requête, rien n’est envoyé', async () => {
+    for (const [r, cause] of [
+      [reponse(401), 'action non disponible'],
+      [reponse(429), 'action non disponible'],
+      [reponse(403, JSON.stringify({ code: 'human_verification_required' })), CAUSE_VERIFICATION_HUMAINE],
+    ] as const) {
+      const f = vi.fn(async () => r.clone())
+      expect(await creer(f)(enchereTendance)).toMatchObject({ classe: 'echec', cause })
+      expect(f).toHaveBeenCalledTimes(1)
+    }
+  })
+
+  it('autre origine que le site : aucune requête', async () => {
+    const f = vi.fn()
+    const e = creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: 'https://autre.example', fetchImpl: f as unknown as typeof fetch, attendre: async () => undefined })
+    expect(await e(enchereTendance)).toEqual({ classe: 'echec', codeHttp: null, cause: 'action non disponible' })
+    expect(f).not.toHaveBeenCalled()
+  })
+})

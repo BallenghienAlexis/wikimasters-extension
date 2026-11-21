@@ -29,8 +29,8 @@ describe('sélection manuelle : enchères et défausses (2026-11-14)', () => {
   it('met aux enchères les cartes choisies, les plus chères d’abord, un exemplaire chacune', () => {
     const l = lot([carte('a', { valeurMarchande: 40, prixCible: 10 }), carte('b', { valeurMarchande: 90, prixCible: 50 })], { vendre: ['a', 'b'], defausser: {} })
     expect(de(l.actions, 'enchere')).toEqual([
-      { type: 'enchere', idCarte: 'b', idExemplaire: 'ex-b-1', prix: 50 },
-      { type: 'enchere', idCarte: 'a', idExemplaire: 'ex-a-1', prix: 10 },
+      { type: 'enchere', idCarte: 'b', idExemplaire: 'ex-b-1', prix: 50, prixFixe: true },
+      { type: 'enchere', idCarte: 'a', idExemplaire: 'ex-a-1', prix: 10, prixFixe: true },
     ])
   })
 
@@ -160,5 +160,13 @@ describe('raison de non-proposition (2026-11-17)', () => {
     expect(raisonNonProposable(carte('b', { favori: true }))).toMatch(/favori/)
     expect(raisonNonProposable(carte('c', { idsSite: null }))).toMatch(/non reliée/)
     expect(raisonNonProposable(carte('d', { titre: 'Zzqx', description: '' }))).toMatch(/thème fiable/)
+  })
+})
+
+describe('enchère sans carte du site (2026-11-21)', () => {
+  it('sans identifiant de carte du site, l’enchère est écartée : le prix ne peut pas être relu', () => {
+    const c = carte('a', { valeurMarchande: 100, prixCible: null })
+    const l = lot([c], { vendre: ['a'], defausser: {} }, { idsCartesSite: {} })
+    expect(de(l.actions, 'enchere')).toEqual([])
   })
 })

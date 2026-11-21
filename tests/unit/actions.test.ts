@@ -82,7 +82,7 @@ describe('actions : types partagés', () => {
 
   it('SC-015 : ResultatAction a classe, codeHttp nullable et cause', () => {
     expectTypeOf<ResultatAction['classe']>().toEqualTypeOf<
-      'reussie' | 'echec' | 'arret' | 'inconnu'
+      'reussie' | 'echec' | 'arret' | 'inconnu' | 'passee'
     >()
     expectTypeOf<ResultatAction['codeHttp']>().toEqualTypeOf<number | null>()
     expectTypeOf<ResultatAction>().toHaveProperty('cause')

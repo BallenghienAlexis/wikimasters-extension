@@ -124,6 +124,7 @@ const PanneauApercuLot: React.FC<Props> = ({
     ongletsLive,
     enCoursStocke,
     ventesSiteLues,
+    prixSite,
     entrees,
     setEntrees,
     journalIllisible,
@@ -205,7 +206,7 @@ const PanneauApercuLot: React.FC<Props> = ({
     setDecochees(new Set());
     setFavorisBascules(new Set());
     setFavorisRefuses(new Set());
-    const config = { ...configDuLot(preferences, ventesSiteLues), selection: versSelection(collection.cartes, choix) };
+    const config = { ...configDuLot(preferences, ventesSiteLues, prixSite), selection: versSelection(collection.cartes, choix) };
     setEtat(preparerLot(collection, r, dispo, config));
     let apercu: ApercuEtiquettes | null = null;
     if (r !== null) {

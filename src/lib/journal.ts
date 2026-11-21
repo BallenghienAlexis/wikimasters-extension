@@ -55,6 +55,7 @@ const RESULTAT_PAR_CLASSE: Readonly<Record<ResultatAction['classe'], Resultat>> 
   echec: 'echouee',
   arret: 'interrompue',
   inconnu: 'inconnu',
+  passee: 'passee',
 } as Record<ResultatAction['classe'], Resultat>)
 
 const resultatDeClasse = (classe: unknown): Resultat =>
