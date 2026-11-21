@@ -309,6 +309,11 @@ export function construireEncheres(
       ecarter('non-reliee')
       continue
     }
+    // Prix relu juste avant l’envoi : sans l’identifiant de la carte sur le site, on ne met pas en vente à l’aveugle.
+    if (config.idsCartesSite !== undefined && c.prixCible == null && config.idsCartesSite[c.id] === undefined) {
+      ecarter('non-reliee')
+      continue
+    }
     if (!autorisee) {
       ecarter('action-non-disponible')
       continue

@@ -108,7 +108,7 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
    * `passee` (prix du marché introuvable ou illisible : on ne met pas en vente à l’aveugle), ou `echec`/`arret` pour les
    * mêmes codes que toute requête (401, 403, 429 ; anti-bot jamais contourné).
    */
-  async function relireTendance(idCarteSite: string, rarete: string): Promise<{ valeur: number; tendance: TendancePrix } | ResultatAction> {
+  async function relireTendance(idCarteSite: string, rarete: string): Promise<{ valeur: number; tendance: TendancePrix | null } | ResultatAction> {
     if (deps.origineOnglet !== ORIGINE_SITE) return NON_DISPONIBLE
     const chemin = `/api/marketplace/cards/${encodeURIComponent(idCarteSite)}/price-history`
     const controle = new AbortController()
@@ -122,10 +122,11 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
       const maintenant = Date.now()
       const valeur = analyserPrix(json, rarete, maintenant)
       if (valeur === null) return { classe: 'passee', codeHttp: 200, cause: 'aucune vente récente : prix du marché inconnu' }
-      return { valeur, tendance: analyserTendance(json, rarete, maintenant) as TendancePrix }
+      return { valeur, tendance: analyserTendance(json, rarete, maintenant) }
     } catch (e) {
       const delai = e instanceof Error && e.name === 'AbortError'
-      return { classe: 'inconnu', codeHttp: null, cause: delai ? 'délai dépassé' : 'erreur réseau' }
+      // Aucune enchère n'est partie : un échec ordinaire (« Réessayer » reste possible), pas un résultat inconnu.
+      return { classe: 'echec', codeHttp: null, cause: delai ? 'délai dépassé' : 'erreur réseau' }
     } finally {
       clearTimeout(minuteur)
     }
@@ -222,7 +223,11 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
     const prix = prixDepartAjuste(depart.prix, ordre.reductions ?? 0)
     // Cadence : 0,2 s plus gigue entre la lecture et l’envoi, comme entre deux requêtes quelconques.
     await attendre(INTERVALLE_MS + gigue())
+    const debutEnvoi = Date.now()
     const resultat = await emettreBrut({ ...ordre, prix })
+    // La file et le verrou ne voient que l'ordre entier : l'écart de 0,2 s plus gigue après le vrai départ de l'enchère est garanti ici.
+    const reste = debutEnvoi + INTERVALLE_MS + gigue() - Date.now()
+    if (reste > 0) await attendre(reste)
     return resultat.classe === 'reussie' ? { ...resultat, prix } : resultat
   }
 }

@@ -19,7 +19,7 @@ function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relan
   let t = T0
   // Le bail du suivi est le sien : celui de la synchro globale (tenu ou non) ne le concerne pas.
   let bailValeur: number | null = null
-  let globalEtat: EtatOrdonnanceur | null = opts.etat ?? (opts.synchroRecente === false ? { ...etatInitial(), arretJusqua: T0 + 3_600_000 } : null)
+  let globalEtat: EtatOrdonnanceur | null = opts.etat ?? (opts.synchroRecente === false ? { ...etatInitial(), arretJusqua: T0 + 3_600_000 } : { ...etatInitial(), cardIds: { c: 'card-site-c' } })
   const etat = { suivi: suiviVide() as SuiviVentes, statut: null as StatutRelanceVentes | null, suiviEtat: null as EtatSuiviVentes | null, verrous: 0, lancements: [] as LancementVente[], ecartes: {} as Record<string, number>, lectures: 0, ordres: [] as Action[] }
   const reponses = [...opts.reponses]
   const deps: DependancesSuiviVentes = {

@@ -249,13 +249,13 @@ describe('reseau : lecture des enchères en cours (marketplace/mine)', () => {
 })
 
 describe('reseau : enchère avec relecture de la tendance (2026-11-21)', () => {
-  const CARTE_SITE = 'a19ec80a-0c1e-4bcd-9d79-070a03b2b44c'
+  const CARTE_SITE = '00000000-0000-4000-8000-000000000001'
   const enchereTendance: Action = { type: 'enchere', idCarte: 'UR|Yoga', idExemplaire: EX, prix: 5, idCarteSite: CARTE_SITE, rarete: 'UR' }
   const lundi = (): string => {
     const d = new Date()
     return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - ((d.getUTCDay() + 6) % 7))).toISOString().slice(0, 10)
   }
-  const historique = (avg: number, count = 6) => JSON.stringify({ by_rarity: { UR: { weekly: [{ start: lundi(), avg, min: 3, max: 446, count }], monthly: [] } } })
+  const historique = (avg: number, count = 6) => JSON.stringify({ by_rarity: { UR: { weekly: [{ start: lundi(), avg, min: 2, max: 480, count }], monthly: [] } } })
   const creer = (f: unknown, attendre = vi.fn(async () => undefined)) =>
     creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: ORIGINE, fetchImpl: f as typeof fetch, attendre, gigue: () => 7 })
 
@@ -271,6 +271,23 @@ describe('reseau : enchère avec relecture de la tendance (2026-11-21)', () => {
     expect(appels[0]![1].credentials).toBe('same-origin')
     expect(attendre).toHaveBeenCalledWith(207)
     expect(JSON.parse(appels[1]![1].body as string).base_amount).toBe(25)
+  })
+
+  it('garantit 0,2 s plus gigue après le départ de l’enchère avant de rendre la main', async () => {
+    const f = vi.fn(async (url: string) => (String(url).endsWith('/price-history') ? reponse(200, historique(100)) : reponse(201, JSON.stringify({ auction_id: 'x' }))))
+    const attendre = vi.fn(async () => undefined)
+    await creer(f, attendre)(enchereTendance)
+    // 1er attendre : entre la relecture et l'envoi ; 2e : après l'envoi (réponse immédiate, donc presque tout l'écart reste à attendre).
+    expect(attendre).toHaveBeenCalledTimes(2)
+    const reste = (attendre.mock.calls as unknown as number[][])[1]![0]!
+    expect(reste).toBeGreaterThan(150)
+    expect(reste).toBeLessThanOrEqual(207)
+  })
+
+  it('erreur réseau à la relecture : échec ordinaire, rien n’est envoyé', async () => {
+    const f = vi.fn(async () => { throw new TypeError('réseau') })
+    expect(await creer(f)(enchereTendance)).toMatchObject({ classe: 'echec', cause: 'erreur réseau' })
+    expect(f).toHaveBeenCalledTimes(1)
   })
 
   it('divise le prix relu par deux autant de fois que de non-ventes', async () => {

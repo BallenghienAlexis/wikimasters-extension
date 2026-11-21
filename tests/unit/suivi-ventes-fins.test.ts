@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Action, ResultatAction } from '../../src/lib/actions'
 import { collectionVide, type Carte } from '../../src/lib/collection'
+import { etatInitial } from '../../src/lib/ordonnanceur'
 import { creerSuiviVentes, type DependancesSuiviVentes } from '../../src/content/suiviVentes'
 import type { EtatSuiviVentes, StatutRelanceVentes } from '../../src/lib/stockage'
 import { preferencesParDefaut } from '../../src/lib/tri'
@@ -46,7 +47,7 @@ function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; carte
     chargerEcartes: async () => etat.ecartes,
     enregistrerEcartes: async (e) => void (etat.ecartes = e),
     pauseLots: async () => null,
-    chargerEtat: async () => null,
+    chargerEtat: async () => ({ ...etatInitial(), cardIds: new Proxy({} as Record<string, string>, { get: (_, k) => (typeof k === 'string' ? `site-${k}` : undefined) }) }),
     enregistrerEtat: async () => undefined,
     bail: { lire: async () => bail, ecrire: async (v) => void (bail = v) },
   }

@@ -162,3 +162,11 @@ describe('raison de non-proposition (2026-11-17)', () => {
     expect(raisonNonProposable(carte('d', { titre: 'Zzqx', description: '' }))).toMatch(/thème fiable/)
   })
 })
+
+describe('enchère sans carte du site (2026-11-21)', () => {
+  it('sans identifiant de carte du site, l’enchère est écartée : le prix ne peut pas être relu', () => {
+    const c = carte('a', { valeurMarchande: 100, prixCible: null })
+    const l = lot([c], { vendre: ['a'], defausser: {} }, { idsCartesSite: {} })
+    expect(de(l.actions, 'enchere')).toEqual([])
+  })
+})
