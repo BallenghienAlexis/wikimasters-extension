@@ -4,11 +4,16 @@
  * Seul module, avec `jeton.ts` en amont, à envoyer le jeton de session : lu en mémoire à chaque
  * requête, jamais gardé, journalisé ni renvoyé. Aucun résultat ne contient de corps de réponse :
  * seuls une classe, un code HTTP, un libellé fixe et, pour une création, l’identifiant validé.
- * Aucun aléatoire ici : le délai variable est tiré par l’appelant (`Synchronisation.tsx`).
+ * Le délai variable est tiré par l’appelant, sauf entre la relecture de la tendance et l’enchère (`gigueAleatoire`, injectable).
  */
 import { CAUSE_VERIFICATION_HUMAINE, CODE_VERIFICATION_HUMAINE, type Action, type ResultatAction } from './actions'
 import type { EntreeContrat, TableContrat } from './contrat'
 import { enteteAuthentification, sessionCourante, type SessionLue } from './jeton'
+import { analyserPrix, analyserTendance, type TendancePrix } from './lectureApi'
+import { prixDepartSelonTendance } from './prixTendance'
+import { prixDepartAjuste } from './ventes'
+import { INTERVALLE_MS } from './file'
+import { gigueAleatoire } from './gigue'
 import { COULEUR_ETIQUETTE, CLE_PUBLIQUE, DELAI_REQUETE_MS, ORIGINE_REST, ORIGINE_SITE } from '../config/synchro'
 
 export interface DependancesReseau {
@@ -18,6 +23,9 @@ export interface DependancesReseau {
   /** Session courante, relue à chaque requête (par défaut : cookie du site). */
   session?: () => SessionLue | null
   fetchImpl?: typeof fetch
+  /** Attente (injectée pour les tests) et délai variable entre la relecture de la tendance et l’envoi. */
+  attendre?: (ms: number) => Promise<void>
+  gigue?: () => number
 }
 
 const CODES_ARRET = [401, 403, 429]
@@ -91,8 +99,39 @@ export function diagnosticDeRefus(methode: string, chemin: string, type: string,
 
 export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promise<ResultatAction> {
   const appel = deps.fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a))
+  const attendre = deps.attendre ?? ((ms: number) => new Promise<void>((fin) => setTimeout(fin, ms)))
+  const gigue = deps.gigue ?? gigueAleatoire
 
-  return async (ordre) => {
+  /**
+   * Tendance relue juste avant une mise en vente (Alexis, 2026-11-21) : une lecture `GET .../price-history`, même origine,
+   * cookies du navigateur, aucun en-tête, aucun jeton. Renvoie la tendance, ou le résultat à rendre à la place de l’envoi :
+   * `passee` (prix du marché introuvable ou illisible : on ne met pas en vente à l’aveugle), ou `echec`/`arret` pour les
+   * mêmes codes que toute requête (401, 403, 429 ; anti-bot jamais contourné).
+   */
+  async function relireTendance(idCarteSite: string, rarete: string): Promise<{ valeur: number; tendance: TendancePrix } | ResultatAction> {
+    if (deps.origineOnglet !== ORIGINE_SITE) return NON_DISPONIBLE
+    const chemin = `/api/marketplace/cards/${encodeURIComponent(idCarteSite)}/price-history`
+    const controle = new AbortController()
+    const minuteur = setTimeout(() => controle.abort(), DELAI_REQUETE_MS)
+    try {
+      const reponse = await appel(`${ORIGINE_SITE}${chemin}`, { method: 'GET', credentials: 'same-origin', redirect: 'error', cache: 'no-store', signal: controle.signal })
+      const { json, texte } = await lireCorps(reponse)
+      if (reponse.status === 403 && verificationHumaine(json, texte)) return { classe: 'echec', codeHttp: 403, cause: CAUSE_VERIFICATION_HUMAINE }
+      if (reponse.status === 401 || reponse.status === 429) return { classe: 'echec', codeHttp: reponse.status, cause: 'action non disponible' }
+      if (reponse.status !== 200) return { classe: 'passee', codeHttp: reponse.status, cause: 'prix du marché indisponible' }
+      const maintenant = Date.now()
+      const valeur = analyserPrix(json, rarete, maintenant)
+      if (valeur === null) return { classe: 'passee', codeHttp: 200, cause: 'aucune vente récente : prix du marché inconnu' }
+      return { valeur, tendance: analyserTendance(json, rarete, maintenant) as TendancePrix }
+    } catch (e) {
+      const delai = e instanceof Error && e.name === 'AbortError'
+      return { classe: 'inconnu', codeHttp: null, cause: delai ? 'délai dépassé' : 'erreur réseau' }
+    } finally {
+      clearTimeout(minuteur)
+    }
+  }
+
+  const emettreBrut = async (ordre: Action): Promise<ResultatAction> => {
     const entree: EntreeContrat | undefined = deps.table[ordre.type]
     if (entree === undefined) return NON_DISPONIBLE
 
@@ -173,4 +212,18 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
       clearTimeout(minuteur)
     }
   }
+
+  return async (ordre) => {
+    if (ordre.type !== 'enchere' || ordre.prixFixe === true || ordre.idCarteSite === undefined || ordre.rarete === undefined) return emettreBrut(ordre)
+    const lue = await relireTendance(ordre.idCarteSite, ordre.rarete)
+    if ('classe' in lue) return lue
+    const depart = prixDepartSelonTendance(lue.valeur, lue.tendance)
+    if (depart === null) return { classe: 'passee', codeHttp: null, cause: 'prix du marché trop bas pour une mise en vente' }
+    const prix = prixDepartAjuste(depart.prix, ordre.reductions ?? 0)
+    // Cadence : 0,2 s plus gigue entre la lecture et l’envoi, comme entre deux requêtes quelconques.
+    await attendre(INTERVALLE_MS + gigue())
+    const resultat = await emettreBrut({ ...ordre, prix })
+    return resultat.classe === 'reussie' ? { ...resultat, prix } : resultat
+  }
 }
+

@@ -1,6 +1,8 @@
 // Préférences du joueur (amis et thèmes). L'assistant de tri et les statuts ont été retirés le 2026-11-14 :
 // les étiquettes du site et les favoris font foi.
-import { CONFIG_PRIX, PLAFOND_DEFAUSSE_MAX, PLAFOND_DEFAUSSE_MIN, PLAFOND_VALEUR_DEFAUSSE, type ConfigPrix } from '../config/prix';
+import { prixDepartSelonTendance } from './prixTendance';
+import type { TendancePrix } from './lectureApi';
+import { PLAFOND_DEFAUSSE_MAX, PLAFOND_DEFAUSSE_MIN, PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
 import type { Carte } from './collection';
 import { estFavori, normaliser } from './collection';
 import { parentsDe, THEME_AUTRES, themesDeCarte } from './themes';
@@ -42,10 +44,9 @@ export function valeurDeCarte(carte: Pick<Carte, 'valeurMarchande'>): number | n
   return carte.valeurMarchande ?? null;
 }
 
-export function prixDepart(valeur: number, config: ConfigPrix = CONFIG_PRIX): number | null {
-  const atteintes = config.matricePrixDepart.filter((tranche) => valeur >= tranche.valeurMin);
-  if (atteintes.length === 0) return null;
-  return atteintes.reduce((haute, tranche) => (tranche.valeurMin > haute.valeurMin ? tranche : haute)).prixDepart;
+/** Prix de départ par la règle de tendance (`prixTendance.ts`) ; sans tendance connue, règle de base. */
+export function prixDepart(valeur: number, tendance?: TendancePrix | null): number | null {
+  return prixDepartSelonTendance(valeur, tendance)?.prix ?? null;
 }
 
 /**

@@ -1,3 +1,4 @@
+import type { TendancePrix } from '../lib/lectureApi';
 import { CONFIG_PRIX } from '../config/prix';
 import { estLimiteEncheres, estVerificationHumaine, type Action, type CarteEcartee, type FamilleLot, type RaisonEcart, type Registre, type TypeAction, type TypesDisponibles } from '../lib/actions';
 import type { Carte, Collection } from '../lib/collection';
@@ -243,8 +244,13 @@ export function texteLotVide(avecIndisponibles: boolean): string {
 export type ResultatLot = { lot: LotConstruit } | { erreur: string };
 
 /** Configuration du lot à partir des préférences (amis et thèmes suivis pour les étiquettes d’échange). */
-export function configDuLot(preferences: Preferences, ventesSite: { enCours: number; max: number } | null = null): Config {
+export function configDuLot(
+  preferences: Preferences,
+  ventesSite: { enCours: number; max: number } | null = null,
+  prixSite: { idsCartesSite: Record<string, string>; tendances: Record<string, TendancePrix> } | null = null,
+): Config {
   return {
+    ...(prixSite ? { idsCartesSite: prixSite.idsCartesSite, tendances: prixSite.tendances } : {}),
     maxVentesSimultanees: CONFIG_PRIX.maxVentesSimultanees,
     plafondDefausse: plafondDefausse(preferences),
     mesThemes: preferences.mesThemes,

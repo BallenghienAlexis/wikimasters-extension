@@ -422,6 +422,11 @@ export function creerFile(deps: DependancesFile): File {
       }
       derniereReponse = Math.max(derniereReponse, horloge.now())
     }
+    // Enchère passée sans envoi (prix du marché introuvable à la relecture de la tendance) : ni échec ni arrêt, le lot continue.
+    if (!exception && resultat.classe === 'passee') {
+      await journal.passer(id)
+      return
+    }
     // Raison d’arrêt connue dès la réponse : le drapeau passe avant toute attente de journal, pour qu’aucun
     // ordre du lot parallèle ne parte entre-temps.
     let arretApres: Arret | null = null

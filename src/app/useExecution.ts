@@ -1,3 +1,4 @@
+import type { TendancePrix } from '../lib/lectureApi';
 import { useEffect, useState } from 'react';
 import type { EntreeJournal, Registre } from '../lib/actions';
 import type { EtatFile } from '../lib/file';
@@ -21,10 +22,17 @@ export function useExecution() {
   const [enCoursStocke, setEnCoursStocke] = useState<boolean | null>(null);
   // Enchères en cours sur le site (relevé de la synchronisation), pour ne pas dépasser le plafond du site.
   const [ventesSiteLues, setVentesSiteLues] = useState<{ enCours: number; max: number } | null>(null);
+  // Identifiants de cartes du site et dernière tendance de prix : estimation du prix de départ, relu à l’envoi.
+  const [prixSite, setPrixSite] = useState<{ idsCartesSite: Record<string, string>; tendances: Record<string, TendancePrix> }>({ idsCartesSite: {}, tendances: {} });
   useEffect(() => {
     let actif = true;
     void chargerEtatSynchro()
       .then((e) => {
+        if (actif && e) {
+          const tendances: Record<string, TendancePrix> = {};
+          for (const [id, p] of Object.entries(e.prix)) if (p.tendance) tendances[id] = p.tendance;
+          setPrixSite({ idsCartesSite: e.cardIds, tendances });
+        }
         if (actif && e?.ventesSite) setVentesSiteLues({ enCours: e.ventesSite.enCours, max: e.ventesSite.max });
       })
       .catch(() => {});
@@ -92,6 +100,7 @@ export function useExecution() {
     ongletsLive,
     enCoursStocke,
     ventesSiteLues,
+    prixSite,
     entrees,
     setEntrees,
     journalIllisible,

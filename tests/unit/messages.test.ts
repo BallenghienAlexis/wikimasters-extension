@@ -243,3 +243,23 @@ describe('résultat avec diagnostic de refus', () => {
     expect(validerResultat(enveloppe({ ...base, diagnostic: 'a'.repeat(601) }))).toBeNull()
   })
 })
+
+describe('messages : enchère à tendance et résultat « passée » (2026-11-21)', () => {
+  it('valide les champs facultatifs de l’enchère et refuse les valeurs hors liste', () => {
+    const base = { type: 'enchere', idCarte: 'UR|Yoga', idExemplaire: 'ex', prix: 5 }
+    const valider = (ordre: unknown) => validerOrdre({ message: 'ordre', ordre })
+    expect(valider({ ...base, idCarteSite: 'site', rarete: 'UR', reductions: 2, prixFixe: false })).toMatchObject({ idCarteSite: 'site', rarete: 'UR', reductions: 2 })
+    expect(valider({ ...base, reductions: -1 })).toBeNull()
+    expect(valider({ ...base, reductions: 99 })).toBeNull()
+    expect(valider({ ...base, prixFixe: 'oui' })).toBeNull()
+    expect(valider({ ...base, idCarteSite: 3 })).toBeNull()
+    expect(valider({ ...base, autre: 1 })).toBeNull()
+  })
+  it('accepte un résultat « passée » et le prix envoyé, refuse un prix invalide', () => {
+    const r = (resultat: unknown) => validerResultat({ message: 'resultat', resultat })
+    expect(r({ classe: 'passee', codeHttp: 404, cause: 'prix du marché indisponible' })).toMatchObject({ classe: 'passee' })
+    expect(r({ classe: 'reussie', codeHttp: 201, cause: 'action réussie', prix: 25 })).toMatchObject({ prix: 25 })
+    expect(r({ classe: 'reussie', codeHttp: 201, cause: 'action réussie', prix: 0 })).toBeNull()
+    expect(r({ classe: 'reussie', codeHttp: 201, cause: 'action réussie', prix: 1.5 })).toBeNull()
+  })
+})

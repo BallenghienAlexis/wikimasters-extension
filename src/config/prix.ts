@@ -1,16 +1,29 @@
 // Réglages de prix à renseigner par Alexis. Après modification : npm run build, puis recharger l'extension.
 
-export interface TranchePrix {
-  // À partir de cette valeur marchande (incluse), en wikibidous.
-  valeurMin: number;
-  prixDepart: number;
-}
-
 export interface ConfigPrix {
   seuilDefausse: number;
   maxVentesSimultanees: number;
-  matricePrixDepart: TranchePrix[];
 }
+
+/**
+ * Règle du prix de départ selon la tendance du marché (Alexis, 2026-11-21 : « prix variable selon la tendance du marché à
+ * réexaminer juste avant de mettre une carte en vente »). Elle remplace la matrice de tranches.
+ * - Référence = prix moyen de la dernière semaine (`price-history`), jamais le prix de départ lui-même.
+ * - Prix de départ = référence × `coefDepart` (25 %), arrondi par défaut, au moins 1, toujours sous la valeur du marché.
+ * - Hausse (variation ≥ `seuilVariation` %) : on ne poursuit pas la hausse, la référence est la moyenne entre le prix actuel
+ *   et celui de la semaine d'avant.
+ * - Baisse (variation ≤ −`seuilVariation` %) : départ plus bas, `coefBaisse` (15 %), pour attirer des mises.
+ * - Peu de ventes (moins de `minVentes` sur 4 semaines) : la moyenne est peu fiable, la référence est à mi-chemin entre le plus
+ *   bas de la fourchette et la moyenne.
+ */
+export const REGLE_PRIX = {
+  coefDepart: 0.25,
+  coefBaisse: 0.15,
+  seuilVariation: 25,
+  minVentes: 3,
+  /** Sous cette valeur marchande, aucune mise aux enchères (ancienne première tranche, alignée sur le plafond de défausse + 1). */
+  valeurMinVente: 6,
+} as const;
 
 /**
  * Plafond de sécurité de l'envoi réel d'une défausse (Alexis, 2026-11-11) : une carte dont la valeur
@@ -29,22 +42,4 @@ export const CONFIG_PRIX: ConfigPrix = {
 
   // Nombre d'enchères que le site autorise en même temps.
   maxVentesSimultanees: 5,
-
-  // Matrice valeur marchande → prix de départ. La tranche la plus haute atteinte s'applique.
-  // Lecture : une carte vendue au marché entre 6 et 25 se met aux enchères à 1, etc.
-  // Au-delà de 200 : suite extrapolée (tranches doublées, prix toujours inférieur à la valeur du marché). À ajuster.
-  matricePrixDepart: [
-    { valeurMin: 6, prixDepart: 1 }, // 6 à 25 (abaissé de 15 à 6 le 2026-11-11 avec le seuil de défausse)
-    { valeurMin: 26, prixDepart: 5 }, // 26 à 50
-    { valeurMin: 51, prixDepart: 10 }, // 51 à 100
-    { valeurMin: 101, prixDepart: 50 }, // 101 à 200
-    { valeurMin: 201, prixDepart: 100 }, // 201 à 400
-    { valeurMin: 401, prixDepart: 200 }, // 401 à 800
-    { valeurMin: 801, prixDepart: 500 }, // 801 à 1 600
-    { valeurMin: 1601, prixDepart: 1000 }, // 1 601 à 3 200
-    { valeurMin: 3201, prixDepart: 2000 }, // 3 201 à 6 400
-    { valeurMin: 6401, prixDepart: 5000 }, // 6 401 à 12 800
-    { valeurMin: 12801, prixDepart: 10000 }, // 12 801 à 25 600
-    { valeurMin: 25601, prixDepart: 20000 }, // 25 601 à 51 200
-  ],
 };

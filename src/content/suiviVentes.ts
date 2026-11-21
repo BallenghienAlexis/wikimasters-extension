@@ -18,6 +18,7 @@ import { routeMarcheValide } from '../lib/affluence';
 import { PAUSE_LOTS_MS } from '../lib/reprise';
 import { DUREE_BAIL_MS, PAUSE_APRES_ARRET_MS, etatInitial, type Bail, type EtatOrdonnanceur, type ReponseApi } from '../lib/ordonnanceur';
 import type { AvecVerrouRequete } from '../lib/verrouRequete';
+import type { TendancePrix } from '../lib/lectureApi';
 import { choisirProchaineEnchere } from '../lib/relanceVentes';
 import { ETAT_SUIVI_INITIAL, type EtatSuiviVentes, type StatutRelanceVentes } from '../lib/stockage';
 import type { Preferences } from '../lib/tri';
@@ -155,7 +156,12 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     const [collection, preferences, ecartes] = await Promise.all([deps.chargerCollection(), deps.chargerPreferences(), deps.chargerEcartes()]);
     const ecartesActifs = Object.entries(ecartes).filter(([cle, t]) => !cle.startsWith('carte:') && !cle.startsWith('vu:') && !cle.startsWith('attend:') && t > maintenant).map(([cle]) => cle);
     const titresRetires = Object.keys(ecartes).filter((c) => c.startsWith('carte:')).map((c) => c.slice('carte:'.length));
+    const etatSynchro = await deps.chargerEtat().catch(() => null);
+    const tendances: Record<string, TendancePrix> = {};
+    for (const [id, p] of Object.entries(etatSynchro?.prix ?? {})) if (p.tendance) tendances[id] = p.tendance;
     const choix = choisirProchaineEnchere({
+      idsCartesSite: etatSynchro?.cardIds ?? {},
+      tendances,
       collection,
       preferences,
       enCours: suivi.actives.length,
@@ -169,7 +175,8 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     // Non vendue : prix de départ divisé par deux autant de fois que la carte est restée sans vente (Alexis, 2026-11-17).
     const rarete = collection.cartes.find((c) => c.id === choix.action.idCarte)?.rarete ?? '';
     const nonVentes = nonVentesDe(suivi, cleNonVente(rarete, choix.titre));
-    if (nonVentes > 0) choix.action = { ...choix.action, prix: prixDepartAjuste(choix.action.prix, nonVentes) };
+    // La division est aussi portée par l'ordre (`reductions`) : le prix de base est relu juste avant l'envoi (tendance du marché).
+    if (nonVentes > 0) choix.action = { ...choix.action, prix: prixDepartAjuste(choix.action.prix, nonVentes), reductions: nonVentes };
 
     // Les essais déjà faits sur cette carte survivent à un rechargement de l’onglet (lus dans le statut enregistré).
     if (stocke?.carte?.idExemplaire === choix.action.idExemplaire && stocke.carte.essais > echecsEcriture) {
@@ -183,7 +190,8 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     } catch {
       resultat = { classe: 'inconnu', codeHttp: null, cause: 'erreur d’émission' };
     }
-    const lancement = (resultat: 'reussie' | 'echec', cause: string | null): LancementVente => ({ le: deps.horloge.now(), source: 'auto', titre: choix.titre, prix: choix.action.prix, resultat, cause, ...(issue !== undefined ? { issue } : {}) });
+    const prixEnvoye = resultat.prix ?? choix.action.prix;
+    const lancement = (resultat: 'reussie' | 'echec', cause: string | null): LancementVente => ({ le: deps.horloge.now(), source: 'auto', titre: choix.titre, prix: prixEnvoye, resultat, cause, ...(issue !== undefined ? { issue } : {}) });
 
     if (resultat.classe === 'reussie') {
       echecsEcriture = 0;
@@ -193,11 +201,18 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       await statut({ etat: 'attente', message: `Mise en vente lancée : ${choix.titre}`, jusqua: null, carte: null });
       const maintenantLancee = deps.horloge.now();
       // Compte local de la place prise : le listing du site ne la montrera qu’à la lecture suivante.
-      const prise: VenteActive = { id: `local:${choix.action.idExemplaire}`, idExemplaire: choix.action.idExemplaire, titre: choix.titre, rarete, prixDepart: choix.action.prix, prixActuel: choix.action.prix, avecMise: false, creeLe: maintenantLancee, finLe: maintenantLancee + 3600_000, finInitiale: maintenantLancee };
+      const prise: VenteActive = { id: `local:${choix.action.idExemplaire}`, idExemplaire: choix.action.idExemplaire, titre: choix.titre, rarete, prixDepart: prixEnvoye, prixActuel: prixEnvoye, avecMise: false, creeLe: maintenantLancee, finLe: maintenantLancee + 3600_000, finInitiale: maintenantLancee };
       return { etat: 'lancee', active: prise };
     }
     const cause = resultat.cause;
     await deps.ajouterLancement(lancement('echec', cause)).catch(() => undefined);
+    // Prix du marché introuvable à la relecture de la tendance : la carte n'est pas mise en vente à l'aveugle, elle est écartée
+    // un jour et la relance passe à la suivante (ni échec, ni attente progressive).
+    if (resultat.classe === 'passee') {
+      await deps.enregistrerEcartes(purgerEcartes({ ...ecartes, [choix.action.idExemplaire]: deps.horloge.now() + ECART_REFUS_MS }, deps.horloge.now())).catch(() => undefined);
+      await statut({ etat: 'attente', message: `Prix du marché introuvable pour ${choix.titre} : carte écartée un jour`, jusqua: null, carte: null });
+      return { etat: 'stop' };
+    }
     const diagnostic = resultat.diagnostic ?? '';
     const pause = async (ms: number, message: string, carte: StatutRelanceVentes['carte'] = null): Promise<void> => {
       attenteEcritureJusqua = deps.horloge.now() + ms;

@@ -18,6 +18,7 @@ import type {
 import { estFavori, estFavoriVerrouille, normaliser, type Carte, type Collection } from './collection'
 import { estRefuse, LONGUEUR_MAX_ID } from './registre'
 import { amisConcernes, plafondDefausse, prixDepart, type Ami } from './tri'
+import type { TendancePrix } from './lectureApi'
 import { LIBELLES_THEMES, themesDeCarte, themesPrincipaux, versionThemes } from './themes'
 
 /** Choix manuels du joueur pour le lot : un favori n’est jamais retenu, une carte ne peut être qu’à vendre ou à défausser. */
@@ -51,6 +52,9 @@ export interface Config {
   limiteNoms?: number | null
   /** Sélection manuelle du joueur au moment de l’aperçu : cartes à mettre aux enchères et nombre d’exemplaires à défausser. */
   selection?: SelectionLot
+  /** Identifiant local → `card_id` du site et dernière tendance mémorisée (état de synchro) : estimation du prix et relecture avant l’envoi. */
+  idsCartesSite?: Readonly<Record<string, string>>
+  tendances?: Readonly<Record<string, TendancePrix>>
   /** Plafond de valeur de défausse réglé par le joueur ; absent : `PLAFOND_VALEUR_DEFAUSSE` (5). */
   plafondDefausse?: number
   /** Mode des étiquettes (absent : `poser`) : `suspendre` ne crée ni ne pose rien ; `retirer-tout` ne propose que des retraits (tout ce que l’extension a posé). */
@@ -291,7 +295,7 @@ export function construireEncheres(
       ecarter('valeur-absente')
       continue
     }
-    const prix = c.prixCible ?? prixDepart(valeur)
+    const prix = c.prixCible ?? prixDepart(valeur, config.tendances?.[c.id])
     if (prix === null || !Number.isSafeInteger(prix) || prix < 1) {
       ecarter('prix-invalide')
       continue
@@ -317,7 +321,10 @@ export function construireEncheres(
   const places = Math.max(0, Math.floor(occupation.max - occupation.occupees))
   const actions: Action[] = []
   valides.forEach(({ carte, prix, idExemplaire }, rang) => {
-    if (rang < places) actions.push({ type: 'enchere', idCarte: carte.id, idExemplaire, prix })
+    if (rang < places) {
+      const idCarteSite = config.idsCartesSite?.[carte.id]
+      actions.push({ type: 'enchere', idCarte: carte.id, idExemplaire, prix, ...(idCarteSite !== undefined && typeof carte.rarete === 'string' ? { idCarteSite, rarete: carte.rarete } : {}), ...(carte.prixCible != null ? { prixFixe: true } : {}) })
+    }
     else ecartees.push({ idCarte: carte.id, titre: carte.titre, raison: 'en-attente-place' })
   })
   return { actions, ecartees }

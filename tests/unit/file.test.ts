@@ -740,3 +740,15 @@ describe('refusParCarte : vérification anti-bot (Alexis, 2026-11-15)', () => {
     expect(refusParCarte(enchere, 403, CAUSE_VERIFICATION_HUMAINE)).toBe(false)
   })
 })
+
+describe('enchère passée à la relecture de la tendance (2026-11-21)', () => {
+  it('une action « passée » n’est ni un échec ni un arrêt : le lot continue, journal « passée »', async () => {
+    const encheres: Action[] = [1, 2, 3].map((n) => ({ type: 'enchere', idCarte: `R|C${n}`, idExemplaire: `ex-${n}`, prix: 5 }));
+    const b = banc({}, (n) => (n <= 3 ? { classe: 'passee', codeHttp: 404, cause: 'prix du marché indisponible' } : OK));
+    const etat = await creerFile(b.deps).demarrer([...encheres, pose(9)], 'lot-1');
+    expect(b.requetes).toHaveLength(4);
+    expect(b.journal.filter((j) => j.startsWith('passer'))).toHaveLength(3);
+    expect(b.appliquees).toHaveLength(1);
+    expect(etat.etat).toBe('terminee');
+  });
+});
