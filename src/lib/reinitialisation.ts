@@ -102,9 +102,13 @@ export function garantirSansFavori(actions: readonly Action[]): void {
 /** Clés conservées telles quelles (le drapeau empêche de refusionner les amis initiaux déjà décidés). */
 export const CLES_GARDEES = ['preferences', 'amisInitiaux', 'collection'] as const;
 
-/** Préférences réduites à ce qui est gardé : thèmes aimés et amis (avec leurs thèmes). Le reste revient au défaut. */
+/**
+ * Préférences réduites à ce qui est gardé : thèmes aimés et amis (avec leurs thèmes). Le reste revient au défaut,
+ * sauf le mode des étiquettes : il passe à `poser` (Alexis, 2026-11-21), sinon le défaut `suspendre` grisait la création
+ * et la pose des étiquettes dès la première synchro, alors que le site vient d’être vidé de ses étiquettes pour les reposer.
+ */
 export function preferencesGardees(p: Preferences): Preferences {
-  return { version: 2, mesThemes: [...p.mesThemes], amis: p.amis.map((a) => ({ ...a, themes: [...a.themes] })) };
+  return { version: 2, mesThemes: [...p.mesThemes], amis: p.amis.map((a) => ({ ...a, themes: [...a.themes] })), modeEtiquettes: 'poser' };
 }
 
 /**

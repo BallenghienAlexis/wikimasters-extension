@@ -68,8 +68,8 @@ describe('réinitialisation : volet local', () => {
     expect(r.cartes[0]?.themesChoisis).toBeUndefined();
   });
 
-  it('réduit les préférences aux thèmes aimés et aux amis', () => {
-    const r = preferencesGardees({ version: 2, mesThemes: ['rock'], amis: [{ nom: 'Tom', themes: ['ukraine'] }], plafondDefausse: 9, modeEtiquettes: 'poser' });
-    expect(r).toEqual({ version: 2, mesThemes: ['rock'], amis: [{ nom: 'Tom', themes: ['ukraine'] }] });
+  it('réduit les préférences aux thèmes aimés et aux amis, et remet le mode « poser »', () => {
+    const r = preferencesGardees({ version: 2, mesThemes: ['rock'], amis: [{ nom: 'Tom', themes: ['ukraine'] }], plafondDefausse: 9, modeEtiquettes: 'retirer-tout' });
+    expect(r).toEqual({ version: 2, mesThemes: ['rock'], amis: [{ nom: 'Tom', themes: ['ukraine'] }], modeEtiquettes: 'poser' });
   });
 });
