@@ -2,6 +2,7 @@
 
 ## À reprendre
 
+- **PR #208 (revue, mineur)** : `src/app/ReinitialisationGlobale.tsx` : l’aperçu local n’indique pas que la réinitialisation remet le mode des étiquettes sur « Pose selon les règles » ; ajouter une phrase (tâche T-9xx retouches).
 - **T-316 (PR #111)** : `src/lib/reseau.ts:7` cite encore `Synchronisation.tsx` dans un commentaire (fichier hors liste de T-316) ; remplacer par `pilotageLots.ts` (tâche T-9xx retouches).
 - **T-303 (PR #112)** : `src/lib/ignorees.ts:72` et `:89` : une enchère ignorée est reconnue par `parametre = String(prix)` ; si le prix change avant la prochaine synchro, l’action réapparaît dans le lot. À trancher : ignorer par `(type, idCarte)` sans le prix, ou documenter que l’ignorée ne vaut que pour ce prix (effet limité : aperçu et « Lancer » restent nécessaires).
 - **T-303 (PR #112)** : `src/lib/stockage.ts:331` et `:343` : `chargerIgnorees` et `chargerHistorique` renvoient `[]` pour une version inconnue ; le premier `enregistrer*` (T-313, T-308) écraserait la valeur illisible. Exposer un état « illisible » ou refuser l’écriture (à traiter dans T-313 ou T-9xx).
