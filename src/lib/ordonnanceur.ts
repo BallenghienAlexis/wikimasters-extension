@@ -6,7 +6,7 @@
  * chemin relatif (`GET` même origine) et ne renvoie que le statut et le JSON.
  *
  * Plan incrémental : `stats` → pages de `my-collection` (seulement si quelque chose a changé)
- * → prix du marché (`sales?scope=summary`, jamais la route sans `scope`). Intervalle minimal
+ * → prix du marché (`price-history`, relevée le 2026-11-21 ; plus de `sales?scope=summary`). Intervalle minimal
  * (constantes de `file.ts`) allongé par un délai variable injecté, une requête en vol.
  *
  * Le module ne modifie jamais les champs d’édition d’une carte (statut, prix cible, note, ami,
@@ -18,7 +18,7 @@ import { CODE_VERIFICATION_HUMAINE } from './actions';
 import { PAS_ATTENTE_MS } from './ventes';
 import { CODES_ARRET, INTERVALLE_MS, type Horloge } from './file';
 import { VERSION_SCHEMA, aEditionLocale, type Carte, type Collection } from './collection';
-import { analyserPage, analyserPrix, sensDuPrix, type SensPrix, decrireForme, diagnosticStats, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
+import { analyserPage, analyserPrix, analyserTendance, type TendancePrix, sensDuPrix, type SensPrix, decrireForme, diagnosticStats, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
 
 /** Aucune reprise automatique avant ce délai après un arrêt (401, 403 ou 429 des pages et stats). Même durée que la pause des lots (`PAUSE_LOTS_MS`). */
 export const PAUSE_APRES_ARRET_MS = PAUSE_LOTS_MS;
@@ -60,6 +60,8 @@ export interface PrixReleve {
   /** null : le site n’a pas de valeur pour cette rareté. */
   valeur: number | null;
   releveLe: number;
+  /** Tendance sur 4 semaines (price-history), absente si le site n’en donne pas. */
+  tendance?: TendancePrix;
 }
 
 /** État conservé entre deux exécutions (à persister par l’appelant ; ne contient aucun secret). */
@@ -169,7 +171,7 @@ type TriSite = 'added' | 'rarity';
 const cheminStats = (): string => '/api/my-collection/stats?sort=added';
 const cheminPage = (n: number, tri: TriSite): string => `/api/my-collection?sort=${tri}&page=${n}&stats=0`;
 const cheminVentes = (): string => '/api/marketplace/mine';
-const cheminPrix = (cardId: string): string => `/api/marketplace/cards/${encodeURIComponent(cardId)}/sales?scope=summary`;
+const cheminPrix = (cardId: string): string => `/api/marketplace/cards/${encodeURIComponent(cardId)}/price-history`;
 
 const signatureTete = (cartes: readonly CarteLue[]): string =>
   cartes.map((c) => `${c.idsSite.join('+')}:${c.quantite}:${c.favori ? 1 : 0}:${[...c.etiquettesSite].sort().join('|')}`).join(';');
@@ -343,7 +345,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       if ('erreur' in reponse) {
         motif = `erreur réseau (${reponse.erreur})`;
       } else if (reponse.statut === 200) {
-        const sens = sensDuPrix(reponse.json, rarete);
+        const sens = sensDuPrix(reponse.json, rarete, horloge.now());
         if (sens !== 'vide') {
           deps.annoncerAttente?.(null);
           return { reponse, sens };
@@ -692,10 +694,11 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       if (sens === 'aucune-vente') journal(`Aucune vente enregistrée pour « ${carte.titre} » : prix inconnu (ce n’est pas une erreur).`);
       echecs = 0;
       deps.prixTermine?.();
-      const valeur = analyserPrix(r.json, carte.rarete as string);
+      const valeur = analyserPrix(r.json, carte.rarete as string, horloge.now());
+      const tendance = analyserTendance(r.json, carte.rarete as string, horloge.now());
       const courante = parId.get(carte.id) as Carte;
       const saisieMain = courante.valeurMarchande !== null && etat.prix[carte.id]?.valeur !== courante.valeurMarchande;
-      etat.prix[carte.id] = { valeur, releveLe: horloge.now() };
+      etat.prix[carte.id] = tendance ? { valeur, releveLe: horloge.now(), tendance } : { valeur, releveLe: horloge.now() };
       if (valeur === null) {
         if (sens !== 'aucune-vente') journal(`Pas de valeur marchande pour « ${carte.titre} ».`);
       } else if (saisieMain) {

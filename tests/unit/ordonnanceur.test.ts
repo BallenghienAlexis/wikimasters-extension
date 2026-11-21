@@ -78,7 +78,7 @@ function siteFictif(nCartes: number, options: { prix?: (n: number) => number | n
       const p = Number(page[1]);
       return { statut: 200, json: { collection: exemplaires.slice(p * 50, (p + 1) * 50) } };
     }
-    const vente = /\/api\/marketplace\/cards\/card-(\d+)\/sales\?scope=summary$/.exec(chemin);
+    const vente = /\/api\/marketplace\/cards\/card-(\d+)\/price-history$/.exec(chemin);
     if (vente) {
       const valeur = (options.prix ?? ((n) => 100 + n))(Number(vente[1]));
       return { statut: 200, json: { summary: valeur === null ? {} : { R: { average: valeur } }, isPro: false } };
@@ -440,7 +440,7 @@ describe('ordonnanceur — critère 3 : prix', () => {
     cardIds: ids,
   });
 
-  const cheminsPrix = (b: Banc) => b.departs.map((d) => d.chemin).filter((c) => c.includes('/sales'));
+  const cheminsPrix = (b: Banc) => b.departs.map((d) => d.chemin).filter((c) => c.includes("/price-history"));
 
   it('relève d’abord les valeurs absentes, puis périmées', async () => {
     const cartes = [
@@ -497,14 +497,14 @@ describe('ordonnanceur — critère 3 : prix', () => {
     expect(r.signalements).toEqual([]);
   });
 
-  it('n’emploie jamais la route /sales sans ?scope=summary', async () => {
+  it('n’emploie que la route /price-history pour les prix', async () => {
     const cartes = [1, 2, 3].map((n) => carteLocale(n, { }));
     const ids = Object.fromEntries(cartes.map((c, i) => [c.id, `card-${i + 1}`]));
     const b = banc(siteFictif(3), collectionDe(cartes), etatLu(collectionDe(cartes), ids));
     await synchroniser(b.deps);
-    const ventes = b.departs.map((d) => d.chemin).filter((c) => c.includes('/sales'));
+    const ventes = b.departs.map((d) => d.chemin).filter((c) => c.includes("/price-history"));
     expect(ventes.length).toBe(3);
-    expect(ventes.every((c) => c.endsWith('/sales?scope=summary'))).toBe(true);
+    expect(ventes.every((c) => c.endsWith('/price-history'))).toBe(true);
   });
 
   it('une rareté absente de la réponse ne compte pas comme un échec et n’est pas redemandée avant 30 jours', async () => {
@@ -596,7 +596,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
 
   it('prix : une série de 404 ne déclenche aucune pause', async () => {
     const site = siteFictif(8);
-    const b = banc((chemin) => (/card-[0-9]+\/sales/.test(chemin) ? { statut: 404, json: null } : site(chemin)));
+    const b = banc((chemin) => (/card-[0-9]+\/price-history/.test(chemin) ? { statut: 404, json: null } : site(chemin)));
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('termine');
     expect(b.journal.join('\n')).not.toContain('limitation de débit possible');
@@ -606,7 +606,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     const site = siteFictif(4);
     let refus = 0;
     const b = banc((chemin) => {
-      if (chemin.includes('card-2/sales') && refus < 3) {
+      if (chemin.includes('card-2/price-history') && refus < 3) {
         refus += 1;
         return { statut: 403, json: null };
       }
@@ -616,7 +616,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.issue).toBe('termine');
     expect(r.etat.arretJusqua).toBeNull();
     expect(r.prixReleves).toBe(4);
-    const essais = b.departs.filter((d) => d.chemin.includes('card-2/sales'));
+    const essais = b.departs.filter((d) => d.chemin.includes('card-2/price-history'));
     expect(essais).toHaveLength(4);
     // Attente de 5 s, puis 10 s, puis 15 s : +5 s à chaque nouvel échec de la même carte.
     expect(essais[1]!.t - essais[0]!.t).toBeGreaterThanOrEqual(5_000);
@@ -628,18 +628,18 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
   it('prix : 429 répétés (plus de 5) : aucune limite, la synchro attend jusqu’au succès', async () => {
     const site = siteFictif(3);
     let refus = 0;
-    const b = banc((chemin) => (chemin.includes('card-1/sales') && refus++ < 8 ? { statut: 429, json: null } : site(chemin)));
+    const b = banc((chemin) => (chemin.includes('card-1/price-history') && refus++ < 8 ? { statut: 429, json: null } : site(chemin)));
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('termine');
     expect(r.prixReleves).toBe(3);
-    expect(b.departs.filter((d) => d.chemin.includes('card-1/sales'))).toHaveLength(9);
+    expect(b.departs.filter((d) => d.chemin.includes('card-1/price-history'))).toHaveLength(9);
   })
 
   it('prix : la vérification anti-bot met la phase en attente (message clair) et reprend dès que le joueur l’a franchie', async () => {
     const site = siteFictif(3);
     let verif = 2;
     const attentes: Array<{ verification: boolean; codeHttp: number | null } | null> = [];
-    const b = banc((chemin) => (chemin.includes('card-2/sales') && verif-- > 0 ? { statut: 403, json: { code: 'human_verification_required' } } : site(chemin)));
+    const b = banc((chemin) => (chemin.includes('card-2/price-history') && verif-- > 0 ? { statut: 403, json: { code: 'human_verification_required' } } : site(chemin)));
     const r = await synchroniser({ ...b.deps, annoncerAttente: (a) => attentes.push(a === null ? null : { verification: a.verification, codeHttp: a.codeHttp }) });
     expect(r.issue).toBe('termine');
     expect(r.prixReleves).toBe(3);
@@ -652,7 +652,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     const site = siteFictif(3);
     let n = 0;
     const b = banc((chemin) => {
-      if (chemin.includes('card-2/sales')) {
+      if (chemin.includes('card-2/price-history')) {
         n += 1;
         if (n === 1) return { statut: 200, json: null };
         if (n === 2) throw new Error('réseau');
@@ -661,7 +661,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     });
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('termine');
-    const essais = b.departs.filter((d) => d.chemin.includes('card-2/sales'));
+    const essais = b.departs.filter((d) => d.chemin.includes('card-2/price-history'));
     expect(essais).toHaveLength(3);
     expect(essais[1]!.t - essais[0]!.t).toBeGreaterThanOrEqual(5_000);
     expect(essais[2]!.t - essais[1]!.t).toBeGreaterThanOrEqual(10_000);
@@ -672,7 +672,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     const site = siteFictif(3);
     let arret = false;
     const b = banc((chemin) => {
-      if (chemin.includes('card-2/sales')) {
+      if (chemin.includes('card-2/price-history')) {
         arret = true;
         return { statut: 403, json: null };
       }
@@ -688,7 +688,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     const site = siteFictif(3);
     let demande = false;
     let arret = false;
-    const b = banc((chemin) => (chemin.includes('card-2/sales') ? { statut: 403, json: null } : site(chemin)));
+    const b = banc((chemin) => (chemin.includes('card-2/price-history') ? { statut: 403, json: null } : site(chemin)));
     const r = await synchroniser({
       ...b.deps,
       annoncerAttente: (a) => {
@@ -704,13 +704,13 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     });
     expect(r.issue).toBe('arret');
     expect(b.journal.join('\n')).not.toContain('passée à la demande du joueur');
-    expect(b.departs.filter((d) => d.chemin.includes('card-2/sales')).length).toBeGreaterThan(SEUIL_AVERTISSEMENT_PRIX);
+    expect(b.departs.filter((d) => d.chemin.includes('card-2/price-history')).length).toBeGreaterThan(SEUIL_AVERTISSEMENT_PRIX);
   })
 
   it('prix : « passer cette carte » : un clic fait une fois l’avertissement affiché passe la carte (redemandée dans 1 jour)', async () => {
     const site = siteFictif(3);
     let demande = false;
-    const b = banc((chemin) => (chemin.includes('card-2/sales') ? { statut: 403, json: null } : site(chemin)));
+    const b = banc((chemin) => (chemin.includes('card-2/price-history') ? { statut: 403, json: null } : site(chemin)));
     const r = await synchroniser({
       ...b.deps,
       annoncerAttente: (a) => {
@@ -731,7 +731,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     const site = siteFictif(4);
     let demande = true; // clic périmé levé avant la carte 2
     let arret = false;
-    const b = banc((chemin) => (chemin.includes('card-2/sales') ? { statut: 403, json: null } : site(chemin)));
+    const b = banc((chemin) => (chemin.includes('card-2/price-history') ? { statut: 403, json: null } : site(chemin)));
     const r = await synchroniser({
       ...b.deps,
       annoncerAttente: (a) => {
@@ -750,18 +750,18 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
 
   it('prix : un 404 isolé (carte sans marché) est ignoré sans attente et mémorisé', async () => {
     const site = siteFictif(4);
-    const b = banc((chemin) => (chemin.includes('card-2/sales') ? { statut: 404, json: null } : site(chemin)));
+    const b = banc((chemin) => (chemin.includes('card-2/price-history') ? { statut: 404, json: null } : site(chemin)));
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('termine');
     expect(r.prixReleves).toBe(3);
-    expect(b.departs.filter((d) => d.chemin.includes('card-2/sales'))).toHaveLength(1);
+    expect(b.departs.filter((d) => d.chemin.includes('card-2/price-history'))).toHaveLength(1);
     expect(r.etat.prix[idCarte(2)]?.valeur).toBeNull();
   })
 
   it('prix : deux demandes de prix sont espacées d’au moins l’intervalle et de la pause de prix', async () => {
     const b = banc(siteFictif(5));
     await synchroniser(b.deps);
-    const ventes = b.departs.filter((d) => d.chemin.includes('/sales'));
+    const ventes = b.departs.filter((d) => d.chemin.includes("/price-history"));
     const ecarts = ventes.slice(1).map((d, i) => d.t - (ventes[i]?.t ?? 0));
     expect(Math.min(...ecarts)).toBeGreaterThanOrEqual(INTERVALLE_MS + PAUSE_PRIX_MS);
   })
@@ -780,7 +780,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     const site = siteFictif(3);
     let refus = 2;
     let termines = 0;
-    const b = banc((chemin) => (chemin.includes('card-2/sales') && refus-- > 0 ? { statut: 429, json: null } : site(chemin)));
+    const b = banc((chemin) => (chemin.includes('card-2/price-history') && refus-- > 0 ? { statut: 429, json: null } : site(chemin)));
     await synchroniser({ ...b.deps, prixTermine: () => (termines += 1) });
     expect(termines).toBe(3);
   })
@@ -789,7 +789,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     const b = banc(siteFictif(150));
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('termine');
-    const ventes = b.departs.filter((d) => d.chemin.includes('/sales'));
+    const ventes = b.departs.filter((d) => d.chemin.includes("/price-history"));
     expect(ventes).toHaveLength(150);
     const ecarts = ventes.slice(1).map((d, i) => d.t - (ventes[i]?.t ?? 0));
     expect(Math.max(...ecarts)).toBeLessThan(2_000);
@@ -827,7 +827,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     const site = siteFictif(3);
     let deja = false;
     const b = banc((chemin) => {
-      if (chemin.includes('card-2/sales') && !deja) {
+      if (chemin.includes('card-2/price-history') && !deja) {
         deja = true;
         return { statut: 429, json: null };
       }
@@ -848,7 +848,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     let arret = false;
     const b = banc(
       (chemin) => {
-        if (chemin.includes('card-2/sales')) {
+        if (chemin.includes('card-2/price-history')) {
           arret = true;
           return { statut: 429, json: null };
         }
@@ -861,7 +861,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('arret');
     expect(r.raison).toBe('manuel');
-    expect(b.departs.filter((d) => d.chemin.includes('card-2/sales'))).toHaveLength(1);
+    expect(b.departs.filter((d) => d.chemin.includes('card-2/price-history'))).toHaveLength(1);
   })
 
   it('ventes : rien en vente (compteur absent) = 0 vente, sans erreur ni arrêt', async () => {
@@ -936,7 +936,7 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     await synchroniser(b.deps);
     for (const d of b.departs) {
       expect(d.chemin).toMatch(
-        /^\/api\/(my-collection\/stats\?sort=added|my-collection\?sort=(?:added|rarity)&page=\d+&stats=0|marketplace\/mine|marketplace\/cards\/[A-Za-z0-9_-]+\/sales\?scope=summary)$/,
+        /^\/api\/(my-collection\/stats\?sort=added|my-collection\?sort=(?:added|rarity)&page=\d+&stats=0|marketplace\/mine|marketplace\/cards\/[A-Za-z0-9_-]+\/price-history)$/,
       );
     }
   });

@@ -167,9 +167,73 @@ function moyenneRecente(json: unknown, rarete: string): { ventes: number; moyenn
   return { ventes: prix.length, moyenne: Math.round(prix.reduce((a, b) => a + b, 0) / prix.length) };
 }
 
-// Lecture de `/api/marketplace/cards/<card_id>/sales?scope=summary` : valeur marchande de la rareté demandée
-// (`summary` si le site le renvoie, sinon moyenne des ventes récentes de la rareté).
-export function analyserPrix(json: unknown, rarete: string): number | null {
+/** Tendance d’une rareté sur 4 semaines, telle que la fenêtre « Mettre aux enchères » du site l’affiche. */
+export interface TendancePrix {
+  /** Variation en % du prix moyen de la semaine par rapport à la semaine d’avant (null si pas de semaine d’avant). */
+  variationPct: number | null;
+  /** Fourchette des prix finaux sur les 4 dernières semaines. */
+  min4: number;
+  max4: number;
+  /** Nombre de ventes sur ces 4 semaines. */
+  ventes4: number;
+}
+
+const SEMAINE_MS = 7 * 24 * 3600 * 1000;
+const debutDeSemaine = (maintenant: number): number => {
+  const d = new Date(maintenant);
+  const jour = (d.getUTCDay() + 6) % 7; // lundi = 0
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - jour);
+};
+
+interface Historique { moyenne: number; tendance: TendancePrix }
+
+/**
+ * Lecture de `/api/marketplace/cards/<card_id>/price-history` (relevée le 2026-11-21) :
+ * `{ computed_at, by_rarity: { <rareté>: { weekly: [{ start, avg, min, max, count }], monthly: [...] } } }`.
+ * Prix moyen de la semaine = dernière semaine des 4 dernières (semaine en cours comprise) ; variation = contre la semaine
+ * d’avant si elle existe ; fourchette = plus bas et plus haut sur ces 4 semaines. `undefined` : forme illisible ;
+ * `null` : lisible mais aucune vente sur 4 semaines pour la rareté.
+ */
+function lireHistorique(json: unknown, rarete: string, maintenant: number): Historique | null | undefined {
+  if (!estObjet(json) || !estObjet(json.by_rarity)) return undefined;
+  if (!Object.prototype.hasOwnProperty.call(json.by_rarity, rarete)) return null;
+  const entree = json.by_rarity[rarete];
+  if (!estObjet(entree) || !Array.isArray(entree.weekly)) return undefined;
+  const debutCourante = debutDeSemaine(maintenant);
+  const semaines = new Map<number, { avg: number; min: number; max: number; count: number }>();
+  for (const w of entree.weekly) {
+    if (!estObjet(w) || typeof w.start !== 'string') return undefined;
+    const t = Date.parse(`${w.start}T00:00:00Z`);
+    if (Number.isNaN(t) || !estEntier(w.avg) || !estEntier(w.min) || !estEntier(w.max) || !estEntier(w.count)) return undefined;
+    semaines.set(t, { avg: w.avg, min: w.min, max: w.max, count: w.count });
+  }
+  const fenetre = [...semaines.entries()].filter(([t]) => t >= debutCourante - 3 * SEMAINE_MS && t <= debutCourante).sort((a, b) => a[0] - b[0]);
+  if (fenetre.length === 0) return null;
+  const [debutRef, ref] = fenetre[fenetre.length - 1];
+  const avant = semaines.get(debutRef - SEMAINE_MS);
+  const variationPct = avant && avant.avg > 0 ? Math.round(((ref.avg - avant.avg) / avant.avg) * 1000) / 10 : null;
+  return {
+    moyenne: ref.avg,
+    tendance: {
+      variationPct,
+      min4: Math.min(...fenetre.map(([, w]) => w.min)),
+      max4: Math.max(...fenetre.map(([, w]) => w.max)),
+      ventes4: fenetre.reduce((n, [, w]) => n + w.count, 0),
+    },
+  };
+}
+
+/** Tendance de la rareté (`null` si la réponse n’est pas un historique lisible ou sans vente sur 4 semaines). */
+export function analyserTendance(json: unknown, rarete: string, maintenant: number): TendancePrix | null {
+  const h = lireHistorique(json, rarete, maintenant);
+  return h ? h.tendance : null;
+}
+
+// Valeur marchande de la rareté demandée : `price-history` (prix moyen de la semaine) ; repli sur l’ancienne forme
+// `summary`, puis sur la moyenne des ventes récentes (`sales`, 2026-11-21).
+export function analyserPrix(json: unknown, rarete: string, maintenant: number = Date.now()): number | null {
+  const h = lireHistorique(json, rarete, maintenant);
+  if (h !== undefined) return h ? h.moyenne : null;
   if (estObjet(json) && !estObjet(json.summary)) {
     const recent = moyenneRecente(json, rarete);
     return recent && recent.ventes > 0 ? recent.moyenne : null;
@@ -188,7 +252,9 @@ export function analyserPrix(json: unknown, rarete: string): number | null {
  */
 export type SensPrix = 'valeur' | 'aucune-vente' | 'vide';
 
-export function sensDuPrix(json: unknown, rarete: string): SensPrix {
+export function sensDuPrix(json: unknown, rarete: string, maintenant: number = Date.now()): SensPrix {
+  const h = lireHistorique(json, rarete, maintenant);
+  if (h !== undefined) return h ? 'valeur' : 'aucune-vente';
   if (estObjet(json) && !estObjet(json.summary)) {
     const recent = moyenneRecente(json, rarete);
     if (recent) return recent.ventes > 0 ? 'valeur' : 'aucune-vente';

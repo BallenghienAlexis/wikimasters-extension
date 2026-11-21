@@ -18,7 +18,7 @@ const PRIX = lire('api/prix.json');
 const ID_CARTE = 'UR|Loutre fictive';
 const CHEMIN_STATS = '/api/my-collection/stats?sort=added';
 const CHEMIN_PAGE = (n: number): string => `/api/my-collection?sort=added&page=${n}&stats=0`;
-const CHEMIN_PRIX = '/api/marketplace/cards/carte-fictive-1/sales?scope=summary';
+const CHEMIN_PRIX = '/api/marketplace/cards/carte-fictive-1/price-history';
 // Relevé d'affluence (décision du 2026-11-11) : un seul GET vers le listing du marché, après la synchro.
 const CHEMIN_VENTES = '/api/marketplace/mine';
 const CHEMIN_MARCHE = CONFIG_AFFLUENCE.routeMarche ?? '/api/marketplace';
@@ -96,12 +96,12 @@ async function ouvrirSite(context: BrowserContext, reponses: Partial<Record<stri
   return { api, page };
 }
 
-/** SC-009 : GET seulement, chemins autorisés, `/sales` toujours avec `?scope=summary`, aucun jeton. */
+/** SC-009 : GET seulement, chemins autorisés, `/sales` jamais appelée, prix par `/price-history`, aucun jeton. */
 function verifierLectureSeule(api: RequeteVue[]): void {
   for (const r of api) {
     expect(r.methode, r.chemin).toBe('GET');
     expect(CHEMINS_AUTORISES, r.chemin).toContain(r.chemin);
-    if (r.chemin.includes('/sales')) expect(r.chemin).toContain('?scope=summary');
+    if (r.chemin.includes('/sales')) throw new Error('route /sales interdite');
     for (const entete of ['authorization', 'apikey', 'x-csrf-token', 'x-auth-token']) expect(r.entetes[entete], `${entete} sur ${r.chemin}`).toBeUndefined();
   }
 }
