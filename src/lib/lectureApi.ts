@@ -151,22 +151,6 @@ export function analyserVentes(json: unknown): { enCours: number; max: number } 
   return { enCours: json.sellingCount, max: json.maxConcurrentAuctions };
 }
 
-/**
- * Moyenne des ventes récentes d’une rareté, pour la nouvelle forme de réponse du site (2026-11-21) : plus de `summary`,
- * seulement `recent` (les dernières ventes : `final_price`, `settled_at`, `rarity`). `null` si `recent` n’est pas une liste ;
- * 0 vente pour la rareté = `{ ventes: 0 }`.
- */
-function moyenneRecente(json: unknown, rarete: string): { ventes: number; moyenne: number } | null {
-  if (!estObjet(json) || !Array.isArray(json.recent)) return null;
-  const prix: number[] = [];
-  for (const vente of json.recent) {
-    if (!estObjet(vente) || vente.rarity !== rarete) continue;
-    if (estEntier(vente.final_price)) prix.push(vente.final_price);
-  }
-  if (prix.length === 0) return { ventes: 0, moyenne: 0 };
-  return { ventes: prix.length, moyenne: Math.round(prix.reduce((a, b) => a + b, 0) / prix.length) };
-}
-
 /** Tendance d’une rareté sur 4 semaines, telle que la fenêtre « Mettre aux enchères » du site l’affiche. */
 export interface TendancePrix {
   /** Variation en % du prix moyen de la semaine par rapport à la semaine d’avant (null si pas de semaine d’avant). */
@@ -202,10 +186,12 @@ function lireHistorique(json: unknown, rarete: string, maintenant: number): Hist
   const debutCourante = debutDeSemaine(maintenant);
   const semaines = new Map<number, { avg: number; min: number; max: number; count: number }>();
   for (const w of entree.weekly) {
-    if (!estObjet(w) || typeof w.start !== 'string') return undefined;
+    // Une semaine illisible ou sans vente est ignorée, jamais toute la réponse (sinon la carte attendrait sans fin).
+    if (!estObjet(w) || typeof w.start !== 'string') continue;
     const t = Date.parse(`${w.start}T00:00:00Z`);
-    if (Number.isNaN(t) || !estEntier(w.avg) || !estEntier(w.min) || !estEntier(w.max) || !estEntier(w.count)) return undefined;
-    semaines.set(t, { avg: w.avg, min: w.min, max: w.max, count: w.count });
+    const nombres = [w.avg, w.min, w.max, w.count];
+    if (Number.isNaN(t) || !nombres.every((n) => typeof n === 'number' && Number.isFinite(n) && n >= 0) || (w.count as number) <= 0) continue;
+    semaines.set(t, { avg: Math.round(w.avg as number), min: Math.round(w.min as number), max: Math.round(w.max as number), count: Math.round(w.count as number) });
   }
   const fenetre = [...semaines.entries()].filter(([t]) => t >= debutCourante - 3 * SEMAINE_MS && t <= debutCourante).sort((a, b) => a[0] - b[0]);
   if (fenetre.length === 0) return null;
@@ -230,15 +216,10 @@ export function analyserTendance(json: unknown, rarete: string, maintenant: numb
   return h ? h.tendance : null;
 }
 
-// Valeur marchande de la rareté demandée : `price-history` (prix moyen de la semaine) ; repli sur l’ancienne forme
-// `summary`, puis sur la moyenne des ventes récentes (`sales`, 2026-11-21).
+// Valeur marchande de la rareté demandée : `price-history` (prix moyen de la semaine) ; repli sur l’ancienne forme `summary`.
 export function analyserPrix(json: unknown, rarete: string, maintenant: number = Date.now()): number | null {
   const h = lireHistorique(json, rarete, maintenant);
   if (h !== undefined) return h ? h.moyenne : null;
-  if (estObjet(json) && !estObjet(json.summary)) {
-    const recent = moyenneRecente(json, rarete);
-    return recent && recent.ventes > 0 ? recent.moyenne : null;
-  }
   if (!estObjet(json) || !estObjet(json.summary)) return null;
   if (!Object.prototype.hasOwnProperty.call(json.summary, rarete)) return null;
   const entree = json.summary[rarete];
@@ -256,10 +237,6 @@ export type SensPrix = 'valeur' | 'aucune-vente' | 'vide';
 export function sensDuPrix(json: unknown, rarete: string, maintenant: number = Date.now()): SensPrix {
   const h = lireHistorique(json, rarete, maintenant);
   if (h !== undefined) return h ? 'valeur' : 'aucune-vente';
-  if (estObjet(json) && !estObjet(json.summary)) {
-    const recent = moyenneRecente(json, rarete);
-    if (recent) return recent.ventes > 0 ? 'valeur' : 'aucune-vente';
-  }
   if (!estObjet(json) || !estObjet(json.summary)) return 'vide';
   if (!Object.prototype.hasOwnProperty.call(json.summary, rarete)) return 'aucune-vente';
   const entree = json.summary[rarete];

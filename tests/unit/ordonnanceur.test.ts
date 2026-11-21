@@ -81,7 +81,7 @@ function siteFictif(nCartes: number, options: { prix?: (n: number) => number | n
     const vente = /\/api\/marketplace\/cards\/card-(\d+)\/price-history$/.exec(chemin);
     if (vente) {
       const valeur = (options.prix ?? ((n) => 100 + n))(Number(vente[1]));
-      return { statut: 200, json: { summary: valeur === null ? {} : { R: { average: valeur } }, isPro: false } };
+      return { statut: 200, json: { by_rarity: valeur === null ? {} : { R: { weekly: [{ start: '1970-04-20', avg: valeur, min: 1, max: 500, count: 3 }], monthly: [] } } } };
     }
     return { statut: 404, json: null };
   };
@@ -495,6 +495,14 @@ describe('ordonnanceur — critère 3 : prix', () => {
     const r = await synchroniser(b.deps);
     expect(r.collection.cartes[0]?.valeurMarchande).toBe(101);
     expect(r.signalements).toEqual([]);
+  });
+
+  it('pose la valeur marchande et la tendance lues dans price-history', async () => {
+    const cartes = [1].map((n) => carteLocale(n, { }));
+    const b = banc(siteFictif(1), collectionDe(cartes), etatLu(collectionDe(cartes), { [cartes[0]!.id]: 'card-1' }));
+    const r = await synchroniser(b.deps);
+    expect(r.etat.prix[cartes[0]!.id]?.valeur).toBe(101);
+    expect(r.etat.prix[cartes[0]!.id]?.tendance).toEqual({ variationPct: null, min4: 1, max4: 500, ventes4: 3 });
   });
 
   it('n’emploie que la route /price-history pour les prix', async () => {

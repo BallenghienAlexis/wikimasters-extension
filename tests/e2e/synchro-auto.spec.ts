@@ -13,7 +13,12 @@ const SITE = lire('site-vide.html');
 const STATS = lire('api/stats.json');
 const PAGE_0 = lire('api/page-0.json');
 const PAGE_VIDE = lire('api/page-vide.json');
-const PRIX = lire('api/prix.json');
+// Semaine en cours (lundi, UTC) : la lecture ne garde que les 4 dernières semaines, la fixture ne peut donc pas être figée.
+const lundi = ((): string => {
+  const d = new Date();
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - ((d.getUTCDay() + 6) % 7))).toISOString().slice(0, 10);
+})();
+const PRIX = JSON.stringify({ by_rarity: { UR: { weekly: [{ start: lundi, avg: 276, min: 100, max: 500, count: 4 }], monthly: [] } } });
 
 const ID_CARTE = 'UR|Loutre fictive';
 const CHEMIN_STATS = '/api/my-collection/stats?sort=added';

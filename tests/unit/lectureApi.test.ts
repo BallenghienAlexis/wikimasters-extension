@@ -193,27 +193,6 @@ describe('sensDuPrix', () => {
   });
 });
 
-describe('prix : nouvelle forme « recent » (2026-11-21)', () => {
-  const vente = (rarity: string, final_price: number) => ({ id: 'v', final_price, settled_at: '2026-11-21T10:00:00+00:00', rarity });
-  it('moyenne les ventes récentes de la rareté', () => {
-    const json = { recent: [vente('SR', 22), vente('SR', 62), vente('UR', 400), vente('SR', 11)] };
-    expect(sensDuPrix(json, 'SR')).toBe('valeur');
-    expect(analyserPrix(json, 'SR')).toBe(32);
-  });
-  it('liste vide ou rareté absente = aucune vente, pas une réponse vide', () => {
-    expect(sensDuPrix({ recent: [] }, 'SR')).toBe('aucune-vente');
-    expect(sensDuPrix({ recent: [vente('UR', 5)] }, 'SR')).toBe('aucune-vente');
-    expect(analyserPrix({ recent: [] }, 'SR')).toBeNull();
-  });
-  it('une forme illisible reste « vide »', () => {
-    expect(sensDuPrix({ recent: 'x' }, 'SR')).toBe('vide');
-    expect(sensDuPrix({ autre: 1 }, 'SR')).toBe('vide');
-  });
-  it('summary garde la priorité', () => {
-    expect(analyserPrix({ summary: { SR: { average: 9 } }, recent: [vente('SR', 50)] }, 'SR')).toBe(9);
-  });
-});
-
 describe('prix : price-history (2026-11-21)', () => {
   const maintenant = Date.parse('2026-11-21T14:00:00Z'); // samedi ; semaine en cours : lundi 2026-11-16
   const sem = (start: string, avg: number, min: number, max: number, count: number) => ({ start, avg, min, max, count });
@@ -229,8 +208,14 @@ describe('prix : price-history (2026-11-21)', () => {
     expect(sensDuPrix(json([sem('2026-06-01', 9, 9, 9, 1)]), 'UR', maintenant)).toBe('aucune-vente');
     expect(sensDuPrix(ur, 'SR', maintenant)).toBe('aucune-vente');
   });
+  it('une semaine illisible ou sans vente est ignorée, pas toute la réponse', () => {
+    const j = json([{ start: 'x', avg: 'a' }, sem('2026-11-09', 0, 0, 0, 0), sem('2026-11-16', 40.4, 20, 60, 2)]);
+    expect(analyserPrix(j, 'UR', maintenant)).toBe(40);
+    expect(analyserTendance(j, 'UR', maintenant)?.variationPct).toBeNull();
+    expect(sensDuPrix(json([sem('2026-11-16', 0, 0, 0, 0)]), 'UR', maintenant)).toBe('aucune-vente');
+  });
   it('une forme illisible reste « vide »', () => {
-    expect(sensDuPrix(json([{ start: 'x', avg: 'a' }]), 'UR', maintenant)).toBe('vide');
+    expect(sensDuPrix({ by_rarity: { UR: {} } }, 'UR', maintenant)).toBe('vide');
     expect(analyserTendance({ by_rarity: { UR: {} } }, 'UR', maintenant)).toBeNull();
   });
 });

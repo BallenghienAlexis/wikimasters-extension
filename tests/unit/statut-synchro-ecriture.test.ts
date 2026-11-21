@@ -37,7 +37,7 @@ const site = (n: number) => (chemin: string): ReponseApi => {
     const p = Number(page[1]);
     return { statut: 200, json: { collection: Array.from({ length: n }, (_, i) => exemplaire(i + 1)).slice(p * 50, (p + 1) * 50) } };
   }
-  if (/\/price-history$/.test(chemin)) return { statut: 200, json: { summary: { R: { average: 120 } }, isPro: false } };
+  if (/\/price-history$/.test(chemin)) return { statut: 200, json: { by_rarity: { R: { weekly: [{ start: '1970-04-20', avg: 120, min: 1, max: 500, count: 3 }], monthly: [] } } } };
   if (chemin === '/api/marketplace/mine') return { statut: 200, json: { listings: [] } };
   return { statut: 404, json: null };
 };
