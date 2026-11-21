@@ -192,3 +192,24 @@ describe('sensDuPrix', () => {
     expect(sensDuPrix(reponse({ L: { average: '5' } }), 'L')).toBe('vide');
   });
 });
+
+describe('prix : nouvelle forme « recent » (2026-11-21)', () => {
+  const vente = (rarity: string, final_price: number) => ({ id: 'v', final_price, settled_at: '2026-11-21T10:00:00+00:00', rarity });
+  it('moyenne les ventes récentes de la rareté', () => {
+    const json = { recent: [vente('SR', 22), vente('SR', 62), vente('UR', 400), vente('SR', 11)] };
+    expect(sensDuPrix(json, 'SR')).toBe('valeur');
+    expect(analyserPrix(json, 'SR')).toBe(32);
+  });
+  it('liste vide ou rareté absente = aucune vente, pas une réponse vide', () => {
+    expect(sensDuPrix({ recent: [] }, 'SR')).toBe('aucune-vente');
+    expect(sensDuPrix({ recent: [vente('UR', 5)] }, 'SR')).toBe('aucune-vente');
+    expect(analyserPrix({ recent: [] }, 'SR')).toBeNull();
+  });
+  it('une forme illisible reste « vide »', () => {
+    expect(sensDuPrix({ recent: 'x' }, 'SR')).toBe('vide');
+    expect(sensDuPrix({ autre: 1 }, 'SR')).toBe('vide');
+  });
+  it('summary garde la priorité', () => {
+    expect(analyserPrix({ summary: { SR: { average: 9 } }, recent: [vente('SR', 50)] }, 'SR')).toBe(9);
+  });
+});

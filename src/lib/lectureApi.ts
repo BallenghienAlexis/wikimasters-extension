@@ -151,8 +151,29 @@ export function analyserVentes(json: unknown): { enCours: number; max: number } 
   return { enCours: json.sellingCount, max: json.maxConcurrentAuctions };
 }
 
-// Lecture de `/api/marketplace/cards/<card_id>/sales?scope=summary` : valeur marchande de la rareté demandée.
+/**
+ * Moyenne des ventes récentes d’une rareté, pour la nouvelle forme de réponse du site (2026-11-21) : plus de `summary`,
+ * seulement `recent` (les dernières ventes : `final_price`, `settled_at`, `rarity`). `null` si `recent` n’est pas une liste ;
+ * 0 vente pour la rareté = `{ ventes: 0 }`.
+ */
+function moyenneRecente(json: unknown, rarete: string): { ventes: number; moyenne: number } | null {
+  if (!estObjet(json) || !Array.isArray(json.recent)) return null;
+  const prix: number[] = [];
+  for (const vente of json.recent) {
+    if (!estObjet(vente) || vente.rarity !== rarete) continue;
+    if (estEntier(vente.final_price)) prix.push(vente.final_price);
+  }
+  if (prix.length === 0) return { ventes: 0, moyenne: 0 };
+  return { ventes: prix.length, moyenne: Math.round(prix.reduce((a, b) => a + b, 0) / prix.length) };
+}
+
+// Lecture de `/api/marketplace/cards/<card_id>/sales?scope=summary` : valeur marchande de la rareté demandée
+// (`summary` si le site le renvoie, sinon moyenne des ventes récentes de la rareté).
 export function analyserPrix(json: unknown, rarete: string): number | null {
+  if (estObjet(json) && !estObjet(json.summary)) {
+    const recent = moyenneRecente(json, rarete);
+    return recent && recent.ventes > 0 ? recent.moyenne : null;
+  }
   if (!estObjet(json) || !estObjet(json.summary)) return null;
   if (!Object.prototype.hasOwnProperty.call(json.summary, rarete)) return null;
   const entree = json.summary[rarete];
@@ -168,6 +189,10 @@ export function analyserPrix(json: unknown, rarete: string): number | null {
 export type SensPrix = 'valeur' | 'aucune-vente' | 'vide';
 
 export function sensDuPrix(json: unknown, rarete: string): SensPrix {
+  if (estObjet(json) && !estObjet(json.summary)) {
+    const recent = moyenneRecente(json, rarete);
+    if (recent) return recent.ventes > 0 ? 'valeur' : 'aucune-vente';
+  }
   if (!estObjet(json) || !estObjet(json.summary)) return 'vide';
   if (!Object.prototype.hasOwnProperty.call(json.summary, rarete)) return 'aucune-vente';
   const entree = json.summary[rarete];
