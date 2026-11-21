@@ -3,6 +3,7 @@ import type { Carte } from '../../src/lib/collection'
 import { collectionVide } from '../../src/lib/collection'
 import { choisirProchaineEnchere } from '../../src/lib/relanceVentes'
 import { preferencesParDefaut } from '../../src/lib/tri'
+import { encheresEnCours } from '../../src/lib/ventes'
 import {
   DELAI_FINAL_MS,
   DELAI_NORMAL_MS,
@@ -197,7 +198,6 @@ describe('non-ventes et prix de départ divisé par deux', () => {
   })
 })
 
-import { encheresEnCours } from '../../src/lib/ventes'
 describe('encheresEnCours', () => {
   it('écarte les enchères dont la fin est dépassée', () => {
     expect(encheresEnCours([{ finLe: 100 }, { finLe: 5000 }], 1000)).toEqual([{ finLe: 5000 }])

@@ -120,7 +120,17 @@ describe('cycle de suivi des mises en vente', () => {
     await m.suivi.cycle()
     expect(m.etat.ordres).toHaveLength(1)
   })
-  it('relance : envoi impossible (pause d’écriture), la place libre est retentée dès la fin de l’attente, pas 5 min plus tard', async () => {
+  it('relance : pause des lots en cours, la place libre est retentée à la fin de la pause', async () => {
+    const m = monde({ reponses: [ok([vente('a', 3_600_000)])], relance: true, pauseLots: T0 + 20_000 })
+    const attente = await m.suivi.cycle()
+    expect(m.etat.ordres).toHaveLength(0)
+    expect(attente).toBeLessThanOrEqual(20_000)
+  })
+  it('relance : prix introuvable (passée), nouvelle tentative sous 10 s', async () => {
+    const m = monde({ reponses: [ok([])], relance: true, resultat: { classe: 'passee', codeHttp: 404, cause: 'prix du marché indisponible' } })
+    expect(await m.suivi.cycle()).toBeLessThanOrEqual(10_000)
+  })
+  it('relance : envoi en échec (500), la place libre est retentée dès la fin de l’attente, pas 5 min plus tard', async () => {
     const m = monde({ reponses: [ok([vente('a', 3_600_000)]), ok([vente('a', 3_600_000)])], relance: true, resultat: { classe: 'echec', codeHttp: 500, cause: 'erreur serveur' } })
     const attente = await m.suivi.cycle()
     expect(attente).toBeLessThanOrEqual(10_000)
