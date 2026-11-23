@@ -86,3 +86,11 @@ describe('mémoire de synchro dans la sauvegarde', () => {
     expect(lireSauvegarde(JSON.stringify(brut)).ok).toBe(false);
   });
 });
+
+describe('sansVente et sauvegarde (2026-11-23)', () => {
+  it('un fichier ne peut pas poser sansVente : la marque est retirée à la lecture', () => {
+    const synchro: DonneesSynchro = { ...synchroVide(), etat: { ...etatInitial(), prix: { a: { valeur: null, releveLe: 3000, sansVente: true } } } };
+    const lu = lire(donnees([carte('a')], synchro));
+    expect(lu.synchro?.etat?.prix.a).toEqual({ valeur: null, releveLe: 3000 });
+  });
+});

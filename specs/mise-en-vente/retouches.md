@@ -22,3 +22,10 @@
 - `src/content/suiviVentes.ts:189` + `src/lib/reseau.ts` : la relance fait maintenant deux requêtes (relecture `price-history`, puis enchère) sous une seule tenue du verrou de requête, qui expire après 20 s (`DUREE_VERROU_REQUETE_MS`) ; sur un site très lent (15 s par requête), le verrou peut expirer pendant l'envoi. Prolonger le verrou avant l'envoi ou prendre deux tenues distinctes.
 - `src/lib/file.ts:426` : une enchère « passée » à la relecture de la tendance est journalisée sans sa cause (« prix du marché indisponible », « aucune vente récente », « prix trop bas ») et le journal d'un lot garde le prix estimé de l'aperçu, pas le prix relu envoyé (`resultat.prix`). Garder cause et prix dans l'entrée de journal.
 - `src/lib/reseau.ts` (`relireTendance`) : un 401 ou un 429 à la relecture n'a pas de ligne `diagnostic` (« GET …/price-history → 429 »).
+
+## À reprendre (2026-11-23, PR #212, cartes sans prix trouvé)
+
+- `src/lib/lectureApi.ts:238` (`absenceDeVenteProuvee`) : une réponse `{ by_rarity: {} }` entière vaut preuve d'absence. Le site renvoie parfois des réponses vides passagères ; la défausse étant définitive, le risque n'est limité que par les 7 jours, le plafond de pré-coche de 10 et « Lancer ». Piste : relire `price-history` juste avant chaque défausse « sans prix », ou exiger deux relevés concordants espacés avant de poser `sansVente`.
+- `src/lib/selectionLot.ts:116` (`resumerSansPrix` / `precocher`) : le plafond de 10 compte aussi les cartes déjà cochées à la main (`actuel`) ; ignorer celles-ci.
+- `src/lib/lot.ts:406` : `config.sansPrix.includes` sur un tableau pour chaque carte (environ 2 600) ; passer par un `Set`.
+- `src/app/SelectionVenteDefausse.tsx:124` : avertissement « cartes sans prix » sans capture aux 3 breakpoints ni test e2e.

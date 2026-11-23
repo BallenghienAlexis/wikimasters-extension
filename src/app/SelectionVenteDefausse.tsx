@@ -10,6 +10,10 @@ interface Props {
   cartes: readonly Carte[];
   choix: Choix;
   plafond: number;
+  /** Cartes sans aucun prix trouvé sur le site : défaussables malgré la valeur inconnue (2026-11-23). */
+  sansPrix?: ReadonlySet<string>;
+  /** Cartes sans prix défaussables par la pré-coche, et si leur nombre dépasse le plafond (rien n’est alors pré-coché). */
+  resumeSansPrix?: { nombre: number; trop: boolean };
   onChoisir: (idCarte: string, choix: ChoixCarte, exemplaires: number) => void;
   /** Pré-coche selon mes thèmes, mes amis et le plafond (explicite, jamais automatique). */
   onPrecocher: () => void;
@@ -22,7 +26,7 @@ const MAX_AFFICHEES = 30;
 const MAX_CHOISIES = 50;
 
 /** Choix manuel des cartes à mettre aux enchères ou à défausser, avant l’aperçu du lot (rien n’est envoyé ici). */
-const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, onChoisir, onPrecocher, onVider, ventes }) => {
+const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansPrix, resumeSansPrix, onChoisir, onPrecocher, onVider, ventes }) => {
   const [recherche, setRecherche] = useState('');
   const proposables = useMemo(() => cartes.filter(estProposable), [cartes]);
   const choisies = useMemo(() => proposables.filter((c) => (choix.get(c.id)?.choix ?? 'aucun') !== 'aucun'), [proposables, choix]);
@@ -42,14 +46,15 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, onCho
   const [maintenant] = useState(() => Date.now());
   const ligne = (c: Carte): React.ReactNode => {
     const x = choix.get(c.id) ?? { choix: 'aucun' as ChoixCarte, exemplaires: 1 };
-    const defausseOk = c.valeurMarchande !== null && c.valeurMarchande <= plafond;
+    const sansPrixTrouve = c.valeurMarchande === null && sansPrix?.has(c.id) === true;
+    const defausseOk = sansPrixTrouve || (c.valeurMarchande !== null && c.valeurMarchande <= plafond);
     const nom = `choix-${c.id}`;
     return (
       <li key={c.id} className="flex flex-col gap-2 border-b border-line py-2 md:flex-row md:items-center md:justify-between" data-testid="ligne-selection">
         <span className="break-words">
           {c.titre}
           <span className="text-muted">
-            {NB}· {c.quantite} ex.{NB}· valeur {c.valeurMarchande ?? 'inconnue'}
+            {NB}· {c.quantite} ex.{NB}· valeur {c.valeurMarchande ?? (sansPrixTrouve ? 'aucun prix trouvé' : 'inconnue')}
           </span>
         </span>
         <fieldset className="flex flex-wrap items-center gap-2">
@@ -103,7 +108,7 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, onCho
       </p>
       <div className="mt-2 flex flex-col gap-2 md:flex-row">
         <button type="button" className={`${CLASSE_BOUTON} border-muted`} onClick={onPrecocher}>
-          Pré-cocher selon mes thèmes, mes amis et le plafond
+          Pré-cocher selon mes thèmes, mes amis, le plafond et les cartes sans prix
         </button>
         {choisies.length > 0 && (
           <button type="button" className={`${CLASSE_BOUTON} border-muted`} onClick={onVider}>
@@ -115,6 +120,13 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, onCho
         Pré-coche{NB}: un thème que vous gardez ou un ami concerné, rien (l’échange passe par les étiquettes « #À échanger »)
         ; valeur au plafond ({plafond}) ou en dessous, défausse ; au-dessus, mise aux enchères. Vous gardez la main sur chaque case.
       </p>
+      {resumeSansPrix && resumeSansPrix.nombre > 0 && (
+        <p className="mt-1 text-sm" data-testid="avertissement-sans-prix">
+          {resumeSansPrix.trop
+            ? `${resumeSansPrix.nombre} cartes sans prix trouvé seraient défaussables : trop pour une pré-coche de masse, elles ne sont pas cochées. Choisissez-les à la main.`
+            : `${resumeSansPrix.nombre} carte(s) sans prix trouvé sur le site seront pré-cochées en défausse (définitive, un exemplaire gardé si elle est en plusieurs).`}
+        </p>
+      )}
       {choisies.length > 0 && <ul className="mt-2">{choisies.slice(0, MAX_CHOISIES).map(ligne)}</ul>}
       {choisies.length > MAX_CHOISIES && <p className="mt-1 text-sm text-muted">… et {choisies.length - MAX_CHOISIES} autres cartes choisies (toutes seront dans le lot).</p>}
       <HeuresFortes nbObservations={observations(ventes)} />

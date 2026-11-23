@@ -57,6 +57,8 @@ export interface Config {
   tendances?: Readonly<Record<string, TendancePrix>>
   /** Plafond de valeur de défausse réglé par le joueur ; absent : `PLAFOND_VALEUR_DEFAUSSE` (5). */
   plafondDefausse?: number
+  /** Cartes dont aucun prix n’a été trouvé sur le site (relevé récent sans valeur) : défaussables malgré la valeur inconnue (Alexis, 2026-11-23). */
+  sansPrix?: readonly string[]
   /** Mode des étiquettes (absent : `poser`) : `suspendre` ne crée ni ne pose rien ; `retirer-tout` ne propose que des retraits (tout ce que l’extension a posé). */
   modeEtiquettes?: 'poser' | 'suspendre' | 'retirer-tout'
   /** Thèmes gardés du joueur (« Mes thèmes ») : une carte reliée de ces thèmes est mise en favori (Alexis, 2026-11-15). */
@@ -401,7 +403,8 @@ export function construireLot(
     if (nbDefausses > 0) {
       // Aucun retrait d’étiquette avant défausse (H19) : une carte défaussée n’est pas étiquetée.
       const ids = c.idsSite.slice(0, Math.min(nbDefausses, Math.max(0, c.quantite)))
-      if (!(c.valeurMarchande !== null && c.valeurMarchande <= plafondDefausse({ plafondDefausse: config.plafondDefausse }))) {
+      const sansPrixConfirme = c.valeurMarchande === null && (config.sansPrix ?? []).includes(c.id)
+      if (!sansPrixConfirme && !(c.valeurMarchande !== null && c.valeurMarchande <= plafondDefausse({ plafondDefausse: config.plafondDefausse }))) {
         ecarter('valeur-defausse-elevee')
       } else if (dispo('defausse')) {
         for (const idExemplaire of ids) defausses.push({ type: 'defausse', idCarte: c.id, idExemplaire })

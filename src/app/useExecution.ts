@@ -2,6 +2,7 @@ import type { TendancePrix } from '../lib/lectureApi';
 import { useEffect, useState } from 'react';
 import type { EntreeJournal, Registre } from '../lib/actions';
 import type { EtatFile } from '../lib/file';
+import type { EtatOrdonnanceur } from '../lib/ordonnanceur';
 import { chargerEtatSynchro, chargerExecution, chargerJournal, chargerRegistre } from '../lib/stockage';
 import type { Bilan } from './apercuLot';
 import { contexteExecution } from './pilotageLots';
@@ -24,10 +25,13 @@ export function useExecution() {
   const [ventesSiteLues, setVentesSiteLues] = useState<{ enCours: number; max: number } | null>(null);
   // Identifiants de cartes du site et dernière tendance de prix : estimation du prix de départ, relu à l’envoi.
   const [prixSite, setPrixSite] = useState<{ idsCartesSite: Record<string, string>; tendances: Record<string, TendancePrix> }>({ idsCartesSite: {}, tendances: {} });
+  // Relevés de prix de la dernière synchro : servent à savoir quelles cartes n’ont aucun prix trouvé (défausse, Alexis 2026-11-23).
+  const [prixLus, setPrixLus] = useState<EtatOrdonnanceur['prix']>({});
   useEffect(() => {
     let actif = true;
     void chargerEtatSynchro()
       .then((e) => {
+        if (actif && e) setPrixLus(e.prix);
         if (actif && e) {
           const tendances: Record<string, TendancePrix> = {};
           for (const [id, p] of Object.entries(e.prix)) if (p.tendance) tendances[id] = p.tendance;
@@ -101,6 +105,7 @@ export function useExecution() {
     enCoursStocke,
     ventesSiteLues,
     prixSite,
+    prixLus,
     entrees,
     setEntrees,
     journalIllisible,

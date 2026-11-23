@@ -248,11 +248,13 @@ export function configDuLot(
   preferences: Preferences,
   ventesSite: { enCours: number; max: number } | null = null,
   prixSite: { idsCartesSite: Record<string, string>; tendances: Record<string, TendancePrix> } | null = null,
+  sansPrix: readonly string[] = [],
 ): Config {
   return {
     ...(prixSite ? { idsCartesSite: prixSite.idsCartesSite, tendances: prixSite.tendances } : {}),
     maxVentesSimultanees: CONFIG_PRIX.maxVentesSimultanees,
     plafondDefausse: plafondDefausse(preferences),
+    sansPrix,
     mesThemes: preferences.mesThemes,
     modeEtiquettes: modeEtiquettes(preferences),
     longueurMaxEtiquette: null,

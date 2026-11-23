@@ -813,6 +813,17 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r.etat.prix[idCarte(1)]?.valeur).toBeNull();
   })
 
+  it('prix : sansVente posé seulement sur une absence prouvée (rareté absente), pas sur un 404 ni une forme illisible', async () => {
+    const prouvee = await synchroniser(banc(siteFictif(2, { prix: () => null })).deps);
+    expect(prouvee.etat.prix[idCarte(1)]?.sansVente).toBe(true);
+    const site404 = siteFictif(2);
+    const b404 = banc((chemin) => (/price-history/.test(chemin) ? { statut: 404, json: null } : site404(chemin)));
+    const r404 = await synchroniser(b404.deps);
+    expect(r404.etat.prix[idCarte(1)]?.sansVente).toBeUndefined();
+    const avecValeur = await synchroniser(banc(siteFictif(2)).deps);
+    expect(avecValeur.etat.prix[idCarte(1)]?.sansVente).toBeUndefined();
+  })
+
   it('un 429 sur une page ou les stats arrête tout de suite, sans pause ni reprise', async () => {
     const site = siteFictif(4);
     const b = banc((chemin) => (/page=/.test(chemin) ? { statut: 429, json: null } : site(chemin)));

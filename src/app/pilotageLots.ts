@@ -7,6 +7,7 @@ import type { Action, CauseJournal, EtatExecutionV2, ErreurExecution, FamilleLot
 import type { Collection } from '../lib/collection';
 import type { Journal } from '../lib/journal';
 import { DUREE_BAIL_MS } from '../lib/ordonnanceur';
+import { FRAICHEUR_SANS_PRIX_MS, idsSansPrixConfirme } from '../lib/selectionLot';
 import { CODES_ARRET, INTERVALLE_MS, SUPPLEMENT_MAX_MS, creerFile, type ContexteErreur, type ContexteJournal, type File as FileLot, type SuiteExecution } from '../lib/file';
 import { LIBELLES_THEMES } from '../lib/themes';
 import { actionsReinitSite, planSite, type OptionsReinitSite } from '../lib/reinitialisation';
@@ -22,6 +23,7 @@ import {
   chargerIgnorees,
   chargerJournal,
   chargerPreferences,
+  chargerEtatSynchro,
   chargerRegistre,
   chargerEtiquettesSite,
   enregistrerEtiquettesSite,
@@ -130,8 +132,9 @@ export function contexteExecution(): ContexteExecution {
       return execution.transport(complete);
     },
     reverifier: async (action) => {
-      const [collection, registre, preferences] = await Promise.all([chargerCollection(), chargerRegistre(), chargerPreferences()]);
-      return reverifierAction(action, collection, registre, configDuLot(preferences));
+      const [collection, registre, preferences, etatSynchro] = await Promise.all([chargerCollection(), chargerRegistre(), chargerPreferences(), chargerEtatSynchro().catch(() => null)]);
+      const sansPrix = idsSansPrixConfirme(collection.cartes, etatSynchro?.prix ?? {}, Date.now(), FRAICHEUR_SANS_PRIX_MS);
+      return reverifierAction(action, collection, registre, configDuLot(preferences, null, null, sansPrix));
     },
     appliquer: async (action, resultat) => {
       const [collection, registre] = await Promise.all([chargerCollection(), chargerRegistre()]);

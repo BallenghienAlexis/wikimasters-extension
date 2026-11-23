@@ -210,6 +210,18 @@ function lireHistorique(json: unknown, rarete: string, maintenant: number): Hist
   };
 }
 
+/**
+ * Absence de vente **prouvée** (Alexis, 2026-11-23) : l'historique `price-history` est lisible et la rareté n'y figure pas
+ * ou n'a aucune semaine (`weekly` vide). Une rareté qui a des semaines anciennes sans vente récente n'est pas une preuve,
+ * ni une forme illisible, ni le repli `summary`.
+ */
+export function absenceDeVenteProuvee(json: unknown, rarete: string): boolean {
+  if (!estObjet(json) || !estObjet(json.by_rarity)) return false;
+  if (!Object.prototype.hasOwnProperty.call(json.by_rarity, rarete)) return true;
+  const entree = json.by_rarity[rarete];
+  return estObjet(entree) && Array.isArray(entree.weekly) && entree.weekly.length === 0;
+}
+
 /** Tendance de la rareté (`null` si la réponse n’est pas un historique lisible ou sans vente sur 4 semaines). */
 export function analyserTendance(json: unknown, rarete: string, maintenant: number): TendancePrix | null {
   const h = lireHistorique(json, rarete, maintenant);

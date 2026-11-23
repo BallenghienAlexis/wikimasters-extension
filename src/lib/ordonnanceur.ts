@@ -18,7 +18,7 @@ import { CODE_VERIFICATION_HUMAINE } from './actions';
 import { PAS_ATTENTE_MS } from './ventes';
 import { CODES_ARRET, INTERVALLE_MS, type Horloge } from './file';
 import { VERSION_SCHEMA, aEditionLocale, type Carte, type Collection } from './collection';
-import { analyserPage, analyserPrix, analyserTendance, type TendancePrix, sensDuPrix, type SensPrix, decrireForme, diagnosticStats, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
+import { absenceDeVenteProuvee, analyserPage, analyserPrix, analyserTendance, type TendancePrix, sensDuPrix, type SensPrix, decrireForme, diagnosticStats, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
 
 /** Aucune reprise automatique avant ce délai après un arrêt (401, 403 ou 429 des pages et stats). Même durée que la pause des lots (`PAUSE_LOTS_MS`). */
 export const PAUSE_APRES_ARRET_MS = PAUSE_LOTS_MS;
@@ -62,6 +62,8 @@ export interface PrixReleve {
   releveLe: number;
   /** Tendance sur 4 semaines (price-history), absente si le site n’en donne pas. */
   tendance?: TendancePrix;
+  /** Aucune vente prouvée par `price-history` (Alexis, 2026-11-23) : posé seulement sur une absence prouvée, jamais sur 404, carte passée ou erreur. */
+  sansVente?: boolean;
 }
 
 /** État conservé entre deux exécutions (à persister par l’appelant ; ne contient aucun secret). */
@@ -698,7 +700,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       const tendance = analyserTendance(r.json, carte.rarete as string, horloge.now());
       const courante = parId.get(carte.id) as Carte;
       const saisieMain = courante.valeurMarchande !== null && etat.prix[carte.id]?.valeur !== courante.valeurMarchande;
-      etat.prix[carte.id] = tendance ? { valeur, releveLe: horloge.now(), tendance } : { valeur, releveLe: horloge.now() };
+      const sansVente = valeur === null && sens === 'aucune-vente' && absenceDeVenteProuvee(r.json, carte.rarete as string);
+      etat.prix[carte.id] = { valeur, releveLe: horloge.now(), ...(tendance ? { tendance } : {}), ...(sansVente ? { sansVente: true } : {}) };
       if (valeur === null) {
         if (sens !== 'aucune-vente') journal(`Pas de valeur marchande pour « ${carte.titre} ».`);
       } else if (saisieMain) {

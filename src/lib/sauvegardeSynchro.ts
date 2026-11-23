@@ -60,7 +60,12 @@ export function lireSynchro(brut: unknown): SynchroSauvegardee | undefined | str
     // Même validation que le stockage : les champs hors liste blanche sont remplacés par des valeurs neutres.
     const valide = validerEtatSynchro({ version: 1, total: e.total, totalUnique: e.totalUnique, signatureEtiquettes: e.signatureEtiquettes, derniereComplete: e.derniereComplete, arretJusqua: null, requetes: [], cardIds: {}, prix: e.prix });
     if (valide === null) return 'Les relevés de prix de la sauvegarde sont invalides.';
-    etat = { total: valide.total, totalUnique: valide.totalUnique, signatureEtiquettes: valide.signatureEtiquettes, derniereComplete: valide.derniereComplete, prix: valide.prix };
+    // `sansVente` ne vient jamais d'un fichier : une sauvegarde modifiée ne peut pas faire défausser une carte.
+    const prix = Object.create(null) as EtatSauvegarde['prix'];
+    for (const [id, r] of Object.entries(valide.prix)) {
+      prix[id] = r.tendance ? { valeur: r.valeur, releveLe: r.releveLe, tendance: r.tendance } : { valeur: r.valeur, releveLe: r.releveLe };
+    }
+    etat = { total: valide.total, totalUnique: valide.totalUnique, signatureEtiquettes: valide.signatureEtiquettes, derniereComplete: valide.derniereComplete, prix };
   }
   const wikipedia = validerCache(brut.wikipedia);
   if (wikipedia === null) return 'Le cache Wikipédia de la sauvegarde est invalide.';

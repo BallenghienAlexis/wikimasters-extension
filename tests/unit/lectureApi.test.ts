@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { analyserTendance, analyserPage, analyserPrix, sensDuPrix, analyserStats, decrireForme, diagnosticStats } from '../../src/lib/lectureApi';
+import { validerEtatSynchro } from '../../src/lib/validerEtatSynchro';
+import { etatInitial } from '../../src/lib/ordonnanceur';
+import { absenceDeVenteProuvee, analyserTendance, analyserPage, analyserPrix, sensDuPrix, analyserStats, decrireForme, diagnosticStats } from '../../src/lib/lectureApi';
 
 // Réponses fictives, conformes à specs/synchro-auto/releve-api.md.
 const etiquette = (id: string, name: string) => ({ id, name, color: '#112233', user_id: 'u-fictif', created_at: '2026-01-01' });
@@ -217,5 +219,23 @@ describe('prix : price-history (2026-11-21)', () => {
   it('une forme illisible reste « vide »', () => {
     expect(sensDuPrix({ by_rarity: { UR: {} } }, 'UR', maintenant)).toBe('vide');
     expect(analyserTendance({ by_rarity: { UR: {} } }, 'UR', maintenant)).toBeNull();
+  });
+});
+
+describe('absence de vente prouvée (2026-11-23)', () => {
+  it('rareté absente ou sans semaine : prouvée ; semaines anciennes, forme illisible ou summary : non', () => {
+    expect(absenceDeVenteProuvee({ by_rarity: {} }, 'R')).toBe(true);
+    expect(absenceDeVenteProuvee({ by_rarity: { R: { weekly: [], monthly: [] } } }, 'R')).toBe(true);
+    expect(absenceDeVenteProuvee({ by_rarity: { R: { weekly: [{ start: '2020-01-06', avg: 5, min: 1, max: 9, count: 2 }] } } }, 'R')).toBe(false);
+    expect(absenceDeVenteProuvee({ by_rarity: { R: 'x' } }, 'R')).toBe(false);
+    expect(absenceDeVenteProuvee({ summary: {} }, 'R')).toBe(false);
+    expect(absenceDeVenteProuvee(null, 'R')).toBe(false);
+  });
+
+  it('le stockage garde sansVente seulement avec une valeur nulle', () => {
+    const brut = { ...etatInitial(), prix: { a: { valeur: null, releveLe: 1, sansVente: true }, b: { valeur: 5, releveLe: 1, sansVente: true } } };
+    const v = validerEtatSynchro(JSON.parse(JSON.stringify(brut)));
+    expect(v?.prix.a?.sansVente).toBe(true);
+    expect(v?.prix.b?.sansVente).toBeUndefined();
   });
 });

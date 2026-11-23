@@ -59,6 +59,7 @@ describe('reverifierAction (AC1)', () => {
     expect(reverifierAction(defausse, coll(carte({ ...CHIEN, valeurMarchande: 1 })), reg(), config)).toBe('ok')
     expect(reverifierAction(defausse, coll(carte({ ...CHIEN, valeurMarchande: 6 })), reg(), config)).toBe('passee')
     expect(reverifierAction(defausse, coll(carte({ ...CHIEN, valeurMarchande: null })), reg(), config)).toBe('passee')
+    expect(reverifierAction(defausse, coll(carte({ ...CHIEN, valeurMarchande: null })), reg(), { ...config, sansPrix: ['commune|Chat'] })).toBe('ok')
     expect(reverifierAction(defausse, coll(carte({ ...CHIEN, valeurMarchande: 1, favori: true })), reg(), config)).toBe('passee')
     expect(reverifierAction(defausse, coll(carte({ ...CHIEN, valeurMarchande: 1, idsSite: ['ex-2'] })), reg(), config)).toBe('passee')
     expect(reverifierAction(defausse, coll(carte({ ...ZZZ, valeurMarchande: 1 })), reg(), config)).toBe('passee') // à classer
