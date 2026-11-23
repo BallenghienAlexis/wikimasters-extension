@@ -189,7 +189,12 @@ const cleAmi = (nom: string): string => nom.trim().toLowerCase();
 
 export function apercuImport(locales: Donnees, s: Sauvegarde): Apercu {
   const parId = new Map(locales.collection.cartes.map((c) => [c.id, c]));
-  const a: Apercu = { cartesNouvelles: 0, cartesCompletees: 0, cartesIdentiques: 0, cartesEnConflit: 0, themesAjoutes: 0, amisAjoutes: 0, ventesAjoutees: 0, plafondRepris: null, creeLe: s.creeLe, synchro: s.synchro ? apercuSynchro(locales.synchro, s.synchro) : null };
+  const a: Apercu = { cartesNouvelles: 0, cartesCompletees: 0, cartesIdentiques: 0, cartesEnConflit: 0, themesAjoutes: 0, amisAjoutes: 0, ventesAjoutees: 0, plafondRepris: null, creeLe: s.creeLe, synchro: null };
+  if (s.synchro) {
+    // Valeur marchande finale de chaque carte : celle d'ici, sinon celle de la sauvegarde (comme `appliquerImport`).
+    const finales = s.cartes.map((c) => ({ ...c, valeurMarchande: parId.get(c.id)?.valeurMarchande ?? c.valeurMarchande }) as Carte);
+    a.synchro = apercuSynchro(locales.synchro, s.synchro, [...locales.collection.cartes, ...finales]);
+  }
   for (const c of s.cartes) {
     const k = classer(parId.get(c.id), c);
     if (k === 'nouvelle') a.cartesNouvelles += 1;
@@ -219,7 +224,7 @@ export type ResultatApplication = { ok: true; donnees: Donnees } | { ok: false; 
  * Fusionne la sauvegarde dans les données locales sans rien perdre :
  * - carte absente ici : ajoutée (sans identifiants ni étiquettes du site, la synchro les relie) ;
  * - carte dont l'édition ici est vierge : reçoit celle de la sauvegarde ;
- * - édition différente des deux côtés : la politique tranche (`garder-ici` par défaut, ou `remplacer`) ;
+ * - édition différente des deux côtés : la politique tranche (`remplacer` par défaut dans l'interface, ou `garder-ici`) ;
  * - favori, quantité, identifiants : ceux d'ici (le site fait foi) ; valeur marchande : complétée si absente ici ;
  * - réglages (thèmes, amis, plafond de défausse d'ici s'il existe) et ventes : toujours réunis, quelle que soit la politique ; la politique ne tranche que les cartes en conflit ;
  * - interrupteur de synchro auto : celui d'ici ;
@@ -262,7 +267,8 @@ export function appliquerImport(locales: Donnees, s: Sauvegarde, politique: Poli
       preferences,
       syncAuto: locales.syncAuto,
       ventes: ventesFusionnees,
-      ...(locales.synchro && s.synchro ? { synchro: fusionnerSynchro(locales.synchro, s.synchro, [...parId.values()]) } : locales.synchro ? { synchro: locales.synchro } : {}),
+      // Sans mémoire de synchro dans le fichier, rien de la synchro n'est réécrit (ni le bail exigé).
+      ...(locales.synchro && s.synchro ? { synchro: fusionnerSynchro(locales.synchro, s.synchro, [...parId.values()]) } : {}),
     },
   };
 }

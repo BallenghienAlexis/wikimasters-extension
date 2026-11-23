@@ -3,6 +3,7 @@ import { appliquerImport, apercuImport, creerSauvegarde, lireSauvegarde, nomFich
 import { PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
 import { ecrireDonneesSauvegarde, ErreurImportSynchroEnCours, lireDonneesSauvegarde } from '../lib/stockage';
 
+const MARQUE_IMPORT = 'wm-import-reussi';
 const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded border border-line bg-ink-2 px-4';
 
 interface Props {
@@ -23,7 +24,12 @@ const pluriel = (n: number, un: string, plusieurs: string): string => `${n} ${n 
 
 const Sauvegarde: React.FC<Props> = ({ onImportee }) => {
   const champ = useRef<HTMLInputElement>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(() => {
+    // Message laissé par l'importation juste avant le rechargement de la page (`window.name` survit au rechargement).
+    if (window.name !== MARQUE_IMPORT) return null;
+    window.name = '';
+    return 'Sauvegarde importée, mémoire de synchro comprise.';
+  });
   const [erreur, setErreur] = useState<string | null>(null);
   const [lue, setLue] = useState<{ sauvegarde: DonneesSauvegarde; apercu: Apercu } | null>(null);
   const [politique, setPolitique] = useState<PolitiqueConflit>('remplacer');
@@ -74,7 +80,14 @@ const Sauvegarde: React.FC<Props> = ({ onImportee }) => {
       onImportee(resultat.donnees);
       setLue(null);
       setErreur(null);
-      setMessage(lue.sauvegarde.synchro ? 'Sauvegarde importée. Rechargez la page de gestion pour appliquer les thèmes et classements repris.' : 'Sauvegarde importée.');
+      setMessage('Sauvegarde importée.');
+      if (lue.sauvegarde.synchro) {
+        // Les caches (Wikipédia, thèmes) vivent aussi en mémoire de la page et seraient réécrits par la lecture de fond :
+        // rechargement immédiat pour repartir des données importées.
+        window.name = MARQUE_IMPORT;
+        window.location.reload();
+        return;
+      }
     } catch (e) {
       if (e instanceof ErreurImportSynchroEnCours) {
         setErreur(`Importation refusée : ${e.message} Rien n’a été modifié.`);

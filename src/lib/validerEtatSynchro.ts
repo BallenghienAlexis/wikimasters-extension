@@ -17,7 +17,7 @@ export function validerEtatSynchro(brut: unknown): EtatOrdonnanceur | null {
   if (!estObjet(cardIds) || Object.keys(cardIds).length > MAX_ENTREES_ETAT) return null;
   if (!Object.values(cardIds).every((v) => typeof v === 'string')) return null;
   if (!estObjet(prix) || Object.keys(prix).length > MAX_ENTREES_ETAT) return null;
-  const releves: EtatOrdonnanceur['prix'] = {};
+  const releves = Object.create(null) as EtatOrdonnanceur['prix'];
   for (const [id, r] of Object.entries(prix)) {
     if (!estObjet(r) || !nullOuEntier(r.valeur) || !horodatageValide(r.releveLe)) return null;
     const t = r.tendance;
@@ -41,7 +41,7 @@ export function validerEtatSynchro(brut: unknown): EtatOrdonnanceur | null {
     arretJusqua,
     requetes: [...requetes],
     cardIds: { ...(cardIds as Record<string, string>) },
-    prix: releves,
+    prix: { ...releves },
     ...(ventesSite === null ? {} : { ventesSite }),
   };
 }

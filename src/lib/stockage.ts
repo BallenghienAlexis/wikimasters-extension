@@ -701,7 +701,12 @@ export async function ecrireDonneesSauvegarde(donnees: Donnees): Promise<void> {
     await enregistrerCacheIA(s.classementIA);
     await enregistrerThemesAppris(s.themesAppris);
     await enregistrerGrapheWikidata(s.grapheWikidata, MAX_ENTITES_GRAPHE);
-    if (s.etat !== null) await enregistrerEtatSynchro(s.etat);
+    if (s.etat !== null) {
+      // Relecture juste avant : une pause 401/429 écrite entre-temps (`arretJusqua`) ne doit jamais être perdue.
+      const courant = await chargerEtatSynchro().catch(() => null);
+      const arret = Math.max(s.etat.arretJusqua ?? 0, courant?.arretJusqua ?? 0);
+      await enregistrerEtatSynchro({ ...s.etat, arretJusqua: arret > 0 ? arret : null });
+    }
     if (s.derniereSynchro !== null) await enregistrerDerniereSynchro(s.derniereSynchro);
   }
 }

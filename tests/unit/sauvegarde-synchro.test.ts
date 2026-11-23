@@ -54,7 +54,7 @@ describe('mémoire de synchro dans la sauvegarde', () => {
     // b : la valeur de la carte (1) ne concorde pas avec le relevé (9) : non repris.
     expect(Object.keys(sy.etat!.prix)).toEqual(['a']);
     expect(sy.wikipedia.entrees['Alpha']).toBeDefined();
-    expect(apercuImport(donnees([], synchroVide()), s).synchro?.prixRestaures).toBe(2);
+    expect(apercuImport(donnees([], synchroVide()), s).synchro?.prixRestaures).toBe(1);
   });
 
   it('garde le plus récent d’ici', () => {
@@ -64,6 +64,20 @@ describe('mémoire de synchro dans la sauvegarde', () => {
     if (!res.ok) throw new Error(res.erreur);
     expect(res.donnees.synchro?.derniereSynchro).toBe(9000);
     expect(res.donnees.synchro?.etat?.prix['a']?.releveLe).toBe(6000);
+  });
+
+  it('ramène à maintenant un horodatage du futur', () => {
+    const futur: DonneesSynchro = { ...source(), derniereSynchro: 9e12 };
+    const s = lire(donnees([carte('a', { valeurMarchande: 7 })], futur));
+    const res = appliquerImport(donnees([], synchroVide()), s, 'remplacer');
+    if (!res.ok) throw new Error(res.erreur);
+    expect(res.donnees.synchro!.derniereSynchro).toBeLessThanOrEqual(Date.now());
+  });
+
+  it('sans synchro dans le fichier, la synchro d’ici n’est pas touchée', () => {
+    const res = appliquerImport(donnees([], synchroVide()), lire(donnees([carte('a')])), 'remplacer');
+    if (!res.ok) throw new Error(res.erreur);
+    expect(res.donnees.synchro).toBeUndefined();
   });
 
   it('refuse une synchro invalide', () => {

@@ -83,32 +83,33 @@ const plusRecent = (a: number | null, b: number | null): number | null => (a ===
  * - caches : réunis, l'entrée la plus récente (Wikipédia) ou celle d'ici (IA, Wikidata) l'emporte ;
  * - thèmes appris : ceux d'ici s'il y en a, sinon ceux de la sauvegarde.
  */
-export function fusionnerSynchro(locale: DonneesSynchro, s: SynchroSauvegardee, cartes: readonly Carte[]): DonneesSynchro {
+export function fusionnerSynchro(locale: DonneesSynchro, s: SynchroSauvegardee, cartes: readonly Carte[], maintenant: number = Date.now()): DonneesSynchro {
+  // Un horodatage postérieur à maintenant (horloge d'un autre PC, fichier modifié) bloquerait la synchro : on le ramène à maintenant.
+  const borne = (t: number): number => Math.min(t, maintenant);
   const parId = new Map(cartes.map((c) => [c.id, c]));
   let etat = locale.etat;
   if (s.etat !== null) {
     const base: EtatOrdonnanceur = locale.etat ? { ...locale.etat, prix: { ...locale.etat.prix } } : etatInitial();
-    for (const [id, r] of Object.entries(s.etat.prix)) {
-      const carte = parId.get(id);
-      if (!carte || carte.valeurMarchande !== r.valeur) continue;
+    for (const [id, r] of Object.entries(prixRepris(s, parId))) {
       const ici = base.prix[id];
-      if (ici === undefined || ici.releveLe < r.releveLe) base.prix[id] = r;
+      const releveLe = borne(r.releveLe);
+      if (ici === undefined || ici.releveLe < releveLe) base.prix[id] = { ...r, releveLe };
     }
-    if (s.etat.derniereComplete !== null && (base.derniereComplete === null || base.derniereComplete < s.etat.derniereComplete)) {
+    if (s.etat.derniereComplete !== null && (base.derniereComplete === null || base.derniereComplete < borne(s.etat.derniereComplete))) {
       base.total = s.etat.total;
       base.totalUnique = s.etat.totalUnique;
       base.signatureEtiquettes = s.etat.signatureEtiquettes;
-      base.derniereComplete = s.etat.derniereComplete;
+      base.derniereComplete = borne(s.etat.derniereComplete);
     }
     etat = base;
   }
 
-  const entreesWiki: CacheWikipedia['entrees'] = { ...locale.wikipedia.entrees };
+  const entreesWiki = Object.assign(Object.create(null) as CacheWikipedia['entrees'], locale.wikipedia.entrees);
   for (const [titre, e] of Object.entries(s.wikipedia.entrees)) {
-    const ici = entreesWiki[titre];
+    const ici = Object.hasOwn(entreesWiki, titre) ? entreesWiki[titre] : undefined;
     if (ici === undefined) {
       if (Object.keys(entreesWiki).length < MAX_ENTREES_WIKIPEDIA) entreesWiki[titre] = e;
-    } else if (ici.verifieLe < e.verifieLe) entreesWiki[titre] = e;
+    } else if (ici.verifieLe < borne(e.verifieLe)) entreesWiki[titre] = { ...e, verifieLe: borne(e.verifieLe) };
   }
 
   const entreesIA: CacheIA['entrees'] = { ...s.classementIA.entrees, ...locale.classementIA.entrees };
@@ -119,13 +120,23 @@ export function fusionnerSynchro(locale: DonneesSynchro, s: SynchroSauvegardee, 
   const apprisIci = locale.themesAppris.themes.length > 0 || locale.themesAppris.journal.length > 0;
 
   return {
-    derniereSynchro: plusRecent(locale.derniereSynchro, s.derniereSynchro),
+    derniereSynchro: plusRecent(locale.derniereSynchro, s.derniereSynchro === null ? null : borne(s.derniereSynchro)),
     etat,
-    wikipedia: { version: 1, entrees: entreesWiki },
+    wikipedia: { version: 1, entrees: { ...entreesWiki } },
     classementIA: { version: 1, modele: locale.classementIA.modele, entrees: entreesIA },
     themesAppris: apprisIci ? locale.themesAppris : s.themesAppris,
     grapheWikidata: graphe,
   };
+}
+
+/** Relevés de la sauvegarde repris : la carte existe et sa valeur marchande concorde (sinon la synchro y verrait une saisie à la main). */
+function prixRepris(s: SynchroSauvegardee, parId: ReadonlyMap<string, Carte>): EtatSauvegarde['prix'] {
+  const repris: EtatSauvegarde['prix'] = {};
+  for (const [id, r] of Object.entries(s.etat?.prix ?? {})) {
+    const carte = parId.get(id);
+    if (carte && carte.valeurMarchande === r.valeur) repris[id] = r;
+  }
+  return repris;
 }
 
 export interface ApercuSynchro {
@@ -134,11 +145,11 @@ export interface ApercuSynchro {
   derniereSynchro: number | null;
 }
 
-export function apercuSynchro(locale: DonneesSynchro | undefined, s: SynchroSauvegardee): ApercuSynchro {
+export function apercuSynchro(locale: DonneesSynchro | undefined, s: SynchroSauvegardee, cartesFinales: readonly Carte[]): ApercuSynchro {
   const ici = locale?.etat?.prix ?? {};
   const wikiIci = locale?.wikipedia.entrees ?? {};
   return {
-    prixRestaures: Object.entries(s.etat?.prix ?? {}).filter(([id, r]) => ici[id] === undefined || ici[id].releveLe < r.releveLe).length,
+    prixRestaures: Object.entries(prixRepris(s, new Map(cartesFinales.map((c) => [c.id, c])))).filter(([id, r]) => ici[id] === undefined || ici[id].releveLe < r.releveLe).length,
     entreesWikipedia: Object.keys(s.wikipedia.entrees).filter((t) => wikiIci[t] === undefined).length,
     derniereSynchro: s.derniereSynchro,
   };
