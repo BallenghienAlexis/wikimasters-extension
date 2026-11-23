@@ -108,7 +108,7 @@ export function fusionnerSynchro(locale: DonneesSynchro, s: SynchroSauvegardee, 
   for (const [titre, e] of Object.entries(s.wikipedia.entrees)) {
     const ici = Object.hasOwn(entreesWiki, titre) ? entreesWiki[titre] : undefined;
     if (ici === undefined) {
-      if (Object.keys(entreesWiki).length < MAX_ENTREES_WIKIPEDIA) entreesWiki[titre] = e;
+      if (Object.keys(entreesWiki).length < MAX_ENTREES_WIKIPEDIA) entreesWiki[titre] = { ...e, verifieLe: borne(e.verifieLe) };
     } else if (ici.verifieLe < borne(e.verifieLe)) entreesWiki[titre] = { ...e, verifieLe: borne(e.verifieLe) };
   }
 
