@@ -172,3 +172,6 @@ export function validerGraphe(brut: unknown, maxEntites: number): GrapheWikidata
   }
   return { ...graphe };
 }
+
+/** Entités ancêtres gardées en mémoire (graphe mémorisé et sauvegarde complète). */
+export const MAX_ENTITES_GRAPHE = 25_000;
