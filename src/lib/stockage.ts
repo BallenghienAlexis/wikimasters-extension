@@ -8,12 +8,13 @@ import { validerIgnorees, type Ignoree } from './ignorees';
 import { validerHistorique, type PointHistorique } from './historique';
 import { AFFICHAGE_DEFAUT, validerAffichage, type Affichage } from './affichage';
 import { cacheVide, validerCache, type CacheWikipedia } from './wikipedia';
-import { validerGraphe, type GrapheWikidata } from './classesWikidata';
+import { MAX_ENTITES_GRAPHE, validerGraphe, type GrapheWikidata } from './classesWikidata';
 import { etatApprisVide, validerEtatAppris, type EtatAppris } from './themesAppris';
 import { cacheIAVide, validerCacheIA, type CacheIA } from './classificationIA';
 import { registreVide, validerRegistre } from './registre';
 import { validerEtiquettesSite, type EtiquetteSite } from './etiquettesPreexistantes';
 import type { EtatOrdonnanceur } from './ordonnanceur';
+import { validerEtatSynchro } from './validerEtatSynchro';
 import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../config/amis';
 import { ajouterEvenement, validerEvenements, VERSION_VENTES, type EvenementVente } from './affluence';
 import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, type Preferences } from './tri';
@@ -278,48 +279,7 @@ export const enregistrerDerniereRelance = (horodatage: number): Promise<void> =>
 export const chargerBailSynchro = (): Promise<number | null> => chargerHorodatage(CLE_BAIL_SYNCHRO);
 export const enregistrerBailSynchro = (expiration: number | null): Promise<void> => enregistrerHorodatage(CLE_BAIL_SYNCHRO, expiration);
 
-const MAX_ENTREES_ETAT = 100_000;
 const nullOuHorodatage = (v: unknown): v is number | null => v === null || horodatageValide(v);
-const nullOuEntier = (v: unknown): v is number | null => v === null || (typeof v === 'number' && Number.isSafeInteger(v) && v >= 0);
-
-function validerEtatSynchro(brut: unknown): EtatOrdonnanceur | null {
-  if (!estObjet(brut) || brut.version !== 1) return null;
-  const { total, totalUnique, signatureEtiquettes, derniereComplete, arretJusqua, requetes, cardIds, prix } = brut;
-  if (!nullOuEntier(total) || !nullOuEntier(totalUnique)) return null;
-  if (signatureEtiquettes !== null && typeof signatureEtiquettes !== 'string') return null;
-  if (!nullOuHorodatage(derniereComplete) || !nullOuHorodatage(arretJusqua)) return null;
-  if (!Array.isArray(requetes) || requetes.length > MAX_ENTREES_ETAT || !requetes.every(horodatageValide)) return null;
-  if (!estObjet(cardIds) || Object.keys(cardIds).length > MAX_ENTREES_ETAT) return null;
-  if (!Object.values(cardIds).every((v) => typeof v === 'string')) return null;
-  if (!estObjet(prix) || Object.keys(prix).length > MAX_ENTREES_ETAT) return null;
-  const releves: EtatOrdonnanceur['prix'] = {};
-  for (const [id, r] of Object.entries(prix)) {
-    if (!estObjet(r) || !nullOuEntier(r.valeur) || !horodatageValide(r.releveLe)) return null;
-    const t = r.tendance;
-    const tendance =
-      estObjet(t) && (t.variationPct === null || typeof t.variationPct === 'number') && Number.isInteger(t.min4) && (t.min4 as number) >= 0 && Number.isInteger(t.max4) && (t.max4 as number) >= 0 && Number.isInteger(t.ventes4) && (t.ventes4 as number) >= 0
-        ? { variationPct: t.variationPct as number | null, min4: t.min4 as number, max4: t.max4 as number, ventes4: t.ventes4 as number }
-        : null;
-    releves[id] = tendance ? { valeur: r.valeur, releveLe: r.releveLe, tendance } : { valeur: r.valeur, releveLe: r.releveLe };
-  }
-  const vs = brut.ventesSite;
-  const ventesSite =
-    estObjet(vs) && horodatageValide(vs.enCours) && horodatageValide(vs.max) && horodatageValide(vs.releveLe)
-      ? { enCours: vs.enCours, max: vs.max, releveLe: vs.releveLe }
-      : null;
-  return {
-    version: 1,
-    total,
-    totalUnique,
-    signatureEtiquettes,
-    derniereComplete,
-    arretJusqua,
-    requetes: [...requetes],
-    cardIds: { ...(cardIds as Record<string, string>) },
-    prix: releves,
-    ...(ventesSite === null ? {} : { ventesSite }),
-  };
-}
 
 /** État de l’ordonnanceur (aucun secret) ; `null` si jamais écrit, erreur s’il est illisible. */
 export async function chargerEtatSynchro(): Promise<EtatOrdonnanceur | null> {
@@ -706,15 +666,44 @@ export function enregistrerVentes(evenements: EvenementVente[]): Promise<void> {
 /** Lit ce que couvre la sauvegarde complète (voir `sauvegarde.ts`) ; une donnée illisible fait échouer la lecture. */
 export async function lireDonneesSauvegarde(): Promise<Donnees> {
   const [collection, preferences, syncAuto, ventes] = await Promise.all([chargerCollection(), chargerPreferences(), chargerSyncAuto(), chargerVentes()]);
-  return { collection, preferences, syncAuto, ventes };
+  // Mémoire de synchro : facultative, une valeur illisible vaut « vide » (elle se refait à la synchro).
+  const [derniereSynchro, etat, wikipedia, classementIA, themesAppris, grapheWikidata] = await Promise.all([
+    chargerDerniereSynchro(),
+    chargerEtatSynchro().catch(() => null),
+    chargerCacheWikipedia(),
+    chargerCacheIA(),
+    chargerThemesAppris(),
+    chargerGrapheWikidata(MAX_ENTITES_GRAPHE),
+  ]);
+  return { collection, preferences, syncAuto, ventes, synchro: { derniereSynchro, etat, wikipedia, classementIA, themesAppris, grapheWikidata } };
 }
 
-/** Écrit les données fusionnées. La collection d’abord : en cas d’échec, rien d’autre n’a bougé. */
+/** Une synchronisation tient le bail : l'importer maintenant écraserait son état. */
+export class ErreurImportSynchroEnCours extends Error {
+  constructor() {
+    super('Une synchronisation est en cours : attendez sa fin, puis relancez l’importation.');
+  }
+}
+
+/** Écrit les données fusionnées. La collection d'abord : en cas d'échec, rien d'autre n'a bougé. */
 export async function ecrireDonneesSauvegarde(donnees: Donnees): Promise<void> {
+  if (donnees.synchro) {
+    const bail = await chargerBailSynchro();
+    if (bail !== null && bail > Date.now()) throw new ErreurImportSynchroEnCours();
+  }
   await enregistrerCollection(donnees.collection);
   await enregistrerPreferences(donnees.preferences);
   await enregistrerVentes(donnees.ventes);
   await enregistrerSyncAuto(donnees.syncAuto);
+  const s = donnees.synchro;
+  if (s) {
+    await enregistrerCacheWikipedia(s.wikipedia);
+    await enregistrerCacheIA(s.classementIA);
+    await enregistrerThemesAppris(s.themesAppris);
+    await enregistrerGrapheWikidata(s.grapheWikidata, MAX_ENTITES_GRAPHE);
+    if (s.etat !== null) await enregistrerEtatSynchro(s.etat);
+    if (s.derniereSynchro !== null) await enregistrerDerniereSynchro(s.derniereSynchro);
+  }
 }
 
 // ---- Synchro autonome du suivi des ventes en cours (Alexis, 2026-11-17) ----

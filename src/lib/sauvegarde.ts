@@ -5,6 +5,7 @@ import { analyserStockage, meilleureDescription, MAX_CARTES, type Carte, type Co
 import { MAX_EVENEMENTS, validerEvenements, type EvenementVente } from './affluence';
 import { fusionnerAmisInitiaux, plafondDefausse, type Ami, type Preferences } from './tri';
 import { estObjet } from './valider';
+import { apercuSynchro, exporterSynchro, fusionnerSynchro, lireSynchro, type ApercuSynchro, type DonneesSynchro, type SynchroSauvegardee } from './sauvegardeSynchro';
 
 export const FORMAT_SAUVEGARDE = 'wm-collection-sauvegarde';
 export const VERSION_SAUVEGARDE = 1;
@@ -30,6 +31,8 @@ export interface Sauvegarde {
   preferences: Preferences;
   syncAuto: boolean;
   ventes: EvenementVente[];
+  /** Mémoire de synchro (facultative : absente des fichiers plus anciens) : la synchro suivante repart de là. */
+  synchro?: SynchroSauvegardee;
 }
 
 /** Ce que la sauvegarde couvre, tel qu'il vit dans le stockage de l'extension. */
@@ -38,8 +41,8 @@ export interface Donnees {
   preferences: Preferences;
   syncAuto: boolean;
   ventes: EvenementVente[];
+  synchro?: DonneesSynchro;
 }
-
 
 const garderChamps = (c: Carte): CarteSauvegardee => ({
   id: c.id,
@@ -71,6 +74,7 @@ export function creerSauvegarde(donnees: Donnees, maintenant: Date): Sauvegarde 
     },
     syncAuto: donnees.syncAuto,
     ventes: donnees.ventes.filter((e) => e.type !== 'site').map((e) => ({ type: e.type, at: e.at })),
+    ...(donnees.synchro ? { synchro: exporterSynchro(donnees.synchro) } : {}),
   };
 }
 
@@ -132,6 +136,9 @@ export function lireSauvegarde(texte: string): ResultatLecture {
   const ventes = validerEvenements(brut.ventes, MAX_EVENEMENTS);
   if (ventes.length !== brut.ventes.length || ventes.some((e) => e.type === 'site')) return non('Le journal des ventes contient une entrée invalide.');
 
+  const synchro = lireSynchro(brut.synchro);
+  if (typeof synchro === 'string') return non(synchro);
+
   return {
     ok: true,
     sauvegarde: {
@@ -142,6 +149,7 @@ export function lireSauvegarde(texte: string): ResultatLecture {
       preferences: prefs,
       syncAuto: brut.syncAuto,
       ventes,
+      ...(synchro ? { synchro } : {}),
     },
   };
 }
@@ -172,6 +180,8 @@ export interface Apercu {
   /** Plafond de défausse repris de la sauvegarde (absent ici), sinon `null`. */
   plafondRepris: number | null;
   creeLe: string;
+  /** Mémoire de synchro reprise de la sauvegarde (relevés de prix, caches), sinon `null`. */
+  synchro: ApercuSynchro | null;
 }
 
 const cleVente = (e: EvenementVente): string => `${e.type}|${e.at}`;
@@ -179,7 +189,7 @@ const cleAmi = (nom: string): string => nom.trim().toLowerCase();
 
 export function apercuImport(locales: Donnees, s: Sauvegarde): Apercu {
   const parId = new Map(locales.collection.cartes.map((c) => [c.id, c]));
-  const a: Apercu = { cartesNouvelles: 0, cartesCompletees: 0, cartesIdentiques: 0, cartesEnConflit: 0, themesAjoutes: 0, amisAjoutes: 0, ventesAjoutees: 0, plafondRepris: null, creeLe: s.creeLe };
+  const a: Apercu = { cartesNouvelles: 0, cartesCompletees: 0, cartesIdentiques: 0, cartesEnConflit: 0, themesAjoutes: 0, amisAjoutes: 0, ventesAjoutees: 0, plafondRepris: null, creeLe: s.creeLe, synchro: s.synchro ? apercuSynchro(locales.synchro, s.synchro) : null };
   for (const c of s.cartes) {
     const k = classer(parId.get(c.id), c);
     if (k === 'nouvelle') a.cartesNouvelles += 1;
@@ -212,7 +222,9 @@ export type ResultatApplication = { ok: true; donnees: Donnees } | { ok: false; 
  * - édition différente des deux côtés : la politique tranche (`garder-ici` par défaut, ou `remplacer`) ;
  * - favori, quantité, identifiants : ceux d'ici (le site fait foi) ; valeur marchande : complétée si absente ici ;
  * - réglages (thèmes, amis, plafond de défausse d'ici s'il existe) et ventes : toujours réunis, quelle que soit la politique ; la politique ne tranche que les cartes en conflit ;
- * - interrupteur de synchro auto : celui d'ici.
+ * - interrupteur de synchro auto : celui d'ici ;
+ * - mémoire de synchro (prix relevés, dernière synchro, caches) : reprise, pour que la synchro suivante soit incrémentale
+ *   (voir `fusionnerSynchro` : le plus récent l'emporte, un prix n'est repris que si la valeur de la carte concorde).
  */
 export function appliquerImport(locales: Donnees, s: Sauvegarde, politique: PolitiqueConflit): ResultatApplication {
   const remplacer = politique === 'remplacer';
@@ -250,6 +262,7 @@ export function appliquerImport(locales: Donnees, s: Sauvegarde, politique: Poli
       preferences,
       syncAuto: locales.syncAuto,
       ventes: ventesFusionnees,
+      ...(locales.synchro && s.synchro ? { synchro: fusionnerSynchro(locales.synchro, s.synchro, [...parId.values()]) } : locales.synchro ? { synchro: locales.synchro } : {}),
     },
   };
 }
