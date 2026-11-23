@@ -243,10 +243,11 @@ export function texteLotVide(avecIndisponibles: boolean): string {
 export type ResultatLot = { lot: LotConstruit } | { erreur: string };
 
 /** Configuration du lot à partir des préférences (amis et thèmes suivis pour les étiquettes d’échange). */
-export function configDuLot(preferences: Preferences, ventesSite: { enCours: number; max: number } | null = null): Config {
+export function configDuLot(preferences: Preferences, ventesSite: { enCours: number; max: number } | null = null, sansPrix: readonly string[] = []): Config {
   return {
     maxVentesSimultanees: CONFIG_PRIX.maxVentesSimultanees,
     plafondDefausse: plafondDefausse(preferences),
+    sansPrix,
     mesThemes: preferences.mesThemes,
     modeEtiquettes: modeEtiquettes(preferences),
     longueurMaxEtiquette: null,

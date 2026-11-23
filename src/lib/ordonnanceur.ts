@@ -60,6 +60,11 @@ export interface PrixReleve {
   /** null : le site n’a pas de valeur pour cette rareté. */
   valeur: number | null;
   releveLe: number;
+  /**
+   * Vrai seulement quand le site a répondu normalement sans aucune valeur pour cette rareté (aucune vente trouvée) :
+   * un 404, une carte passée par le joueur ou une erreur ne le posent jamais (Alexis, 2026-11-23, défausse des cartes sans prix).
+   */
+  sansVente?: boolean;
 }
 
 /** État conservé entre deux exécutions (à persister par l’appelant ; ne contient aucun secret). */
@@ -695,7 +700,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       const valeur = analyserPrix(r.json, carte.rarete as string);
       const courante = parId.get(carte.id) as Carte;
       const saisieMain = courante.valeurMarchande !== null && etat.prix[carte.id]?.valeur !== courante.valeurMarchande;
-      etat.prix[carte.id] = { valeur, releveLe: horloge.now() };
+      etat.prix[carte.id] = { valeur, releveLe: horloge.now(), ...(valeur === null ? { sansVente: true } : {}) };
       if (valeur === null) {
         if (sens !== 'aucune-vente') journal(`Pas de valeur marchande pour « ${carte.titre} ».`);
       } else if (saisieMain) {

@@ -25,6 +25,24 @@ export const raisonNonProposable = (c: Carte): string | null => {
   return null
 }
 
+/**
+ * Cartes dont aucun prix n’a été trouvé sur le site (Alexis, 2026-11-23) : pas de valeur marchande (ni saisie à la main) et un
+ * relevé récent où le site a répondu sans aucune valeur (`sansVente`). Une erreur, un 404 ou une carte passée ne comptent pas.
+ */
+export function idsSansPrixConfirme(
+  cartes: readonly Carte[],
+  prix: Readonly<Record<string, { valeur: number | null; releveLe: number; sansVente?: boolean }>>,
+  maintenant: number,
+  ancienneteMaxMs: number,
+): string[] {
+  return cartes
+    .filter((c) => {
+      const r = prix[c.id]
+      return c.valeurMarchande === null && r !== undefined && r.sansVente === true && r.valeur === null && maintenant - r.releveLe <= ancienneteMaxMs
+    })
+    .map((c) => c.id)
+}
+
 const sansDieseEtAccents = (nom: string): string => normaliser(nom).replace(/^#\s*/, '').trim()
 
 /**
@@ -71,8 +89,10 @@ export function versSelection(cartes: readonly Carte[], choix: Choix): Selection
  * rien non plus, l’échange passe uniquement par les étiquettes « #À échanger <nom> » que le lot pose (jamais « Statut · Échanger »).
  * Valeur inconnue : rien. Valeur au plafond de défausse ou en dessous : défausse. Sinon : mise aux enchères.
  * Une coche déjà faite (`actuel`) n’est jamais remplacée.
+ * Aucun prix trouvé (`sansPrix`, Alexis 2026-11-23) : une carte qui ne tombe sous aucune règle de garde ci-dessus est pré-cochée en
+ * défausse (la valeur inconnue ne la protège plus) ; les cartes « à classer » restent exclues (`estProposable`).
  */
-export function precocher(cartes: readonly Carte[], preferences: Preferences, actuel: Choix): Choix {
+export function precocher(cartes: readonly Carte[], preferences: Preferences, actuel: Choix, sansPrix: ReadonlySet<string> = new Set()): Choix {
   const m = new Map(actuel)
   const plafond = plafondDefausse(preferences)
   for (const c of cartes) {
@@ -80,6 +100,11 @@ export function precocher(cartes: readonly Carte[], preferences: Preferences, ac
     const themes = themesDeCarte(c)
     if (preferences.mesThemes.some((t) => themes.includes(t))) continue
     if (amisConcernes(themes, preferences.amis).length > 0 || c.ami !== null) continue
+    // Défausse définitive : on garde un exemplaire quand la carte est en plusieurs (les doublons seulement).
+    if (c.valeurMarchande === null && sansPrix.has(c.id)) {
+      m.set(c.id, { choix: 'defausser', exemplaires: Math.max(1, Math.min(c.quantite - 1, (c.idsSite?.length ?? 1) - 1)) })
+      continue
+    }
     if (c.valeurMarchande === null) continue
     // Défausse définitive : on garde un exemplaire quand la carte est en plusieurs (les doublons seulement).
     if (c.valeurMarchande <= plafond) m.set(c.id, { choix: 'defausser', exemplaires: Math.max(1, Math.min(c.quantite - 1, (c.idsSite?.length ?? 1) - 1)) })

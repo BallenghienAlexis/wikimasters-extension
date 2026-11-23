@@ -12,7 +12,8 @@ import { chargerExecution, chargerIgnorees, ecouterExecution, enregistrerJournal
 import { PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
 import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
 import SelectionVenteDefausse from './SelectionVenteDefausse';
-import { choixInitial, precocher, versSelection, type Choix, type ChoixCarte } from '../lib/selectionLot';
+import { ancienneteMaxPrixMs } from '../lib/ordonnanceur';
+import { choixInitial, idsSansPrixConfirme, precocher, versSelection, type Choix, type ChoixCarte } from '../lib/selectionLot';
 import SelectionFavoris from './SelectionFavoris';
 import { basculesApresTout, favorisDecoches as calculerDecoches, propositionsFavori, sansFavorisDecoches } from '../lib/selectionFavoris';
 import type { EditionCarte } from '../lib/collection';
@@ -124,6 +125,7 @@ const PanneauApercuLot: React.FC<Props> = ({
     ongletsLive,
     enCoursStocke,
     ventesSiteLues,
+    prixLus,
     entrees,
     setEntrees,
     journalIllisible,
@@ -205,7 +207,7 @@ const PanneauApercuLot: React.FC<Props> = ({
     setDecochees(new Set());
     setFavorisBascules(new Set());
     setFavorisRefuses(new Set());
-    const config = { ...configDuLot(preferences, ventesSiteLues), selection: versSelection(collection.cartes, choix) };
+    const config = { ...configDuLot(preferences, ventesSiteLues, sansPrix), selection: versSelection(collection.cartes, choix) };
     setEtat(preparerLot(collection, r, dispo, config));
     let apercu: ApercuEtiquettes | null = null;
     if (r !== null) {
@@ -294,6 +296,9 @@ const PanneauApercuLot: React.FC<Props> = ({
     nbLotsCoches: lotsAffiches.length > 0 ? cochees.size : undefined,
   });
   const plafond = plafondDefausse(preferences);
+  const [maintenantPrix] = useState(() => Date.now());
+  const sansPrix = idsSansPrixConfirme(collection.cartes, prixLus, maintenantPrix, ancienneteMaxPrixMs);
+  const sansPrixEns: ReadonlySet<string> = new Set(sansPrix);
 
   const phase = exec?.etat.etat ?? null;
   useEffect(() => {
@@ -431,8 +436,9 @@ const PanneauApercuLot: React.FC<Props> = ({
           cartes={collection.cartes}
           choix={choix}
           plafond={plafond}
+          sansPrix={sansPrixEns}
           onChoisir={choisir}
-          onPrecocher={() => setChoixManuels(precocher(collection.cartes, preferences, choix))}
+          onPrecocher={() => setChoixManuels(precocher(collection.cartes, preferences, choix, sansPrixEns))}
           onVider={() => setChoixManuels(new Map())}
           ventes={ventes}
         />

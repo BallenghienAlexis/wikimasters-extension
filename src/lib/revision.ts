@@ -52,6 +52,7 @@ export function reverifierAction(
     }
     case 'defausse': {
       if (estFavoriVerrouille(carte) || estACLasser(carte) || carte.quantite < 1 || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
+      if (carte.valeurMarchande === null) return (config.sansPrix ?? []).includes(carte.id) ? 'ok' : 'passee'
       return typeof carte.valeurMarchande === 'number' && carte.valeurMarchande <= plafondDefausse({ plafondDefausse: config.plafondDefausse }) ? 'ok' : 'passee'
     }
     case 'favori': {

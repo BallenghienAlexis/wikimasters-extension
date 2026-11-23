@@ -294,7 +294,7 @@ function validerEtatSynchro(brut: unknown): EtatOrdonnanceur | null {
   const releves: EtatOrdonnanceur['prix'] = {};
   for (const [id, r] of Object.entries(prix)) {
     if (!estObjet(r) || !nullOuEntier(r.valeur) || !horodatageValide(r.releveLe)) return null;
-    releves[id] = { valeur: r.valeur, releveLe: r.releveLe };
+    releves[id] = { valeur: r.valeur, releveLe: r.releveLe, ...(r.sansVente === true ? { sansVente: true } : {}) };
   }
   const vs = brut.ventesSite;
   const ventesSite =

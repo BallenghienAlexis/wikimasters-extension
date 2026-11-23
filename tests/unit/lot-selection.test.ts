@@ -6,7 +6,7 @@ import { collectionVide } from '../../src/lib/collection'
 import { construireLot, type Config, type SelectionLot } from '../../src/lib/lot'
 import { preferencesParDefaut } from '../../src/lib/tri'
 import { registreVide } from '../../src/lib/registre'
-import { choixInitial, conseilLancement, estEtiquetteAVendre, precocher, versSelection } from '../../src/lib/selectionLot'
+import { choixInitial, conseilLancement, estEtiquetteAVendre, idsSansPrixConfirme, precocher, versSelection } from '../../src/lib/selectionLot'
 
 const TOUS: TypesDisponibles = new Set<TypeAction>(TYPES_ACTION)
 const CHIEN = { titre: 'Berger allemand', description: 'race de chien' }
@@ -160,5 +160,48 @@ describe('raison de non-proposition (2026-11-17)', () => {
     expect(raisonNonProposable(carte('b', { favori: true }))).toMatch(/favori/)
     expect(raisonNonProposable(carte('c', { idsSite: null }))).toMatch(/non reliée/)
     expect(raisonNonProposable(carte('d', { titre: 'Zzqx', description: '' }))).toMatch(/thème fiable/)
+  })
+})
+
+describe('cartes sans prix trouvé (Alexis, 2026-11-23)', () => {
+  const prefs = preferencesParDefaut()
+  const sans = new Set(['a'])
+
+  it('pré-coche en défausse une carte sans prix confirmé, jamais sans confirmation', () => {
+    const cartes = [carte('a', { valeurMarchande: null }), carte('b', { valeurMarchande: null })]
+    const choix = precocher(cartes, prefs, new Map(), sans)
+    expect(choix.get('a')?.choix).toBe('defausser')
+    expect(choix.has('b')).toBe(false)
+  })
+
+  it('garde un exemplaire quand la carte est en plusieurs', () => {
+    const choix = precocher([carte('a', { valeurMarchande: null, quantite: 3, idsSite: ['x', 'y', 'z'] })], prefs, new Map(), sans)
+    expect(choix.get('a')?.exemplaires).toBe(2)
+  })
+
+  it('protège favori, thème gardé, ami et carte « à classer »', () => {
+    const gardee = { ...prefs, mesThemes: ['animaux'] }
+    expect(precocher([carte('a', { valeurMarchande: null, favori: true })], prefs, new Map(), sans).size).toBe(0)
+    expect(precocher([carte('a', { valeurMarchande: null, ami: 'Benjamin' })], prefs, new Map(), sans).size).toBe(0)
+    expect(precocher([carte('a', { valeurMarchande: null })], gardee, new Map(), sans).size).toBe(0)
+    expect(precocher([carte('a', { titre: 'Zzz', description: '', valeurMarchande: null })], prefs, new Map(), sans).size).toBe(0)
+  })
+
+  it('idsSansPrixConfirme : seulement une réponse sans vente, récente, sans valeur saisie', () => {
+    const cartes = [carte('a', { valeurMarchande: null }), carte('b', { valeurMarchande: null }), carte('c', { valeurMarchande: null }), carte('d', { valeurMarchande: 3 }), carte('e', { valeurMarchande: null })]
+    const prix = {
+      a: { valeur: null, releveLe: 1000, sansVente: true },
+      b: { valeur: null, releveLe: 1000 }, // 404, carte passée ou erreur
+      c: { valeur: null, releveLe: 0, sansVente: true }, // périmé
+      d: { valeur: null, releveLe: 1000, sansVente: true }, // valeur saisie à la main
+    }
+    expect(idsSansPrixConfirme(cartes, prix, 2000, 1500)).toEqual(['a'])
+  })
+
+  it('le lot défausse une carte sans prix confirmé, pas sans confirmation', () => {
+    const c = carte('a', { valeurMarchande: null, quantite: 1, idsSite: ['ex-1'] })
+    const sel: SelectionLot = { vendre: [], defausser: { a: 1 } }
+    expect(de(lot([c], sel, { sansPrix: ['a'] }).actions, 'defausse')).toHaveLength(1)
+    expect(de(lot([c], sel).actions, 'defausse')).toHaveLength(0)
   })
 })

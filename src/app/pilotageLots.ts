@@ -5,7 +5,8 @@ import { limiterEncheres } from '../lib/lot';
 import type { Action, CauseJournal, EtatExecutionV2, ErreurExecution, FamilleLot, Registre, ResultatAction } from '../lib/actions';
 import type { Collection } from '../lib/collection';
 import type { Journal } from '../lib/journal';
-import { DUREE_BAIL_MS } from '../lib/ordonnanceur';
+import { DUREE_BAIL_MS, ancienneteMaxPrixMs } from '../lib/ordonnanceur';
+import { idsSansPrixConfirme } from '../lib/selectionLot';
 import { CODES_ARRET, INTERVALLE_MS, SUPPLEMENT_MAX_MS, creerFile, type ContexteErreur, type ContexteJournal, type File as FileLot, type SuiteExecution } from '../lib/file';
 import { familleDe } from '../lib/familles';
 import { ajouterIgnoree } from '../lib/ignorees';
@@ -19,6 +20,7 @@ import {
   chargerIgnorees,
   chargerJournal,
   chargerPreferences,
+  chargerEtatSynchro,
   chargerRegistre,
   chargerEtiquettesSite,
   enregistrerEtiquettesSite,
@@ -127,8 +129,9 @@ export function contexteExecution(): ContexteExecution {
       return execution.transport(complete);
     },
     reverifier: async (action) => {
-      const [collection, registre, preferences] = await Promise.all([chargerCollection(), chargerRegistre(), chargerPreferences()]);
-      return reverifierAction(action, collection, registre, configDuLot(preferences));
+      const [collection, registre, preferences, etatSynchro] = await Promise.all([chargerCollection(), chargerRegistre(), chargerPreferences(), chargerEtatSynchro().catch(() => null)]);
+      const sansPrix = idsSansPrixConfirme(collection.cartes, etatSynchro?.prix ?? {}, Date.now(), ancienneteMaxPrixMs);
+      return reverifierAction(action, collection, registre, configDuLot(preferences, null, sansPrix));
     },
     appliquer: async (action, resultat) => {
       const [collection, registre] = await Promise.all([chargerCollection(), chargerRegistre()]);
