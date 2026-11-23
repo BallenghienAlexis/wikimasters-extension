@@ -15,11 +15,11 @@ const carte: Carte = {
 }
 const vente = (id: string, finDans: number) => ({ id, card_id: `ex-${id}`, base_amount: 50, current_bid: null, effective_bid: 50, created_at: iso(T0), end_at: iso(T0 + finDans), card: { wikipedia_title: `T${id}` } })
 
-function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relance?: boolean; resultat?: ResultatAction; visible?: boolean; actif?: boolean; synchroRecente?: boolean; pauseLots?: number; lotEnCours?: boolean }) {
+function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relance?: boolean; resultat?: ResultatAction; visible?: boolean; actif?: boolean; synchroRecente?: boolean; pauseLots?: number; lotEnCours?: boolean; etat?: EtatOrdonnanceur }) {
   let t = T0
   // Le bail du suivi est le sien : celui de la synchro globale (tenu ou non) ne le concerne pas.
   let bailValeur: number | null = null
-  let globalEtat: EtatOrdonnanceur | null = opts.synchroRecente === false ? { ...etatInitial(), arretJusqua: T0 + 3_600_000 } : null
+  let globalEtat: EtatOrdonnanceur | null = opts.etat ?? (opts.synchroRecente === false ? { ...etatInitial(), arretJusqua: T0 + 3_600_000 } : { ...etatInitial(), cardIds: { c: 'card-site-c' } })
   const etat = { suivi: suiviVide() as SuiviVentes, statut: null as StatutRelanceVentes | null, suiviEtat: null as EtatSuiviVentes | null, verrous: 0, lancements: [] as LancementVente[], ecartes: {} as Record<string, number>, lectures: 0, ordres: [] as Action[] }
   const reponses = [...opts.reponses]
   const deps: DependancesSuiviVentes = {
@@ -110,6 +110,35 @@ describe('cycle de suivi des mises en vente', () => {
     expect(m.etat.lancements[0]).toMatchObject({ resultat: 'reussie', titre: 'Berger allemand' })
     expect(delai).toBe(2000)
   })
+  it('relance : maximum absent de la réponse du site, la limite de 5 de la configuration s’applique et la relance part', async () => {
+    const m = monde({ reponses: [{ statut: 200, json: { selling: [], history: [] } }], relance: true })
+    await m.suivi.cycle()
+    expect(m.etat.ordres).toHaveLength(1)
+  })
+  it('relance : une enchère dont la fin est dépassée mais encore listée ne prend plus de place (5/5 retrouvé)', async () => {
+    const m = monde({ reponses: [ok([vente('a', -5_000), vente('b', 3_600_000), vente('v', 3_600_000), vente('d', 3_600_000), vente('e', 3_600_000)])], relance: true })
+    await m.suivi.cycle()
+    expect(m.etat.ordres).toHaveLength(1)
+  })
+  it('relance : pause des lots en cours, la place libre est retentée à la fin de la pause', async () => {
+    const m = monde({ reponses: [ok([vente('a', 3_600_000)])], relance: true, pauseLots: T0 + 20_000 })
+    const attente = await m.suivi.cycle()
+    expect(m.etat.ordres).toHaveLength(0)
+    expect(attente).toBeLessThanOrEqual(20_000)
+  })
+  it('relance : prix introuvable (passée), nouvelle tentative sous 10 s', async () => {
+    const m = monde({ reponses: [ok([])], relance: true, resultat: { classe: 'passee', codeHttp: 404, cause: 'prix du marché indisponible' } })
+    expect(await m.suivi.cycle()).toBeLessThanOrEqual(10_000)
+  })
+  it('relance : envoi en échec (500), la place libre est retentée dès la fin de l’attente, pas 5 min plus tard', async () => {
+    const m = monde({ reponses: [ok([vente('a', 3_600_000)]), ok([vente('a', 3_600_000)])], relance: true, resultat: { classe: 'echec', codeHttp: 500, cause: 'erreur serveur' } })
+    const attente = await m.suivi.cycle()
+    expect(attente).toBeLessThanOrEqual(10_000)
+    m.avancer(attente)
+    await m.suivi.cycle()
+    expect(m.etat.lectures).toBe(2)
+    expect(m.etat.ordres.length).toBeGreaterThanOrEqual(1)
+  })
   it('relance : le prix de départ est divisé par deux autant de fois que la carte est restée non vendue', async () => {
     const m = monde({ reponses: [ok([])], relance: true })
     await m.suivi.cycle()
@@ -119,6 +148,20 @@ describe('cycle de suivi des mises en vente', () => {
     await n.suivi.cycle()
     expect(n.etat.ordres[0]).toMatchObject({ type: 'enchere', prix: Math.max(1, Math.floor(normal / 4)) })
     expect(n.etat.lancements[0]?.prix).toBe(Math.max(1, Math.floor(normal / 4)))
+  })
+  it('relance : l’ordre porte la carte du site, la rareté et les non-ventes pour relire la tendance avant l’envoi', async () => {
+    const etat = { ...etatInitial(), cardIds: { c: 'card-site-c' }, prix: { c: { valeur: 100, releveLe: T0, tendance: { variationPct: 40, min4: 10, max4: 300, ventes4: 12 } } } }
+    const m = monde({ reponses: [ok([])], relance: true, etat })
+    m.etat.suivi = { ...suiviVide(), nonVentes: { 'C|Berger allemand': 1 }, finsVues: [] }
+    await m.suivi.cycle()
+    expect(m.etat.ordres[0]).toMatchObject({ type: 'enchere', idCarteSite: 'card-site-c', rarete: 'C', reductions: 1 })
+  })
+  it('relance : prix du marché introuvable à la relecture, la carte est écartée un jour sans attente d’échec', async () => {
+    const m = monde({ reponses: [ok([])], relance: true, resultat: { classe: 'passee', codeHttp: 404, cause: 'prix du marché indisponible' } })
+    await m.suivi.cycle()
+    expect(m.etat.lancements[0]).toMatchObject({ resultat: 'echec', cause: 'prix du marché indisponible' })
+    expect(Object.keys(m.etat.ecartes)).toContain('ex-c')
+    expect(m.etat.statut?.etat).toBe('attente')
   })
   it('de bout en bout : deux non-ventes lues dans l’historique du site divisent le prix de la relance (rareté en code du site)', async () => {
     const fin = (id: string, dans: number) => ({ id, card_id: 'ex-x', base_amount: 10, current_bid: null, effective_bid: 10, final_price: null, status: 'settled_unsold', snapshot_rarity: 'C', created_at: iso(T0 - 7_200_000), settled_at: iso(T0 + dans), end_at: iso(T0 + dans), card: { wikipedia_title: 'Berger allemand' } })

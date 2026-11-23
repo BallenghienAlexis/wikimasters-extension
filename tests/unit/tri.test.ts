@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import type { ConfigPrix } from '../../src/config/prix';
-import { CONFIG_PRIX } from '../../src/config/prix';
 import type { Carte } from '../../src/lib/collection';
 import { themesDeCarte } from '../../src/lib/themes';
 import { amisConcernes, fusionnerAmisInitiaux, lirePreferences, plafondDefausse, preferencesParDefaut, prixDepart, themesAimesDesFavoris, valeurDeCarte, type Preferences } from '../../src/lib/tri';
@@ -22,15 +20,6 @@ const carte = (surcharge: Partial<Carte> = {}): Carte => ({
   ...surcharge,
 });
 
-const CONFIG: ConfigPrix = {
-  seuilDefausse: 15,
-  maxVentesSimultanees: 5,
-  matricePrixDepart: [
-    { valeurMin: 15, prixDepart: 20 },
-    { valeurMin: 50, prixDepart: 60 },
-  ],
-};
-
 const prefs = (surcharge: Partial<Preferences> = {}): Preferences => ({ ...preferencesParDefaut(), ...surcharge });
 
 describe('valeurDeCarte', () => {
@@ -44,22 +33,13 @@ describe('valeurDeCarte', () => {
 
 describe('prixDepart', () => {
   it.each([
-    [14, null],
-    [15, 20],
-    [49, 20],
-    [50, 60],
-    [1000, 60],
-  ])('valeur %i donne %j', (valeur, attendu) => {
-    expect(prixDepart(valeur, CONFIG)).toBe(attendu);
-  });
-
-  it('retient la tranche la plus haute, quel que soit l’ordre de la matrice', () => {
-    const inverse = { ...CONFIG, matricePrixDepart: [...CONFIG.matricePrixDepart].reverse() };
-    expect(prixDepart(60, inverse)).toBe(60);
-  });
-
-  it('sans matrice, le prix reste à définir', () => {
-    expect(prixDepart(100, { ...CONFIG, matricePrixDepart: [] })).toBeNull();
+    [5, null],
+    [6, 1],
+    [40, 10],
+    [100, 25],
+    [1000, 250],
+  ])('valeur %i donne %j (règle de base, sans tendance)', (valeur, attendu) => {
+    expect(prixDepart(valeur)).toBe(attendu);
   });
 });
 
@@ -89,12 +69,6 @@ describe('lirePreferences', () => {
   it('garde des préférences valides', () => {
     const p = prefs({ mesThemes: ['sport'], amis: [{ nom: 'Ami fictif', themes: ['arts'] }] })
     expect(lirePreferences(JSON.parse(JSON.stringify(p)))).toEqual(p)
-  })
-})
-
-describe('matrice des prix réelle', () => {
-  it('chaque prix de départ reste sous la valeur minimale de sa tranche', () => {
-    for (const tranche of CONFIG_PRIX.matricePrixDepart) expect(tranche.prixDepart).toBeLessThan(tranche.valeurMin)
   })
 })
 

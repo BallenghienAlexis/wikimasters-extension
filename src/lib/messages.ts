@@ -27,6 +27,9 @@ export const PRIX_MAX = 1_000_000
  */
 export const CAUSES_RESULTAT: readonly string[] = [
   'action réussie',
+  'prix du marché indisponible',
+  'aucune vente récente : prix du marché inconnu',
+  'prix du marché trop bas pour une mise en vente',
   'action non disponible',
   'erreur d’émission',
   'erreur de transport',
@@ -39,7 +42,7 @@ export const CAUSES_RESULTAT: readonly string[] = [
   'conflit signalé par le site',
 ]
 
-const CLASSES: ReadonlyArray<ResultatAction['classe']> = ['reussie', 'echec', 'arret', 'inconnu']
+const CLASSES: ReadonlyArray<ResultatAction['classe']> = ['reussie', 'echec', 'arret', 'inconnu', 'passee']
 
 export interface MessageBonjour {
   message: 'bonjour'
@@ -132,6 +135,7 @@ export function validerOrdre(brut: unknown): Action | null {
 
   switch (type as TypeAction) {
     case 'lecture':
+      if ('cible' in ordre) return cles(ordre, ['type', 'idCarte', 'cible']) && ordre.cible === 'etiquettes' ? { type: 'lecture', idCarte, cible: 'etiquettes' } : null
       return cles(ordre, ['type', 'idCarte']) ? { type: 'lecture', idCarte } : null
     case 'creation-etiquette': {
       const nomEtiquette = texte(ordre.nomEtiquette)
@@ -153,9 +157,20 @@ export function validerOrdre(brut: unknown): Action | null {
     case 'enchere': {
       const idExemplaire = texte(ordre.idExemplaire)
       const prix = ordre.prix
-      if (!cles(ordre, ['type', 'idCarte', 'idExemplaire', 'prix']) || idExemplaire === null) return null
+      const facultatifs = ['idCarteSite', 'rarete', 'prixFixe', 'reductions'].filter((k) => k in ordre)
+      if (!cles(ordre, ['type', 'idCarte', 'idExemplaire', 'prix', ...facultatifs]) || idExemplaire === null) return null
       if (typeof prix !== 'number' || !Number.isSafeInteger(prix) || prix < 1 || prix > PRIX_MAX) return null
-      return { type: 'enchere' as const, idCarte, idExemplaire, prix }
+      const idCarteSite = 'idCarteSite' in ordre ? texte(ordre.idCarteSite) : undefined
+      const rarete = 'rarete' in ordre ? texte(ordre.rarete) : undefined
+      if (idCarteSite === null || rarete === null) return null
+      if ('prixFixe' in ordre && typeof ordre.prixFixe !== 'boolean') return null
+      const reductions = ordre.reductions
+      if ('reductions' in ordre && (typeof reductions !== 'number' || !Number.isInteger(reductions) || reductions < 0 || reductions > 30)) return null
+      return {
+        type: 'enchere' as const, idCarte, idExemplaire, prix,
+        ...(idCarteSite !== undefined ? { idCarteSite } : {}), ...(rarete !== undefined ? { rarete } : {}),
+        ...('prixFixe' in ordre ? { prixFixe: ordre.prixFixe as boolean } : {}), ...('reductions' in ordre ? { reductions: reductions as number } : {}),
+      }
     }
     case 'suppression-etiquette': {
       const nomEtiquette = texte(ordre.nomEtiquette)
@@ -188,7 +203,9 @@ export function validerResultat(brut: unknown): ResultatAction | null {
   const avecId = resultat !== null && 'idEtiquette' in resultat
   const avecDiag = resultat !== null && 'diagnostic' in resultat
   const avecVentes = resultat !== null && 'ventes' in resultat
-  if (!resultat || !cles(resultat, ['classe', 'codeHttp', 'cause', ...(avecId ? ['idEtiquette'] : []), ...(avecDiag ? ['diagnostic'] : []), ...(avecVentes ? ['ventes'] : [])])) return null
+  const avecPrix = resultat !== null && 'prix' in resultat
+  const avecEtiquettes = resultat !== null && 'etiquettes' in resultat
+  if (!resultat || !cles(resultat, ['classe', 'codeHttp', 'cause', ...(avecId ? ['idEtiquette'] : []), ...(avecDiag ? ['diagnostic'] : []), ...(avecVentes ? ['ventes'] : []), ...(avecPrix ? ['prix'] : []), ...(avecEtiquettes ? ['etiquettes'] : [])])) return null
   const { classe, codeHttp } = resultat
   if (typeof classe !== 'string' || !(CLASSES as readonly string[]).includes(classe)) return null
   if (codeHttp !== null) {
@@ -209,7 +226,22 @@ export function validerResultat(brut: unknown): ResultatAction | null {
     if (typeof enCours !== 'number' || typeof max !== 'number' || !Number.isInteger(enCours) || !Number.isInteger(max) || enCours < 0 || max < 0 || enCours > 1000 || max > 1000) return null
     ventes = { enCours, max }
   }
-  const base = { classe: classe as ResultatAction['classe'], codeHttp: codeHttp as number | null, cause, ...(diagnostic !== undefined ? { diagnostic } : {}), ...(ventes !== undefined ? { ventes } : {}) }
+  let etiquettes: Array<{ id: string; nom: string; nbCartes: number }> | undefined
+  if (avecEtiquettes) {
+    if (!Array.isArray(resultat.etiquettes) || resultat.etiquettes.length > 500) return null
+    etiquettes = []
+    for (const e of resultat.etiquettes as unknown[]) {
+      const o = enObjet(e)
+      const id = o ? uuid(o.id) : null
+      const nom = o ? texte(o.nom) : null
+      const nbCartes = o?.nbCartes
+      if (!o || !cles(o, ['id', 'nom', 'nbCartes']) || id === null || nom === null) return null
+      if (typeof nbCartes !== 'number' || !Number.isSafeInteger(nbCartes) || nbCartes < 0) return null
+      etiquettes.push({ id, nom, nbCartes })
+    }
+  }
+  if (avecPrix && (typeof resultat.prix !== 'number' || !Number.isSafeInteger(resultat.prix) || resultat.prix < 1 || resultat.prix > PRIX_MAX)) return null
+  const base = { classe: classe as ResultatAction['classe'], codeHttp: codeHttp as number | null, cause, ...(diagnostic !== undefined ? { diagnostic } : {}), ...(ventes !== undefined ? { ventes } : {}), ...(avecPrix ? { prix: resultat.prix as number } : {}), ...(etiquettes !== undefined ? { etiquettes } : {}) }
   if (!avecId) return base
   const idEtiquette = uuid(resultat.idEtiquette)
   return idEtiquette === null ? null : { ...base, idEtiquette }

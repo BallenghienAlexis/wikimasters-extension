@@ -8,17 +8,19 @@ import { validerIgnorees, type Ignoree } from './ignorees';
 import { validerHistorique, type PointHistorique } from './historique';
 import { AFFICHAGE_DEFAUT, validerAffichage, type Affichage } from './affichage';
 import { cacheVide, validerCache, type CacheWikipedia } from './wikipedia';
-import { validerGraphe, type GrapheWikidata } from './classesWikidata';
+import { MAX_ENTITES_GRAPHE, validerGraphe, type GrapheWikidata } from './classesWikidata';
 import { etatApprisVide, validerEtatAppris, type EtatAppris } from './themesAppris';
 import { cacheIAVide, validerCacheIA, type CacheIA } from './classificationIA';
 import { registreVide, validerRegistre } from './registre';
 import { validerEtiquettesSite, type EtiquetteSite } from './etiquettesPreexistantes';
 import type { EtatOrdonnanceur } from './ordonnanceur';
+import { validerEtatSynchro } from './validerEtatSynchro';
 import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../config/amis';
 import { ajouterEvenement, validerEvenements, VERSION_VENTES, type EvenementVente } from './affluence';
 import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, type Preferences } from './tri';
 import { estObjet } from './valider';
 import type { EtatVerrouRequete } from './verrouRequete';
+import { CLES_GARDEES, collectionReduite, preferencesGardees } from './reinitialisation';
 import { VERSION_SUIVI, suiviVide, validerLancements, type LancementVente, type SuiviVentes } from './ventes';
 
 const CLE = 'collection';
@@ -277,43 +279,7 @@ export const enregistrerDerniereRelance = (horodatage: number): Promise<void> =>
 export const chargerBailSynchro = (): Promise<number | null> => chargerHorodatage(CLE_BAIL_SYNCHRO);
 export const enregistrerBailSynchro = (expiration: number | null): Promise<void> => enregistrerHorodatage(CLE_BAIL_SYNCHRO, expiration);
 
-const MAX_ENTREES_ETAT = 100_000;
 const nullOuHorodatage = (v: unknown): v is number | null => v === null || horodatageValide(v);
-const nullOuEntier = (v: unknown): v is number | null => v === null || (typeof v === 'number' && Number.isSafeInteger(v) && v >= 0);
-
-function validerEtatSynchro(brut: unknown): EtatOrdonnanceur | null {
-  if (!estObjet(brut) || brut.version !== 1) return null;
-  const { total, totalUnique, signatureEtiquettes, derniereComplete, arretJusqua, requetes, cardIds, prix } = brut;
-  if (!nullOuEntier(total) || !nullOuEntier(totalUnique)) return null;
-  if (signatureEtiquettes !== null && typeof signatureEtiquettes !== 'string') return null;
-  if (!nullOuHorodatage(derniereComplete) || !nullOuHorodatage(arretJusqua)) return null;
-  if (!Array.isArray(requetes) || requetes.length > MAX_ENTREES_ETAT || !requetes.every(horodatageValide)) return null;
-  if (!estObjet(cardIds) || Object.keys(cardIds).length > MAX_ENTREES_ETAT) return null;
-  if (!Object.values(cardIds).every((v) => typeof v === 'string')) return null;
-  if (!estObjet(prix) || Object.keys(prix).length > MAX_ENTREES_ETAT) return null;
-  const releves: EtatOrdonnanceur['prix'] = {};
-  for (const [id, r] of Object.entries(prix)) {
-    if (!estObjet(r) || !nullOuEntier(r.valeur) || !horodatageValide(r.releveLe)) return null;
-    releves[id] = { valeur: r.valeur, releveLe: r.releveLe, ...(r.sansVente === true ? { sansVente: true } : {}) };
-  }
-  const vs = brut.ventesSite;
-  const ventesSite =
-    estObjet(vs) && horodatageValide(vs.enCours) && horodatageValide(vs.max) && horodatageValide(vs.releveLe)
-      ? { enCours: vs.enCours, max: vs.max, releveLe: vs.releveLe }
-      : null;
-  return {
-    version: 1,
-    total,
-    totalUnique,
-    signatureEtiquettes,
-    derniereComplete,
-    arretJusqua,
-    requetes: [...requetes],
-    cardIds: { ...(cardIds as Record<string, string>) },
-    prix: releves,
-    ...(ventesSite === null ? {} : { ventesSite }),
-  };
-}
 
 /** État de l’ordonnanceur (aucun secret) ; `null` si jamais écrit, erreur s’il est illisible. */
 export async function chargerEtatSynchro(): Promise<EtatOrdonnanceur | null> {
@@ -700,15 +666,49 @@ export function enregistrerVentes(evenements: EvenementVente[]): Promise<void> {
 /** Lit ce que couvre la sauvegarde complète (voir `sauvegarde.ts`) ; une donnée illisible fait échouer la lecture. */
 export async function lireDonneesSauvegarde(): Promise<Donnees> {
   const [collection, preferences, syncAuto, ventes] = await Promise.all([chargerCollection(), chargerPreferences(), chargerSyncAuto(), chargerVentes()]);
-  return { collection, preferences, syncAuto, ventes };
+  // Mémoire de synchro : facultative, une valeur illisible vaut « vide » (elle se refait à la synchro).
+  const [derniereSynchro, etat, wikipedia, classementIA, themesAppris, grapheWikidata] = await Promise.all([
+    chargerDerniereSynchro(),
+    chargerEtatSynchro().catch(() => null),
+    chargerCacheWikipedia(),
+    chargerCacheIA(),
+    chargerThemesAppris(),
+    chargerGrapheWikidata(MAX_ENTITES_GRAPHE),
+  ]);
+  return { collection, preferences, syncAuto, ventes, synchro: { derniereSynchro, etat, wikipedia, classementIA, themesAppris, grapheWikidata } };
 }
 
-/** Écrit les données fusionnées. La collection d’abord : en cas d’échec, rien d’autre n’a bougé. */
+/** Une synchronisation tient le bail : l'importer maintenant écraserait son état. */
+export class ErreurImportSynchroEnCours extends Error {
+  constructor() {
+    super('Une synchronisation est en cours : attendez sa fin, puis relancez l’importation.');
+  }
+}
+
+/** Écrit les données fusionnées. La collection d'abord : en cas d'échec, rien d'autre n'a bougé. */
 export async function ecrireDonneesSauvegarde(donnees: Donnees): Promise<void> {
+  if (donnees.synchro) {
+    const bail = await chargerBailSynchro();
+    if (bail !== null && bail > Date.now()) throw new ErreurImportSynchroEnCours();
+  }
   await enregistrerCollection(donnees.collection);
   await enregistrerPreferences(donnees.preferences);
   await enregistrerVentes(donnees.ventes);
   await enregistrerSyncAuto(donnees.syncAuto);
+  const s = donnees.synchro;
+  if (s) {
+    await enregistrerCacheWikipedia(s.wikipedia);
+    await enregistrerCacheIA(s.classementIA);
+    await enregistrerThemesAppris(s.themesAppris);
+    await enregistrerGrapheWikidata(s.grapheWikidata, MAX_ENTITES_GRAPHE);
+    if (s.etat !== null) {
+      // Relecture juste avant : une pause 401/429 écrite entre-temps (`arretJusqua`) ne doit jamais être perdue.
+      const courant = await chargerEtatSynchro().catch(() => null);
+      const arret = Math.max(s.etat.arretJusqua ?? 0, courant?.arretJusqua ?? 0);
+      await enregistrerEtatSynchro({ ...s.etat, arretJusqua: arret > 0 ? arret : null });
+    }
+    if (s.derniereSynchro !== null) await enregistrerDerniereSynchro(s.derniereSynchro);
+  }
 }
 
 // ---- Synchro autonome du suivi des ventes en cours (Alexis, 2026-11-17) ----
@@ -783,4 +783,36 @@ export async function chargerVerrouRequete(): Promise<EtatVerrouRequete | null> 
 
 export async function enregistrerVerrouRequete(etat: EtatVerrouRequete): Promise<void> {
   await chrome.storage.local.set({ [CLE_VERROU_REQUETE]: etat });
+}
+
+// ---- Réinitialisation globale (Alexis, 2026-11-21) ----
+
+/** Contenu complet de `chrome.storage.local`, tel quel : sert à la sauvegarde préalable et à l’aperçu de l’effacement. */
+export async function lireToutLeStockage(): Promise<Record<string, unknown>> {
+  return (await chrome.storage.local.get(null)) as Record<string, unknown>;
+}
+
+/**
+ * Efface tout `chrome.storage.local` sauf les thèmes aimés et ceux des amis (préférences réduites à `mesThemes` et
+ * `amis`, plus le drapeau `amisInitiaux`) et les choix de favori (collection réduite aux cartes qui en portent un). Les préférences sont réécrites avant tout retrait : en cas d’échec, rien
+ * n’est perdu. Des préférences illisibles sont gardées telles quelles (jamais écrasées). Rend les clés effacées.
+ */
+export async function effacerStockageSaufThemes(): Promise<string[]> {
+  const contenu = await lireToutLeStockage();
+  const brut = contenu[CLE_PREFERENCES];
+  const lues = lirePreferences(brut);
+  const illisible = brut !== undefined && JSON.stringify(lues) !== JSON.stringify(brut) && JSON.stringify(lues) === JSON.stringify(preferencesParDefaut());
+  const lisibles = !illisible;
+  const aEcrire: Record<string, unknown> = {};
+  if (lisibles) aEcrire[CLE_PREFERENCES] = preferencesGardees(lues);
+  // Choix de favori gardés : collection réduite avant tout retrait. Collection illisible : gardée telle quelle, jamais écrasée.
+  try {
+    aEcrire[CLE] = collectionReduite(lireContenu(contenu[CLE]));
+  } catch {
+    /* illisible : laissée intacte */
+  }
+  if (Object.keys(aEcrire).length > 0) await chrome.storage.local.set(aEcrire);
+  const aRetirer = Object.keys(contenu).filter((cle) => !(CLES_GARDEES as readonly string[]).includes(cle));
+  if (aRetirer.length > 0) await chrome.storage.local.remove(aRetirer);
+  return aRetirer;
 }

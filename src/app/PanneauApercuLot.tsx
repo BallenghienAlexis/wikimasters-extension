@@ -12,8 +12,7 @@ import { chargerExecution, chargerIgnorees, ecouterExecution, enregistrerJournal
 import { PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
 import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
 import SelectionVenteDefausse from './SelectionVenteDefausse';
-import { ancienneteMaxPrixMs } from '../lib/ordonnanceur';
-import { choixInitial, idsSansPrixConfirme, precocher, versSelection, type Choix, type ChoixCarte } from '../lib/selectionLot';
+import { FRAICHEUR_SANS_PRIX_MS, choixInitial, idsSansPrixConfirme, precocher, resumerSansPrix, versSelection, type Choix, type ChoixCarte } from '../lib/selectionLot';
 import SelectionFavoris from './SelectionFavoris';
 import { basculesApresTout, favorisDecoches as calculerDecoches, propositionsFavori, sansFavorisDecoches } from '../lib/selectionFavoris';
 import type { EditionCarte } from '../lib/collection';
@@ -125,6 +124,7 @@ const PanneauApercuLot: React.FC<Props> = ({
     ongletsLive,
     enCoursStocke,
     ventesSiteLues,
+    prixSite,
     prixLus,
     entrees,
     setEntrees,
@@ -207,7 +207,7 @@ const PanneauApercuLot: React.FC<Props> = ({
     setDecochees(new Set());
     setFavorisBascules(new Set());
     setFavorisRefuses(new Set());
-    const config = { ...configDuLot(preferences, ventesSiteLues, sansPrix), selection: versSelection(collection.cartes, choix) };
+    const config = { ...configDuLot(preferences, ventesSiteLues, prixSite, sansPrix), selection: versSelection(collection.cartes, choix) };
     setEtat(preparerLot(collection, r, dispo, config));
     let apercu: ApercuEtiquettes | null = null;
     if (r !== null) {
@@ -297,8 +297,9 @@ const PanneauApercuLot: React.FC<Props> = ({
   });
   const plafond = plafondDefausse(preferences);
   const [maintenantPrix] = useState(() => Date.now());
-  const sansPrix = idsSansPrixConfirme(collection.cartes, prixLus, maintenantPrix, ancienneteMaxPrixMs);
+  const sansPrix = idsSansPrixConfirme(collection.cartes, prixLus, maintenantPrix, FRAICHEUR_SANS_PRIX_MS);
   const sansPrixEns: ReadonlySet<string> = new Set(sansPrix);
+  const resumeSansPrix = resumerSansPrix(collection.cartes, preferences, sansPrixEns);
 
   const phase = exec?.etat.etat ?? null;
   useEffect(() => {
@@ -437,6 +438,7 @@ const PanneauApercuLot: React.FC<Props> = ({
           choix={choix}
           plafond={plafond}
           sansPrix={sansPrixEns}
+          resumeSansPrix={resumeSansPrix}
           onChoisir={choisir}
           onPrecocher={() => setChoixManuels(precocher(collection.cartes, preferences, choix, sansPrixEns))}
           onVider={() => setChoixManuels(new Map())}

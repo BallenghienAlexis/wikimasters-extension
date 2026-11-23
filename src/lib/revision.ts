@@ -13,7 +13,7 @@ import {
   type Collection,
 } from './collection'
 import { estAGarder, estACLasser, exemplairesAttendus, type Config } from './lot'
-import { plafondDefausse, prixDepart } from './tri'
+import { plafondDefausse } from './tri'
 import { enregistrerEtiquette, poserCouple, purgerCarte, purgerExemplaire, retirerCouple, supprimerEtiquetteDuRegistre } from './registre'
 
 /** Résultat d’une action, avec l’identifiant d’étiquette renvoyé par une création réussie. */
@@ -47,8 +47,9 @@ export function reverifierAction(
       if (estFavoriVerrouille(carte) || estACLasser(carte) || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'
       const valeur = carte.valeurMarchande
       if (valeur === null || !(action.prix >= 1 && action.prix < valeur)) return 'passee'
-      // Le prix de départ courant (prix cible, sinon matrice) ne doit pas avoir changé depuis l’aperçu.
-      return (carte.prixCible ?? prixDepart(valeur)) === action.prix ? 'ok' : 'passee'
+      // Prix cible du joueur : il ne doit pas avoir changé depuis l’aperçu. Sans prix cible, le prix est relu avec la
+      // tendance du marché juste avant l’envoi (`reseau.ts`) : l’estimation de l’aperçu n’a pas à rester identique.
+      return carte.prixCible == null || carte.prixCible === action.prix ? 'ok' : 'passee'
     }
     case 'defausse': {
       if (estFavoriVerrouille(carte) || estACLasser(carte) || carte.quantite < 1 || !carte.idsSite?.includes(action.idExemplaire)) return 'passee'

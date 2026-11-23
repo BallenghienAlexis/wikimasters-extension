@@ -43,6 +43,24 @@ export function idsSansPrixConfirme(
     .map((c) => c.id)
 }
 
+/** Fraîcheur du relevé « aucun prix » pour proposer une défausse : une semaine (la défausse est définitive). */
+export const FRAICHEUR_SANS_PRIX_MS = 7 * 86_400_000
+/** Au-delà de ce nombre de cartes sans prix à défausser, la pré-coche de masse ne les coche pas : le joueur les choisit à la main. */
+export const MAX_PRECOCHE_SANS_PRIX = 10
+
+/** Cartes sans prix que la pré-coche défausserait (hors règles de garde), et si leur nombre dépasse le plafond de pré-coche. */
+export function resumerSansPrix(cartes: readonly Carte[], preferences: Preferences, sansPrix: ReadonlySet<string>): { nombre: number; trop: boolean } {
+  let nombre = 0
+  for (const c of cartes) {
+    if (!estProposable(c) || c.valeurMarchande !== null || !sansPrix.has(c.id)) continue
+    const themes = themesDeCarte(c)
+    if (preferences.mesThemes.some((t) => themes.includes(t))) continue
+    if (amisConcernes(themes, preferences.amis).length > 0 || c.ami !== null) continue
+    nombre++
+  }
+  return { nombre, trop: nombre > MAX_PRECOCHE_SANS_PRIX }
+}
+
 const sansDieseEtAccents = (nom: string): string => normaliser(nom).replace(/^#\s*/, '').trim()
 
 /**
@@ -95,13 +113,14 @@ export function versSelection(cartes: readonly Carte[], choix: Choix): Selection
 export function precocher(cartes: readonly Carte[], preferences: Preferences, actuel: Choix, sansPrix: ReadonlySet<string> = new Set()): Choix {
   const m = new Map(actuel)
   const plafond = plafondDefausse(preferences)
+  const sansPrixAutorise = resumerSansPrix(cartes, preferences, sansPrix).nombre <= MAX_PRECOCHE_SANS_PRIX
   for (const c of cartes) {
     if (!estProposable(c) || m.has(c.id)) continue
     const themes = themesDeCarte(c)
     if (preferences.mesThemes.some((t) => themes.includes(t))) continue
     if (amisConcernes(themes, preferences.amis).length > 0 || c.ami !== null) continue
     // Défausse définitive : on garde un exemplaire quand la carte est en plusieurs (les doublons seulement).
-    if (c.valeurMarchande === null && sansPrix.has(c.id)) {
+    if (c.valeurMarchande === null && sansPrix.has(c.id) && sansPrixAutorise) {
       m.set(c.id, { choix: 'defausser', exemplaires: Math.max(1, Math.min(c.quantite - 1, (c.idsSite?.length ?? 1) - 1)) })
       continue
     }

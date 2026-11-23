@@ -34,3 +34,8 @@ Constats :
 - Le sélecteur de tri de `/collection` (Rareté par défaut, Nom, Favoris, Date d'ajout) émet `GET /api/my-collection/stats?sort=added` et `GET /api/my-collection?sort=added&page=0&stats=0`. Valeurs : `rarity` (défaut), `added`.
 - Vérifié sur la page 0 : `obtained_at` décroît d'un exemplaire à l'autre (plus récent d'abord).
 - Usage : l'ordonnanceur lit en `sort=added` et s'arrête à la première page identique au local, seulement si le total a augmenté, les étiquettes sont inchangées et l'écart de total est exactement expliqué par ce qui a été lu (seules de nouvelles cartes sont arrivées). Si la page 0 n'a pas des dates lisibles et décroissantes, repli : relecture complète en `sort=rarity`.
+
+## Relevé du 2026-11-21 : prix du marché (lecture seule)
+
+- `GET /api/marketplace/cards/<card_id>/sales?scope=summary` ne renvoie plus `summary` : `{ "recent": [{ "id", "final_price", "settled_at", "rarity" }] }` (5 ventes, raretés mélangées possibles). Plus utilisée par l'extension.
+- `GET /api/marketplace/cards/<card_id>/price-history` (autorisée par Alexis le 2026-11-21) : `{ "computed_at", "by_rarity": { "<rareté>": { "weekly": [{ "start": "YYYY-MM-DD" (lundi), "avg", "min", "max", "count" }], "monthly": [{ "start": "YYYY-MM-01", … }] } } }`. Les semaines sans vente sont absentes ; `avg`, `min`, `max`, `count` relevés entiers. La fenêtre « Mettre aux enchères » affiche : prix moyen de la dernière semaine, variation contre la semaine d'avant, fourchette min/max sur 4 semaines.

@@ -6,7 +6,7 @@
  * chemin relatif (`GET` même origine) et ne renvoie que le statut et le JSON.
  *
  * Plan incrémental : `stats` → pages de `my-collection` (seulement si quelque chose a changé)
- * → prix du marché (`sales?scope=summary`, jamais la route sans `scope`). Intervalle minimal
+ * → prix du marché (`price-history`, relevée le 2026-11-21 ; plus de `sales?scope=summary`). Intervalle minimal
  * (constantes de `file.ts`) allongé par un délai variable injecté, une requête en vol.
  *
  * Le module ne modifie jamais les champs d’édition d’une carte (statut, prix cible, note, ami,
@@ -14,9 +14,11 @@
  * au prix, `valeurMarchande` — sans écraser une valeur saisie à la main.
  */
 import { PAUSE_LOTS_MS } from './reprise';
+import { CODE_VERIFICATION_HUMAINE } from './actions';
+import { PAS_ATTENTE_MS } from './ventes';
 import { CODES_ARRET, INTERVALLE_MS, type Horloge } from './file';
 import { VERSION_SCHEMA, aEditionLocale, type Carte, type Collection } from './collection';
-import { analyserPage, analyserPrix, sensDuPrix, type SensPrix, decrireForme, diagnosticStats, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
+import { absenceDeVenteProuvee, analyserPage, analyserPrix, analyserTendance, type TendancePrix, sensDuPrix, type SensPrix, decrireForme, diagnosticStats, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
 
 /** Aucune reprise automatique avant ce délai après un arrêt (401, 403 ou 429 des pages et stats). Même durée que la pause des lots (`PAUSE_LOTS_MS`). */
 export const PAUSE_APRES_ARRET_MS = PAUSE_LOTS_MS;
@@ -33,13 +35,11 @@ export const PAUSE_PRIX_MS = 1_200;
  * à chaque nouvel échec de la même carte, sans plafond, jusqu’à ce que la requête réussisse (Alexis, 2026-11-16).
  * Aucun arrêt automatique : seul le joueur arrête.
  */
-export const PAS_ATTENTE_PRIX_MS = 5_000;
+export const PAS_ATTENTE_PRIX_MS = PAS_ATTENTE_MS;
 /** Après ce nombre d’échecs de la même carte, un avertissement propose au joueur de la passer (Alexis, 2026-11-16) ; jamais de passage automatique. */
 export const SEUIL_AVERTISSEMENT_PRIX = 5;
 /** Ralentissement supplémentaire maximal entre deux demandes de prix, appris des échecs (réduit de moitié à chaque prix lu). */
 export const RALENTISSEMENT_PRIX_MAX_MS = 2_000;
-/** Code de la réponse 403 du site qui exige une vérification humaine : jamais contournée (le joueur la franchit à la main). */
-const CODE_VERIFICATION_HUMAINE = 'human_verification_required';
 const PREMIERE_PAGE = 0;
 const CARTES_PAR_PAGE = 50;
 /** Retrait automatique des cartes disparues : au plus ce nombre, ou 10 % de la collection si plus. */
@@ -60,10 +60,9 @@ export interface PrixReleve {
   /** null : le site n’a pas de valeur pour cette rareté. */
   valeur: number | null;
   releveLe: number;
-  /**
-   * Vrai seulement quand le site a répondu normalement sans aucune valeur pour cette rareté (aucune vente trouvée) :
-   * un 404, une carte passée par le joueur ou une erreur ne le posent jamais (Alexis, 2026-11-23, défausse des cartes sans prix).
-   */
+  /** Tendance sur 4 semaines (price-history), absente si le site n’en donne pas. */
+  tendance?: TendancePrix;
+  /** Aucune vente prouvée par `price-history` (Alexis, 2026-11-23) : posé seulement sur une absence prouvée, jamais sur 404, carte passée ou erreur. */
   sansVente?: boolean;
 }
 
@@ -174,7 +173,7 @@ type TriSite = 'added' | 'rarity';
 const cheminStats = (): string => '/api/my-collection/stats?sort=added';
 const cheminPage = (n: number, tri: TriSite): string => `/api/my-collection?sort=${tri}&page=${n}&stats=0`;
 const cheminVentes = (): string => '/api/marketplace/mine';
-const cheminPrix = (cardId: string): string => `/api/marketplace/cards/${encodeURIComponent(cardId)}/sales?scope=summary`;
+const cheminPrix = (cardId: string): string => `/api/marketplace/cards/${encodeURIComponent(cardId)}/price-history`;
 
 const signatureTete = (cartes: readonly CarteLue[]): string =>
   cartes.map((c) => `${c.idsSite.join('+')}:${c.quantite}:${c.favori ? 1 : 0}:${[...c.etiquettesSite].sort().join('|')}`).join(';');
@@ -348,7 +347,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       if ('erreur' in reponse) {
         motif = `erreur réseau (${reponse.erreur})`;
       } else if (reponse.statut === 200) {
-        const sens = sensDuPrix(reponse.json, rarete);
+        const sens = sensDuPrix(reponse.json, rarete, horloge.now());
         if (sens !== 'vide') {
           deps.annoncerAttente?.(null);
           return { reponse, sens };
@@ -500,7 +499,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
     // Réponse « stats » inexploitable (vide, HTML, forme changée) : souvent un rythme trop rapide. Pauses de 5 s puis 10 s et
     // jusqu’à 3 essais ; si elle reste inexploitable, l’élément est sauté et les pages sont lues quand même (jamais d’arrêt).
     for (let essai = 1; ; essai++) {
-      const r = await requete(cheminStats(), false, essai === 1 ? 0 : 5000 * (essai - 1));
+      const r = await requete(cheminStats(), false, essai === 1 ? 0 : PAS_ATTENTE_MS * (essai - 1));
       if (r === null) return null;
       const stats = analyserStats(r.json);
       if (stats !== null) return stats;
@@ -697,10 +696,12 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       if (sens === 'aucune-vente') journal(`Aucune vente enregistrée pour « ${carte.titre} » : prix inconnu (ce n’est pas une erreur).`);
       echecs = 0;
       deps.prixTermine?.();
-      const valeur = analyserPrix(r.json, carte.rarete as string);
+      const valeur = analyserPrix(r.json, carte.rarete as string, horloge.now());
+      const tendance = analyserTendance(r.json, carte.rarete as string, horloge.now());
       const courante = parId.get(carte.id) as Carte;
       const saisieMain = courante.valeurMarchande !== null && etat.prix[carte.id]?.valeur !== courante.valeurMarchande;
-      etat.prix[carte.id] = { valeur, releveLe: horloge.now(), ...(valeur === null ? { sansVente: true } : {}) };
+      const sansVente = valeur === null && sens === 'aucune-vente' && absenceDeVenteProuvee(r.json, carte.rarete as string);
+      etat.prix[carte.id] = { valeur, releveLe: horloge.now(), ...(tendance ? { tendance } : {}), ...(sansVente ? { sansVente: true } : {}) };
       if (valeur === null) {
         if (sens !== 'aucune-vente') journal(`Pas de valeur marchande pour « ${carte.titre} ».`);
       } else if (saisieMain) {

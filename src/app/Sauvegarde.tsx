@@ -1,8 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { appliquerImport, apercuImport, creerSauvegarde, lireSauvegarde, nomFichierSauvegarde, serialiserSauvegarde, TAILLE_MAX_SAUVEGARDE, type Apercu, type Donnees, type PolitiqueConflit, type Sauvegarde as DonneesSauvegarde } from '../lib/sauvegarde';
 import { PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
-import { ecrireDonneesSauvegarde, lireDonneesSauvegarde } from '../lib/stockage';
+import { ecrireDonneesSauvegarde, ErreurImportSynchroEnCours, lireDonneesSauvegarde } from '../lib/stockage';
 
+const MARQUE_IMPORT = 'wm-import-reussi';
 const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded border border-line bg-ink-2 px-4';
 
 interface Props {
@@ -23,10 +24,15 @@ const pluriel = (n: number, un: string, plusieurs: string): string => `${n} ${n 
 
 const Sauvegarde: React.FC<Props> = ({ onImportee }) => {
   const champ = useRef<HTMLInputElement>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(() => {
+    // Message laissé par l'importation juste avant le rechargement de la page (`window.name` survit au rechargement).
+    if (window.name !== MARQUE_IMPORT) return null;
+    window.name = '';
+    return 'Sauvegarde importée. Mémoire de synchro comprise.';
+  });
   const [erreur, setErreur] = useState<string | null>(null);
   const [lue, setLue] = useState<{ sauvegarde: DonneesSauvegarde; apercu: Apercu } | null>(null);
-  const [politique, setPolitique] = useState<PolitiqueConflit>('garder-ici');
+  const [politique, setPolitique] = useState<PolitiqueConflit>('remplacer');
   const [occupe, setOccupe] = useState(false);
 
   const exporter = async (): Promise<void> => {
@@ -75,7 +81,18 @@ const Sauvegarde: React.FC<Props> = ({ onImportee }) => {
       setLue(null);
       setErreur(null);
       setMessage('Sauvegarde importée.');
-    } catch {
+      if (lue.sauvegarde.synchro) {
+        // Les caches (Wikipédia, thèmes) vivent aussi en mémoire de la page et seraient réécrits par la lecture de fond :
+        // rechargement immédiat pour repartir des données importées.
+        window.name = MARQUE_IMPORT;
+        window.location.reload();
+        return;
+      }
+    } catch (e) {
+      if (e instanceof ErreurImportSynchroEnCours) {
+        setErreur(`Importation refusée : ${e.message} Rien n’a été modifié.`);
+        return;
+      }
       setErreur('Importation interrompue : vérifiez le stockage, puis réessayez (l’importation est sans danger si on la relance).');
     } finally {
       setOccupe(false);
@@ -127,15 +144,20 @@ const Sauvegarde: React.FC<Props> = ({ onImportee }) => {
               Le plafond de défausse sera réglé à {a.plafondRepris}{a.plafondRepris > PLAFOND_VALEUR_DEFAUSSE ? ` (attention : au-dessus de ${PLAFOND_VALEUR_DEFAUSSE}, des cartes de plus de valeur peuvent être défaussées)` : ''}.
             </p>
           )}
+          {a.synchro && (
+            <p className="mt-2">
+              Mémoire de synchro reprise : {pluriel(a.synchro.prixRestaures, 'prix', 'prix')}, {pluriel(a.synchro.entreesWikipedia, 'titre classé', 'titres classés')} (Wikipédia) ; la prochaine synchro sera incrémentale.
+            </p>
+          )}
           <fieldset className="mt-3">
             <legend className="font-medium">En cas de conflit</legend>
             <label className="flex min-h-11 items-center gap-2">
               <input type="radio" name="politique-sauvegarde" checked={politique === 'garder-ici'} onChange={() => setPolitique('garder-ici')} />
-              Garder ce que j’ai saisi ici (recommandé)
+              Garder ce que j’ai saisi ici
             </label>
             <label className="flex min-h-11 items-center gap-2">
               <input type="radio" name="politique-sauvegarde" checked={politique === 'remplacer'} onChange={() => setPolitique('remplacer')} />
-              Prendre la sauvegarde pour les cartes en conflit (thèmes, amis et ventes sont toujours réunis)
+              Prendre la sauvegarde pour les cartes en conflit : elle fait foi (recommandé ; thèmes, amis et ventes sont toujours réunis)
             </label>
           </fieldset>
           <div className="mt-3 flex flex-wrap gap-3">

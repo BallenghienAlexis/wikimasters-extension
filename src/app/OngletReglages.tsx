@@ -8,6 +8,7 @@ import EtiquettesPreexistantes from './EtiquettesPreexistantes';
 import ModeEtiquettes from './ModeEtiquettes';
 import PlafondDefausse from './PlafondDefausse';
 import { lancerSuppressionEtiquettes } from './pilotageLots';
+import ReinitialisationGlobale from './ReinitialisationGlobale';
 import ReglageAnimations from './ReglageAnimations';
 import ReglageSynchroAuto from './ReglageSynchroAuto';
 import Sauvegarde from './Sauvegarde';
@@ -50,6 +51,10 @@ const OngletReglages: React.FC<Props> = ({ donnees, onImportee }) => {
 
       <SectionRepliable id="reglage-sauvegarde" titre="Sauvegarde" resume="Fichier JSON">
         <Sauvegarde onImportee={onImportee} />
+      </SectionRepliable>
+
+      <SectionRepliable id="reglage-reinitialisation" titre="Réinitialisation globale" resume="Étiquettes du site et données locales">
+        <ReinitialisationGlobale etiquettesSite={etiquettesSite} registre={registre} occupe={executionEnCours} />
       </SectionRepliable>
 
       <SectionRepliable id="reglage-plafond" titre="Plafond de défausse" resume={`Plafond${NB}: ${plafond}`}>

@@ -31,6 +31,11 @@ interface ActionBase {
 
 export interface ActionLecture extends ActionBase {
   type: 'lecture'
+  /**
+   * Absente : lecture des enchères (`marketplace/mine`). `etiquettes` : lecture de `my-collection/stats` pour vérifier,
+   * avant un lot, que les étiquettes attendues existent encore sur le site (Alexis, 2026-11-23).
+   */
+  cible?: 'etiquettes'
 }
 
 export interface ActionCreationEtiquette extends ActionBase {
@@ -57,7 +62,15 @@ export interface ActionPoseEtiquette extends ActionBase {
 export interface ActionEnchere extends ActionBase {
   type: 'enchere'
   idExemplaire: string
+  /** Prix de départ estimé à l’aperçu ; recalculé à l’envoi par la tendance relue (sauf `prixFixe`). */
   prix: number
+  /** Identifiant de la carte sur le site (`card_id`, route `price-history`) et sa rareté : requis pour relire la tendance. */
+  idCarteSite?: string
+  rarete?: string
+  /** Prix choisi à la main par le joueur (prix cible) : jamais recalculé. */
+  prixFixe?: boolean
+  /** Nombre de non-ventes de suite : le prix de départ relu est divisé par deux autant de fois (relance automatique). */
+  reductions?: number
 }
 
 export interface ActionDefausse extends ActionBase {
@@ -143,7 +156,7 @@ export const estLimiteEncheres = (diagnostic: string | null | undefined): boolea
 
 /** Résultat d’une action : classe, code HTTP éventuel et cause en libellé fixe. */
 export interface ResultatAction {
-  classe: 'reussie' | 'echec' | 'arret' | 'inconnu'
+  classe: 'reussie' | 'echec' | 'arret' | 'inconnu' | 'passee'
   codeHttp: number | null
   /** Libellé fixe choisi par l’extension, jamais recopié depuis une réponse. */
   cause: string
@@ -156,6 +169,10 @@ export interface ResultatAction {
   diagnostic?: string
   /** Enchères en cours et maximum du site, lus par une action `lecture` (`marketplace/mine`) ; validés avant usage. */
   ventes?: { enCours: number; max: number }
+  /** Étiquettes du compte lues par une action `lecture` de cible `etiquettes` (identifiant et nom, validés avant usage). */
+  etiquettes?: Array<{ id: string; nom: string; nbCartes: number }>
+  /** Prix de départ réellement envoyé d’une enchère (tendance relue juste avant), entier validé. */
+  prix?: number
 }
 
 /**

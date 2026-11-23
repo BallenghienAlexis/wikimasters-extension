@@ -51,7 +51,7 @@ describe('T-205 G2 : GET uniquement', () => {
     expect(c).not.toMatch(/\b(POST|PUT|PATCH|DELETE)\b/);
     expect(c).not.toMatch(/\bbody\s*:/);
   });
-  it('la route /sales n’apparaît pas dans src/content (elle est construite dans l’ordonnanceur avec ?scope=summary)', () => {
+  it('la route /sales n’apparaît pas dans src/content (les prix passent par /price-history, construite dans l’ordonnanceur)', () => {
     for (const f of fichiers) expect(lire(f), f).not.toMatch(/\/sales/);
   });
 });

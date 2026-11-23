@@ -10,13 +10,15 @@
 // Relance : quand une place se libère, une mise aux enchères (`POST /api/marketplace`, même contrat que les lots) pour la
 // carte choisie par `choisirProchaineEnchere`, sans clic « Lancer », seulement si l’interrupteur est activé.
 // N’appelle jamais `fetch` lui-même : le transport de lecture et l’émetteur d’écriture sont injectés.
-import { CAUSE_VERIFICATION_HUMAINE, estLimiteEncheres, type Action, type ResultatAction } from '../lib/actions';
+import { CAUSE_VERIFICATION_HUMAINE, CODE_VERIFICATION_HUMAINE, estLimiteEncheres, type Action, type ResultatAction } from '../lib/actions';
 import type { Collection } from '../lib/collection';
 import type { Horloge } from '../lib/file';
 import { CONFIG_PRIX } from '../config/prix';
 import { routeMarcheValide } from '../lib/affluence';
+import { PAUSE_LOTS_MS } from '../lib/reprise';
 import { DUREE_BAIL_MS, PAUSE_APRES_ARRET_MS, etatInitial, type Bail, type EtatOrdonnanceur, type ReponseApi } from '../lib/ordonnanceur';
 import type { AvecVerrouRequete } from '../lib/verrouRequete';
+import type { TendancePrix } from '../lib/lectureApi';
 import { choisirProchaineEnchere } from '../lib/relanceVentes';
 import { ETAT_SUIVI_INITIAL, type EtatSuiviVentes, type StatutRelanceVentes } from '../lib/stockage';
 import type { Preferences } from '../lib/tri';
@@ -26,6 +28,7 @@ import {
   analyserListeVentes,
   attenteApresEchec,
   delaiSuivant,
+  encheresEnCours,
   fusionnerSuivi,
   cleNonVente,
   nonVentesDe,
@@ -39,7 +42,7 @@ import {
 } from '../lib/ventes';
 
 /** Pause de la relance après un 401 ou un 429 (règle de sécurité des lots d’écriture). */
-export const PAUSE_ECRITURE_MS = 30 * 60_000;
+export const PAUSE_ECRITURE_MS = PAUSE_LOTS_MS;
 /** Un exemplaire refusé (403 ou 404 : vendu, défaussé) n’est pas retenté avant 1 jour. */
 export const ECART_REFUS_MS = 24 * 3600_000;
 /** Échecs de suite d’une même carte à partir desquels l’onglet affiche un avertissement avec choix (jamais d’arrêt automatique). */
@@ -48,6 +51,8 @@ export const SEUIL_AVERTISSEMENT_ECRITURE = 5;
 export const DELAI_APRES_LANCEMENT_MS = 2_000;
 /** Attente après un 409 (limite d’enchères) avant un nouvel essai. */
 export const DELAI_APRES_409_MS = 60_000;
+/** Place libre mais envoi impossible pour l’instant (pause, lot, échec) : nouvelle tentative au plus tôt après ce délai, sans attendre 5 min. */
+export const DELAI_REESSAI_PLACE_MS = 10_000;
 
 export interface DependancesSuiviVentes {
   horloge: Horloge;
@@ -106,7 +111,7 @@ const libelleLecture = (r: ReponseApi): string => {
   if (r.statut === 429) return 'Le site demande de ralentir (429)';
   if (r.statut === 403) {
     const j = r.json as { code?: unknown } | null;
-    return j && typeof j === 'object' && j.code === 'human_verification_required'
+    return j && typeof j === 'object' && j.code === CODE_VERIFICATION_HUMAINE
       ? 'Vérification anti-bot du site requise : résous-la à la main sur wiki-masters.com'
       : 'Le site a refusé la lecture (403)';
   }
@@ -122,6 +127,8 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
   /** Refus 403 de suite, toutes cartes confondues : au-delà de 2, attente progressive (jamais de rafale). */
   let refusSuite = 0;
   let enCours = false;
+  /** Date à partir de laquelle une place libre doit être retentée sans attendre l’échéance de lecture (en mémoire). */
+  let reessaiLe: number | null = null;
 
   const statut = async (s: Omit<StatutRelanceVentes, 'maj' | 'echecs'> & { echecs?: number }): Promise<void> => {
     await deps.enregistrerStatut({ ...s, echecs: s.echecs ?? 0, maj: deps.horloge.now() }).catch(() => undefined);
@@ -139,7 +146,10 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
    * lot en cours, aucune place) ; `rien` : aucune carte éligible ; `stop` : un envoi a échoué (attente ou pause enregistrée).
    */
   async function relancerUne(suivi: SuiviVentes, prefere: string | undefined, issue: LancementVente['issue']): Promise<ResultatRelance> {
-    if (!(await deps.relanceActive())) return { etat: 'bloque' };
+    if (!(await deps.relanceActive())) {
+      reessaiLe = null;
+      return { etat: 'bloque' };
+    }
     // L’attente d’écriture survit à un rechargement de l’onglet : elle est aussi lue dans le statut enregistré.
     const stocke = await deps.chargerStatut();
     const jusquaStocke = stocke?.etat === 'pause' && stocke.jusqua !== null ? stocke.jusqua : 0;
@@ -147,18 +157,33 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     // Les écritures respectent aussi la pause demandée par le site (401, 403, 429 de la synchro ou du suivi) : un « Forcer » ou
     // une lecture réussie n’autorise jamais un envoi pendant cette pause.
     const pauseSite = (await deps.chargerEtat().catch(() => null))?.arretJusqua ?? 0;
-    if (deps.horloge.now() < Math.max(attenteEcritureJusqua, jusquaStocke, pauseLots, pauseSite) || suivi.max === null || suivi.actives.length >= Math.min(suivi.max, CONFIG_PRIX.maxVentesSimultanees)) return { etat: 'bloque' };
     const maintenant = deps.horloge.now();
+    // Maximum absent de la réponse : celui de la configuration (5). Une enchère dont la fin est dépassée ne compte plus comme place prise.
+    const maxSite = Math.min(suivi.max ?? CONFIG_PRIX.maxVentesSimultanees, CONFIG_PRIX.maxVentesSimultanees);
+    const enCoursReel = encheresEnCours(suivi.actives, maintenant).length;
+    if (maintenant < Math.max(attenteEcritureJusqua, jusquaStocke, pauseLots, pauseSite)) {
+      reessaiLe = Math.max(attenteEcritureJusqua, jusquaStocke, pauseLots, pauseSite);
+      return { etat: 'bloque' };
+    }
+    if (enCoursReel >= maxSite) return { etat: 'bloque' };
     // Un lot d’écriture en cours garde la main sur les enchères (le 409 reste le garde-fou) ; la synchro globale, elle, ne gêne pas.
-    if (await deps.lotEnCours().catch(() => false)) return { etat: 'bloque' };
+    if (await deps.lotEnCours().catch(() => false)) {
+      reessaiLe = maintenant + DELAI_REESSAI_PLACE_MS;
+      return { etat: 'bloque' };
+    }
     const [collection, preferences, ecartes] = await Promise.all([deps.chargerCollection(), deps.chargerPreferences(), deps.chargerEcartes()]);
     const ecartesActifs = Object.entries(ecartes).filter(([cle, t]) => !cle.startsWith('carte:') && !cle.startsWith('vu:') && !cle.startsWith('attend:') && t > maintenant).map(([cle]) => cle);
     const titresRetires = Object.keys(ecartes).filter((c) => c.startsWith('carte:')).map((c) => c.slice('carte:'.length));
+    const etatSynchro = await deps.chargerEtat().catch(() => null);
+    const tendances: Record<string, TendancePrix> = {};
+    for (const [id, p] of Object.entries(etatSynchro?.prix ?? {})) if (p.tendance) tendances[id] = p.tendance;
     const choix = choisirProchaineEnchere({
+      idsCartesSite: etatSynchro?.cardIds ?? {},
+      tendances,
       collection,
       preferences,
-      enCours: suivi.actives.length,
-      max: suivi.max,
+      enCours: enCoursReel,
+      max: maxSite,
       exemplairesEnVente: new Set(suivi.actives.map((v) => v.idExemplaire)),
       exemplairesEcartes: new Set(ecartesActifs),
       titresRetires: new Set(titresRetires),
@@ -168,7 +193,8 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     // Non vendue : prix de départ divisé par deux autant de fois que la carte est restée sans vente (Alexis, 2026-11-17).
     const rarete = collection.cartes.find((c) => c.id === choix.action.idCarte)?.rarete ?? '';
     const nonVentes = nonVentesDe(suivi, cleNonVente(rarete, choix.titre));
-    if (nonVentes > 0) choix.action = { ...choix.action, prix: prixDepartAjuste(choix.action.prix, nonVentes) };
+    // La division est aussi portée par l'ordre (`reductions`) : le prix de base est relu juste avant l'envoi (tendance du marché).
+    if (nonVentes > 0) choix.action = { ...choix.action, prix: prixDepartAjuste(choix.action.prix, nonVentes), reductions: nonVentes };
 
     // Les essais déjà faits sur cette carte survivent à un rechargement de l’onglet (lus dans le statut enregistré).
     if (stocke?.carte?.idExemplaire === choix.action.idExemplaire && stocke.carte.essais > echecsEcriture) {
@@ -182,7 +208,8 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     } catch {
       resultat = { classe: 'inconnu', codeHttp: null, cause: 'erreur d’émission' };
     }
-    const lancement = (resultat: 'reussie' | 'echec', cause: string | null): LancementVente => ({ le: deps.horloge.now(), source: 'auto', titre: choix.titre, prix: choix.action.prix, resultat, cause, ...(issue !== undefined ? { issue } : {}) });
+    const prixEnvoye = resultat.prix ?? choix.action.prix;
+    const lancement = (resultat: 'reussie' | 'echec', cause: string | null): LancementVente => ({ le: deps.horloge.now(), source: 'auto', titre: choix.titre, prix: prixEnvoye, resultat, cause, ...(issue !== undefined ? { issue } : {}) });
 
     if (resultat.classe === 'reussie') {
       echecsEcriture = 0;
@@ -192,14 +219,23 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       await statut({ etat: 'attente', message: `Mise en vente lancée : ${choix.titre}`, jusqua: null, carte: null });
       const maintenantLancee = deps.horloge.now();
       // Compte local de la place prise : le listing du site ne la montrera qu’à la lecture suivante.
-      const prise: VenteActive = { id: `local:${choix.action.idExemplaire}`, idExemplaire: choix.action.idExemplaire, titre: choix.titre, rarete, prixDepart: choix.action.prix, prixActuel: choix.action.prix, avecMise: false, creeLe: maintenantLancee, finLe: maintenantLancee + 3600_000, finInitiale: maintenantLancee };
+      const prise: VenteActive = { id: `local:${choix.action.idExemplaire}`, idExemplaire: choix.action.idExemplaire, titre: choix.titre, rarete, prixDepart: prixEnvoye, prixActuel: prixEnvoye, avecMise: false, creeLe: maintenantLancee, finLe: maintenantLancee + 3600_000, finInitiale: maintenantLancee };
       return { etat: 'lancee', active: prise };
     }
     const cause = resultat.cause;
     await deps.ajouterLancement(lancement('echec', cause)).catch(() => undefined);
+    // Prix du marché introuvable à la relecture de la tendance : la carte n'est pas mise en vente à l'aveugle, elle est écartée
+    // un jour et la relance passe à la suivante (ni échec, ni attente progressive).
+    if (resultat.classe === 'passee') {
+      await deps.enregistrerEcartes(purgerEcartes({ ...ecartes, [choix.action.idExemplaire]: deps.horloge.now() + ECART_REFUS_MS }, deps.horloge.now())).catch(() => undefined);
+      await statut({ etat: 'attente', message: `Prix du marché introuvable pour ${choix.titre} : carte écartée un jour`, jusqua: null, carte: null });
+      reessaiLe = deps.horloge.now() + DELAI_REESSAI_PLACE_MS;
+      return { etat: 'stop' };
+    }
     const diagnostic = resultat.diagnostic ?? '';
     const pause = async (ms: number, message: string, carte: StatutRelanceVentes['carte'] = null): Promise<void> => {
       attenteEcritureJusqua = deps.horloge.now() + ms;
+      reessaiLe = attenteEcritureJusqua;
       await statut({ etat: 'pause', message, jusqua: attenteEcritureJusqua, carte });
     };
     if (resultat.codeHttp === 401 || resultat.codeHttp === 429) {
@@ -221,6 +257,7 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       refusSuite += 1;
       if (refusSuite < 3) {
         await statut({ etat: 'attente', message: `Carte refusée par le site : ${choix.titre} est écartée un jour`, jusqua: null, carte: null });
+        reessaiLe = deps.horloge.now() + DELAI_REESSAI_PLACE_MS;
         return { etat: 'stop' };
       }
       const attenteRefus = attenteApresEchec(refusSuite - 2);
@@ -250,6 +287,7 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
    * file qu’une fois traité : une attente, un 401/429, un 409 ou un échec le laissent en place pour le passage suivant.
    */
   async function relancer(suivi0: SuiviVentes, bailToujoursNotre: () => Promise<boolean>): Promise<boolean> {
+    reessaiLe = null;
     let suivi = suivi0;
     // Une enchère disparue sans verdict : on attend son statut (10 s entre deux lectures, 2 min au plus), jamais d’arrêt.
     if (verdictEnAttente(suivi, deps.horloge.now())) return false;
@@ -344,7 +382,9 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       }
       const stocke = await deps.chargerSuivi();
       const echeance = stocke.releveLe === 0 ? 0 : stocke.releveLe + delaiSuivant(stocke.actives, stocke.releveLe, verdictEnAttente(stocke, stocke.releveLe));
-      if (!forcer && maintenant < echeance - 1_000) return echeance - maintenant;
+      // Place libre dont l’envoi a échoué ou attendu : retentée dès la fin de l’attente, sans attendre l’échéance de 5 min.
+      const reessaiDu = reessaiLe !== null && maintenant >= reessaiLe;
+      if (!forcer && !reessaiDu && maintenant < echeance - 1_000) return reessaiLe !== null ? Math.max(1_000, Math.min(echeance, reessaiLe) - maintenant) : echeance - maintenant;
 
       let reponse: ReponseApi;
       try {
@@ -386,6 +426,7 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       };
       const lancee = await relancer(suivi, bailToujoursNotre);
       if (lancee) return DELAI_APRES_LANCEMENT_MS + deps.gigue();
+      if (reessaiLe !== null) return Math.max(DELAI_REESSAI_PLACE_MS, reessaiLe - deps.horloge.now()) + deps.gigue();
       return Math.max(1_000, delaiSuivant(suivi.actives, deps.horloge.now(), verdictEnAttente(suivi, deps.horloge.now()))) + deps.gigue();
     } catch {
       const e = (await deps.chargerEtatSuivi().catch(() => null)) ?? ETAT_SUIVI_INITIAL;

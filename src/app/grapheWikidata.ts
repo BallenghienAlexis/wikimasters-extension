@@ -15,7 +15,8 @@ import {
 import { parentsDe } from '../lib/themes';
 
 /** Entités ancêtres gardées en mémoire : au-delà, le graphe n’est plus agrandi (les cartes suivantes se contentent de ce qui est connu). */
-export const MAX_ENTITES_GRAPHE = 25_000;
+import { MAX_ENTITES_GRAPHE } from '../lib/classesWikidata';
+export { MAX_ENTITES_GRAPHE };
 const NIVEAUX_P279 = 7;
 const NIVEAUX_P171 = 12;
 const PAR_REQUETE = 50;

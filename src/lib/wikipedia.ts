@@ -9,7 +9,7 @@ export const HOTE_WIKIPEDIA = 'https://fr.wikipedia.org';
 export const HOTE_WIKIDATA = 'https://www.wikidata.org';
 /** Durée de validité d'une entrée du cache : 30 jours. */
 export const DUREE_CACHE_MS = 30 * 24 * 3600 * 1000;
-const MAX_ENTREES = 20_000;
+export const MAX_ENTREES = 20_000;
 const MAX_CATEGORIES = 500;
 const MAX_RESUME = 2000;
 const cle = (texte: string): string => texte.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();

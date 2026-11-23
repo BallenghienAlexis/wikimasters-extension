@@ -18,6 +18,7 @@ import type {
 import { estFavori, estFavoriVerrouille, normaliser, type Carte, type Collection } from './collection'
 import { estRefuse, LONGUEUR_MAX_ID } from './registre'
 import { amisConcernes, plafondDefausse, prixDepart, type Ami } from './tri'
+import type { TendancePrix } from './lectureApi'
 import { LIBELLES_THEMES, themesDeCarte, themesPrincipaux, versionThemes } from './themes'
 
 /** Choix manuels du joueur pour le lot : un favori n’est jamais retenu, une carte ne peut être qu’à vendre ou à défausser. */
@@ -51,6 +52,9 @@ export interface Config {
   limiteNoms?: number | null
   /** Sélection manuelle du joueur au moment de l’aperçu : cartes à mettre aux enchères et nombre d’exemplaires à défausser. */
   selection?: SelectionLot
+  /** Identifiant local → `card_id` du site et dernière tendance mémorisée (état de synchro) : estimation du prix et relecture avant l’envoi. */
+  idsCartesSite?: Readonly<Record<string, string>>
+  tendances?: Readonly<Record<string, TendancePrix>>
   /** Plafond de valeur de défausse réglé par le joueur ; absent : `PLAFOND_VALEUR_DEFAUSSE` (5). */
   plafondDefausse?: number
   /** Cartes dont aucun prix n’a été trouvé sur le site (relevé récent sans valeur) : défaussables malgré la valeur inconnue (Alexis, 2026-11-23). */
@@ -293,7 +297,7 @@ export function construireEncheres(
       ecarter('valeur-absente')
       continue
     }
-    const prix = c.prixCible ?? prixDepart(valeur)
+    const prix = c.prixCible ?? prixDepart(valeur, config.tendances?.[c.id])
     if (prix === null || !Number.isSafeInteger(prix) || prix < 1) {
       ecarter('prix-invalide')
       continue
@@ -304,6 +308,11 @@ export function construireEncheres(
     }
     const idExemplaire = c.idsSite?.[0]
     if (idExemplaire === undefined) {
+      ecarter('non-reliee')
+      continue
+    }
+    // Prix relu juste avant l’envoi : sans l’identifiant de la carte sur le site, on ne met pas en vente à l’aveugle.
+    if (config.idsCartesSite !== undefined && c.prixCible == null && config.idsCartesSite[c.id] === undefined) {
       ecarter('non-reliee')
       continue
     }
@@ -319,7 +328,10 @@ export function construireEncheres(
   const places = Math.max(0, Math.floor(occupation.max - occupation.occupees))
   const actions: Action[] = []
   valides.forEach(({ carte, prix, idExemplaire }, rang) => {
-    if (rang < places) actions.push({ type: 'enchere', idCarte: carte.id, idExemplaire, prix })
+    if (rang < places) {
+      const idCarteSite = config.idsCartesSite?.[carte.id]
+      actions.push({ type: 'enchere', idCarte: carte.id, idExemplaire, prix, ...(idCarteSite !== undefined && typeof carte.rarete === 'string' ? { idCarteSite, rarete: carte.rarete } : {}), ...(carte.prixCible != null ? { prixFixe: true } : {}) })
+    }
     else ecartees.push({ idCarte: carte.id, titre: carte.titre, raison: 'en-attente-place' })
   })
   return { actions, ecartees }
@@ -509,4 +521,52 @@ export function construireLot(
     ecartees: ecarteesUniques,
     nonPosees,
   }
+}
+
+/** Noms qu’aucun lot ne crée ni ne pose (Alexis, 2026-11-15 : jamais « À classer » ni « Autres »). */
+const NOMS_INTERDITS: ReadonlySet<string> = new Set([ETIQUETTE_A_CLASSER, '#Autres'])
+
+/**
+ * Ajuste un lot déjà calculé aux étiquettes réellement présentes sur le site (Alexis, 2026-11-23). `registre` est le
+ * registre déjà réconcilié (`reconcilierAvecSite`) et `perdus` les couples dont l’étiquette a disparu :
+ * - un retrait dont le couple n’est plus au registre est retiré du lot (l’étiquette n’existe plus) ;
+ * - chaque couple perdu encore attendu est reposé (jamais là où le joueur avait retiré l’étiquette) ;
+ * - toute pose dont le nom est inconnu du registre reçoit une création, placée en tête du lot.
+ * Hors mode `poser`, ou si la création ou la pose n’est pas disponible, rien n’est ajouté. Jamais « À classer » ni « Autres ».
+ */
+export function ajusterLotAuSite(
+  actions: readonly Action[],
+  registre: Registre,
+  perdus: ReadonlyArray<{ ex: string; nom: string }>,
+  collection: Collection,
+  config: Config,
+  disponibles: TypesDisponibles,
+): Action[] {
+  const poser = (config.modeEtiquettes ?? 'poser') === 'poser' && disponibles.has('creation-etiquette') && disponibles.has('pose-etiquette')
+  const garde = actions.filter((a) => a.type !== 'retrait-etiquette' || registre.couples.some((c) => c.ex === a.idExemplaire && c.nom === a.nomEtiquette))
+  if (!poser) return garde
+
+  const dejaPoses = new Set(garde.flatMap((a) => (a.type === 'pose-etiquette' ? [JSON.stringify([a.idExemplaire, a.nomEtiquette])] : [])))
+  const reposes: Action[] = []
+  for (const { ex, nom } of perdus) {
+    const cle = JSON.stringify([ex, nom])
+    if (dejaPoses.has(cle) || NOMS_INTERDITS.has(nom) || estRefuse(registre, ex, nom)) continue
+    const carte = collection.cartes.find((c) => c.idsSite?.includes(ex))
+    if (!carte || !exemplairesAttendus(carte, config).some((e) => e.idExemplaire === ex && e.etiquettes.includes(nom))) continue
+    dejaPoses.add(cle)
+    reposes.push({ type: 'pose-etiquette', idCarte: carte.id, idExemplaire: ex, nomEtiquette: nom })
+  }
+
+  const toutes = [...garde, ...reposes]
+  const creations: Action[] = []
+  const creees = new Set(toutes.flatMap((a) => (a.type === 'creation-etiquette' ? [a.nomEtiquette] : [])))
+  for (const a of toutes) {
+    if (a.type !== 'pose-etiquette' || NOMS_INTERDITS.has(a.nomEtiquette)) continue
+    if (Object.prototype.hasOwnProperty.call(registre.etiquettes, a.nomEtiquette) || creees.has(a.nomEtiquette)) continue
+    creees.add(a.nomEtiquette)
+    creations.push({ type: 'creation-etiquette', idCarte: a.idCarte, nomEtiquette: a.nomEtiquette })
+  }
+  const autres = toutes.filter((a) => a.type !== 'creation-etiquette')
+  const dejaCreations = toutes.filter((a) => a.type === 'creation-etiquette')
+  return [...dejaCreations, ...creations, ...autres.filter((a) => a.type !== 'pose-etiquette' || !NOMS_INTERDITS.has(a.nomEtiquette))]
 }

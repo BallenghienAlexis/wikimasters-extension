@@ -314,7 +314,7 @@ test.describe('exécution réelle (site fictif)', () => {
     const cartes = Array.from({ length: 3 }, (_, i) => ({
       id: `UR|Berger allemand ${i + 1}`, titre: `Berger allemand ${i + 1}`, description: 'race de chien', rarete: 'UR', quantite: 1,
       idsSite: [`bbbbbbbb-bbbb-4bbb-8bbb-${String(i + 1).padStart(12, '0')}`], url: null, favori: false,
-      etiquettesSite: ['Statut · Vendre'], prixCible: null, note: '', ami: null, valeurMarchande: 100 - i,
+      etiquettesSite: ['Statut · Vendre'], prixCible: 10, note: '', ami: null, valeurMarchande: 100 - i,
     }));
     await page.evaluate(async (c) => {
       await chrome.storage.local.set({

@@ -10,6 +10,7 @@ import type { Action, TypesDisponibles } from './actions'
 import type { Carte, Collection } from './collection'
 import { construireEncheres, type Config } from './lot'
 import { estProposable, precocher } from './selectionLot'
+import type { TendancePrix } from './lectureApi'
 import { plafondDefausse, type Preferences } from './tri'
 
 export interface EntreeChoix {
@@ -26,6 +27,9 @@ export interface EntreeChoix {
   titresRetires?: ReadonlySet<string>
   /** Retente cet exemplaire seulement (enchère terminée sans vente : la même carte est remise en vente moins chère). */
   seulementExemplaire?: string
+  /** Identifiant local → `card_id` du site et dernière tendance mémorisée : relecture du prix juste avant l’envoi. */
+  idsCartesSite?: Readonly<Record<string, string>>
+  tendances?: Readonly<Record<string, TendancePrix>>
 }
 
 /** Prochaine mise aux enchères à lancer, ou `null` (aucune place libre ou aucune carte éligible). */
@@ -49,6 +53,8 @@ export function choisirProchaineEnchere(e: EntreeChoix): { action: Extract<Actio
     amis: e.preferences.amis,
     lienCardId: true,
     ventesSite: { enCours: e.enCours, max: e.max },
+    ...(e.idsCartesSite ? { idsCartesSite: e.idsCartesSite } : {}),
+    ...(e.tendances ? { tendances: e.tendances } : {}),
   }
   const dispo: TypesDisponibles = new Set(['enchere'])
   const { actions } = construireEncheres(aVendre, e.enCours, config, dispo)

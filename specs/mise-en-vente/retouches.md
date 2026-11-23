@@ -16,3 +16,9 @@
 - (fins d’enchère) `src/content/suiviVentes.ts` (`relancer`) : si l’onglet se ferme entre un envoi réussi et `clore`, la fin est retraitée et une mise en vente de trop est possible (bornée par les places et le 409) ; retirer la fin avant l’envoi et la remettre sur `stop`/`bloque`.
 - (fins d’enchère) Annulée : traité (Alexis, 2026-11-17), la carte annulée est écartée un jour.
 - (fins d’enchère) Tests unitaires de module pour `fileDesFins` (file plafonnée à 50, `sansVerdict` expiré), « Aucune carte éligible » affichée sans `prix: 0`.
+
+## À reprendre (2026-11-21, PR #207)
+
+- `src/content/suiviVentes.ts:189` + `src/lib/reseau.ts` : la relance fait maintenant deux requêtes (relecture `price-history`, puis enchère) sous une seule tenue du verrou de requête, qui expire après 20 s (`DUREE_VERROU_REQUETE_MS`) ; sur un site très lent (15 s par requête), le verrou peut expirer pendant l'envoi. Prolonger le verrou avant l'envoi ou prendre deux tenues distinctes.
+- `src/lib/file.ts:426` : une enchère « passée » à la relecture de la tendance est journalisée sans sa cause (« prix du marché indisponible », « aucune vente récente », « prix trop bas ») et le journal d'un lot garde le prix estimé de l'aperçu, pas le prix relu envoyé (`resultat.prix`). Garder cause et prix dans l'entrée de journal.
+- `src/lib/reseau.ts` (`relireTendance`) : un 401 ou un 429 à la relecture n'a pas de ligne `diagnostic` (« GET …/price-history → 429 »).
