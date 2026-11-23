@@ -28,7 +28,7 @@ const Sauvegarde: React.FC<Props> = ({ onImportee }) => {
     // Message laissé par l'importation juste avant le rechargement de la page (`window.name` survit au rechargement).
     if (window.name !== MARQUE_IMPORT) return null;
     window.name = '';
-    return 'Sauvegarde importée, mémoire de synchro comprise.';
+    return 'Sauvegarde importée. Mémoire de synchro comprise.';
   });
   const [erreur, setErreur] = useState<string | null>(null);
   const [lue, setLue] = useState<{ sauvegarde: DonneesSauvegarde; apercu: Apercu } | null>(null);
