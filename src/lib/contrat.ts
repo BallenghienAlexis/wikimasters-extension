@@ -33,6 +33,8 @@ export interface EntreeContrat {
   lireIdEtiquette?: (json: unknown) => string | null
   /** Enchères en cours et maximum lus dans une réponse conforme (lecture de `marketplace/mine`). */
   lireVentes?: (json: unknown) => { enCours: number; max: number } | null
+  /** Étiquettes du compte lues dans une réponse conforme (lecture de `my-collection/stats`, cible `etiquettes`). */
+  lireEtiquettes?: (json: unknown) => Array<{ id: string; nom: string; nbCartes: number }> | null
   /** `{ entete: 'session' }` si la requête exige le jeton de session (ajouté par `reseau.ts`), sinon `null`. */
   auth: { entete: string } | null
   /**

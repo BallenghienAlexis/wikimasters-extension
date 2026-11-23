@@ -60,6 +60,56 @@ export function supprimerEtiquetteDuRegistre(r: Registre, nom: string): Registre
   return { ...r, etiquettes, couples: r.couples.filter((c) => c.nom !== nom), ...(r.refus ? { refus: r.refus.filter((x) => x.nom !== nom) } : {}) }
 }
 
+/** Étiquette du compte telle que le site la liste (identifiant et nom). */
+export interface EtiquetteDuSite {
+  id: string
+  nom: string
+}
+
+export interface ReconciliationSite {
+  registre: Registre
+  /** Couples (exemplaire, nom) perdus parce que leur étiquette a disparu du site : à reposer après recréation. */
+  perdus: Array<{ ex: string; nom: string }>
+  /** Noms d’étiquettes du registre absents du site (supprimées par erreur) : à recréer. */
+  manquantes: string[]
+}
+
+/**
+ * Aligne le registre sur la liste d’étiquettes réellement présente sur le site (Alexis, 2026-11-23 : thèmes supprimés par
+ * erreur). Une étiquette du registre dont l’identifiant a disparu du site est oubliée avec ses couples, qui sont rendus
+ * pour être reposés ; si le site en porte une du même nom sous un autre identifiant (recréée à la main), le registre
+ * reprend cet identifiant et ses couples sont reposés aussi (la suppression emporte les poses). Les retraits voulus par le
+ * joueur (`refus`) sont conservés : une étiquette recréée n’est pas reposée là où il l’avait retirée.
+ * Sans liste fiable (`null`), le registre est rendu tel quel. Ne modifie jamais l’entrée.
+ */
+export function reconcilierAvecSite(r: Registre, site: readonly EtiquetteDuSite[] | null): ReconciliationSite {
+  if (site === null) return { registre: r, perdus: [], manquantes: [] }
+  const idsSite = new Set(site.map((e) => e.id))
+  const idParNom = new Map<string, string>()
+  for (const e of site) if (!idParNom.has(e.nom)) idParNom.set(e.nom, e.id)
+
+  const etiquettes = tableVide()
+  const perdues = new Set<string>()
+  const manquantes: string[] = []
+  for (const [nom, id] of Object.entries(r.etiquettes)) {
+    if (idsSite.has(id)) {
+      etiquettes[nom] = id
+      continue
+    }
+    perdues.add(nom)
+    const autre = idParNom.get(nom)
+    if (autre !== undefined) etiquettes[nom] = autre
+    else manquantes.push(nom)
+  }
+  if (perdues.size === 0) return { registre: r, perdus: [], manquantes: [] }
+  const perdus = r.couples.filter((c) => perdues.has(c.nom)).map((c) => ({ ex: c.ex, nom: c.nom }))
+  return {
+    registre: { ...r, etiquettes, couples: r.couples.filter((c) => !perdues.has(c.nom)) },
+    perdus,
+    manquantes,
+  }
+}
+
 export function couplesDe(r: Registre, idExemplaire: string): Array<{ ex: string; nom: string }> {
   return r.couples.filter((c) => c.ex === idExemplaire).map((c) => ({ ex: c.ex, nom: c.nom }))
 }

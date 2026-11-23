@@ -8,7 +8,8 @@ import { regrouperEtiquettes, type ApercuEtiquettes } from '../lib/apercuEtiquet
 import { calculerEcarts } from '../lib/ecarts';
 import { decouperEnLots } from '../lib/familles';
 import { filtrerLotIgnore, type Ignoree } from '../lib/ignorees';
-import { chargerExecution, chargerIgnorees, ecouterExecution, enregistrerJournal } from '../lib/stockage';
+import { chargerEtiquettesSite, chargerExecution, chargerIgnorees, ecouterExecution, enregistrerJournal } from '../lib/stockage';
+import { reconcilierAvecSite } from '../lib/registre';
 import { PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
 import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
 import SelectionVenteDefausse from './SelectionVenteDefausse';
@@ -218,14 +219,22 @@ const PanneauApercuLot: React.FC<Props> = ({
     }
     setApercuEtiquettes(apercu);
   };
+  // Aperçu fondé sur les étiquettes réellement présentes sur le site à la dernière synchro (Alexis, 2026-11-23) : une
+  // étiquette supprimée par erreur apparaît comme à recréer. Liste vide ou illisible : registre inchangé. Le lancement
+  // relit la liste du site avant d'envoyer (`pilotageLots.ts`).
+  const alignerSurLeSite = async (r: Registre | null): Promise<Registre | null> => {
+    if (r === null) return r;
+    const site = await chargerEtiquettesSite().catch(() => null);
+    return site !== null && site.length > 0 ? reconcilierAvecSite(r, site).registre : r;
+  };
   const ouvrir = (): void => {
     chargerIgnorees()
       .catch(() => [] as Ignoree[])
-      .then((i) => figer(registreIllisible ? null : registreCourant, i));
+      .then(async (i) => figer(await alignerSurLeSite(registreIllisible ? null : registreCourant), i));
   };
   const reessayer = async (): Promise<void> => {
     const r = onReessayer ? await onReessayer() : registreIllisible ? null : registreCourant;
-    figer(r, await chargerIgnorees().catch(() => [] as Ignoree[]));
+    figer(await alignerSurLeSite(r), await chargerIgnorees().catch(() => [] as Ignoree[]));
     setFocusTitre((k) => k + 1);
   };
 

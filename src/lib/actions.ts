@@ -31,6 +31,11 @@ interface ActionBase {
 
 export interface ActionLecture extends ActionBase {
   type: 'lecture'
+  /**
+   * Absente : lecture des enchères (`marketplace/mine`). `etiquettes` : lecture de `my-collection/stats` pour vérifier,
+   * avant un lot, que les étiquettes attendues existent encore sur le site (Alexis, 2026-11-23).
+   */
+  cible?: 'etiquettes'
 }
 
 export interface ActionCreationEtiquette extends ActionBase {
@@ -164,6 +169,8 @@ export interface ResultatAction {
   diagnostic?: string
   /** Enchères en cours et maximum du site, lus par une action `lecture` (`marketplace/mine`) ; validés avant usage. */
   ventes?: { enCours: number; max: number }
+  /** Étiquettes du compte lues par une action `lecture` de cible `etiquettes` (identifiant et nom, validés avant usage). */
+  etiquettes?: Array<{ id: string; nom: string; nbCartes: number }>
   /** Prix de départ réellement envoyé d’une enchère (tendance relue juste avant), entier validé. */
   prix?: number
 }
