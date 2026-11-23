@@ -300,6 +300,7 @@ async function alignerSurLesEtiquettesDuSite(actions: readonly Action[]): Promis
   if (lue === undefined) return actions;
   const [registre, collection, preferences] = await Promise.all([chargerRegistre(), chargerCollection(), chargerPreferences()]);
   // Une liste vide alors que le registre connaît des étiquettes n'est pas mémorisée (réponse allégée possible du site).
+  // Erreur d'écriture ignorée volontairement : simple mémoire d'affichage, le lot continue.
   if (lue.length > 0 || Object.keys(registre.etiquettes).length === 0) await enregistrerEtiquettesSite(lue).catch(() => undefined);
   const reconciliation = reconcilierAvecSite(registre, lue);
   if (reconciliation.registre !== registre) await enregistrerRegistre(reconciliation.registre);

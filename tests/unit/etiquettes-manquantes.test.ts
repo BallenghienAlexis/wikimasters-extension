@@ -130,6 +130,8 @@ describe('lecture des étiquettes avant un lot', () => {
     expect(entree.lireEtiquettes!(stats)).toEqual([{ id: U1, nom: '#Animaux', nbCartes: 4 }])
     expect(entree.lireEtiquettes!({ total: 3, tagOptions: [] })).toEqual([])
     expect(entree.lireEtiquettes!({ total: 3 })).toBeNull()
+    const trop = Array.from({ length: 500 }, (_, i) => ({ id: `0a1b2c3d-0000-4000-8000-${String(i).padStart(12, '0')}`, name: `#T${i}`, color: '#fff', cardCount: 1 }))
+    expect(entree.lireEtiquettes!({ total: 3, tagOptions: trop })).toBeNull()
     // Une option illisible écartée rend la liste incomplète : aucune réconciliation.
     expect(entree.lireEtiquettes!({ total: 3, tagOptions: [stats.tagOptions[0], { id: U2, name: '', cardCount: 1 }] })).toBeNull()
     expect(entree.validerReponse(200, stats, { type: 'lecture', idCarte: 'x', cible: 'etiquettes' })).toBe('reussie')
