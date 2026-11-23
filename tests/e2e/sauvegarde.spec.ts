@@ -43,7 +43,9 @@ test.describe('sauvegarde complète', () => {
     const apercu = pageCollection.getByTestId('apercu-sauvegarde');
     await expect(apercu).toContainText('4 cartes nouvelles');
     await expect(apercu).toContainText('1 ami ajouté');
-    await pageCollection.getByRole('button', { name: 'Appliquer la sauvegarde' }).click();
+    // La synchro est reprise avec la sauvegarde : la page se recharge pour repartir des caches importés (section repliée).
+    await Promise.all([pageCollection.waitForEvent('load'), pageCollection.getByRole('button', { name: 'Appliquer la sauvegarde' }).click()]);
+    await ouvrirSauvegarde(pageCollection);
     await expect(pageCollection.getByText('Sauvegarde importée.')).toBeVisible();
     await allerA(pageCollection, 'collection');
     await expect(pageCollection.getByTestId('resume')).toContainText('7 exemplaires');
