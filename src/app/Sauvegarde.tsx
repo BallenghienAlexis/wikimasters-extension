@@ -74,9 +74,7 @@ const Sauvegarde: React.FC<Props> = ({ onImportee }) => {
       onImportee(resultat.donnees);
       setLue(null);
       setErreur(null);
-      setMessage(resultat.donnees.synchro && lue.sauvegarde.synchro ? 'Sauvegarde importée, mémoire de synchro comprise : la page se recharge.' : 'Sauvegarde importée.');
-      // Les caches (thèmes, Wikipédia) sont lus au chargement de la page : on la recharge pour les prendre en compte.
-      if (lue.sauvegarde.synchro) window.setTimeout(() => window.location.reload(), 1500);
+      setMessage(lue.sauvegarde.synchro ? 'Sauvegarde importée. Rechargez la page de gestion pour appliquer les thèmes et classements repris.' : 'Sauvegarde importée.');
     } catch (e) {
       if (e instanceof ErreurImportSynchroEnCours) {
         setErreur(`Importation refusée : ${e.message} Rien n’a été modifié.`);
