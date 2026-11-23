@@ -44,7 +44,7 @@ export interface EntreeContrat {
   hote?: 'rest' | 'site'
   /** `true` si la requête n’a volontairement pas de corps (le corps `null` n’est alors pas une invalidité). */
   sansCorps?: boolean
-  validerReponse: (statut: number, json: unknown) => 'reussie' | 'hors-contrat'
+  validerReponse: (statut: number, json: unknown, action?: Action) => 'reussie' | 'hors-contrat'
 }
 
 export type TableContrat = Partial<Record<TypeAction, EntreeContrat>>

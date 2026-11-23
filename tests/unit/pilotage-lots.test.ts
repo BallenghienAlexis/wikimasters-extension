@@ -464,6 +464,65 @@ describe('Lecture des enchères en cours avant un lot d’enchères (Alexis, 202
   });
 });
 
+describe('Vérification des étiquettes du site avant un lot d’étiquettes (Alexis, 2026-11-23)', () => {
+  const U1 = '0a1b2c3d-0000-4000-8000-000000000001';
+  const U2 = '0a1b2c3d-0000-4000-8000-000000000002';
+  const lue = (...e: Array<{ id: string; nom: string }>): ResultatAction => ({ classe: 'reussie', codeHttp: 200, cause: 'action réussie', etiquettes: e.map((x) => ({ ...x, nbCartes: 1 })) });
+  const registreDe = (noms: Record<string, string>) => ({ version: 2, etiquettes: noms, couples: [{ ex: 'ex-1', nom: '#Musique' }] });
+
+  it('une seule lecture par lot d’étiquettes, aucune pour un lot sans étiquette', async () => {
+    const api = await frais();
+    await api.lancerLot([defausse(1)], 'lot-1');
+    expect(banc.lectures).toBe(0);
+    await api.lancerLot([pose('1', 'ex-1', '#Musique')], 'lot-2');
+    expect(banc.lectures).toBe(1);
+  });
+
+  it('étiquette disparue du site : création en tête du lot', async () => {
+    const api = await frais();
+    await api.enregistrerPreferences({ ...(await api.chargerPreferences()), modeEtiquettes: 'poser' });
+    await api.enregistrerRegistre(registreDe({ '#Musique': U1 }));
+    banc.lectureResultat = lue({ id: U2, nom: '#Autre' });
+    await api.lancerLot([pose('2', 'ex-2', '#Musique')], 'lot-1');
+    expect(banc.appels[0]).toMatchObject({ type: 'creation-etiquette', nomEtiquette: '#Musique' });
+    expect(banc.appels.at(-1)).toMatchObject({ type: 'pose-etiquette', nomEtiquette: '#Musique' });
+    expect((await api.chargerRegistre()).etiquettes['#Musique']).toBeUndefined();
+  });
+
+  it('liste vide relue : registre inchangé, aucune création', async () => {
+    const api = await frais();
+    await api.enregistrerRegistre(registreDe({ '#Musique': U1 }));
+    banc.lectureResultat = lue();
+    await api.lancerLot([pose('2', 'ex-2', '#Musique')], 'lot-1');
+    expect(banc.appels.map((a) => a.type)).toEqual(['pose-etiquette']);
+    expect((await api.chargerRegistre()).etiquettes['#Musique']).toBe(U1);
+  });
+
+  it('réponse sans liste (réseau, hors contrat) : le lot part tel quel', async () => {
+    const api = await frais();
+    await api.enregistrerRegistre(registreDe({ '#Musique': U1 }));
+    banc.lectureResultat = { classe: 'inconnu', codeHttp: null, cause: 'erreur réseau' };
+    await api.lancerLot([pose('2', 'ex-2', '#Musique')], 'lot-1');
+    expect(banc.appels.map((a) => a.type)).toEqual(['pose-etiquette']);
+  });
+
+  it('403 anti-bot : lancement refusé avec le libellé dédié, rien d’envoyé', async () => {
+    const api = await frais();
+    banc.lectureResultat = { classe: 'echec', codeHttp: 403, cause: 'vérification anti-bot requise' };
+    await expect(api.lancerLot([pose('1', 'ex-1', '#Musique')], 'lot-1')).rejects.toThrow('Vérification anti-bot');
+    expect(banc.appels).toEqual([]);
+  });
+
+  it.each([401, 429])('%i sur la lecture : lancement refusé et pause de 30 min', async (code) => {
+    const api = await frais();
+    banc.lectureResultat = { classe: 'echec', codeHttp: code, cause: 'action non disponible' };
+    await expect(api.lancerLot([pose('1', 'ex-1', '#Musique')], 'lot-1')).rejects.toThrow('Le site a refusé la lecture de tes étiquettes');
+    banc.lectureResultat = undefined;
+    await expect(api.lancerLot([defausse(2)], 'lot-2')).rejects.toThrow(/Reprise possible à/);
+    expect(banc.appels).toEqual([]);
+  });
+});
+
 describe('AC4 : sauterLot (SC-005, H10)', () => {
   it('SC-005 : une seule entrée de journal, les N - 1 autres comptées sautées, reprise au lot suivant', async () => {
     const api = await frais();

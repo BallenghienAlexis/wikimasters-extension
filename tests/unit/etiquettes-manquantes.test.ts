@@ -55,6 +55,10 @@ describe('reconcilierAvecSite', () => {
     expect(rec.perdus.every((c) => c.nom === nom)).toBe(true)
     expect(id).toBeTruthy()
   })
+  it('une liste vide ne prouve rien : registre inchangé, aucun doublon à recréer', () => {
+    const r = registreAligne()
+    expect(reconcilierAvecSite(r, []).registre).toBe(r)
+  })
   it('reprend l’identifiant d’une étiquette recréée à la main sous le même nom, et repose ses couples', () => {
     const r = registreAligne()
     const [nom] = Object.entries(r.etiquettes)[0]!
@@ -89,7 +93,7 @@ describe('ajusterLotAuSite', () => {
     const r = registreAligne()
     const couple = r.couples[0]!
     const retrait: Action = { type: 'retrait-etiquette', idCarte: 'a', idExemplaire: couple.ex, nomEtiquette: couple.nom }
-    const rec = reconcilierAvecSite(r, [])
+    const rec = reconcilierAvecSite(r, [{ id: U1, nom: '#Autre-site' }])
     expect(ajusterLotAuSite([retrait], rec.registre, rec.perdus, coll, config, TOUS).some((a) => a.type === 'retrait-etiquette')).toBe(false)
   })
   it('ajoute une création devant une pose dont le nom est inconnu, une seule par nom', () => {
@@ -108,7 +112,7 @@ describe('ajusterLotAuSite', () => {
     const nom = Object.keys(r.etiquettes)[0]!
     const couple = r.couples.find((c) => c.nom === nom)!
     r = refuserCouple(r, couple.ex, nom)
-    const rec = reconcilierAvecSite(r, [])
+    const rec = reconcilierAvecSite(r, [{ id: U1, nom: '#Autre-site' }])
     const avecRefus = ajusterLotAuSite([], rec.registre, rec.perdus, coll, config, TOUS)
     expect(avecRefus.some((a) => a.type === 'pose-etiquette' && a.idExemplaire === couple.ex && a.nomEtiquette === nom)).toBe(false)
     expect(ajusterLotAuSite([], rec.registre, rec.perdus, coll, { ...config, modeEtiquettes: 'suspendre' }, TOUS)).toEqual([])
@@ -126,7 +130,11 @@ describe('lecture des étiquettes avant un lot', () => {
     expect(entree.lireEtiquettes!(stats)).toEqual([{ id: U1, nom: '#Animaux', nbCartes: 4 }])
     expect(entree.lireEtiquettes!({ total: 3, tagOptions: [] })).toEqual([])
     expect(entree.lireEtiquettes!({ total: 3 })).toBeNull()
-    expect(entree.validerReponse(200, stats)).toBe('reussie')
+    // Une option illisible écartée rend la liste incomplète : aucune réconciliation.
+    expect(entree.lireEtiquettes!({ total: 3, tagOptions: [stats.tagOptions[0], { id: U2, name: '', cardCount: 1 }] })).toBeNull()
+    expect(entree.validerReponse(200, stats, { type: 'lecture', idCarte: 'x', cible: 'etiquettes' })).toBe('reussie')
+    expect(entree.validerReponse(200, stats, { type: 'lecture', idCarte: 'x' })).toBe('hors-contrat')
+    expect(entree.validerReponse(200, { maxConcurrentAuctions: 5 }, { type: 'lecture', idCarte: 'x', cible: 'etiquettes' })).toBe('hors-contrat')
   })
   it('messages : ordre et résultat validés strictement', () => {
     expect(validerOrdre({ message: 'ordre', ordre: { type: 'lecture', idCarte: 'x', cible: 'etiquettes' } })).toEqual({ type: 'lecture', idCarte: 'x', cible: 'etiquettes' })

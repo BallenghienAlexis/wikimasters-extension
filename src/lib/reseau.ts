@@ -200,7 +200,7 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
       if (reponse.status < 200 || reponse.status > 299) {
         return { classe: 'echec', codeHttp: reponse.status, cause: 'erreur d’émission', ...(diagnostic ? { diagnostic } : {}) }
       }
-      if (entree.validerReponse(reponse.status, json) !== 'reussie') {
+      if (entree.validerReponse(reponse.status, json, ordre) !== 'reussie') {
         return { classe: 'inconnu', codeHttp: reponse.status, cause: 'réponse hors contrat' }
       }
       const id = entree.lireIdEtiquette?.(json) ?? null

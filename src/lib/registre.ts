@@ -80,10 +80,12 @@ export interface ReconciliationSite {
  * pour être reposés ; si le site en porte une du même nom sous un autre identifiant (recréée à la main), le registre
  * reprend cet identifiant et ses couples sont reposés aussi (la suppression emporte les poses). Les retraits voulus par le
  * joueur (`refus`) sont conservés : une étiquette recréée n’est pas reposée là où il l’avait retirée.
- * Sans liste fiable (`null`), le registre est rendu tel quel. Ne modifie jamais l’entrée.
+ * Sans liste fiable (`null` ou vide), le registre est rendu tel quel. Ne modifie jamais l’entrée.
  */
 export function reconcilierAvecSite(r: Registre, site: readonly EtiquetteDuSite[] | null): ReconciliationSite {
-  if (site === null) return { registre: r, perdus: [], manquantes: [] }
+  // Liste vide alors que le registre connaît des étiquettes : le site renvoie `tagOptions: []` dans ses réponses allégées, ce
+  // n'est pas la preuve que tout a disparu (recréer en masse ferait des doublons) : registre inchangé.
+  if (site === null || (site.length === 0 && Object.keys(r.etiquettes).length > 0)) return { registre: r, perdus: [], manquantes: [] }
   const idsSite = new Set(site.map((e) => e.id))
   const idParNom = new Map<string, string>()
   for (const e of site) if (!idParNom.has(e.nom)) idParNom.set(e.nom, e.id)

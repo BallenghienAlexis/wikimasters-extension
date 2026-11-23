@@ -267,38 +267,40 @@ async function noterEncheresEcartees(retirees: readonly Action[], ventes: { enCo
 }
 
 /** Arrêt d'une lecture préalable (401, 429, 403) : même traitement que pour une écriture, le lot ne part pas. */
-function refuserSiArret(r: ResultatAction): void {
+function refuserSiArret(r: ResultatAction, libelleRefus: string = ECHEC_LECTURE_ENCHERES): void {
   if (r.classe === 'reussie' || r.codeHttp === null || !CODES_ARRET.includes(r.codeHttp)) return;
   if (calculerPauseJusqua({ raison: 'code-http', codeHttp: r.codeHttp }, Date.now()) !== null) pauseLecture = Date.now() + PAUSE_LOTS_MS;
-  throw new Error(r.cause === CAUSE_VERIFICATION_HUMAINE ? LIBELLE_VERIFICATION_HUMAINE : `${ECHEC_LECTURE_ENCHERES} (réponse ${r.codeHttp}).`);
+  throw new Error(r.cause === CAUSE_VERIFICATION_HUMAINE ? LIBELLE_VERIFICATION_HUMAINE : `${libelleRefus} (réponse ${r.codeHttp}).`);
 }
+
+const ECHEC_LECTURE_ETIQUETTES = 'Le site a refusé la lecture de tes étiquettes';
 
 /**
  * Avant un lot qui touche aux étiquettes (Alexis, 2026-11-23 : des thèmes supprimés par erreur sur le site) : relit la liste
  * des étiquettes du compte (`GET /api/my-collection/stats`, route déjà lue par la synchro, une requête, mêmes cadence,
  * gigue et arrêts), aligne le registre dessus puis ajuste le lot : une étiquette disparue est recréée (création en tête)
  * et reposée sur les exemplaires qui la portaient, sans jamais « À classer » ni « Autres ». Lecture impossible (réseau,
- * réponse sans liste) : on se rabat sur la dernière liste lue par la synchro, sinon le lot part tel quel (le site
- * refuserait alors une pose sur une étiquette disparue, comme avant).
+ * réponse sans liste complète) : le lot part tel quel, sans réconciliation (le site refuserait alors une pose sur une
+ * étiquette disparue, comme avant).
  */
 async function alignerSurLesEtiquettesDuSite(actions: readonly Action[]): Promise<readonly Action[]> {
   if (!actions.some((a) => a.type === 'creation-etiquette' || a.type === 'pose-etiquette' || a.type === 'retrait-etiquette')) return actions;
   let lue: Array<{ id: string; nom: string; nbCartes: number }> | undefined;
   try {
     const r = await contexteExecution().execution.transport({ type: 'lecture', idCarte: ID_CARTE_ETIQUETTES, cible: 'etiquettes' });
-    refuserSiArret(r);
+    refuserSiArret(r, ECHEC_LECTURE_ETIQUETTES);
     if (r.classe === 'reussie') lue = r.etiquettes;
   } catch (e) {
-    if (e instanceof Error && (e.message === LIBELLE_VERIFICATION_HUMAINE || e.message.startsWith(ECHEC_LECTURE_ENCHERES))) throw e;
+    if (e instanceof Error && (e.message === LIBELLE_VERIFICATION_HUMAINE || e.message.startsWith(ECHEC_LECTURE_ETIQUETTES))) throw e;
   }
   // Même cadence que la file : 0,2 s au minimum plus la gigue avant la requête suivante.
   await horlogeReelle.attendreJusqua(horlogeReelle.now() + INTERVALLE_MS + supplementAleatoire());
-  const [registre, collection, preferences, stockee] = await Promise.all([chargerRegistre(), chargerCollection(), chargerPreferences(), chargerEtiquettesSite().catch(() => null)]);
-  // Une liste vide venue du stockage n'est pas fiable (lecture échouée) ; une liste vide relue sur le site l'est.
-  const liste = lue ?? (stockee !== null && stockee.length > 0 ? stockee : undefined);
-  if (liste === undefined) return actions;
-  if (lue !== undefined) await enregistrerEtiquettesSite(lue).catch(() => undefined);
-  const reconciliation = reconcilierAvecSite(registre, liste);
+  // Seule une liste relue avec succès juste avant le lot sert à réconcilier : la liste de la synchro peut être plus ancienne
+  // que le registre (étiquettes créées depuis) et ferait recréer des doublons. Sans lecture fiable, le lot part tel quel.
+  if (lue === undefined) return actions;
+  const [registre, collection, preferences] = await Promise.all([chargerRegistre(), chargerCollection(), chargerPreferences()]);
+  await enregistrerEtiquettesSite(lue).catch(() => undefined);
+  const reconciliation = reconcilierAvecSite(registre, lue);
   if (reconciliation.registre !== registre) await enregistrerRegistre(reconciliation.registre);
   return ajusterLotAuSite(actions, reconciliation.registre, reconciliation.perdus, collection, configDuLot(preferences), typesDisponibles());
 }
@@ -314,11 +316,7 @@ async function limiterAuxPlacesLibres(actions: readonly Action[], idLot: string)
   try {
     const r = await contexteExecution().execution.transport({ type: 'lecture', idCarte: ID_CARTE_ETIQUETTES });
     if (r.classe === 'reussie') ventes = r.ventes;
-    else if (r.codeHttp !== null && CODES_ARRET.includes(r.codeHttp)) {
-      // Même arrêt que pour une enchère : le lot ne part pas (401 et 429 : pause de 30 min ; 403 : vérification anti-bot ou refus).
-      if (calculerPauseJusqua({ raison: 'code-http', codeHttp: r.codeHttp }, Date.now()) !== null) pauseLecture = Date.now() + PAUSE_LOTS_MS;
-      throw new Error(r.cause === CAUSE_VERIFICATION_HUMAINE ? LIBELLE_VERIFICATION_HUMAINE : `${ECHEC_LECTURE_ENCHERES} (réponse ${r.codeHttp}).`);
-    }
+    else refuserSiArret(r);
   } catch (e) {
     if (e instanceof Error && (e.message === LIBELLE_VERIFICATION_HUMAINE || e.message.startsWith(ECHEC_LECTURE_ENCHERES))) throw e;
     return actions;
