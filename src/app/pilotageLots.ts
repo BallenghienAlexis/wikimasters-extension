@@ -299,7 +299,8 @@ async function alignerSurLesEtiquettesDuSite(actions: readonly Action[]): Promis
   // que le registre (étiquettes créées depuis) et ferait recréer des doublons. Sans lecture fiable, le lot part tel quel.
   if (lue === undefined) return actions;
   const [registre, collection, preferences] = await Promise.all([chargerRegistre(), chargerCollection(), chargerPreferences()]);
-  await enregistrerEtiquettesSite(lue).catch(() => undefined);
+  // Une liste vide alors que le registre connaît des étiquettes n'est pas mémorisée (réponse allégée possible du site).
+  if (lue.length > 0 || Object.keys(registre.etiquettes).length === 0) await enregistrerEtiquettesSite(lue).catch(() => undefined);
   const reconciliation = reconcilierAvecSite(registre, lue);
   if (reconciliation.registre !== registre) await enregistrerRegistre(reconciliation.registre);
   return ajusterLotAuSite(actions, reconciliation.registre, reconciliation.perdus, collection, configDuLot(preferences), typesDisponibles());
