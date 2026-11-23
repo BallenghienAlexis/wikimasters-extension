@@ -1,7 +1,8 @@
 import { trierEtiquettesSite } from '../lib/etiquettesPreexistantes';
 import { CONFIG_PRIX } from '../config/prix';
 import { CAUSE_VERIFICATION_HUMAINE, ID_CARTE_ETIQUETTES } from '../lib/actions';
-import { limiterEncheres } from '../lib/lot';
+import { ajusterLotAuSite, limiterEncheres } from '../lib/lot';
+import { typesDisponibles } from '../lib/contrat';
 import type { Action, CauseJournal, EtatExecutionV2, ErreurExecution, FamilleLot, Registre, ResultatAction } from '../lib/actions';
 import type { Collection } from '../lib/collection';
 import type { Journal } from '../lib/journal';
@@ -31,7 +32,7 @@ import {
   enregistrerJournal,
   enregistrerRegistre,
 } from '../lib/stockage';
-import { avecIdEtiquette, refuserCouple } from '../lib/registre';
+import { avecIdEtiquette, reconcilierAvecSite, refuserCouple } from '../lib/registre';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
 import type { CoupleRetrait } from './Journal';
 import { AUCUNE_PLACE_ENCHERE, ECHEC_LECTURE_ENCHERES, SYNCHRO_EN_COURS, bilanVide, configDuLot, type Bilan } from './apercuLot';
@@ -252,7 +253,7 @@ async function lancerAvec(preparer: () => Promise<Lancement>): Promise<void> {
  * 30 minutes (message « Reprise possible à HH:MM »). Résout à la fin de l'exécution (terminée, arrêtée ou en erreur).
  */
 export async function lancerLot(actions: readonly Action[], idLot: string): Promise<void> {
-  return lancerAvec(async () => ({ actions: await limiterAuxPlacesLibres(actions, idLot), idLot }));
+  return lancerAvec(async () => ({ actions: await limiterAuxPlacesLibres(await alignerSurLesEtiquettesDuSite(actions), idLot), idLot }));
 }
 
 /** Une entrée « Passée » par enchère écartée (20 au plus), pour que le joueur voie pourquoi elle n'est pas partie. */
@@ -263,6 +264,47 @@ async function noterEncheresEcartees(retirees: readonly Action[], ventes: { enCo
     journal = ouvrirEntreePassee(journal, { idCarte: a.idCarte, titre: await titreDe(a.idCarte), type: a.type, parametre: parametreDe(a), idLot }, information, () => new Date());
   }
   await enregistrerJournal(journal);
+}
+
+/** Arrêt d'une lecture préalable (401, 429, 403) : même traitement que pour une écriture, le lot ne part pas. */
+function refuserSiArret(r: ResultatAction, libelleRefus: string = ECHEC_LECTURE_ENCHERES): void {
+  if (r.classe === 'reussie' || r.codeHttp === null || !CODES_ARRET.includes(r.codeHttp)) return;
+  if (calculerPauseJusqua({ raison: 'code-http', codeHttp: r.codeHttp }, Date.now()) !== null) pauseLecture = Date.now() + PAUSE_LOTS_MS;
+  throw new Error(r.cause === CAUSE_VERIFICATION_HUMAINE ? LIBELLE_VERIFICATION_HUMAINE : `${libelleRefus} (réponse ${r.codeHttp}).`);
+}
+
+const ECHEC_LECTURE_ETIQUETTES = 'Le site a refusé la lecture de tes étiquettes';
+
+/**
+ * Avant un lot qui touche aux étiquettes (Alexis, 2026-11-23 : des thèmes supprimés par erreur sur le site) : relit la liste
+ * des étiquettes du compte (`GET /api/my-collection/stats`, route déjà lue par la synchro, une requête, mêmes cadence,
+ * gigue et arrêts), aligne le registre dessus puis ajuste le lot : une étiquette disparue est recréée (création en tête)
+ * et reposée sur les exemplaires qui la portaient, sans jamais « À classer » ni « Autres ». Lecture impossible (réseau,
+ * réponse sans liste complète) : le lot part tel quel, sans réconciliation (le site refuserait alors une pose sur une
+ * étiquette disparue, comme avant).
+ */
+async function alignerSurLesEtiquettesDuSite(actions: readonly Action[]): Promise<readonly Action[]> {
+  if (!actions.some((a) => a.type === 'creation-etiquette' || a.type === 'pose-etiquette' || a.type === 'retrait-etiquette')) return actions;
+  let lue: Array<{ id: string; nom: string; nbCartes: number }> | undefined;
+  try {
+    const r = await contexteExecution().execution.transport({ type: 'lecture', idCarte: ID_CARTE_ETIQUETTES, cible: 'etiquettes' });
+    refuserSiArret(r, ECHEC_LECTURE_ETIQUETTES);
+    if (r.classe === 'reussie') lue = r.etiquettes;
+  } catch (e) {
+    if (e instanceof Error && (e.message === LIBELLE_VERIFICATION_HUMAINE || e.message.startsWith(ECHEC_LECTURE_ETIQUETTES))) throw e;
+  }
+  // Même cadence que la file : 0,2 s au minimum plus la gigue avant la requête suivante.
+  await horlogeReelle.attendreJusqua(horlogeReelle.now() + INTERVALLE_MS + supplementAleatoire());
+  // Seule une liste relue avec succès juste avant le lot sert à réconcilier : la liste de la synchro peut être plus ancienne
+  // que le registre (étiquettes créées depuis) et ferait recréer des doublons. Sans lecture fiable, le lot part tel quel.
+  if (lue === undefined) return actions;
+  const [registre, collection, preferences] = await Promise.all([chargerRegistre(), chargerCollection(), chargerPreferences()]);
+  // Une liste vide alors que le registre connaît des étiquettes n'est pas mémorisée (réponse allégée possible du site).
+  // Erreur d'écriture ignorée volontairement : simple mémoire d'affichage, le lot continue.
+  if (lue.length > 0 || Object.keys(registre.etiquettes).length === 0) await enregistrerEtiquettesSite(lue).catch(() => undefined);
+  const reconciliation = reconcilierAvecSite(registre, lue);
+  if (reconciliation.registre !== registre) await enregistrerRegistre(reconciliation.registre);
+  return ajusterLotAuSite(actions, reconciliation.registre, reconciliation.perdus, collection, configDuLot(preferences), typesDisponibles());
 }
 
 /**
@@ -276,11 +318,7 @@ async function limiterAuxPlacesLibres(actions: readonly Action[], idLot: string)
   try {
     const r = await contexteExecution().execution.transport({ type: 'lecture', idCarte: ID_CARTE_ETIQUETTES });
     if (r.classe === 'reussie') ventes = r.ventes;
-    else if (r.codeHttp !== null && CODES_ARRET.includes(r.codeHttp)) {
-      // Même arrêt que pour une enchère : le lot ne part pas (401 et 429 : pause de 30 min ; 403 : vérification anti-bot ou refus).
-      if (calculerPauseJusqua({ raison: 'code-http', codeHttp: r.codeHttp }, Date.now()) !== null) pauseLecture = Date.now() + PAUSE_LOTS_MS;
-      throw new Error(r.cause === CAUSE_VERIFICATION_HUMAINE ? LIBELLE_VERIFICATION_HUMAINE : `${ECHEC_LECTURE_ENCHERES} (réponse ${r.codeHttp}).`);
-    }
+    else refuserSiArret(r);
   } catch (e) {
     if (e instanceof Error && (e.message === LIBELLE_VERIFICATION_HUMAINE || e.message.startsWith(ECHEC_LECTURE_ENCHERES))) throw e;
     return actions;

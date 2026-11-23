@@ -33,6 +33,8 @@ export interface EntreeContrat {
   lireIdEtiquette?: (json: unknown) => string | null
   /** Enchères en cours et maximum lus dans une réponse conforme (lecture de `marketplace/mine`). */
   lireVentes?: (json: unknown) => { enCours: number; max: number } | null
+  /** Étiquettes du compte lues dans une réponse conforme (lecture de `my-collection/stats`, cible `etiquettes`). */
+  lireEtiquettes?: (json: unknown) => Array<{ id: string; nom: string; nbCartes: number }> | null
   /** `{ entete: 'session' }` si la requête exige le jeton de session (ajouté par `reseau.ts`), sinon `null`. */
   auth: { entete: string } | null
   /**
@@ -42,7 +44,7 @@ export interface EntreeContrat {
   hote?: 'rest' | 'site'
   /** `true` si la requête n’a volontairement pas de corps (le corps `null` n’est alors pas une invalidité). */
   sansCorps?: boolean
-  validerReponse: (statut: number, json: unknown) => 'reussie' | 'hors-contrat'
+  validerReponse: (statut: number, json: unknown, action?: Action) => 'reussie' | 'hors-contrat'
 }
 
 export type TableContrat = Partial<Record<TypeAction, EntreeContrat>>

@@ -519,3 +519,51 @@ export function construireLot(
     nonPosees,
   }
 }
+
+/** Noms qu’aucun lot ne crée ni ne pose (Alexis, 2026-11-15 : jamais « À classer » ni « Autres »). */
+const NOMS_INTERDITS: ReadonlySet<string> = new Set([ETIQUETTE_A_CLASSER, '#Autres'])
+
+/**
+ * Ajuste un lot déjà calculé aux étiquettes réellement présentes sur le site (Alexis, 2026-11-23). `registre` est le
+ * registre déjà réconcilié (`reconcilierAvecSite`) et `perdus` les couples dont l’étiquette a disparu :
+ * - un retrait dont le couple n’est plus au registre est retiré du lot (l’étiquette n’existe plus) ;
+ * - chaque couple perdu encore attendu est reposé (jamais là où le joueur avait retiré l’étiquette) ;
+ * - toute pose dont le nom est inconnu du registre reçoit une création, placée en tête du lot.
+ * Hors mode `poser`, ou si la création ou la pose n’est pas disponible, rien n’est ajouté. Jamais « À classer » ni « Autres ».
+ */
+export function ajusterLotAuSite(
+  actions: readonly Action[],
+  registre: Registre,
+  perdus: ReadonlyArray<{ ex: string; nom: string }>,
+  collection: Collection,
+  config: Config,
+  disponibles: TypesDisponibles,
+): Action[] {
+  const poser = (config.modeEtiquettes ?? 'poser') === 'poser' && disponibles.has('creation-etiquette') && disponibles.has('pose-etiquette')
+  const garde = actions.filter((a) => a.type !== 'retrait-etiquette' || registre.couples.some((c) => c.ex === a.idExemplaire && c.nom === a.nomEtiquette))
+  if (!poser) return garde
+
+  const dejaPoses = new Set(garde.flatMap((a) => (a.type === 'pose-etiquette' ? [JSON.stringify([a.idExemplaire, a.nomEtiquette])] : [])))
+  const reposes: Action[] = []
+  for (const { ex, nom } of perdus) {
+    const cle = JSON.stringify([ex, nom])
+    if (dejaPoses.has(cle) || NOMS_INTERDITS.has(nom) || estRefuse(registre, ex, nom)) continue
+    const carte = collection.cartes.find((c) => c.idsSite?.includes(ex))
+    if (!carte || !exemplairesAttendus(carte, config).some((e) => e.idExemplaire === ex && e.etiquettes.includes(nom))) continue
+    dejaPoses.add(cle)
+    reposes.push({ type: 'pose-etiquette', idCarte: carte.id, idExemplaire: ex, nomEtiquette: nom })
+  }
+
+  const toutes = [...garde, ...reposes]
+  const creations: Action[] = []
+  const creees = new Set(toutes.flatMap((a) => (a.type === 'creation-etiquette' ? [a.nomEtiquette] : [])))
+  for (const a of toutes) {
+    if (a.type !== 'pose-etiquette' || NOMS_INTERDITS.has(a.nomEtiquette)) continue
+    if (Object.prototype.hasOwnProperty.call(registre.etiquettes, a.nomEtiquette) || creees.has(a.nomEtiquette)) continue
+    creees.add(a.nomEtiquette)
+    creations.push({ type: 'creation-etiquette', idCarte: a.idCarte, nomEtiquette: a.nomEtiquette })
+  }
+  const autres = toutes.filter((a) => a.type !== 'creation-etiquette')
+  const dejaCreations = toutes.filter((a) => a.type === 'creation-etiquette')
+  return [...dejaCreations, ...creations, ...autres.filter((a) => a.type !== 'pose-etiquette' || !NOMS_INTERDITS.has(a.nomEtiquette))]
+}

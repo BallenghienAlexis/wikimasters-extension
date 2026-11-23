@@ -200,12 +200,13 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
       if (reponse.status < 200 || reponse.status > 299) {
         return { classe: 'echec', codeHttp: reponse.status, cause: 'erreur d’émission', ...(diagnostic ? { diagnostic } : {}) }
       }
-      if (entree.validerReponse(reponse.status, json) !== 'reussie') {
+      if (entree.validerReponse(reponse.status, json, ordre) !== 'reussie') {
         return { classe: 'inconnu', codeHttp: reponse.status, cause: 'réponse hors contrat' }
       }
       const id = entree.lireIdEtiquette?.(json) ?? null
       const ventes = entree.lireVentes?.(json) ?? null
-      return { classe: 'reussie', codeHttp: reponse.status, cause: 'action réussie', ...(id !== null ? { idEtiquette: id } : {}), ...(ventes !== null ? { ventes } : {}) }
+      const etiquettes = ordre.type === 'lecture' && ordre.cible === 'etiquettes' ? (entree.lireEtiquettes?.(json) ?? null) : null
+      return { classe: 'reussie', codeHttp: reponse.status, cause: 'action réussie', ...(id !== null ? { idEtiquette: id } : {}), ...(ventes !== null ? { ventes } : {}), ...(etiquettes !== null ? { etiquettes } : {}) }
     } catch (e) {
       const delai = e instanceof Error && e.name === 'AbortError'
       return { classe: 'inconnu', codeHttp: null, cause: delai ? 'délai dépassé' : 'erreur réseau' }
