@@ -90,17 +90,16 @@ describe('activité quotidienne conservée', () => {
 const carte = (id: string, titre: string, description = ''): Carte => ({ id, titre, description, rarete: 'commune', quantite: 1, idsSite: ['s'], valeurMarchande: null, favori: false } as unknown as Carte)
 
 describe('répartitions', () => {
-  it('thèmes : un thème principal par carte, le reste regroupé, sans thème gardé visible', () => {
+  it('thèmes : un thème principal par carte, sans regroupement, sans thème gardé visible', () => {
     const cartes = [
       carte('1', 'Chat', 'Le chat est un animal félin.'), carte('2', 'Chien', 'Le chien est un animal domestique.'),
       carte('3', 'Zzqxy'), carte('4', 'Qwwxz'),
     ]
-    const parts = repartitionThemes(cartes, 6)
+    const parts = repartitionThemes(cartes)
     expect(totalParts(parts)).toBe(4)
     expect(parts.some((p) => p.libelle === 'Sans thème fiable' && p.valeur === 2)).toBe(true)
-    const peu = repartitionThemes(cartes, 2)
-    expect(peu).toHaveLength(2)
-    expect(totalParts(peu)).toBe(4)
+    // Aucun regroupement : chaque thème garde sa part.
+    expect(parts.some((p) => p.id === 'autres')).toBe(false)
   })
 
   const v = (code: Verdict['code'], action: Verdict['action']): Verdict => ({ action, code, motif: '', court: '', libelle: '', exemplaires: 1, amis: [] })
@@ -129,14 +128,15 @@ describe('répartitions', () => {
 })
 
 describe('profilAffluence', () => {
-  it('par défaut : 7 jours × 8 tranches de 3 h, créneaux par défaut', () => {
+  it('par défaut : 7 jours × 24 heures, créneaux par défaut', () => {
     const p = profilAffluence([])
     expect(p.source).toBe('defaut')
     expect(p.jours).toHaveLength(7)
     expect(p.jours.every((j) => j.length === TRANCHES)).toBe(true)
     expect(p.jours[0]![0]!.jour).toBe(1) // lundi d’abord
-    expect(p.jours[0]![6]!.forte).toBe(true) // lundi 18 h–21 h contient 19 h
-    expect(p.jours[0]![1]!.forte).toBe(false)
+    expect(p.jours[0]![19]!.forte).toBe(true) // lundi 19 h est une heure forte par défaut
+    expect(p.jours[0]![3]!.forte).toBe(false)
+    expect(TRANCHES).toBe(24)
     expect(p.jours[6]![0]!.jour).toBe(0)
   })
 
@@ -148,7 +148,7 @@ describe('profilAffluence', () => {
     const p = profilAffluence(ev)
     expect(p.source).toBe('resultats')
     expect(p.nombre).toBe(26)
-    const cell = p.jours[1]![6]!
+    const cell = p.jours[1]![20]!
     expect(cell.nombre).toBe(25)
     expect(cell.valeur).toBeCloseTo((13 * 4 + 12 * 2) / 25)
     expect(cell.forte).toBe(true)

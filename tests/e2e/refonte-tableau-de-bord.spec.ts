@@ -1,4 +1,4 @@
-import { allerA, chargerCartes, expect, test, ouvrirBloc } from './extension';
+import { allerA, chargerCartes, expect, test } from './extension';
 import type { Page } from '@playwright/test';
 
 // T-305 : onglet Tableau de bord (SC-001, SC-022, SC-027, SC-009). Données uniquement fictives.
@@ -30,7 +30,6 @@ const kpis = (page: Page) => page.getByTestId('kpi');
 async function ouvrir(page: Page, cartes: Record<string, unknown>[] = CARTES): Promise<void> {
   await chargerCartes(page, cartes);
   await allerA(page, 'tableau-de-bord');
-  await ouvrirBloc(page, 'chiffres-cles');
 }
 
 test.describe('SC-001 : chiffres clés', () => {
