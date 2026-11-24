@@ -12,6 +12,8 @@ import ReinitialisationGlobale from './ReinitialisationGlobale';
 import ReglageAnimations from './ReglageAnimations';
 import ReglageSynchroAuto from './ReglageSynchroAuto';
 import Sauvegarde from './Sauvegarde';
+import SynchroPc from './SynchroPc';
+import type { SynchroPc as EtatSynchroPc } from './useSynchroPc';
 import SectionRepliable from './SectionRepliable';
 import { useAffichage } from './useAffichage';
 import { useSyncAuto } from './useSyncAuto';
@@ -20,6 +22,7 @@ import type { DonneesPage } from './useDonneesPage';
 interface Props {
   donnees: DonneesPage;
   onImportee: (donnees: Donnees) => void;
+  synchroPc: EtatSynchroPc;
 }
 
 const NB = ' ';
@@ -36,7 +39,7 @@ function telechargerCopie(contenu: string, nom: string): void {
 }
 
 /** Onglet Réglages (D-50) : sept sections repliées par défaut, titre et résumé visibles. */
-const OngletReglages: React.FC<Props> = ({ donnees, onImportee }) => {
+const OngletReglages: React.FC<Props> = ({ donnees, onImportee, synchroPc }) => {
   const { collection, registre, preferences, preferencesLues, etiquettesSite, executionEnCours, enregistrerLesPreferences, setMessage } = donnees;
   const { animations } = useAffichage();
   const syncAuto = useSyncAuto();
@@ -51,6 +54,10 @@ const OngletReglages: React.FC<Props> = ({ donnees, onImportee }) => {
 
       <SectionRepliable id="reglage-sauvegarde" titre="Sauvegarde" resume="Fichier JSON">
         <Sauvegarde onImportee={onImportee} />
+      </SectionRepliable>
+
+      <SectionRepliable id="reglage-synchro-pc" titre="Synchro entre PC" resume={synchroPc.etat === 'actif' ? `Active (${synchroPc.nomPc})` : synchroPc.etat === 'autorisation' ? 'Autorisation à redonner' : synchroPc.dossier ? 'Erreur' : 'Non configurée'}>
+        <SynchroPc synchro={synchroPc} />
       </SectionRepliable>
 
       <SectionRepliable id="reglage-reinitialisation" titre="Réinitialisation globale" resume="Étiquettes du site et données locales">
