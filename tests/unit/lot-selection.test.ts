@@ -6,7 +6,7 @@ import { collectionVide } from '../../src/lib/collection'
 import { construireLot, type Config, type SelectionLot } from '../../src/lib/lot'
 import { preferencesParDefaut } from '../../src/lib/tri'
 import { registreVide } from '../../src/lib/registre'
-import { MAX_PRECOCHE_SANS_PRIX, choixInitial, conseilLancement, estEtiquetteAVendre, idsSansPrixConfirme, precocher, resumerSansPrix, versSelection } from '../../src/lib/selectionLot'
+import { MAX_PRECOCHE_SANS_PRIX, choixInitial, conseilLancement, estEtiquetteAVendre, idsSansPrixConfirme, precocher, resumerSansPrix, retirerCochesPerimees, verdictCarte, verdictsDesCartes, versSelection } from '../../src/lib/selectionLot'
 
 const TOUS: TypesDisponibles = new Set<TypeAction>(TYPES_ACTION)
 const CHIEN = { titre: 'Berger allemand', description: 'race de chien' }
@@ -191,7 +191,7 @@ describe('cartes sans prix trouvé (Alexis, 2026-11-23)', () => {
     const cartes = [sans(1), carte('f', { valeurMarchande: null, favori: true }), carte('g', { valeurMarchande: null, ami: 'Zoé' })]
     const ids = new Set(['s1', 'f', 'g'])
     const choix = precocher(cartes, prefs, new Map(), ids)
-    expect(choix.get('s1')).toEqual({ choix: 'defausser', exemplaires: 1 })
+    expect(choix.get('s1')).toEqual({ choix: 'defausser', exemplaires: 1, origine: 'regle' })
     expect(choix.has('f')).toBe(false)
     expect(choix.has('g')).toBe(false)
     expect(precocher(cartes, { ...prefs, mesThemes: ['chien'] }, new Map(), ids).size).toBe(0)
@@ -213,5 +213,65 @@ describe('cartes sans prix trouvé (Alexis, 2026-11-23)', () => {
     const sel = { vendre: [], defausser: { s1: 1 } }
     expect(de(lot([c], sel, { sansPrix: ['s1'] }).actions, 'defausse')).toHaveLength(1)
     expect(de(lot([c], sel).actions, 'defausse')).toHaveLength(0)
+  })
+})
+
+describe('verdict par carte et recalcul (2026-11-24)', () => {
+  const prefs = { ...preferencesParDefaut(), mesThemes: ['chien'] }
+  const sans = new Set<string>()
+
+  it('donne le motif exact d’une carte gardée par un thème gardé', () => {
+    const v = verdictCarte(carte('a', { valeurMarchande: 2 }), prefs, sans, true)
+    expect(v.action).toBe('garder')
+    expect(v.code).toBe('theme-garde')
+    expect(v.libelle).toContain('thème que vous gardez')
+  })
+
+  it('propose la défausse d’une carte de petite valeur sans garde, et l’enchère au-dessus du plafond', () => {
+    const p = preferencesParDefaut()
+    expect(verdictCarte(carte('a', { valeurMarchande: 2 }), p, sans, true)).toMatchObject({ action: 'defausser', code: 'defausse-plafond' })
+    expect(verdictCarte(carte('b', { valeurMarchande: 50 }), p, sans, true)).toMatchObject({ action: 'vendre', code: 'enchere' })
+  })
+
+  it('explique la valeur inconnue et les cartes sans prix trop nombreuses', () => {
+    const p = preferencesParDefaut()
+    expect(verdictCarte(carte('a', { valeurMarchande: null }), p, sans, true).code).toBe('valeur-inconnue')
+    expect(verdictCarte(carte('b', { valeurMarchande: null }), p, new Set(['b']), false).code).toBe('sans-prix-trop')
+    expect(verdictCarte(carte('b', { valeurMarchande: null }), p, new Set(['b']), true).action).toBe('defausser')
+  })
+
+  it('la pré-coche suit les verdicts et recalcule ses propres coches', () => {
+    const p = preferencesParDefaut()
+    const cartes = [carte('a', { valeurMarchande: 2 }), carte('b', { valeurMarchande: 2 })]
+    const premier = precocher(cartes, p, new Map())
+    expect([...premier.keys()].sort()).toEqual(['a', 'b'])
+    // Un thème gardé arrive : la coche de règle disparaît ; un choix manuel reste.
+    const manuel = new Map(premier).set('b', { choix: 'defausser', exemplaires: 1 })
+    const apres = precocher(cartes, prefs, manuel)
+    expect(apres.has('a')).toBe(false)
+    expect(apres.get('b')).toEqual({ choix: 'defausser', exemplaires: 1 })
+  })
+
+  it('retire les coches de règle périmées sans toucher aux choix du joueur', () => {
+    const cartes = [carte('a', { valeurMarchande: 2 }), carte('b', { valeurMarchande: 2 })]
+    const choix = new Map([
+      ['a', { choix: 'defausser' as const, exemplaires: 1, origine: 'regle' as const }],
+      ['b', { choix: 'defausser' as const, exemplaires: 1 }],
+    ])
+    const r = retirerCochesPerimees(choix, verdictsDesCartes(cartes, prefs))
+    expect([...r.keys()]).toEqual(['b'])
+  })
+})
+
+describe('thèmes gardés réels d’Alexis (2026-11-24)', () => {
+  const prefs = { ...preferencesParDefaut(), mesThemes: ['automobile', 'metal', 'moto', 'rock', 'tracteur', 'alcool', 'camion', 'ia', 'reggae', 'techno'] }
+  const base = { idsSite: ['ex-1'], quantite: 1 }
+  it('une carte de train ou de théâtre et musique n’est pas gardée par ces thèmes : défausse proposée à petite valeur', () => {
+    const train = carte('t', { ...base, titre: 'Compagnie du chemin de fer de Paris à Orléans', description: 'compagnie de chemin de fer française', valeurMarchande: 2 })
+    const rita = carte('r', { ...base, titre: 'Rita Brantalou', description: 'personnage de théâtre et de musique', valeurMarchande: 4 })
+    for (const c of [train, rita]) {
+      const v = verdictCarte(c, prefs, new Set(), true)
+      expect(v.code).not.toBe('theme-garde')
+    }
   })
 })

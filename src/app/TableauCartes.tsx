@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 
 import { estFavori, type Carte, type EditionCarte } from '../lib/collection';
 import { basculerTri, type SensTri, type ValeurTri } from '../lib/ordreTableau';
 import CarteLigne from './CarteLigne';
+import type { Verdict } from '../lib/selectionLot';
 import EnTeteTriable from './EnTeteTriable';
 import { courbeToken, dureeToken, useMouvement } from './useMouvement';
 import { useFlip } from './useFlip';
@@ -48,12 +49,14 @@ interface Props {
   onEdition: (id: string, edition: EditionCarte) => void;
   /** Change quand les thèmes lus changent (cache Wikipédia ou IA) : refait les lignes, et elles seules. */
   versionThemes?: unknown;
+  /** Verdict des règles courantes par carte (motif « gardée » ou « proposée »). */
+  verdicts?: ReadonlyMap<string, Verdict>;
 }
 
 const CLASSE_CHAMP = 'min-h-11 rounded border border-paper bg-ink px-3';
 
 /** Tableau triable des cartes (D-16) ; sous 600 px, cartes empilées pilotées par « Trier par » et « Sens ». */
-const TableauCartes: React.FC<Props> = ({ cartes, tri, revision, cleFiltre, onTri, onEdition, versionThemes }) => {
+const TableauCartes: React.FC<Props> = ({ cartes, tri, revision, cleFiltre, onTri, onEdition, versionThemes, verdicts }) => {
   // `onEdition` change à chaque rendu de la page : on garde un rappel stable pour que les lignes mémoïsées ne soient pas refaites.
   const derniereEdition = useRef(onEdition);
   useEffect(() => {
@@ -144,6 +147,7 @@ const TableauCartes: React.FC<Props> = ({ cartes, tri, revision, cleFiltre, onTr
                 refLigne={enregistrer(carte.id)}
                 onEdition={editionStable}
                 versionThemes={versionThemes}
+                verdict={verdicts?.get(carte.id)?.libelle}
               />
             ))}
           </tbody>
