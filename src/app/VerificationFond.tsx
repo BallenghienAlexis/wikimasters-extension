@@ -2,6 +2,8 @@ import React, { useEffect, useSyncExternalStore } from 'react';
 import type { Carte } from '../lib/collection';
 import { sansThemeLocal } from '../lib/themes';
 import type { CacheWikipedia } from '../lib/wikipedia';
+import { dureeRestante } from '../lib/progression';
+import { estMesuree, mesuresCourantes, secondesPar } from '../lib/durees';
 import { definirRappelCache, lePlanificateur } from './planificateurWikipedia';
 
 interface Props {
@@ -37,7 +39,7 @@ const VerificationFond: React.FC<Props> = ({ cartes, prete, onCache }) => {
   return (
     <>
       <p className="mt-2 text-sm text-muted" hidden={!actif && etat.suspendue === null} data-testid="verification-fond">
-        {etat.suspendue ?? `Lecture en arrière-plan de Wikipédia et Wikidata pour les cartes sans thème${NB}: ${etat.fond.toLocaleString('fr-FR')} restantes.`}
+        {etat.suspendue ?? `Lecture en arrière-plan de Wikipédia et Wikidata pour les cartes sans thème${NB}: ${etat.fond.toLocaleString('fr-FR')} restantes (${estMesuree(mesuresCourantes(), 'wikipedia') ? '' : 'environ, '}${dureeRestante(etat.fond * secondesPar('wikipedia'))}).`}
       </p>
       <p className="sr-only" aria-live="polite">
         {etat.suspendue === null ? (actif ? 'Lecture en arrière-plan des cartes sans thème en cours.' : '') : etat.suspendue}

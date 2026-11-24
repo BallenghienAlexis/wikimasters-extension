@@ -128,6 +128,8 @@ export interface DependancesSynchro {
   passerCarteDemandee?: () => boolean;
   /** Millisecondes ajoutées à l’intervalle minimal entre deux requêtes (délai variable). Absent : 0. */
   gigue?: () => number;
+  /** Durée réelle d’une page lue ou d’un prix relevé (estimations de temps) ; sans effet sur le plan. */
+  mesurer?: (categorie: 'lecture' | 'prix', ms: number) => void;
 }
 
 /** Attente de la phase Prix après une erreur : seul le joueur peut l’arrêter. */
@@ -566,6 +568,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         journal(total === null ? `Arrêt de la lecture : plus de ${maxPages} pages (total inconnu).` : `Arrêt de la lecture : plus de ${maxPages} pages pour ${total} exemplaires.`);
         return { ok: false, vus: null, tete: null, lus: exemplairesLus };
       }
+      const debutPage = horloge.now();
       const r = await requete(cheminPage(page, tri));
       if (r === null) {
         ok = false;
@@ -614,6 +617,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         parId.set(c.id, { ...locale, quantite: c.quantite, favori: c.favori, idsSite: c.idsSite, etiquettesSite: c.etiquettesSite });
       }
       await deps.enregistrer(instantane(), etat);
+      deps.mesurer?.('lecture', horloge.now() - debutPage);
       // Une page identique au local ne suffit pas : tout l’écart de total doit être expliqué par ce qui a été lu.
       if (gain !== null && ordreConfirme && toutIdentique && exemplairesGagnes === gain.exemplaires && cartesGagnees === gain.cartes) return { ok, vus: null, tete, lus: exemplairesLus };
       // Fin atteinte sans demander la page suivante (le site la refuse parfois en 403) : page incomplète,
@@ -678,6 +682,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       const cardId = etat.cardIds[carte.id];
       if (cardId === undefined) continue;
       // Réessaie sans fin (5 s, 10 s, 15 s…) jusqu’à une réponse exploitable ; seul un 404 (sans marché) renvoie `null`.
+      const debutPrix = horloge.now();
       const obtenu = await requetePrix(cheminPrix(cardId), carte.titre, carte.rarete as string);
       if (obtenu === 'passee') {
         // Passée par le joueur : valeur précédente gardée, redemandée dans un jour.
@@ -714,6 +719,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       }
       resultat.prixReleves += 1;
       await deps.enregistrer(instantane(), etat);
+      // Un prix lu sans attente d’erreur : une carte qui a attendu (réessais) n’est pas représentative et est écartée par la médiane.
+      deps.mesurer?.('prix', horloge.now() - debutPrix);
     }
   }
 }

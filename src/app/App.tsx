@@ -16,6 +16,7 @@ import OngletTableauDeBord from './OngletTableauDeBord';
 import { idOnglet, idPanneau } from './definitionOnglets';
 import { ContexteAffichage } from './useMouvement';
 import { useAffichage } from './useAffichage';
+import { useDureesMesurees } from './useDureesMesurees';
 import { useDonneesPage } from './useDonneesPage';
 import { useHistoriqueQuotidien } from './useHistoriqueQuotidien';
 import { useOngletActif } from './useOngletActif';
@@ -28,6 +29,7 @@ import { useOngletActif } from './useOngletActif';
 const App: React.FC = () => {
   const donnees = useDonneesPage();
   const affichage = useAffichage();
+  useDureesMesurees();
   const [actif, aller] = useOngletActif();
   const { collection, chargee, blocage, message } = donnees;
   useHistoriqueQuotidien(collection, chargee && !blocage);

@@ -214,6 +214,8 @@ export interface EtatPlanificateur {
 }
 
 export interface OptionsPlanificateur {
+  /** Durée réelle d’un titre vérifié (estimation de la lecture de fond) ; sans effet sur la cadence. */
+  mesurer?: (ms: number) => void;
   chargerCache: () => Promise<CacheWikipedia>;
   /** Appelé avec le cache à jour après chaque page lue (à enregistrer et à afficher). */
   surCache: (cache: CacheWikipedia) => void | Promise<void>;
@@ -247,7 +249,7 @@ const MESSAGE_ECHECS = 'Vérification suspendue : trop d’échecs de lecture. E
  * suspension définitive (jusqu'au rechargement) sur 403/429 ou 3 échecs de suite. À créer une seule fois par page.
  */
 export function creerPlanificateur(options: OptionsPlanificateur): Planificateur {
-  const { chargerCache, surCache, maintenant = Date.now, attendre = attendreReel, transport = transportReel, chargerGraphe, surGraphe } = options;
+  const { mesurer, chargerCache, surCache, maintenant = Date.now, attendre = attendreReel, transport = transportReel, chargerGraphe, surGraphe } = options;
   // Début de la dernière requête réellement partie : la cadence d'une par seconde tient même après une annulation.
   let dernierDepart = Number.NEGATIVE_INFINITY;
   const transportHorodate: Transport = (url, signal) => {
@@ -287,6 +289,7 @@ export function creerPlanificateur(options: OptionsPlanificateur): Planificateur
         const titre = (courantFond ? fileFond.shift() : file.shift()) as string;
         changer({ fond: fileFond.length });
         if (titresAVerifier([titre], cache, maintenant()).length === 0) continue;
+        const debutTitre = maintenant();
         await respecterCadence();
         const signal = controleur.signal;
         const r = await verifierTitres({
@@ -309,6 +312,7 @@ export function creerPlanificateur(options: OptionsPlanificateur): Planificateur
           continue;
         }
         if (r.arret === 'code-http') return void changer({ suspendue: MESSAGE_CODE(r.codeHttp) });
+        if (r.verifiees > 0 && r.arret === null) mesurer?.(maintenant() - debutTitre);
         // Aucune page lue et aucun arrêt : réponse illisible ou erreur réseau.
         echecs = r.verifiees === 0 ? echecs + 1 : 0;
         if (echecs >= 3) return void changer({ suspendue: MESSAGE_ECHECS });
