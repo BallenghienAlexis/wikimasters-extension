@@ -212,6 +212,7 @@ body {
 /* Dépliage en hauteur fluide (grid-template-rows 0fr → 1fr). */
 .wm-repli {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: 0fr;
   transition: grid-template-rows var(--d-base) var(--ease-out);
 }

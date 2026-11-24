@@ -8,6 +8,7 @@ import { validerIgnorees, type Ignoree } from './ignorees';
 import { validerHistorique, type PointHistorique } from './historique';
 import { AFFICHAGE_DEFAUT, validerAffichage, type Affichage } from './affichage';
 import { cacheVide, validerCache, type CacheWikipedia } from './wikipedia';
+import { validerActiviteJours, type ActiviteJours } from './graphiquesTableauDeBord';
 import { MAX_ENTITES_GRAPHE, validerGraphe, type GrapheWikidata } from './classesWikidata';
 import { etatApprisVide, validerEtatAppris, type EtatAppris } from './themesAppris';
 import { cacheIAVide, validerCacheIA, type CacheIA } from './classificationIA';
@@ -49,6 +50,7 @@ const CLE_THEMES_APPRIS = 'themesAppris';
 const CLE_VENTES = 'ventes';
 const CLE_AFFLUENCE_SITE = 'affluenceSite';
 const CLE_RESULTATS_VENTES = 'resultatsVentes';
+const CLE_ACTIVITE = 'activiteQuotidienne';
 const MAX_RESULTATS_VENTES = 500;
 const MAX_RELEVES_SITE = 2000;
 const CLE_RELEVE_MARCHE = 'releveMarche';
@@ -751,7 +753,8 @@ export async function lireDonneesSauvegarde(): Promise<Donnees> {
   ]);
   // Registre et revendications : facultatifs (illisibles = absents, la sauvegarde n'en dépend pas pour fonctionner).
   const [registre, importees] = await Promise.all([chargerRegistre().catch(() => undefined), chargerEtiquettesImportees()]);
-  return { collection, preferences, syncAuto, ventes, synchro: { derniereSynchro, etat, wikipedia, classementIA, themesAppris, grapheWikidata }, ...(registre ? { registre } : {}), importees };
+  const [activite, resultatsVentes] = await Promise.all([chargerActiviteQuotidienne().catch(() => ({})), chargerResultatsVentes().catch(() => [])]);
+  return { collection, preferences, syncAuto, ventes, synchro: { derniereSynchro, etat, wikipedia, classementIA, themesAppris, grapheWikidata, activite, resultatsVentes }, ...(registre ? { registre } : {}), importees };
 }
 
 /** Une synchronisation tient le bail : l'importer maintenant écraserait son état. */
@@ -785,6 +788,9 @@ export async function ecrireDonneesSauvegarde(donnees: Donnees): Promise<void> {
       await enregistrerEtatSynchro({ ...s.etat, arretJusqua: arret > 0 ? arret : null });
     }
     if (s.derniereSynchro !== null) await enregistrerDerniereSynchro(s.derniereSynchro);
+    // Graphiques du tableau de bord : déjà fusionnés avec ceux d'ici (`fusionnerSynchro`).
+    if (s.activite) await enregistrerActiviteQuotidienne(s.activite);
+    if (s.resultatsVentes) await enregistrerResultatsVentes(s.resultatsVentes);
   }
 }
 
@@ -892,4 +898,30 @@ export async function effacerStockageSaufThemes(): Promise<string[]> {
   const aRetirer = Object.keys(contenu).filter((cle) => !(CLES_GARDEES as readonly string[]).includes(cle));
   if (aRetirer.length > 0) await chrome.storage.local.remove(aRetirer);
   return aRetirer;
+}
+
+// ---- Activité quotidienne du tableau de bord (Alexis, 2026-11-24) ----
+// Compteurs par jour local (enchères, ventes, défausses, étiquettes) cumulés d’après le journal et les enchères terminées ;
+// stockage local seulement, aucune requête. Transmis dans la sauvegarde complète.
+
+/** Activité par jour ; valeur absente ou illisible : aucune activité. */
+export async function chargerActiviteQuotidienne(): Promise<ActiviteJours> {
+  const contenu = await chrome.storage.local.get(CLE_ACTIVITE);
+  const brut = contenu[CLE_ACTIVITE];
+  return estObjet(brut) && brut.version === 1 ? validerActiviteJours(brut.jours) : {};
+}
+
+export async function enregistrerActiviteQuotidienne(jours: ActiviteJours): Promise<void> {
+  await chrome.storage.local.set({ [CLE_ACTIVITE]: { version: 1, jours: validerActiviteJours(jours) } });
+}
+
+export const ecouterActiviteQuotidienne = (rappel: () => void): (() => void) => ecouterCle(CLE_ACTIVITE, rappel);
+
+/** Remplace les enchères terminées gardées (import d’une sauvegarde) ; les entrées illisibles sont ignorées. */
+export async function enregistrerResultatsVentes(evenements: readonly EvenementVente[]): Promise<void> {
+  const tache = fileResultats.then(() =>
+    chrome.storage.local.set({ [CLE_RESULTATS_VENTES]: { version: VERSION_VENTES, evenements: validerEvenements(evenements, MAX_RESULTATS_VENTES).filter((e) => e.type === 'resultat') } }),
+  );
+  fileResultats = tache.catch(() => undefined);
+  await tache;
 }
