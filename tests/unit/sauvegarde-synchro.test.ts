@@ -66,6 +66,16 @@ describe('mémoire de synchro dans la sauvegarde', () => {
     expect(res.donnees.synchro?.etat?.prix['a']?.releveLe).toBe(6000);
   });
 
+  it('garde la date d’origine d’un relevé de plus de 7 jours : l’import ne le rend jamais frais', () => {
+    const maintenant = 100 * 86_400_000;
+    const ancien = maintenant - 10 * 86_400_000;
+    const sy: DonneesSynchro = { ...source(), etat: { ...etatInitial(), derniereComplete: 4000, prix: { a: { valeur: 7, releveLe: ancien } } } };
+    const s = lire(donnees([carte('a', { valeurMarchande: 7 })], sy));
+    const res = appliquerImport(donnees([carte('a', { valeurMarchande: 7 })], synchroVide()), s, 'remplacer');
+    if (!res.ok) throw new Error(res.erreur);
+    expect(res.donnees.synchro?.etat?.prix['a']?.releveLe).toBe(ancien);
+  });
+
   it('ramène à maintenant un horodatage du futur', () => {
     const futur: DonneesSynchro = { ...source(), derniereSynchro: 9e12 };
     const s = lire(donnees([carte('a', { valeurMarchande: 7 })], futur));

@@ -24,8 +24,14 @@ import { absenceDeVenteProuvee, absenceDeVenteRecente, analyserPage, analyserPri
 export const PAUSE_APRES_ARRET_MS = PAUSE_LOTS_MS;
 /** Une carte passée par le joueur est redemandée dans 1 jour. */
 export const REPORT_CARTE_PASSEE_MS = 86_400_000;
-/** Une valeur marchande relevée est périmée après 30 jours. */
-export const ancienneteMaxPrixMs = 30 * 86_400_000;
+/** Un prix du marché relevé (valeur ou absence de vente constatée) est périmé après 7 jours et re-relevé (Alexis, 2026-11-24). */
+export const ancienneteMaxPrixMs = 7 * 86_400_000;
+/** Une carte sans route de prix (404) ou sans relevé exploitable n’est pas redemandée avant 30 jours. */
+export const memoireSansRoutePrixMs = 30 * 86_400_000;
+/** Durée de validité d’un relevé : 7 jours s’il porte une valeur ou une absence de vente constatée, 30 jours sinon (404, carte passée). */
+export function peremptionPrixMs(r: Pick<PrixReleve, 'valeur' | 'sansVente'> | undefined): number {
+  return r !== undefined && r.valeur === null && r.sansVente !== true ? memoireSansRoutePrixMs : ancienneteMaxPrixMs;
+}
 /** Durée d’un bail ; renouvelé avant chaque requête. */
 export const DUREE_BAIL_MS = 2 * 60_000;
 /** Petite pause ajoutée avant chaque demande de prix (en plus de l’intervalle et de la gigue). */
@@ -642,7 +648,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
 
   function candidatsPrix(): Carte[] {
     const maintenant = horloge.now();
-    const fraiche = (r: PrixReleve | undefined): r is PrixReleve => r !== undefined && maintenant - r.releveLe <= ancienneteMaxPrixMs;
+    const fraiche = (r: PrixReleve | undefined): r is PrixReleve => r !== undefined && maintenant - r.releveLe <= peremptionPrixMs(r);
     const absentes: Carte[] = [];
     const perimees: Carte[] = [];
     const anciennete = (c: Carte): number => etat.prix[c.id]?.releveLe ?? 0;
@@ -690,7 +696,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       const obtenu = await requetePrix(cheminPrix(cardId), carte.titre, carte.rarete as string);
       if (obtenu === 'passee') {
         // Passée par le joueur : valeur précédente gardée, redemandée dans un jour.
-        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() - ancienneteMaxPrixMs + REPORT_CARTE_PASSEE_MS, v: 2 };
+        const precedente = etat.prix[carte.id];
+        etat.prix[carte.id] = { valeur: precedente?.valeur ?? null, releveLe: horloge.now() - peremptionPrixMs(precedente) + REPORT_CARTE_PASSEE_MS, v: 2 };
         deps.prixTermine?.();
         continue;
       }

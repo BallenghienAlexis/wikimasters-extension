@@ -203,11 +203,11 @@ describe('lignesSante : santé de la synchro en quatre lignes', () => {
     expect(l[2]).toMatchObject({ symbole: '✓', texte: '1 prix relevé, tous récents' })
   })
 
-  it('prix périmés : seuil au-delà de 30 jours, comme l’ordonnanceur', () => {
-    const exact = lignesSante({ ...base, releves: [100 * JOUR - 30 * JOUR] })
+  it('prix périmés : seuil au-delà de 7 jours, comme l’ordonnanceur', () => {
+    const exact = lignesSante({ ...base, releves: [100 * JOUR - 7 * JOUR] })
     expect(exact[2]?.symbole).toBe('✓')
-    const perime = lignesSante({ ...base, releves: [100 * JOUR - 30 * JOUR - 1, 100 * JOUR] })
-    expect(perime[2]).toMatchObject({ symbole: '○', texte: '1 prix à rafraîchir (plus de 30 jours)' })
+    const perime = lignesSante({ ...base, releves: [100 * JOUR - 7 * JOUR - 1, 100 * JOUR] })
+    expect(perime[2]).toMatchObject({ symbole: '○', texte: '1 prix à rafraîchir (plus de 7 jours)' })
   })
 
   it('actions ignorées : symbole d’alerte et lien nommé', () => {
