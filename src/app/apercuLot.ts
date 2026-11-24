@@ -3,14 +3,13 @@ import { CONFIG_PRIX } from '../config/prix';
 import { estLimiteEncheres, estVerificationHumaine, type Action, type CarteEcartee, type FamilleLot, type RaisonEcart, type Registre, type TypeAction, type TypesDisponibles } from '../lib/actions';
 import type { Carte, Collection } from '../lib/collection';
 import { familleDe } from '../lib/familles';
+import { secondesPar } from '../lib/durees';
 import { raisonPause } from '../lib/reprise';
 import { LIBELLE_LIMITE_ENCHERES, LIBELLE_VERIFICATION_HUMAINE } from '../lib/journal';
 import { CODES_ARRET, CODE_CONFLIT, type EtatFile, type RaisonArret } from '../lib/file';
 import { construireLot, type Config, type LotConstruit } from '../lib/lot';
 import { modeEtiquettes, plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
 
-/** Secondes par action en moyenne : 0,2 s minimale plus un supplément de 0 à 0,1 s (moyenne 0,05 s). */
-const SECONDES_PAR_ACTION = 0.25;
 /** Nombre maximal de lignes d’actions affichées (SC-025). */
 const LIGNES_MAX = 100;
 /** Au-delà, les cartes écartées sont regroupées par raison. */
@@ -103,7 +102,7 @@ export function texteTotaux(t: Totaux): string {
   return parts.join(' · ');
 }
 
-export const dureeMinutes = (nbRequetes: number): number => Math.ceil((nbRequetes * SECONDES_PAR_ACTION) / 60);
+export const dureeMinutes = (nbRequetes: number): number => Math.ceil((nbRequetes * secondesPar('ecriture')) / 60);
 
 export const texteDuree = (nbRequetes: number): string => `Durée estimée${NB}: ${dureeMinutes(nbRequetes)} min`;
 

@@ -27,12 +27,14 @@ import {
   chargerJournal,
   enregistrerStatutSynchro,
   enregistrerEtiquettesSite,
+  ajouterDureesMesurees,
   noterAffluenceSite,
   chargerReleveMarche,
   enregistrerReleveMarche,
   type StatutSynchro,
 } from '../lib/stockage';
 import { gigueAleatoire } from '../lib/gigue';
+import { creerCollecteur } from '../lib/durees';
 import { analyserStats } from '../lib/lectureApi';
 import { completerEntree, ouvrirEntree } from '../lib/journal';
 import { extraireHorodatages, routeMarcheValide } from '../lib/affluence';
@@ -179,6 +181,7 @@ function evenementFinal(resultat: ResultatSynchro, pages: number | null): Evenem
 
 export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
   const journal = deps.journal ?? (() => undefined);
+  const collecteur = creerCollecteur(ajouterDureesMesurees);
   let enCours = false;
   let arretDemande = false;
   let passerDemande = false;
@@ -335,6 +338,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
         bail: deps.bail,
         journal,
         gigue: deps.gigue,
+        mesurer: (categorie, ms) => collecteur.noter(categorie, ms),
         arretDemande: () => arretDemande,
         passerCarteDemandee: () => {
           const d = passerDemande;
@@ -377,6 +381,7 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
       return null;
     } finally {
       enCours = false;
+      await collecteur.vider();
     }
   }
 

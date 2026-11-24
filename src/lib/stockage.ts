@@ -19,6 +19,7 @@ import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../config/amis';
 import { ajouterEvenement, validerEvenements, VERSION_VENTES, type EvenementVente } from './affluence';
 import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, type Preferences } from './tri';
 import { estObjet } from './valider';
+import { ajouterMesures, validerMesures, type CategorieDuree, type MesuresDurees } from './durees';
 import type { EtatVerrouRequete } from './verrouRequete';
 import { CLES_GARDEES, collectionReduite, preferencesGardees } from './reinitialisation';
 import { VERSION_SUIVI, suiviVide, validerLancements, type LancementVente, type SuiviVentes } from './ventes';
@@ -61,6 +62,7 @@ const CLE_ETAT_SUIVI = 'etatSuiviVentes';
 const CLE_SIGNAL_SUIVI = 'signalSuiviVentes';
 const CLE_BAIL_SUIVI = 'bailSuiviVentes';
 const CLE_VERROU_REQUETE = 'verrouRequete';
+const CLE_DUREES = 'dureesMesurees';
 
 export type { StatutSynchro };
 
@@ -105,10 +107,31 @@ export const CLES_STOCKAGE = {
   signalSuiviVentes: CLE_SIGNAL_SUIVI,
   bailSuiviVentes: CLE_BAIL_SUIVI,
   verrouRequete: CLE_VERROU_REQUETE,
+  dureesMesurees: CLE_DUREES,
 } as const;
 
 function illisible(detail: string): Error {
   return new Error(`Données stockées illisibles. ${detail}`);
+}
+
+/** Durées mesurées par process (estimations de temps) : illisible ou absent vaut « aucune mesure », jamais une erreur. */
+export async function chargerDureesMesurees(): Promise<MesuresDurees> {
+  const contenu = await chrome.storage.local.get(CLE_DUREES);
+  return validerMesures(contenu[CLE_DUREES]);
+}
+
+/** Relit puis ajoute (les mesures de la synchro et des lots viennent de deux contextes) : jamais de requête. */
+export async function ajouterDureesMesurees(ajouts: Partial<Record<CategorieDuree, number[]>>): Promise<void> {
+  const actuelles = await chargerDureesMesurees();
+  await chrome.storage.local.set({ [CLE_DUREES]: ajouterMesures(actuelles, ajouts) });
+}
+
+export function ecouterDureesMesurees(rappel: () => void): () => void {
+  const ecouteur = (changes: Record<string, unknown>, zone: string): void => {
+    if (zone === 'local' && CLE_DUREES in changes) rappel();
+  };
+  chrome.storage.onChanged.addListener(ecouteur);
+  return () => chrome.storage.onChanged.removeListener(ecouteur);
 }
 
 /** Étiquettes du compte lues sur le site (identifiant, nom, nombre de cartes) ; illisible ou absent : `null`. */

@@ -12,11 +12,13 @@ import { CODES_ARRET, INTERVALLE_MS, SUPPLEMENT_MAX_MS, creerFile, type Contexte
 import { LIBELLES_THEMES } from '../lib/themes';
 import { actionsReinitSite, planSite, type OptionsReinitSite } from '../lib/reinitialisation';
 import { familleDe } from '../lib/familles';
+import { creerCollecteur } from '../lib/durees';
 import { ajouterIgnoree } from '../lib/ignorees';
 import { LIBELLE_VERIFICATION_HUMAINE, completerEntree, ouvrirEntree, ouvrirEntreePassee, passerEntree } from '../lib/journal';
 import { PAUSE_LOTS_MS, RAISON_RESULTAT_INCONNU, calculerPauseJusqua, raisonPause, resultatInconnu } from '../lib/reprise';
 import { appliquerResultat, reverifierAction } from '../lib/revision';
 import {
+  ajouterDureesMesurees,
   chargerCollection,
   chargerBailSynchro,
   chargerExecution,
@@ -106,6 +108,7 @@ async function construireErreur(c: ContexteErreur, maintenant: number): Promise<
 let restantesMem: Action[] = [];
 let suiteMem: SuiteExecution | null = null;
 let idLotMem = '';
+const collecteurDurees = creerCollecteur(ajouterDureesMesurees);
 /** « Arrêter tout » demandé pendant l'exécution : les restantes sont abandonnées à la fin. */
 let abandon = false;
 
@@ -120,6 +123,8 @@ export function contexteExecution(): ContexteExecution {
   const pont: Pont = { idLot: '', bilan: bilanVide(), deconnecte: false };
   const file = creerFile({
     horloge: horlogeReelle,
+    // Durée réelle par action réussie : estimation de temps des aperçus et du bandeau (aucune requête).
+    mesurer: (ms) => collecteurDurees.noter('ecriture', ms),
     // Délai variable entre les requêtes (décision d’Alexis du 2026-11-11), en plus de la seconde minimale.
     delaiSupplementaire: supplementAleatoire,
     // Poses et retraits d’étiquettes en parallèle, par défaut (Alexis, 2026-11-12).
