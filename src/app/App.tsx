@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
+import type { Donnees } from '../lib/sauvegarde';
 import { collectionVide, type Filtres } from '../lib/collection';
 import BandeauActivite from './BandeauActivite';
 import VerificationFond from './VerificationFond';
@@ -20,6 +21,7 @@ import { useDureesMesurees } from './useDureesMesurees';
 import { useDonneesPage } from './useDonneesPage';
 import { useHistoriqueQuotidien } from './useHistoriqueQuotidien';
 import { useOngletActif } from './useOngletActif';
+import { useSynchroPc } from './useSynchroPc';
 
 /**
  * Coquille de la page de gestion : en-tête, blocage et messages de stockage (au-dessus des onglets, sur les cinq),
@@ -35,6 +37,19 @@ const App: React.FC = () => {
   useHistoriqueQuotidien(collection, chargee && !blocage);
 
   const [revision, setRevision] = useState(0);
+  const synchroPc = useSynchroPc(
+    chargee && !blocage,
+    useCallback(
+      (importees: Donnees) => {
+        donnees.setCollection(importees.collection);
+        donnees.setPreferences(importees.preferences);
+        donnees.setVentes(importees.ventes);
+        setRevision((r) => r + 1);
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [donnees.setCollection, donnees.setPreferences, donnees.setVentes],
+    ),
+  );
   const [limite, setLimite] = useState(TAILLE_PAGE);
   const [filtres, setFiltres] = useState<Filtres>({ recherche: '', doublonsSeulement: false });
   const [theme, setTheme] = useState('tous');
@@ -75,6 +90,7 @@ const App: React.FC = () => {
         panneau = (
           <OngletReglages
             donnees={donnees}
+            synchroPc={synchroPc}
             onImportee={(importees) => {
               donnees.setCollection(importees.collection);
               donnees.setPreferences(importees.preferences);

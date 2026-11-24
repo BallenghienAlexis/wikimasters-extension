@@ -168,6 +168,11 @@ export default tseslint.config(
     rules: { ...regles({ site: true, stockage: false, alea: true, idb: true }), 'no-console': 'error' },
   },
   {
+    // Seul fichier de l'application qui garde la poignée du dossier de synchro entre PC : IndexedDB de l'extension elle-même (le stockage du site reste interdit).
+    files: ['src/app/dossierPc.ts'],
+    rules: regles({ stockage: false }),
+  },
+  {
     files: ['.claude/hooks/**/*.mjs', 'scripts/**/*.mjs'],
     languageOptions: { globals: { process: 'readonly', console: 'readonly', URL: 'readonly' } },
   },
