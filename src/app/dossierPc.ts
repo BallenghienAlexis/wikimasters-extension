@@ -35,7 +35,7 @@ async function transaction<T>(mode: IDBTransactionMode, action: (m: IDBObjectSto
 
 export const synchroPcDisponible = (): boolean => typeof indexedDB !== 'undefined' && 'showDirectoryPicker' in window;
 
-/** Le joueur choisit le dossier (geste obligatoire). `null` seulement s'il ferme la fenêtre : toute autre erreur remonte avec son nom. */
+/** Le joueur choisit le dossier (geste obligatoire). `null` seulement s'il ferme la fenêtre : toute autre erreur remonte avec son nom. `detailAnnulation` : nom et message de l'AbortError, sinon `null`. */
 export async function choisirDossier(): Promise<{ dossier: Dossier | null; erreurMemoire: string | null; detailAnnulation: string | null }> {
   let choisi: Dossier;
   try {

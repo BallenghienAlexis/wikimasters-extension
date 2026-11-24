@@ -154,7 +154,7 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
     try {
       const { dossier: d, erreurMemoire, detailAnnulation } = await choisirDossier();
       if (!d) {
-        setVue((v) => ({ ...v, erreur: 'Aucun dossier retenu : la fenêtre a été fermée ou Chrome a refusé ce dossier. Essaie un autre dossier, par exemple un sous-dossier ordinaire du Drive. Détail renvoyé par Chrome : ' + (detailAnnulation ?? 'aucun') + '.' }));
+        setVue((v) => ({ ...v, erreur: 'Aucun dossier retenu : la fenêtre a été fermée ou Chrome a refusé ce dossier. Essaie un autre dossier, par exemple un sous-dossier ordinaire du Drive (détail renvoyé par Chrome : ' + (detailAnnulation ?? 'aucun') + ').' }));
         return;
       }
       dossier.current = d;
