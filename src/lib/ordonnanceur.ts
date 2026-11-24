@@ -18,7 +18,7 @@ import { CODE_VERIFICATION_HUMAINE } from './actions';
 import { PAS_ATTENTE_MS } from './ventes';
 import { CODES_ARRET, INTERVALLE_MS, type Horloge } from './file';
 import { VERSION_SCHEMA, aEditionLocale, type Carte, type Collection } from './collection';
-import { absenceDeVenteProuvee, analyserPage, analyserPrix, analyserTendance, type TendancePrix, sensDuPrix, type SensPrix, decrireForme, diagnosticStats, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
+import { absenceDeVenteProuvee, absenceDeVenteRecente, analyserPage, analyserPrix, analyserTendance, type TendancePrix, sensDuPrix, type SensPrix, decrireForme, diagnosticStats, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
 
 /** Aucune reprise automatique avant ce délai après un arrêt (401, 403 ou 429 des pages et stats). Même durée que la pause des lots (`PAUSE_LOTS_MS`). */
 export const PAUSE_APRES_ARRET_MS = PAUSE_LOTS_MS;
@@ -64,6 +64,10 @@ export interface PrixReleve {
   tendance?: TendancePrix;
   /** Aucune vente prouvée par `price-history` (Alexis, 2026-11-23) : posé seulement sur une absence prouvée, jamais sur 404, carte passée ou erreur. */
   sansVente?: boolean;
+  /** Avec `sansVente` : plus haut prix moyen d'une semaine plus ancienne que les 4 dernières (2026-11-24) ; absent si aucune vente jamais lue. */
+  ancienMax?: number;
+  /** 2 : relevé fait avec la règle du 2026-11-24 ; une valeur nulle sans cette marque est redemandée une fois. */
+  v?: 2;
 }
 
 /** État conservé entre deux exécutions (à persister par l’appelant ; ne contient aucun secret). */
@@ -648,7 +652,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       if (!c.rarete || !etat.cardIds[c.id]) continue;
       const rec = etat.prix[c.id];
       const saisieMain = c.valeurMarchande !== null && rec?.valeur !== c.valeurMarchande;
-      const aJour = c.valeurMarchande === null ? fraiche(rec) && rec.valeur === null : fraiche(rec) && !saisieMain;
+      const aJour = c.valeurMarchande === null ? fraiche(rec) && rec.valeur === null && rec.v === 2 : fraiche(rec) && !saisieMain;
       if (!saisieMain && !aJour) {
         (c.valeurMarchande === null ? absentes : perimees).push(c);
       }
@@ -686,13 +690,13 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       const obtenu = await requetePrix(cheminPrix(cardId), carte.titre, carte.rarete as string);
       if (obtenu === 'passee') {
         // Passée par le joueur : valeur précédente gardée, redemandée dans un jour.
-        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() - ancienneteMaxPrixMs + REPORT_CARTE_PASSEE_MS };
+        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() - ancienneteMaxPrixMs + REPORT_CARTE_PASSEE_MS, v: 2 };
         deps.prixTermine?.();
         continue;
       }
       if (obtenu === null) {
         // Carte sans route de prix : ignorée, valeur précédente gardée, pas redemandée avant 30 jours.
-        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() };
+        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now(), v: 2 };
         deps.prixTermine?.();
         continue;
       }
@@ -705,8 +709,11 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       const tendance = analyserTendance(r.json, carte.rarete as string, horloge.now());
       const courante = parId.get(carte.id) as Carte;
       const saisieMain = courante.valeurMarchande !== null && etat.prix[carte.id]?.valeur !== courante.valeurMarchande;
-      const sansVente = valeur === null && sens === 'aucune-vente' && absenceDeVenteProuvee(r.json, carte.rarete as string);
-      etat.prix[carte.id] = { valeur, releveLe: horloge.now(), ...(tendance ? { tendance } : {}), ...(sansVente ? { sansVente: true } : {}) };
+      const prouvee = valeur === null && sens === 'aucune-vente' && absenceDeVenteProuvee(r.json, carte.rarete as string);
+      const recente = valeur === null && sens === 'aucune-vente' && !prouvee ? absenceDeVenteRecente(r.json, carte.rarete as string, horloge.now()) : undefined;
+      const sansVente = prouvee || recente !== undefined;
+      const ancienMax = recente?.ancienMax ?? null;
+      etat.prix[carte.id] = { valeur, releveLe: horloge.now(), v: 2, ...(tendance ? { tendance } : {}), ...(sansVente ? { sansVente: true } : {}), ...(ancienMax !== null ? { ancienMax } : {}) };
       if (valeur === null) {
         if (sens !== 'aucune-vente') journal(`Pas de valeur marchande pour « ${carte.titre} ».`);
       } else if (saisieMain) {

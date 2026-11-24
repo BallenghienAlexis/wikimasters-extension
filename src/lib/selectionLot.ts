@@ -31,25 +31,23 @@ export const raisonNonProposable = (c: Carte): string | null => {
  */
 export function idsSansPrixConfirme(
   cartes: readonly Carte[],
-  prix: Readonly<Record<string, { valeur: number | null; releveLe: number; sansVente?: boolean }>>,
+  prix: Readonly<Record<string, { valeur: number | null; releveLe: number; sansVente?: boolean; ancienMax?: number }>>,
   maintenant: number,
   ancienneteMaxMs: number,
+  plafond?: number,
 ): string[] {
   return cartes
     .filter((c) => {
       const r = prix[c.id]
-      return c.valeurMarchande === null && r !== undefined && r.sansVente === true && r.valeur === null && maintenant - r.releveLe <= ancienneteMaxMs
+      return c.valeurMarchande === null && r !== undefined && r.sansVente === true && r.valeur === null && maintenant - r.releveLe <= ancienneteMaxMs && (r.ancienMax === undefined || plafond === undefined || r.ancienMax <= plafond)
     })
     .map((c) => c.id)
 }
 
 /** Fraîcheur du relevé « aucun prix » pour proposer une défausse : une semaine (la défausse est définitive). */
 export const FRAICHEUR_SANS_PRIX_MS = 7 * 86_400_000
-/** Au-delà de ce nombre de cartes sans prix à défausser, la pré-coche de masse ne les coche pas : le joueur les choisit à la main. */
-export const MAX_PRECOCHE_SANS_PRIX = 10
-
-/** Cartes sans prix que la pré-coche défausserait (hors règles de garde), et si leur nombre dépasse le plafond de pré-coche. */
-export function resumerSansPrix(cartes: readonly Carte[], preferences: Preferences, sansPrix: ReadonlySet<string>): { nombre: number; trop: boolean } {
+/** Cartes sans prix que la pré-coche défausserait (hors règles de garde). Plus de plafond de nombre (Alexis, 2026-11-24). */
+export function resumerSansPrix(cartes: readonly Carte[], preferences: Preferences, sansPrix: ReadonlySet<string>): { nombre: number } {
   let nombre = 0
   for (const c of cartes) {
     // Conditions peu coûteuses d’abord : `estProposable` lit les thèmes de la carte.
@@ -59,7 +57,7 @@ export function resumerSansPrix(cartes: readonly Carte[], preferences: Preferenc
     if (amisConcernes(themes, preferences.amis).length > 0 || c.ami !== null) continue
     nombre++
   }
-  return { nombre, trop: nombre > MAX_PRECOCHE_SANS_PRIX }
+  return { nombre }
 }
 
 const sansDieseEtAccents = (nom: string): string => normaliser(nom).replace(/^#\s*/, '').trim()
@@ -112,7 +110,6 @@ export type CodeVerdict =
   | 'theme-garde'
   | 'ami'
   | 'valeur-inconnue'
-  | 'sans-prix-trop'
   | 'defausse-plafond'
   | 'defausse-sans-prix'
   | 'enchere'
@@ -140,9 +137,8 @@ const exemplairesADefausser = (c: Carte): number => Math.max(1, Math.min(c.quant
  * Verdict d’une carte avec les règles courantes (aucun cache : recalculé à chaque appel). Source unique de la pré-coche,
  * de la relance automatique et de l’affichage du motif. Ordre des règles : favori, non reliée, « à classer », thème gardé,
  * ami, puis la valeur (inconnue, au plafond ou en dessous : défausse ; au-dessus : enchère).
- * `sansPrixAutorise` : faux quand trop de cartes sans prix seraient défaussées d’un coup (elles se choisissent alors à la main).
  */
-export function verdictCarte(c: Carte, preferences: Preferences, sansPrix: ReadonlySet<string>, sansPrixAutorise: boolean): Verdict {
+export function verdictCarte(c: Carte, preferences: Preferences, sansPrix: ReadonlySet<string>): Verdict {
   const v = (action: Verdict['action'], code: CodeVerdict, motif: string, court: string, exemplaires = 1): Verdict => ({
     action,
     code,
@@ -168,8 +164,7 @@ export function verdictCarte(c: Carte, preferences: Preferences, sansPrix: Reado
   if (c.ami !== null) return v('garder', 'ami', `carte réservée à ${c.ami}`, `Ami : ${c.ami}`)
   if (c.valeurMarchande === null) {
     if (sansPrix.has(c.id)) {
-      if (sansPrixAutorise) return v('defausser', 'defausse-sans-prix', 'aucun prix trouvé sur le site et aucune règle de garde', 'Aucun prix trouvé', exemplairesADefausser(c))
-      return v('garder', 'sans-prix-trop', `aucun prix trouvé, mais plus de ${MAX_PRECOCHE_SANS_PRIX} cartes dans ce cas : à choisir à la main`, 'Sans prix, trop nombreuses')
+      return v('defausser', 'defausse-sans-prix', 'aucun prix trouvé sur le site et aucune règle de garde', 'Aucun prix trouvé', exemplairesADefausser(c))
     }
     return v('garder', 'valeur-inconnue', 'valeur marchande inconnue (prix pas encore relevé de façon sûre)', 'Valeur inconnue')
   }
@@ -184,12 +179,9 @@ export function verdictsDesCartes(
   cartes: readonly Carte[],
   preferences: Preferences,
   sansPrix: ReadonlySet<string> = new Set(),
-  /** Collection entière, pour décider si les cartes sans prix sont trop nombreuses quand `cartes` n’en est qu’une partie (lignes affichées). */
-  ensemble: readonly Carte[] = cartes,
 ): Map<string, Verdict> {
-  const autorise = resumerSansPrix(ensemble, preferences, sansPrix).nombre <= MAX_PRECOCHE_SANS_PRIX
   const m = new Map<string, Verdict>()
-  for (const c of cartes) m.set(c.id, verdictCarte(c, preferences, sansPrix, autorise))
+  for (const c of cartes) m.set(c.id, verdictCarte(c, preferences, sansPrix))
   return m
 }
 
