@@ -474,8 +474,44 @@ describe('ordonnanceur — critère 3 : prix', () => {
     expect(demandes.length).toBeGreaterThan(0);
   });
 
-  it('la périodicité est de 30 jours', () => {
-    expect(ancienneteMaxPrixMs).toBe(30 * JOUR);
+  it('la périodicité est de 7 jours', () => {
+    expect(ancienneteMaxPrixMs).toBe(7 * JOUR);
+  });
+
+  it('rafraîchit les prix de plus de 7 jours, les plus anciens d’abord, et laisse les récents', async () => {
+    const cartes = [1, 2, 3, 4].map((n) => carteLocale(n, { valeurMarchande: 50 + n }));
+    const collection = collectionDe(cartes);
+    const ids = Object.fromEntries(cartes.map((c, i) => [c.id, `card-${i + 1}`]));
+    const etat = etatLu(collection, ids);
+    etat.prix[idCarte(1)] = { valeur: 51, releveLe: T0 - 8 * JOUR };
+    etat.prix[idCarte(2)] = { valeur: 52, releveLe: T0 - 20 * JOUR };
+    etat.prix[idCarte(3)] = { valeur: 53, releveLe: T0 - 6 * JOUR }; // 6 jours : encore frais
+    etat.prix[idCarte(4)] = { valeur: 54, releveLe: T0 - 1 * JOUR };
+    const b = banc(siteFictif(4), collection, etat);
+    const r = await synchroniser(b.deps);
+    expect(cheminsPrix(b).map((c) => /card-(\d)/.exec(c)![1])).toEqual(['2', '1']);
+    expect(r.etat.prix[idCarte(2)]?.releveLe).toBeGreaterThanOrEqual(T0);
+    expect(r.etat.prix[idCarte(3)]?.releveLe).toBe(T0 - 6 * JOUR);
+  });
+
+  it('une carte sans route de prix (404) reste mémorisée 30 jours, pas 7', async () => {
+    const cartes = [carteLocale(1, {})];
+    const collection = collectionDe(cartes);
+    const etat = etatLu(collection, { [idCarte(1)]: 'card-1' });
+    etat.prix[idCarte(1)] = { valeur: null, releveLe: T0 - 10 * JOUR, v: 2 };
+    const b = banc(siteFictif(1), collection, etat);
+    await synchroniser(b.deps);
+    expect(cheminsPrix(b)).toEqual([]);
+  });
+
+  it('une absence de vente constatée est re-relevée après 7 jours', async () => {
+    const cartes = [carteLocale(1, {})];
+    const collection = collectionDe(cartes);
+    const etat = etatLu(collection, { [idCarte(1)]: 'card-1' });
+    etat.prix[idCarte(1)] = { valeur: null, releveLe: T0 - 8 * JOUR, v: 2, sansVente: true };
+    const b = banc(siteFictif(1), collection, etat);
+    await synchroniser(b.deps);
+    expect(cheminsPrix(b).length).toBe(1);
   });
 
   it('ne relève pas et ne réécrit pas une valeur saisie à la main', async () => {

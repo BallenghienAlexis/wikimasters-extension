@@ -113,7 +113,7 @@ export function lignesSante(e: EntreeLignesSante): LigneSante[] {
       ? { symbole: '✓', nom: 'Étiquettes', texte: `${accord(e.etiquettesLues, 'étiquette lue', 'étiquettes lues')} à la dernière synchro` }
       : { symbole: '○', nom: 'Étiquettes', texte: 'Aucune étiquette lue' },
     perimes > 0
-      ? { symbole: '○', nom: 'Prix', texte: `${accord(perimes, 'prix à rafraîchir', 'prix à rafraîchir')} (plus de 30 jours)` }
+      ? { symbole: '○', nom: 'Prix', texte: `${accord(perimes, 'prix à rafraîchir', 'prix à rafraîchir')} (plus de 7 jours)` }
       : e.releves.length > 0
         ? { symbole: '✓', nom: 'Prix', texte: `${accord(e.releves.length, 'prix relevé', 'prix relevés')}, tous récents` }
         : { symbole: '○', nom: 'Prix', texte: 'Aucun prix relevé' },
