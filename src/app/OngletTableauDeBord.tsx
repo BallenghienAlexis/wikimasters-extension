@@ -12,14 +12,13 @@ import CamembertRepartition from './CamembertRepartition';
 import ProfilAffluenceSemaine from './ProfilAffluenceSemaine';
 import { useDonneesGraphiques } from './useDonneesGraphiques';
 import CarteKpi from './CarteKpi';
-import SectionRepliable from './SectionRepliable';
 import SanteSynchro from './SanteSynchro';
 import { pastilleDe, useLectureSynchro } from './useLectureSynchro';
 
 const accorder = (n: number, singulier: string, pluriel: string): string => `${n} ${n > 1 ? pluriel : singulier}`;
 
 /**
- * Onglet Tableau de bord (T-305) : trois chiffres clés, santé de la synchro.
+ * Onglet Tableau de bord (T-305) : chiffres clés, graphiques et santé de la synchro, tous visibles (aucun bloc repliable, Alexis 2026-11-24).
  * Lecture seule du stockage (collection, préférences, état de synchro) ; aucune requête, aucune vérification Wikipédia.
  */
 const COULEURS_DESTINATION: Record<IdDestination, string> = {
@@ -105,58 +104,56 @@ const OngletTableauDeBord: React.FC<Props> = ({ cacheWiki }) => {
 
   return (
     <section className="mt-4" aria-busy={!chargee}>
+      <div className="flex flex-wrap items-baseline gap-x-3">
       <h2 className="text-xl font-semibold">Tableau de bord</h2>
-      <p className="mt-2 text-sm" data-testid="resume">
+      <p className="text-sm" data-testid="resume">
         {chargee
           ? `${tableau.exemplaires} exemplaires · ${accorder(tableau.distinctes, 'carte distincte', 'cartes distinctes')}`
           : 'Lecture de la collection…'}
       </p>
+      </div>
 
-      <SectionRepliable
-        id="chiffres-cles"
-        testId="chiffres-cles"
-        className="mt-4"
-        titre="Chiffres clés"
-        resume={chargee ? `${tableau.exemplaires} exemplaires · ${tableau.ecarts === 0 ? 'aucun écart' : accorder(tableau.ecarts, 'écart', 'écarts')}` : 'Lecture…'}
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <CarteKpi
-            libelle="Exemplaires"
-            unite="exemplaires"
-            valeur={v(tableau.exemplaires)}
-            detail={accorder(tableau.distinctes, 'carte distincte', 'cartes distinctes')}
-          />
-          <CarteKpi
-            libelle="Valeur estimée"
-            unite="pièces"
-            valeur={v(tableau.valeur)}
-            detail={tableau.partSansPrix === null ? 'Aucun prix connu' : `${tableau.partSansPrix}\u00a0% des cartes sans prix`}
-          />
-          <CarteKpi
-            libelle="Écarts"
-            valeur={v(tableau.ecarts)}
-            detail={tableau.ecarts === 0 ? 'Étiquettes conformes au plan' : 'Cartes dont les étiquettes diffèrent du plan'}
-          />
-        </div>
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3" data-testid="chiffres-cles">
+        <CarteKpi
+          libelle="Exemplaires"
+          unite="exemplaires"
+          valeur={v(tableau.exemplaires)}
+          detail={accorder(tableau.distinctes, 'carte distincte', 'cartes distinctes')}
+        />
+        <CarteKpi
+          libelle="Valeur estimée"
+          unite="pièces"
+          valeur={v(tableau.valeur)}
+          detail={tableau.partSansPrix === null ? 'Aucun prix connu' : `${tableau.partSansPrix}\u00a0% des cartes sans prix`}
+        />
+        <CarteKpi
+          libelle="Écarts"
+          valeur={v(tableau.ecarts)}
+          detail={tableau.ecarts === 0 ? 'Étiquettes conformes au plan' : 'Cartes dont les étiquettes diffèrent du plan'}
+        />
+      </div>
+      <p className="mt-2 text-xs text-muted" data-testid="sans-theme">
+        {tableau.sansTheme === 0
+          ? 'Toutes les cartes reliées ont un thème fiable.'
+          : `${accorder(tableau.sansTheme, 'carte reliée sans thème fiable', 'cartes reliées sans thème fiable')} : aucune étiquette de thème posée pour l’instant.`}
+      </p>
 
-        <p className="mt-3 text-sm text-muted" data-testid="sans-theme">
-          {tableau.sansTheme === 0
-            ? 'Toutes les cartes reliées ont un thème fiable.'
-            : `${accorder(tableau.sansTheme, 'carte reliée sans thème fiable', 'cartes reliées sans thème fiable')} : aucune étiquette de thème posée pour l’instant.`}
-        </p>
-      </SectionRepliable>
+      {vide && <p className="mt-3 rounded border border-line bg-ink-2 p-4">Aucune carte</p>}
 
-      {vide && <p className="mt-4 rounded border border-line bg-ink-2 p-4">Aucune carte</p>}
-
-      <CalendrierActivite activite={graphiques.activite} />
+      {/* Grille responsive : une colonne sur mobile, deux dès 768 px (blocs toujours visibles, sans repli). */}
+      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <CalendrierActivite activite={graphiques.activite} />
+        <ProfilAffluenceSemaine evenements={graphiques.affluence} />
       <CamembertRepartition
         id="repartition-themes"
         titre="Répartition des thèmes"
-        explication="Thème principal de chaque carte (le mieux établi), cartes distinctes. Les thèmes rares sont regroupés."
+        explication="Thème principal de chaque carte (le mieux établi), cartes distinctes, un secteur par thème."
         parts={partsThemes}
+        etiquettes
+        className="md:col-span-2"
         vide="Aucune carte à répartir."
         unite="cartes"
-        couleurDe={(p, rang) => (p.id === 'autres' || p.id === 'sans-theme' ? 'var(--color-muted)' : undefined) ?? ['var(--color-garder)', 'var(--color-echanger)', 'var(--color-vendre)', 'var(--color-defausser)', 'var(--color-paper)'][rang % 5]!}
+        couleurDe={(p) => (p.id === 'sans-theme' ? 'var(--color-muted)' : undefined)}
       />
       <CamembertRepartition
         id="repartition-destinations"
@@ -167,7 +164,7 @@ const OngletTableauDeBord: React.FC<Props> = ({ cacheWiki }) => {
         unite="cartes"
         couleurDe={(p) => COULEURS_DESTINATION[p.id as IdDestination]}
       />
-      <ProfilAffluenceSemaine evenements={graphiques.affluence} />
+
 
       <SanteSynchro
         pastille={tableau.sante.pastille}
@@ -176,6 +173,7 @@ const OngletTableauDeBord: React.FC<Props> = ({ cacheWiki }) => {
         prixReleves={tableau.fraicheurPrix.releves}
         lignes={lignesSante}
       />
+      </div>
     </section>
   );
 };
