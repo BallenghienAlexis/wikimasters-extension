@@ -691,6 +691,12 @@ export function noterAffluenceSite(horodatages: readonly number[]): Promise<Even
   return tache;
 }
 
+/** Tous les évènements d’affluence (ventes notées, relevé du marché, enchères terminées) pour choisir la durée d’une enchère ; une lecture en échec donne une liste vide. */
+export async function chargerEvenementsAffluence(): Promise<EvenementVente[]> {
+  const [notes, site, resultats] = await Promise.all([chargerVentes().catch(() => []), chargerAffluenceSite().catch(() => []), chargerResultatsVentes().catch(() => [])]);
+  return [...notes, ...site, ...resultats];
+}
+
 /** Dernier relevé du marché (horodatage) et nombre d’échecs consécutifs, communs aux onglets. */
 export interface ReleveMarche {
   le: number | null;

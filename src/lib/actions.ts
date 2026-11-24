@@ -71,6 +71,8 @@ export interface ActionEnchere extends ActionBase {
   prixFixe?: boolean
   /** Nombre de non-ventes de suite : le prix de départ relu est divisé par deux autant de fois (relance automatique). */
   reductions?: number
+  /** Durée de l’enchère en minutes (10, 30, 60, 180, 360 ou 720), choisie selon l’affluence à l’envoi ; absente : 60. */
+  dureeMinutes?: number
 }
 
 export interface ActionDefausse extends ActionBase {

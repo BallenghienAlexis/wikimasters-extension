@@ -3,6 +3,7 @@ import { trierEtiquettesSite } from '../lib/etiquettesPreexistantes';
 import { CONFIG_PRIX } from '../config/prix';
 import { CAUSE_VERIFICATION_HUMAINE, ID_CARTE_ETIQUETTES } from '../lib/actions';
 import { ajusterLotAuSite, limiterEncheres } from '../lib/lot';
+import { dureeEnchereMinutes } from '../lib/affluence';
 import { typesDisponibles } from '../lib/contrat';
 import type { Action, CauseJournal, EtatExecutionV2, ErreurExecution, FamilleLot, Registre, ResultatAction } from '../lib/actions';
 import type { Collection } from '../lib/collection';
@@ -29,6 +30,7 @@ import {
   chargerEtatSynchro,
   chargerRegistre,
   chargerEtiquettesSite,
+  chargerEvenementsAffluence,
   enregistrerEtiquettesSite,
   enregistrerCollection,
   enregistrerBailSynchro,
@@ -262,7 +264,7 @@ async function lancerAvec(preparer: () => Promise<Lancement>): Promise<void> {
  * 30 minutes (message « Reprise possible à HH:MM »). Résout à la fin de l'exécution (terminée, arrêtée ou en erreur).
  */
 export async function lancerLot(actions: readonly Action[], idLot: string): Promise<void> {
-  return lancerAvec(async () => ({ actions: await limiterAuxPlacesLibres(await alignerSurLesEtiquettesDuSite(actions), idLot), idLot }));
+  return lancerAvec(async () => ({ actions: await avecDureeEnchere(await limiterAuxPlacesLibres(await alignerSurLesEtiquettesDuSite(actions), idLot)), idLot }));
 }
 
 /** Une entrée « Passée » par enchère écartée (20 au plus), pour que le joueur voie pourquoi elle n'est pas partie. */
@@ -314,6 +316,16 @@ async function alignerSurLesEtiquettesDuSite(actions: readonly Action[]): Promis
   const reconciliation = reconcilierAvecSite(registre, lue);
   if (reconciliation.registre !== registre) await enregistrerRegistre(reconciliation.registre);
   return ajusterLotAuSite(actions, reconciliation.registre, reconciliation.perdus, collection, configDuLot(preferences), typesDisponibles());
+}
+
+/**
+ * Durée de chaque enchère du lot selon l’affluence au moment du lancement (Alexis, 2026-11-24) : 1 h en heure forte, 3 h en
+ * zone creuse (`CONFIG_AFFLUENCE`). Calcul local, sans requête ; le site accepte ces durées (10, 30, 60, 180, 360, 720 min).
+ */
+async function avecDureeEnchere(actions: readonly Action[]): Promise<readonly Action[]> {
+  if (!actions.some((a) => a.type === 'enchere')) return actions;
+  const duree = dureeEnchereMinutes(Date.now(), await chargerEvenementsAffluence().catch(() => []));
+  return actions.map((a) => (a.type === 'enchere' ? { ...a, dureeMinutes: duree } : a));
 }
 
 /**
