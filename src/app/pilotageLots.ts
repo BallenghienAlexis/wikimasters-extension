@@ -39,7 +39,7 @@ import {
   enregistrerJournal,
   enregistrerRegistre,
 } from '../lib/stockage';
-import { adopterEtiquettesImportees } from './adoptionEtiquettes';
+import { adopterEtiquettesImportees, realignerRegistreSurSite } from './adoptionEtiquettes';
 import { avecIdEtiquette, reconcilierAvecSite, refuserCouple } from '../lib/registre';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
 import type { CoupleRetrait } from './Journal';
@@ -315,9 +315,12 @@ async function alignerSurLesEtiquettesDuSite(actions: readonly Action[]): Promis
   // Erreur d'écriture ignorée volontairement : simple mémoire d'affichage, le lot continue.
   if (lue.length > 0 || Object.keys(registre.etiquettes).length === 0) await enregistrerEtiquettesSite(lue).catch(() => undefined);
   // Étiquettes citées par une sauvegarde importée : reprises si le site les confirme (pas de doublon créé, pas de pose refaite).
-  const adopte = await adopterEtiquettesImportees(lue).catch(() => null);
-  const reconciliation = reconcilierAvecSite(adopte ?? registre, lue);
-  if (reconciliation.registre !== registre) await enregistrerRegistre(reconciliation.registre);
+  await adopterEtiquettesImportees(lue).catch(() => null);
+  // Ce que le site porte déjà (liste relue à l'instant) entre au registre : ni création ni pose en double (Alexis, 2026-11-24).
+  await realignerRegistreSurSite(lue).catch(() => null);
+  const registreAJour = await chargerRegistre().catch(() => registre);
+  const reconciliation = reconcilierAvecSite(registreAJour, lue);
+  if (reconciliation.registre !== registreAJour) await enregistrerRegistre(reconciliation.registre);
   return ajusterLotAuSite(actions, reconciliation.registre, reconciliation.perdus, collection, configDuLot(preferences), typesDisponibles());
 }
 

@@ -529,7 +529,8 @@ const NOMS_INTERDITS: ReadonlySet<string> = new Set([ETIQUETTE_A_CLASSER, '#Autr
 /**
  * Ajuste un lot déjà calculé aux étiquettes réellement présentes sur le site (Alexis, 2026-11-23). `registre` est le
  * registre déjà réconcilié (`reconcilierAvecSite`) et `perdus` les couples dont l’étiquette a disparu :
- * - un retrait dont le couple n’est plus au registre est retiré du lot (l’étiquette n’existe plus) ;
+ * - un retrait dont le couple n’est plus au registre est retiré du lot (l’étiquette n’existe plus) ; une création d’étiquette
+ *   connue du registre et une pose déjà au registre sont retirées aussi (le site les porte déjà) ;
  * - chaque couple perdu encore attendu est reposé (jamais là où le joueur avait retiré l’étiquette) ;
  * - toute pose dont le nom est inconnu du registre reçoit une création, placée en tête du lot.
  * Hors mode `poser`, ou si la création ou la pose n’est pas disponible, rien n’est ajouté. Jamais « À classer » ni « Autres ».
@@ -543,7 +544,13 @@ export function ajusterLotAuSite(
   disponibles: TypesDisponibles,
 ): Action[] {
   const poser = (config.modeEtiquettes ?? 'poser') === 'poser' && disponibles.has('creation-etiquette') && disponibles.has('pose-etiquette')
-  const garde = actions.filter((a) => a.type !== 'retrait-etiquette' || registre.couples.some((c) => c.ex === a.idExemplaire && c.nom === a.nomEtiquette))
+  // Déjà là sur le site (registre aligné sur lui) : ni création d'une étiquette connue, ni pose d'un couple déjà posé (Alexis, 2026-11-24).
+  const garde = actions.filter((a) => {
+    if (a.type === 'retrait-etiquette') return registre.couples.some((c) => c.ex === a.idExemplaire && c.nom === a.nomEtiquette)
+    if (a.type === 'creation-etiquette') return !Object.prototype.hasOwnProperty.call(registre.etiquettes, a.nomEtiquette)
+    if (a.type === 'pose-etiquette') return !registre.couples.some((c) => c.ex === a.idExemplaire && c.nom === a.nomEtiquette)
+    return true
+  })
   if (!poser) return garde
 
   const dejaPoses = new Set(garde.flatMap((a) => (a.type === 'pose-etiquette' ? [JSON.stringify([a.idExemplaire, a.nomEtiquette])] : [])))
