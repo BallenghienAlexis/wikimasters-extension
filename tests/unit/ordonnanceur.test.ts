@@ -8,6 +8,7 @@ import {
   PAUSE_PRIX_MS,
   SEUIL_AVERTISSEMENT_PRIX,
   ancienneteMaxPrixMs,
+  peremptionPrixMs,
   etatInitial,
   synchroniser,
   type DependancesSynchro,
@@ -502,6 +503,47 @@ describe('ordonnanceur — critère 3 : prix', () => {
     const b = banc(siteFictif(1), collection, etat);
     await synchroniser(b.deps);
     expect(cheminsPrix(b)).toEqual([]);
+  });
+
+  it.each([
+    ['avec une valeur précédente', { valeur: 52, releveLe: T0 - 20 * JOUR, v: 2 as const }],
+    ['avec une absence de vente constatée', { valeur: null, releveLe: T0 - 20 * JOUR, v: 2 as const, sansVente: true }],
+  ])('prix : une carte passée %s est redemandée dans 1 jour', async (_nom, precedent) => {
+    const cartes = [carteLocale(1, precedent.valeur === null ? {} : { valeurMarchande: precedent.valeur })];
+    const collection = collectionDe(cartes);
+    const etat = etatLu(collection, { [idCarte(1)]: 'card-1' });
+    etat.prix[idCarte(1)] = precedent;
+    let demande = false;
+    const b = banc((chemin) => (chemin.includes('card-1/price-history') ? { statut: 403, json: null } : siteFictif(1)(chemin)), collection, etat);
+    const r = await synchroniser({
+      ...b.deps,
+      annoncerAttente: (a) => {
+        if (a !== null && a.essai > SEUIL_AVERTISSEMENT_PRIX) demande = true;
+      },
+      passerCarteDemandee: () => {
+        const d = demande;
+        demande = false;
+        return d;
+      },
+    });
+    const rec = r.etat.prix[idCarte(1)]!;
+    const echeance = rec.releveLe + peremptionPrixMs(rec);
+    expect(Math.abs(echeance - (T0 + JOUR))).toBeLessThan(JOUR / 2 + 6 * 3_600_000);
+    expect(echeance - r.etat.derniereComplete!).toBeGreaterThan(0);
+  });
+
+  it('une carte en 404 gardant une valeur précédente reste mémorisée 30 jours', async () => {
+    const cartes = [carteLocale(1, { valeurMarchande: 50 })];
+    const collection = collectionDe(cartes);
+    const etat = etatLu(collection, { [idCarte(1)]: 'card-1' });
+    etat.prix[idCarte(1)] = { valeur: 50, releveLe: T0 - 20 * JOUR, v: 2 };
+    const b = banc((chemin) => (chemin.includes('/price-history') ? { statut: 404, json: null } : siteFictif(1)(chemin)), collection, etat);
+    const r = await synchroniser(b.deps);
+    expect(r.etat.prix[idCarte(1)]?.sansRoute).toBe(true);
+    expect(peremptionPrixMs(r.etat.prix[idCarte(1)])).toBe(30 * JOUR);
+    const b2 = banc(siteFictif(1), r.collection, { ...r.etat, derniereComplete: T0 - 1 });
+    await synchroniser(b2.deps);
+    expect(cheminsPrix(b2)).toEqual([]);
   });
 
   it('une absence de vente constatée est re-relevée après 7 jours', async () => {
