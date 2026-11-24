@@ -1,7 +1,7 @@
 /**
  * Tags d’une carte dans la Collection : ce que le site porte vraiment (étiquettes posées, qui font foi) et ce que
  * l’extension prévoit en plus. Le filtre par thème, le compteur de thèmes et la ligne affichée utilisent la même source,
- * pour qu’une carte filtrée sur un thème montre ce thème parmi ses tags. Logique pure.
+ * pour qu’une carte filtrée sur un thème montre ce thème (ou l’un de ses enfants) parmi ses tags. Logique pure.
  */
 import type { Carte } from './collection';
 import { LIBELLES_THEMES, libellesThemesAffiches, parentsDe, THEME_AUTRES, versionThemes } from './themes';
@@ -58,7 +58,7 @@ export function correspondAuTheme(carte: CarteTags, theme: string): boolean {
   });
 }
 
-/** Nombre de cartes par thème, avec la même source que le filtre : le chiffre affiché égale le nombre de cartes filtrées. */
+/** Nombre de cartes par thème, avec la même source que le filtre : le chiffre affiché égale le nombre de cartes filtrées, sauf pour un parent, dont le filtre ajoute aussi les cartes de ses enfants. */
 export function compterParTheme(cartes: readonly CarteTags[], themes: readonly string[]): Record<string, number> {
   const compte: Record<string, number> = Object.fromEntries(themes.map((t) => [t, 0]));
   const table = libellesDeTheme();
