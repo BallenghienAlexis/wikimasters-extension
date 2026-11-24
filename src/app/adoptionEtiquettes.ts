@@ -3,7 +3,9 @@
 import type { Registre } from '../lib/actions';
 import type { EtiquetteSite } from '../lib/etiquettesPreexistantes';
 import { categorieEtiquette } from '../lib/reinitialisation';
+import { alignerRegistreSurSite } from '../lib/alignementSite';
 import { adopterEtiquettes } from '../lib/sauvegardeRegistre';
+import { configDuLot } from './apercuLot';
 import { LIBELLES_THEMES } from '../lib/themes';
 import {
   chargerCollection,
@@ -11,6 +13,7 @@ import {
   chargerEtiquettesImportees,
   chargerEtiquettesSite,
   chargerExecution,
+  chargerPreferences,
   chargerRegistre,
   enregistrerEtiquettesImportees,
   enregistrerRegistre,
@@ -35,4 +38,19 @@ export async function adopterEtiquettesImportees(siteFrais?: EtiquetteSite[]): P
   // Une synchro postérieure à l'import a relu les cartes et la liste du site : les revendications ont servi.
   if (site !== null && site.length > 0 && derniereSynchro !== null && derniereSynchro > importees.importeLe) await enregistrerEtiquettesImportees(null);
   return bilan.registre !== registre ? bilan.registre : null;
+}
+
+/**
+ * Réaligne le registre sur le site avant l'aperçu et avant un lot (Alexis, 2026-11-24 : 2680 créations proposées alors que le
+ * site les porte déjà). Aucune requête : la liste d'étiquettes du site (relue juste avant un lot, sinon celle de la dernière
+ * synchro) et les étiquettes lues sur chaque carte servent de preuve ; seules les étiquettes que les règles attendent sont
+ * reprises (`alignerRegistreSurSite`). Jamais pendant une exécution. Rend le registre mis à jour, ou `null` si rien n'a changé.
+ */
+export async function realignerRegistreSurSite(siteFrais?: EtiquetteSite[]): Promise<Registre | null> {
+  if (siteFrais === undefined && (await chargerExecution().catch(() => null))?.etat === 'en-cours') return null;
+  const [registre, collection, siteStocke, preferences] = await Promise.all([chargerRegistre(), chargerCollection(), chargerEtiquettesSite(), chargerPreferences()]);
+  const bilan = alignerRegistreSurSite(registre, collection.cartes, siteFrais ?? siteStocke, configDuLot(preferences));
+  if (bilan.registre === registre) return null;
+  await enregistrerRegistre(bilan.registre);
+  return bilan.registre;
 }
