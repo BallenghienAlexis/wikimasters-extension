@@ -3,7 +3,8 @@ import type { Action, ResultatAction } from '../../src/lib/actions'
 import { collectionVide, type Carte } from '../../src/lib/collection'
 import { creerSuiviVentes, type DependancesSuiviVentes } from '../../src/content/suiviVentes'
 import type { EtatSuiviVentes, StatutRelanceVentes } from '../../src/lib/stockage'
-import { preferencesParDefaut } from '../../src/lib/tri'
+import { definirThemesWikipedia } from '../../src/lib/themes'
+import { preferencesParDefaut, type Preferences } from '../../src/lib/tri'
 import { etatInitial, type EtatOrdonnanceur } from '../../src/lib/ordonnanceur'
 import { suiviVide, type LancementVente, type SuiviVentes } from '../../src/lib/ventes'
 
@@ -15,7 +16,7 @@ const carte: Carte = {
 }
 const vente = (id: string, finDans: number) => ({ id, card_id: `ex-${id}`, base_amount: 50, current_bid: null, effective_bid: 50, created_at: iso(T0), end_at: iso(T0 + finDans), card: { wikipedia_title: `T${id}` } })
 
-function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relance?: boolean; resultat?: ResultatAction; visible?: boolean; actif?: boolean; synchroRecente?: boolean; pauseLots?: number; lotEnCours?: boolean; etat?: EtatOrdonnanceur }) {
+function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relance?: boolean; resultat?: ResultatAction; visible?: boolean; actif?: boolean; synchroRecente?: boolean; pauseLots?: number; lotEnCours?: boolean; etat?: EtatOrdonnanceur; surcouches?: () => Promise<void>; preferences?: Preferences; carte?: Carte }) {
   let t = T0
   // Le bail du suivi est le sien : celui de la synchro globale (tenu ou non) ne le concerne pas.
   let bailValeur: number | null = null
@@ -45,8 +46,9 @@ function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relan
     enregistrerSuivi: async (s) => void (etat.suivi = s),
     chargerStatut: async () => etat.statut,
     enregistrerStatut: async (s) => void (etat.statut = s),
-    chargerCollection: async () => ({ ...collectionVide(), cartes: [carte] }),
-    chargerPreferences: async () => preferencesParDefaut(),
+    chargerCollection: async () => ({ ...collectionVide(), cartes: [opts.carte ?? carte] }),
+    chargerPreferences: async () => opts.preferences ?? preferencesParDefaut(),
+    ...(opts.surcouches ? { chargerSurcouchesThemes: opts.surcouches } : {}),
     chargerLancements: async () => etat.lancements,
     ajouterLancement: async (l) => void etat.lancements.push(l),
     chargerEcartes: async () => etat.ecartes,
@@ -109,6 +111,22 @@ describe('cycle de suivi des mises en vente', () => {
     expect(m.etat.ordres[0]).toMatchObject({ type: 'enchere', idExemplaire: 'ex-c' })
     expect(m.etat.lancements[0]).toMatchObject({ resultat: 'reussie', titre: 'Berger allemand' })
     expect(delai).toBe(2000)
+  })
+  it('relance : un thème venu de Wikipédia et suivi par un ami garde la carte (jamais mise en vente)', async () => {
+    const prefs: Preferences = { ...preferencesParDefaut(), amis: [{ nom: 'Quentin', themes: ['guerre'] }] }
+    const base: Carte = { ...carte, titre: 'Base aérienne 942 Lyon-Mont Verdun', description: '', rarete: 'SR', valeurMarchande: 27 }
+    try {
+      const m = monde({ reponses: [ok([])], relance: true, preferences: prefs, carte: base, surcouches: async () => definirThemesWikipedia(new Map([[base.titre, ['guerre']]])) })
+      await m.suivi.cycle()
+      expect(m.etat.ordres).toHaveLength(0)
+    } finally {
+      definirThemesWikipedia(new Map())
+    }
+  })
+  it('relance : surcouches de thèmes illisibles, rien n’est mis en vente à l’aveugle', async () => {
+    const m = monde({ reponses: [ok([])], relance: true, surcouches: async () => { throw new Error('stockage illisible') } })
+    await m.suivi.cycle()
+    expect(m.etat.ordres).toHaveLength(0)
   })
   it('relance : maximum absent de la réponse du site, la limite de 5 de la configuration s’applique et la relance part', async () => {
     const m = monde({ reponses: [{ statut: 200, json: { selling: [], history: [] } }], relance: true })

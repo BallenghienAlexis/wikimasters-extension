@@ -79,6 +79,12 @@ export interface DependancesSuiviVentes {
   enregistrerStatut: (s: StatutRelanceVentes) => Promise<void>;
   chargerCollection: () => Promise<Collection>;
   chargerPreferences: () => Promise<Preferences>;
+  /**
+   * Pose les surcouches de thèmes (cache Wikipédia, classement IA, thèmes appris) en mémoire du content script, comme la page
+   * de gestion : sans elles, les thèmes d’une carte (donc « thème gardé » et « thème suivi par un ami ») sont incomplets et une
+   * carte voulue par un ami pouvait être mise en vente. Échec : aucune mise en vente (jamais à l’aveugle).
+   */
+  chargerSurcouchesThemes?: () => Promise<void>;
   chargerLancements: () => Promise<LancementVente[]>;
   ajouterLancement: (l: LancementVente) => Promise<void>;
   chargerEcartes: () => Promise<Record<string, number>>;
@@ -172,6 +178,14 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     if (await deps.lotEnCours().catch(() => false)) {
       reessaiLe = maintenant + DELAI_REESSAI_PLACE_MS;
       return { etat: 'bloque' };
+    }
+    if (deps.chargerSurcouchesThemes) {
+      try {
+        await deps.chargerSurcouchesThemes();
+      } catch {
+        reessaiLe = maintenant + DELAI_REESSAI_PLACE_MS;
+        return { etat: 'bloque' };
+      }
     }
     const [collection, preferences, ecartes] = await Promise.all([deps.chargerCollection(), deps.chargerPreferences(), deps.chargerEcartes()]);
     const ecartesActifs = Object.entries(ecartes).filter(([cle, t]) => !cle.startsWith('carte:') && !cle.startsWith('vu:') && !cle.startsWith('attend:') && t > maintenant).map(([cle]) => cle);
