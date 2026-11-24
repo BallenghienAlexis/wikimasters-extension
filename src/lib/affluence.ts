@@ -122,13 +122,30 @@ export const DUREE_PAR_DEFAUT_MINUTES = 60;
 /** Vrai si le site accepte cette durée (en minutes). */
 export const estDureeSite = (minutes: unknown): minutes is number => typeof minutes === 'number' && DUREES_SITE_MINUTES.includes(minutes);
 
+export type NiveauAffluence = 'forte' | 'creuse' | 'creux-profond' | 'nuit'
+
+/**
+ * Niveau d’affluence à cet instant (Alexis, 2026-11-24) : `forte` (heure forte) ; sinon `nuit` (heures de nuit) ; sinon
+ * `creux-profond` (assez d’enchères terminées, et le créneau n’en a vendu aucune, au moins 2 mesurées) ; sinon `creuse`.
+ */
+export function niveauAffluence(at: number, evenements: readonly EvenementVente[], config: ConfigAffluence = CONFIG_AFFLUENCE): NiveauAffluence {
+  if (estHeureForte(at, evenements, config)) return 'forte';
+  const d = new Date(at);
+  const [debut, fin] = config.heuresNuit;
+  if (d.getHours() >= debut && d.getHours() < fin) return 'nuit';
+  const resultats = evenements.filter((e) => e.type === 'resultat');
+  if (resultats.length >= config.minVentesConclues && rendementParCreneau(resultats)[typeDeJour(d)]![d.getHours()] === 0) return 'creux-profond';
+  return 'creuse';
+}
+
 /**
  * Durée d’une enchère lancée à cet instant (Alexis, 2026-11-24 : « en zone creuse il faut allonger le temps de vente ») :
- * `delaiHeureForte` (1 h) en heure forte, `delaiTempsLibre` (3 h) en temps libre. Une valeur de la configuration que le site
- * n’accepte pas est remplacée par 1 h plutôt qu’envoyée.
+ * 1 h en heure forte, 3 h en creux modéré, 6 h en creux profond, 12 h la nuit (`delai*` de la configuration). Une valeur
+ * que le site n’accepte pas (10 min, 30 min, 1, 3, 6 ou 12 h seulement) est remplacée par 1 h plutôt qu’envoyée.
  */
 export function dureeEnchereMinutes(at: number, evenements: readonly EvenementVente[], config: ConfigAffluence = CONFIG_AFFLUENCE): number {
-  const heures = estHeureForte(at, evenements, config) ? config.delaiHeureForte : config.delaiTempsLibre;
+  const niveau = niveauAffluence(at, evenements, config);
+  const heures = { forte: config.delaiHeureForte, creuse: config.delaiTempsLibre, 'creux-profond': config.delaiCreuxProfond, nuit: config.delaiNuit }[niveau];
   const minutes = Math.round(heures * 60);
   return estDureeSite(minutes) ? minutes : DUREE_PAR_DEFAUT_MINUTES;
 }
