@@ -30,6 +30,7 @@ import {
   enregistrerPreferences,
   noterEvenementVente,
 } from '../lib/stockage';
+import { adopterEtiquettesImportees } from './adoptionEtiquettes';
 import { definirCategoriesWikipedia, definirSignauxWikipedia, definirThemesAppris, definirThemesIA, definirThemesWikipedia } from '../lib/themes';
 import { etatApprisVide, proposerThemes, type EtatAppris } from '../lib/themesAppris';
 import { cacheIAVide, themesIAParTitre, type CacheIA } from '../lib/classificationIA';
@@ -92,6 +93,8 @@ export function useDonneesPage() {
   const lireStockageSynchro = async (): Promise<EtatStockageSynchro> => {
     const etat: EtatStockageSynchro = { registre: null, executionEnCours: false, executionIllisible: false };
     try {
+      // Étiquettes d'un import reprises avant de lire le registre (l'aperçu ne proposera pas de recréer ce que le site a déjà).
+      await adopterEtiquettesImportees().catch(() => null);
       etat.registre = await chargerRegistre();
     } catch {
       etat.registre = null;

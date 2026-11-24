@@ -3,7 +3,9 @@
 // aucun secret (jeton, cookie, clé), aucun identifiant d'exemplaire du site, aucun cache ni état de synchro.
 import { analyserStockage, meilleureDescription, MAX_CARTES, type Carte, type Collection } from './collection';
 import { MAX_EVENEMENTS, validerEvenements, type EvenementVente } from './affluence';
-import { fusionnerAmisInitiaux, plafondDefausse, type Ami, type Preferences } from './tri';
+import { fusionnerAmisInitiaux, MODES_ETIQUETTES, modeEtiquettes, plafondDefausse, type Ami, type ModeEtiquettes, type Preferences } from './tri';
+import type { Registre } from './actions';
+import { exporterEtiquettes, fusionnerImportees, lireEtiquettes, modeApresImport, synchroIciPlusRecente, type EtiquettesImportees, type EtiquettesSauvegardees } from './sauvegardeRegistre';
 import { estObjet } from './valider';
 import { apercuSynchro, exporterSynchro, fusionnerSynchro, lireSynchro, type ApercuSynchro, type DonneesSynchro, type SynchroSauvegardee } from './sauvegardeSynchro';
 
@@ -33,6 +35,8 @@ export interface Sauvegarde {
   ventes: EvenementVente[];
   /** Mémoire de synchro (facultative : absente des fichiers plus anciens) : la synchro suivante repart de là. */
   synchro?: SynchroSauvegardee;
+  /** Étiquettes posées par l'extension (facultatif : absent des fichiers plus anciens, qui restent importables). */
+  etiquettes?: EtiquettesSauvegardees;
 }
 
 /** Ce que la sauvegarde couvre, tel qu'il vit dans le stockage de l'extension. */
@@ -42,6 +46,10 @@ export interface Donnees {
   syncAuto: boolean;
   ventes: EvenementVente[];
   synchro?: DonneesSynchro;
+  /** Registre des étiquettes posées par l'extension (lecture seule pour la sauvegarde : jamais écrasé par un import). */
+  registre?: Registre;
+  /** Revendications d'étiquettes en attente d'une synchro (écrites par l'import, voir `adopterEtiquettes`). */
+  importees?: EtiquettesImportees | null;
 }
 
 const garderChamps = (c: Carte): CarteSauvegardee => ({
@@ -71,10 +79,14 @@ export function creerSauvegarde(donnees: Donnees, maintenant: Date): Sauvegarde 
       mesThemes: [...donnees.preferences.mesThemes],
       amis: donnees.preferences.amis.map((a) => ({ nom: a.nom, themes: [...a.themes] })),
       ...(donnees.preferences.plafondDefausse === undefined ? {} : { plafondDefausse: donnees.preferences.plafondDefausse }),
+      ...(donnees.preferences.modeEtiquettes === undefined ? {} : { modeEtiquettes: donnees.preferences.modeEtiquettes }),
     },
     syncAuto: donnees.syncAuto,
     ventes: donnees.ventes.filter((e) => e.type !== 'site').map((e) => ({ type: e.type, at: e.at })),
     ...(donnees.synchro ? { synchro: exporterSynchro(donnees.synchro) } : {}),
+    ...(donnees.registre
+      ? { etiquettes: exporterEtiquettes({ registre: donnees.registre, cartes: donnees.collection.cartes, derniereSynchro: donnees.synchro?.derniereSynchro ?? null, mode: donnees.preferences.modeEtiquettes }) }
+      : {}),
   };
 }
 
@@ -100,7 +112,9 @@ function lirePrefs(brut: unknown): Preferences | string {
   if (plafond !== undefined && (typeof plafond !== 'number' || plafondDefausse({ plafondDefausse: plafond }) !== plafond)) {
     return 'Le plafond de défausse est invalide.';
   }
-  return { version: 2, mesThemes: [...brut.mesThemes], amis, ...(plafond === undefined ? {} : { plafondDefausse: plafond }) };
+  // Mode inconnu (fichier d'une version plus récente) : ignoré, le mode d'ici est gardé.
+  const mode = (MODES_ETIQUETTES as readonly unknown[]).includes(brut.modeEtiquettes) ? (brut.modeEtiquettes as ModeEtiquettes) : undefined;
+  return { version: 2, mesThemes: [...brut.mesThemes], amis, ...(plafond === undefined ? {} : { plafondDefausse: plafond }), ...(mode === undefined ? {} : { modeEtiquettes: mode }) };
 }
 
 export type ResultatLecture = { ok: true; sauvegarde: Sauvegarde } | { ok: false; erreur: string };
@@ -138,6 +152,8 @@ export function lireSauvegarde(texte: string): ResultatLecture {
 
   const synchro = lireSynchro(brut.synchro);
   if (typeof synchro === 'string') return non(synchro);
+  const etiquettes = lireEtiquettes(brut.etiquettes);
+  if (typeof etiquettes === 'string') return non(etiquettes);
 
   return {
     ok: true,
@@ -150,6 +166,7 @@ export function lireSauvegarde(texte: string): ResultatLecture {
       syncAuto: brut.syncAuto,
       ventes,
       ...(synchro ? { synchro } : {}),
+      ...(etiquettes ? { etiquettes } : {}),
     },
   };
 }
@@ -182,6 +199,24 @@ export interface Apercu {
   creeLe: string;
   /** Mémoire de synchro reprise de la sauvegarde (relevés de prix, caches), sinon `null`. */
   synchro: ApercuSynchro | null;
+  /** Rapport sur les étiquettes (fichier avec part « étiquettes »), sinon `null`. */
+  etiquettes: ApercuEtiquettes | null;
+}
+
+export interface ApercuEtiquettes {
+  /** Étiquettes créées par l'extension, citées par le fichier. */
+  noms: number;
+  /** Cartes dont le fichier cite des étiquettes posées (reprises après la prochaine synchro, seulement si le site les confirme). */
+  cartes: number;
+  /** Retraits à la main repris du fichier ; 0 si la synchro d'ici est plus récente (ses décisions priment). */
+  refusRepris: number;
+  refusIgnores: number;
+  /** Mode des étiquettes qu'aura ce PC après l'import ; `suspendre` = pose coupée. */
+  modeFinal: ModeEtiquettes;
+  modeRepris: boolean;
+  syncIciPlusRecente: boolean;
+  derniereSynchroIci: number | null;
+  releveLeFichier: number | null;
 }
 
 const cleVente = (e: EvenementVente): string => `${e.type}|${e.at}`;
@@ -189,11 +224,28 @@ const cleAmi = (nom: string): string => nom.trim().toLowerCase();
 
 export function apercuImport(locales: Donnees, s: Sauvegarde): Apercu {
   const parId = new Map(locales.collection.cartes.map((c) => [c.id, c]));
-  const a: Apercu = { cartesNouvelles: 0, cartesCompletees: 0, cartesIdentiques: 0, cartesEnConflit: 0, themesAjoutes: 0, amisAjoutes: 0, ventesAjoutees: 0, plafondRepris: null, creeLe: s.creeLe, synchro: null };
+  const a: Apercu = { cartesNouvelles: 0, cartesCompletees: 0, cartesIdentiques: 0, cartesEnConflit: 0, themesAjoutes: 0, amisAjoutes: 0, ventesAjoutees: 0, plafondRepris: null, creeLe: s.creeLe, synchro: null, etiquettes: null };
   if (s.synchro) {
     // Valeur marchande finale de chaque carte : celle d'ici, sinon celle de la sauvegarde (comme `appliquerImport`).
     const finales = s.cartes.map((c) => ({ ...c, valeurMarchande: parId.get(c.id)?.valeurMarchande ?? c.valeurMarchande }) as Carte);
     a.synchro = apercuSynchro(locales.synchro, s.synchro, [...locales.collection.cartes, ...finales]);
+  }
+  if (s.etiquettes) {
+    const e = s.etiquettes;
+    const iciPlusRecente = synchroIciPlusRecente(locales.synchro?.derniereSynchro ?? null, e.releveLe);
+    const nbRefus = Object.keys(e.refus).length;
+    const modeIci = locales.preferences.modeEtiquettes;
+    a.etiquettes = {
+      noms: e.noms.length,
+      cartes: Object.keys(e.parCarte).length,
+      refusRepris: iciPlusRecente ? 0 : nbRefus,
+      refusIgnores: iciPlusRecente ? nbRefus : 0,
+      modeFinal: modeEtiquettes({ modeEtiquettes: modeApresImport(modeIci, e) }),
+      modeRepris: modeIci === undefined && e.mode !== undefined,
+      syncIciPlusRecente: iciPlusRecente,
+      derniereSynchroIci: locales.synchro?.derniereSynchro ?? null,
+      releveLeFichier: e.releveLe,
+    };
   }
   for (const c of s.cartes) {
     const k = classer(parId.get(c.id), c);
@@ -215,7 +267,9 @@ export function apercuImport(locales: Donnees, s: Sauvegarde): Apercu {
 function fusionnerPreferences(locales: Preferences, sauvees: Preferences): Preferences {
   const fusion = fusionnerAmisInitiaux(locales, sauvees.amis);
   const plafond = locales.plafondDefausse ?? sauvees.plafondDefausse;
-  return { ...fusion, mesThemes: [...new Set([...locales.mesThemes, ...sauvees.mesThemes])], ...(plafond === undefined ? {} : { plafondDefausse: plafond }) };
+  // Mode des étiquettes : celui d'ici s'il a été choisi, sinon celui de la sauvegarde (sans lui, un PC neuf reste « suspendu »).
+  const mode = modeApresImport(locales.modeEtiquettes, sauvees.modeEtiquettes === undefined ? undefined : { releveLe: null, mode: sauvees.modeEtiquettes, noms: [], parCarte: {}, refus: {} });
+  return { ...fusion, mesThemes: [...new Set([...locales.mesThemes, ...sauvees.mesThemes])], ...(plafond === undefined ? {} : { plafondDefausse: plafond }), ...(mode === undefined ? {} : { modeEtiquettes: mode }) };
 }
 
 export type ResultatApplication = { ok: true; donnees: Donnees } | { ok: false; erreur: string };
@@ -268,6 +322,8 @@ export function appliquerImport(locales: Donnees, s: Sauvegarde, politique: Poli
       syncAuto: locales.syncAuto,
       ventes: ventesFusionnees,
       // Sans mémoire de synchro dans le fichier, rien de la synchro n'est réécrit (ni le bail exigé).
+      // Étiquettes : le registre d'ici n'est jamais touché ; les revendications du fichier attendent la synchro (le site confirme).
+      ...(s.etiquettes ? { importees: fusionnerImportees(locales.importees ?? null, s.etiquettes, locales.synchro?.derniereSynchro ?? null, Date.now()) } : {}),
       ...(locales.synchro && s.synchro ? { synchro: fusionnerSynchro(locales.synchro, s.synchro, [...parId.values()]) } : {}),
     },
   };

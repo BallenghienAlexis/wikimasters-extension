@@ -20,6 +20,9 @@ function telecharger(contenu: string, nom: string): void {
   URL.revokeObjectURL(url);
 }
 
+const LIBELLES_MODE = { poser: 'pose active', suspendre: 'pose suspendue', 'retirer-tout': 'retrait de toutes les étiquettes posées' } as const;
+const dateHeure = (t: number | null): string => (t === null ? 'date inconnue' : new Date(t).toLocaleString('fr-FR'));
+
 const pluriel = (n: number, un: string, plusieurs: string): string => `${n} ${n > 1 ? plusieurs : un}`;
 
 const Sauvegarde: React.FC<Props> = ({ onImportee }) => {
@@ -148,6 +151,25 @@ const Sauvegarde: React.FC<Props> = ({ onImportee }) => {
             <p className="mt-2">
               Mémoire de synchro reprise : {pluriel(a.synchro.prixRestaures, 'prix', 'prix')}, {pluriel(a.synchro.entreesWikipedia, 'titre classé', 'titres classés')} (Wikipédia) ; la prochaine synchro sera incrémentale.
             </p>
+          )}
+          {a.etiquettes && (
+            <div className="mt-2" data-testid="apercu-etiquettes">
+              <p className="font-medium">Étiquettes du fichier</p>
+              <ul className="mt-1 list-disc pl-5">
+                <li>
+                  {pluriel(a.etiquettes.noms, 'étiquette créée par l’extension', 'étiquettes créées par l’extension')} sur {pluriel(a.etiquettes.cartes, 'carte', 'cartes')} : reprises après la prochaine synchro, seulement si le site les confirme (aucun doublon créé, rien n’est reposé).
+                </li>
+                <li>
+                  {a.etiquettes.syncIciPlusRecente
+                    ? `La synchro de ce PC (${dateHeure(a.etiquettes.derniereSynchroIci)}) est plus récente que le fichier (${dateHeure(a.etiquettes.releveLeFichier)}) : ses informations sont gardées, ${pluriel(a.etiquettes.refusIgnores, 'retrait à la main du fichier ignoré', 'retraits à la main du fichier ignorés')}.`
+                    : `${pluriel(a.etiquettes.refusRepris, 'retrait à la main repris', 'retraits à la main repris')} (jamais reposés).`}
+                </li>
+                <li>
+                  Mode des étiquettes après l’import : {LIBELLES_MODE[a.etiquettes.modeFinal]}{a.etiquettes.modeRepris ? ' (repris du fichier)' : ' (celui de ce PC)'}.
+                  {a.etiquettes.modeFinal === 'suspendre' ? ' Aucune pose tant que tu ne le changes pas dans Réglages › Étiquettes sur le site.' : ''}
+                </li>
+              </ul>
+            </div>
           )}
           <fieldset className="mt-3">
             <legend className="font-medium">En cas de conflit</legend>
