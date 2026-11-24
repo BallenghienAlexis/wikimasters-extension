@@ -144,9 +144,9 @@ describe('conseil de lancement', () => {
   const heureForte = new Date(2026, 10, 16, 20).getTime() // lundi 20 h : créneau par défaut
   const heureLibre = new Date(2026, 10, 16, 15).getTime()
   it('chères en heure forte, moins chères en temps libre', () => {
-    expect(conseilLancement(300, heureForte, [])).toBe('heure forte : bon moment')
-    expect(conseilLancement(300, heureLibre, [])).toBe('carte chère : attendre une heure forte')
-    expect(conseilLancement(50, heureLibre, [])).toBe('temps libre : bon moment')
+    expect(conseilLancement(300, heureForte, [])).toBe('heure forte : bon moment, durée 1\u00a0h')
+    expect(conseilLancement(300, heureLibre, [])).toBe('carte chère : attendre une heure forte (durée 3\u00a0h maintenant)')
+    expect(conseilLancement(50, heureLibre, [])).toBe('zone creuse : bon moment, durée 3\u00a0h')
     expect(conseilLancement(50, heureForte, [])).toContain('réserver')
     expect(conseilLancement(null, heureForte, [])).toBe('valeur inconnue')
   })

@@ -8,6 +8,7 @@
  *
  * Logique pure : pas de `chrome.runtime` ici.
  */
+import { estDureeSite } from './affluence'
 import { CAUSE_VERIFICATION_HUMAINE, ID_CARTE_ETIQUETTES, TYPES_ACTION, type Action, type ResultatAction, type TypeAction } from './actions'
 
 const LONGUEUR_MAX = 200
@@ -157,7 +158,7 @@ export function validerOrdre(brut: unknown): Action | null {
     case 'enchere': {
       const idExemplaire = texte(ordre.idExemplaire)
       const prix = ordre.prix
-      const facultatifs = ['idCarteSite', 'rarete', 'prixFixe', 'reductions'].filter((k) => k in ordre)
+      const facultatifs = ['idCarteSite', 'rarete', 'prixFixe', 'reductions', 'dureeMinutes'].filter((k) => k in ordre)
       if (!cles(ordre, ['type', 'idCarte', 'idExemplaire', 'prix', ...facultatifs]) || idExemplaire === null) return null
       if (typeof prix !== 'number' || !Number.isSafeInteger(prix) || prix < 1 || prix > PRIX_MAX) return null
       const idCarteSite = 'idCarteSite' in ordre ? texte(ordre.idCarteSite) : undefined
@@ -166,10 +167,12 @@ export function validerOrdre(brut: unknown): Action | null {
       if ('prixFixe' in ordre && typeof ordre.prixFixe !== 'boolean') return null
       const reductions = ordre.reductions
       if ('reductions' in ordre && (typeof reductions !== 'number' || !Number.isInteger(reductions) || reductions < 0 || reductions > 30)) return null
+      if ('dureeMinutes' in ordre && !estDureeSite(ordre.dureeMinutes)) return null
       return {
         type: 'enchere' as const, idCarte, idExemplaire, prix,
         ...(idCarteSite !== undefined ? { idCarteSite } : {}), ...(rarete !== undefined ? { rarete } : {}),
         ...('prixFixe' in ordre ? { prixFixe: ordre.prixFixe as boolean } : {}), ...('reductions' in ordre ? { reductions: reductions as number } : {}),
+        ...('dureeMinutes' in ordre ? { dureeMinutes: ordre.dureeMinutes as number } : {}),
       }
     }
     case 'suppression-etiquette': {

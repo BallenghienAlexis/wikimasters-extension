@@ -14,7 +14,7 @@ import { CAUSE_VERIFICATION_HUMAINE, CODE_VERIFICATION_HUMAINE, estLimiteEnchere
 import type { Collection } from '../lib/collection';
 import type { Horloge } from '../lib/file';
 import { CONFIG_PRIX } from '../config/prix';
-import { routeMarcheValide } from '../lib/affluence';
+import { dureeEnchereMinutes, routeMarcheValide, type EvenementVente } from '../lib/affluence';
 import { PAUSE_LOTS_MS } from '../lib/reprise';
 import { DUREE_BAIL_MS, PAUSE_APRES_ARRET_MS, etatInitial, type Bail, type EtatOrdonnanceur, type ReponseApi } from '../lib/ordonnanceur';
 import type { AvecVerrouRequete } from '../lib/verrouRequete';
@@ -82,6 +82,8 @@ export interface DependancesSuiviVentes {
   chargerLancements: () => Promise<LancementVente[]>;
   ajouterLancement: (l: LancementVente) => Promise<void>;
   chargerEcartes: () => Promise<Record<string, number>>;
+  /** Évènements d’affluence (heures fortes) pour choisir la durée de l’enchère ; absent : créneaux par défaut. */
+  chargerEvenementsAffluence?: () => Promise<EvenementVente[]>;
   enregistrerEcartes: (e: Record<string, number>) => Promise<void>;
   /** Fin de la pause de l’exécution des lots (401, 429), `null` sans pause : ne concerne que la relance (écriture). */
   pauseLots: () => Promise<number | null>;
@@ -193,6 +195,9 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     // Non vendue : prix de départ divisé par deux autant de fois que la carte est restée sans vente (Alexis, 2026-11-17).
     const rarete = collection.cartes.find((c) => c.id === choix.action.idCarte)?.rarete ?? '';
     const nonVentes = nonVentesDe(suivi, cleNonVente(rarete, choix.titre));
+    // Durée selon l’affluence à l’instant de l’envoi (Alexis, 2026-11-24) : 1 h en heure forte, plus longue en zone creuse.
+    const dureeMinutes = dureeEnchereMinutes(maintenant, (await deps.chargerEvenementsAffluence?.().catch(() => [])) ?? []);
+    choix.action = { ...choix.action, dureeMinutes };
     // La division est aussi portée par l'ordre (`reductions`) : le prix de base est relu juste avant l'envoi (tendance du marché).
     if (nonVentes > 0) choix.action = { ...choix.action, prix: prixDepartAjuste(choix.action.prix, nonVentes), reductions: nonVentes };
 
@@ -219,7 +224,7 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       await statut({ etat: 'attente', message: `Mise en vente lancée : ${choix.titre}`, jusqua: null, carte: null });
       const maintenantLancee = deps.horloge.now();
       // Compte local de la place prise : le listing du site ne la montrera qu’à la lecture suivante.
-      const prise: VenteActive = { id: `local:${choix.action.idExemplaire}`, idExemplaire: choix.action.idExemplaire, titre: choix.titre, rarete, prixDepart: prixEnvoye, prixActuel: prixEnvoye, avecMise: false, creeLe: maintenantLancee, finLe: maintenantLancee + 3600_000, finInitiale: maintenantLancee };
+      const prise: VenteActive = { id: `local:${choix.action.idExemplaire}`, idExemplaire: choix.action.idExemplaire, titre: choix.titre, rarete, prixDepart: prixEnvoye, prixActuel: prixEnvoye, avecMise: false, creeLe: maintenantLancee, finLe: maintenantLancee + dureeMinutes * 60_000, finInitiale: maintenantLancee };
       return { etat: 'lancee', active: prise };
     }
     const cause = resultat.cause;
