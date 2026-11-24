@@ -78,30 +78,39 @@ describe('étiquettes dans la sauvegarde', () => {
 });
 
 describe('adopterEtiquettes', () => {
+  const ok = (): boolean => true;
   const importees = () => validerImportees({ version: 1, importeLe: 1, noms: ['#Guerre', '#Jazz'], parCarte: { a: ['#Guerre'], b: ['#Jazz'] }, refus: { c: ['#Musique'] } })!;
   const site = [{ id: 'S1', nom: '#Guerre', nbCartes: 2 }, { id: 'S2', nom: '#Autre', nbCartes: 1 }];
 
   it('reprend ce que le site confirme, sans doublon ni étiquette inconnue', () => {
     const cartes = [carte('a', { etiquettesSite: ['#Guerre'] }), carte('b', { etiquettesSite: ['#Jazz'] }), carte('c')];
-    const b = adopterEtiquettes(registreVide(), importees(), cartes, site);
+    const b = adopterEtiquettes(registreVide(), importees(), cartes, site, ok);
     expect(b.registre.etiquettes).toEqual({ '#Guerre': 'S1' });
     expect(b.registre.couples).toEqual([{ ex: 'ex-a', nom: '#Guerre' }]);
     expect(b.registre.refus).toEqual([{ ex: 'ex-c', nom: '#Musique' }]);
     // idempotente
-    expect(adopterEtiquettes(b.registre, importees(), cartes, site).registre).toBe(b.registre);
+    expect(adopterEtiquettes(b.registre, importees(), cartes, site, ok).registre).toBe(b.registre);
   });
 
   it('une carte qui ne porte pas l’étiquette sur le site n’est pas reprise (la synchro d’ici est plus récente)', () => {
-    const b = adopterEtiquettes(registreVide(), importees(), [carte('a', { etiquettesSite: [] })], site);
+    const b = adopterEtiquettes(registreVide(), importees(), [carte('a', { etiquettesSite: [] })], site, ok);
     expect(b.registre.couples).toEqual([]);
   });
 
   it('sans liste du site, rien ne change ; un retrait déjà décidé n’est pas repris à l’envers', () => {
     const r = registreVide();
-    expect(adopterEtiquettes(r, importees(), [carte('a')], null).registre).toBe(r);
-    expect(adopterEtiquettes(r, importees(), [carte('a')], []).registre).toBe(r);
+    expect(adopterEtiquettes(r, importees(), [carte('a')], null, ok).registre).toBe(r);
+    expect(adopterEtiquettes(r, importees(), [carte('a')], [], ok).registre).toBe(r);
     const avecRefus: Registre = { ...r, refus: [{ ex: 'ex-a', nom: '#Guerre' }] };
-    const b = adopterEtiquettes(avecRefus, importees(), [carte('a', { etiquettesSite: ['#Guerre'] })], site);
+    const b = adopterEtiquettes(avecRefus, importees(), [carte('a', { etiquettesSite: ['#Guerre'] })], site, ok);
     expect(b.registre.couples).toEqual([]);
+  });
+
+  it('un nom hors plan présent sur le site n’est jamais repris (étiquette posée à la main)', () => {
+    const imp = validerImportees({ version: 1, importeLe: 1, noms: ['Ma vitrine'], parCarte: { a: ['Ma vitrine'] }, refus: { a: ['Ma vitrine'] } })!;
+    const s = [{ id: 'S9', nom: 'Ma vitrine', nbCartes: 1 }];
+    const b = adopterEtiquettes(registreVide(), imp, [carte('a', { etiquettesSite: ['Ma vitrine'] })], s, (nom) => nom.startsWith('#'));
+    expect(b.registre).toEqual(registreVide());
+    expect(b.ignorees).toBe(1);
   });
 });

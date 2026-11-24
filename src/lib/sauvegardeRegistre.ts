@@ -116,11 +116,17 @@ export const modeApresImport = (ici: ModeEtiquettes | undefined, s: EtiquettesSa
 /** Vrai si la dernière synchro d'ici est plus récente que le relevé du fichier (les informations d'ici priment alors). */
 export const synchroIciPlusRecente = (ici: number | null, fichier: number | null): boolean => ici !== null && (fichier === null || ici > fichier);
 
+const MAX_CARTES_CITEES = 20_000;
 const unir = (a: Table, b: Table): Table => {
   const t = table();
-  for (const [cle, noms] of [...Object.entries(a), ...Object.entries(b)]) t[cle] = [...new Set([...(t[cle] ?? []), ...noms])].slice(0, MAX_PAR_CARTE);
+  for (const [cle, noms] of [...Object.entries(a), ...Object.entries(b)]) {
+    // Bornée comme à la lecture : au-delà, `validerImportees` rejetterait tout et les revendications seraient perdues.
+    if (!Object.hasOwn(t, cle) && Object.keys(t).length >= MAX_CARTES_CITEES) continue;
+    t[cle] = [...new Set([...(t[cle] ?? []), ...noms])].slice(0, MAX_PAR_CARTE);
+  }
   return t;
 };
+const noms_de = (t: Table, cle: string): readonly string[] => (Object.hasOwn(t, cle) ? t[cle]! : []);
 
 /**
  * Revendications à garder après un import (aucune écriture sur le registre ici).
@@ -150,6 +156,8 @@ export function validerImportees(brut: unknown): EtiquettesImportees | null {
 }
 
 export interface BilanAdoption {
+  /** Noms cités par le fichier que l'extension ne peut pas avoir créés (ni thème, ni préfixe du plan) : jamais repris. */
+  ignorees: number;
   registre: Registre;
   etiquettes: number;
   couples: number;
@@ -158,14 +166,16 @@ export interface BilanAdoption {
 
 /**
  * Reprend dans le registre ce que le site confirme (jamais autre chose) :
+ * - seuls les noms que l'extension peut elle-même créer (`adoptable` : thème du catalogue ou appris, préfixe du plan) sont repris :
+ *   un fichier modifié ne peut pas faire passer une étiquette posée à la main pour une étiquette de l'extension ;
  * - une étiquette du fichier qui existe sur le site sous le même nom : son identifiant entre dans le registre (le lot ne la recrée pas) ;
  * - une pose du fichier que la carte porte réellement sur le site : couple ajouté pour ses exemplaires (le lot ne la repose pas, et pourra la retirer) ;
  * - un retrait à la main du fichier que la carte ne porte pas (et que le registre d'ici ne pose pas) : mémorisé, jamais reposé.
  * Sans liste d'étiquettes du site (absente ou vide), rien ne change. Une étiquette hors fichier n'est jamais reprise : l'extension
  * ne retire que ce qu'elle a posée. Idempotente ; ne modifie jamais l'entrée.
  */
-export function adopterEtiquettes(registre: Registre, importees: EtiquettesImportees, cartes: readonly Pick<Carte, 'id' | 'idsSite' | 'etiquettesSite'>[], site: readonly EtiquetteSite[] | null): BilanAdoption {
-  const rien: BilanAdoption = { registre, etiquettes: 0, couples: 0, refus: 0 };
+export function adopterEtiquettes(registre: Registre, importees: EtiquettesImportees, cartes: readonly Pick<Carte, 'id' | 'idsSite' | 'etiquettesSite'>[], site: readonly EtiquetteSite[] | null, adoptable: (nom: string) => boolean): BilanAdoption {
+  const rien: BilanAdoption = { registre, etiquettes: 0, couples: 0, refus: 0, ignorees: 0 };
   if (site === null || site.length === 0) return rien;
   const idParNom = new Map<string, string>();
   for (const e of site) if (!idParNom.has(e.nom)) idParNom.set(e.nom, e.id);
@@ -175,8 +185,13 @@ export function adopterEtiquettes(registre: Registre, importees: EtiquettesImpor
   let nbCouples = 0;
   let nbRefus = 0;
   const revendiquees = new Set([...importees.noms, ...Object.values(importees.parCarte).flat()]);
+  const refuses = new Set<string>();
   for (const nom of revendiquees) {
     const id = idParNom.get(nom);
+    if (id !== undefined && !adoptable(nom)) {
+      refuses.add(nom);
+      continue;
+    }
     if (id === undefined || NOMS_INTERDITS.has(nom) || Object.hasOwn(r.etiquettes, nom)) continue;
     r = enregistrerEtiquette(r, nom, id);
     nbEtiquettes += 1;
@@ -185,8 +200,8 @@ export function adopterEtiquettes(registre: Registre, importees: EtiquettesImpor
     const exemplaires = c.idsSite ?? [];
     if (exemplaires.length === 0) continue;
     const sur = new Set(c.etiquettesSite);
-    for (const nom of importees.parCarte[c.id] ?? []) {
-      if (!sur.has(nom) || !Object.hasOwn(r.etiquettes, nom)) continue;
+    for (const nom of noms_de(importees.parCarte, c.id)) {
+      if (!sur.has(nom) || !Object.hasOwn(r.etiquettes, nom) || !adoptable(nom)) continue;
       for (const ex of exemplaires) {
         if (estRefuse(r, ex, nom)) continue;
         const suivant = poserCouple(r, ex, nom);
@@ -194,8 +209,8 @@ export function adopterEtiquettes(registre: Registre, importees: EtiquettesImpor
         r = suivant;
       }
     }
-    for (const nom of importees.refus[c.id] ?? []) {
-      if (sur.has(nom)) continue;
+    for (const nom of noms_de(importees.refus, c.id)) {
+      if (sur.has(nom) || !adoptable(nom)) continue;
       for (const ex of exemplaires) {
         if (r.couples.some((x) => x.ex === ex && x.nom === nom)) continue;
         const suivant = refuserCouple(r, ex, nom);
@@ -204,5 +219,5 @@ export function adopterEtiquettes(registre: Registre, importees: EtiquettesImpor
       }
     }
   }
-  return { registre: r, etiquettes: nbEtiquettes, couples: nbCouples, refus: nbRefus };
+  return { registre: r, etiquettes: nbEtiquettes, couples: nbCouples, refus: nbRefus, ignorees: refuses.size };
 }

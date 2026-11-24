@@ -315,7 +315,7 @@ async function alignerSurLesEtiquettesDuSite(actions: readonly Action[]): Promis
   // Erreur d'écriture ignorée volontairement : simple mémoire d'affichage, le lot continue.
   if (lue.length > 0 || Object.keys(registre.etiquettes).length === 0) await enregistrerEtiquettesSite(lue).catch(() => undefined);
   // Étiquettes citées par une sauvegarde importée : reprises si le site les confirme (pas de doublon créé, pas de pose refaite).
-  const adopte = await adopterEtiquettesImportees().catch(() => null);
+  const adopte = await adopterEtiquettesImportees(lue).catch(() => null);
   const reconciliation = reconcilierAvecSite(adopte ?? registre, lue);
   if (reconciliation.registre !== registre) await enregistrerRegistre(reconciliation.registre);
   return ajusterLotAuSite(actions, reconciliation.registre, reconciliation.perdus, collection, configDuLot(preferences), typesDisponibles());

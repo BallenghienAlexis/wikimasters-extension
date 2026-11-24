@@ -1,4 +1,3 @@
-import { adopterEtiquettesImportees } from './adoptionEtiquettes';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { appliquerEdition, collectionVide, partagerCartes, type Collection, type EditionCarte } from '../lib/collection';
 import type { Registre } from '../lib/actions';
@@ -31,6 +30,7 @@ import {
   enregistrerPreferences,
   noterEvenementVente,
 } from '../lib/stockage';
+import { adopterEtiquettesImportees } from './adoptionEtiquettes';
 import { definirCategoriesWikipedia, definirSignauxWikipedia, definirThemesAppris, definirThemesIA, definirThemesWikipedia } from '../lib/themes';
 import { etatApprisVide, proposerThemes, type EtatAppris } from '../lib/themesAppris';
 import { cacheIAVide, themesIAParTitre, type CacheIA } from '../lib/classificationIA';

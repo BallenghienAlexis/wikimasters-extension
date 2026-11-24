@@ -10,3 +10,8 @@
   - src/lib/stockage.ts:691 : `ErreurImportSynchroEnCours` (refus d'import tant que le bail est tenu) sans test ; ajouter un test unitaire de `ecrireDonneesSauvegarde` avec un faux `chrome.storage` et un bail en cours.
   - tests/e2e/sauvegarde.spec.ts:47 : vérifier, après le rechargement, que `wikipedia` et `etatSynchro` contiennent bien ce qui a été importé.
   - Le registre des étiquettes (`registre`) reste non sauvegardé (point ci-dessus inchangé) : la pose d'étiquettes sur le 2ᵉ PC dépend toujours de lui.
+- Étiquettes à l'import (PR #224, 2026-11-24), points mineurs de revue reportés :
+  - src/lib/sauvegarde.ts (`exporterEtiquettes`) : un PC exporté avant sa première synchro après un import n'emporte pas les revendications en attente (`etiquettesImportees`) ; les fusionner dans l'export.
+  - src/app/adoptionEtiquettes.ts, `chargerEtiquettesImportees`/`enregistrerEtiquettesImportees`, écriture dans `ecrireDonneesSauvegarde` et branchement `pilotageLots.ts` : tests avec faux `chrome.storage` (modèle `tests/unit/stockage.test.ts`).
+  - src/lib/sauvegarde.ts (`appliquerImport`) : `Date.now()` pour `importeLe`, passer `maintenant` en paramètre.
+  - src/app/Sauvegarde.tsx : aperçu des étiquettes (`data-testid="apercu-etiquettes"`) sans e2e ni captures 3 breakpoints.
