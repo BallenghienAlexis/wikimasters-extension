@@ -116,6 +116,8 @@ export function fusionnerFichiersPc(locales: Donnees, fichiers: FichierPc[], mon
   valides.sort((a, b) => (a.creeLe < b.creeLe ? -1 : a.creeLe > b.creeLe ? 1 : a.nom.localeCompare(b.nom, 'fr')));
 
   let courantes = locales;
+  // Garde 10 cartes et 10 % calculée une fois sur la collection d'avant fusion, cumulée sur tous les fichiers du cycle.
+  let budgetRetraits = Math.max(MAX_RETRAITS_MIN, Math.floor(locales.collection.cartes.length * 0.1));
   const fusionnes: string[] = [];
   for (const v of valides) {
     const sienne = modifieLeDuFichier(texteDe.get(v.nom) ?? '') ?? v.creeLe;
@@ -125,13 +127,16 @@ export function fusionnerFichiersPc(locales: Donnees, fichiers: FichierPc[], mon
     // Dernière lecture complète du site de chaque côté : la plus récente fait foi sur les cartes présentes ou absentes.
     // Fichier plus frais : une carte d'ici absente du fichier a disparu du site (défaussée, vendue) ; fichier plus ancien :
     // une carte absente d'ici ne ressuscite pas, même si ses saisies sont plus récentes.
-    const lectureFichier = v.sauvegarde.synchro?.etat?.derniereComplete ?? null;
+    const brute = v.sauvegarde.synchro?.etat?.derniereComplete ?? null;
+    // Une date future (horloge d'un autre PC, fichier abîmé) ne rend pas un fichier plus frais que maintenant.
+    const lectureFichier = brute === null ? null : Math.min(brute, Date.now());
     const lectureIci = courantes.synchro?.etat?.derniereComplete ?? null;
     const fichierPlusFrais = lectureFichier !== null && (lectureIci === null || lectureFichier > lectureIci);
     const iciPlusFrais = lectureIci !== null && (lectureFichier === null || lectureIci > lectureFichier);
     const nouvellesCartes = plusRecent && !iciPlusFrais;
     const sauvegarde = nouvellesCartes ? v.sauvegarde : { ...v.sauvegarde, cartes: v.sauvegarde.cartes.filter((c) => locales_.has(c.id)) };
-    const avant = fichierPlusFrais ? retirerAbsentes(courantes, new Set(v.sauvegarde.cartes.map((c) => c.id))) : courantes;
+    const avant = fichierPlusFrais ? retirerAbsentes(courantes, new Set(v.sauvegarde.cartes.map((c) => c.id)), budgetRetraits) : courantes;
+    if (fichierPlusFrais) budgetRetraits = Math.max(0, budgetRetraits - (courantes.collection.cartes.length - avant.collection.cartes.length) - nbDelies(courantes, avant));
     const r = appliquerImport(avant, sauvegarde, politique);
     if (!r.ok) {
       ignores.push({ nom: v.nom, raison: r.erreur });
@@ -153,14 +158,20 @@ const MAX_RETRAITS_MIN = 10;
  * Cartes d'ici absentes d'un fichier dont la lecture du site est plus récente : défaussées ou vendues ailleurs.
  * Sans édition locale la carte disparaît ; sinon elle reste, déliée du site (comme `retirerDisparues` de la synchro). Aucune requête.
  */
-export function retirerAbsentes(donnees: Donnees, presentes: ReadonlySet<string>): Donnees {
+export function retirerAbsentes(donnees: Donnees, presentes: ReadonlySet<string>, budget: number): Donnees {
   const absentes = donnees.collection.cartes.filter((c) => !presentes.has(c.id));
-  if (absentes.length === 0 || absentes.length > Math.max(MAX_RETRAITS_MIN, Math.floor(donnees.collection.cartes.length * 0.1))) return donnees;
+  if (absentes.length === 0 || absentes.length > budget) return donnees;
   const ids = new Set(absentes.map((c) => c.id));
   const cartes = donnees.collection.cartes
     .filter((c) => !ids.has(c.id) || aEditionLocale(c))
     .map((c) => (ids.has(c.id) ? { ...c, idsSite: null, etiquettesSite: [] } : c));
   return { ...donnees, collection: { ...donnees.collection, cartes } };
+}
+
+/** Cartes d'ici déliées du site (gardées pour leur saisie) entre deux états. */
+function nbDelies(avant: Donnees, apres: Donnees): number {
+  const ids = new Map(avant.collection.cartes.map((c) => [c.id, c.idsSite]));
+  return apres.collection.cartes.filter((c) => ids.get(c.id) !== undefined && ids.get(c.id) !== null && c.idsSite === null).length;
 }
 
 function lireOk(texte: string) {

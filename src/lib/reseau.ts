@@ -6,7 +6,7 @@
  * seuls une classe, un code HTTP, un libellé fixe et, pour une création, l’identifiant validé.
  * Le délai variable est tiré par l’appelant, sauf entre la relecture de la tendance et l’enchère (`gigueAleatoire`, injectable).
  */
-import { CAUSE_VERIFICATION_HUMAINE, CODE_VERIFICATION_HUMAINE, type Action, type ResultatAction } from './actions'
+import { CAUSE_CARTE_INDISPONIBLE, CAUSE_VERIFICATION_HUMAINE, CODE_VERIFICATION_HUMAINE, type Action, type ResultatAction } from './actions'
 import type { EntreeContrat, TableContrat } from './contrat'
 import { ENTREE_LECTURE_TAGS } from './contrat/lecture'
 import { enteteAuthentification, sessionCourante, type SessionLue } from './jeton'
@@ -55,7 +55,8 @@ export function classerConflit(json: unknown): string {
           .join(' ')
           .slice(0, 300)
       : ''
-  return /actives?|simultan|concurrent|maximum|limite|limit/i.test(message) ? 'limite d’enchères atteinte' : 'conflit signalé par le site'
+  if (/actives?|simultan|concurrent|maximum|limite|limit/i.test(message)) return 'limite d’enchères atteinte'
+  return /ne poss[ée]dez plus|d[ée]j[àa] en vente|already/i.test(message) ? CAUSE_CARTE_INDISPONIBLE : 'conflit signalé par le site'
 }
 
 /** 409 « Vous ne possédez plus cette carte » : message du site, lu sans être recopié. */

@@ -81,7 +81,7 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
       }
       const m = memoire.current;
       const maintenant = new Date();
-      // 1. Envoi de ce PC (au plus une fois par minute, et seulement si le contenu a changé).
+      // 1. Envoi de ce PC (au plus toutes les 15 s, et seulement si le contenu a changé).
       let donnees = await lireDonneesSauvegarde();
       const edition = empreinteEdition(donnees);
       if ((m.edition !== null && edition !== m.edition) || (m.edition === null && m.modifieLe === null && aDesSaisies(donnees))) m.modifieLe = maintenant.toISOString();
@@ -95,7 +95,7 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
         ecrireMemoire(m);
         setDernierEnvoi(m.dernierEnvoi);
       }
-      // 2. Lecture des autres PC (au plus toutes les 5 minutes).
+      // 2. Lecture des autres PC (au plus toutes les 15 s).
       if (Date.now() - derniereLectureMs.current >= INTERVALLE_LECTURE_MS) {
         derniereLectureMs.current = Date.now();
         const rapport = fusionnerFichiersPc(donnees, await listerFichiersPc(d), m.nomPc, m.lus, m.modifieLe);

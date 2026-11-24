@@ -277,4 +277,7 @@ export interface EtatExecutionV2 extends EtatExecution {
 }
 
 /** Codes HTTP d’un refus par carte (exemplaire vendu, défaussé ou en vente), tolérés un à un. */
+/** Cause d'un 409 qui dit que la carte est déjà en vente ou n'est plus possédée (relance : carte écartée un jour). */
+export const CAUSE_CARTE_INDISPONIBLE = 'carte déjà en vente ou plus possédée'
+
 export const CODES_CARTE_INDISPONIBLE: readonly number[] = [403, 404]

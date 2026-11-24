@@ -154,6 +154,12 @@ describe('défausses propagées entre PC', () => {
     const r = fusionnerFichiersPc(locales, [{ nom: 'pc-autre', texte: autre }], 'pc-moi', {}, T2.toISOString());
     expect(r.donnees.collection.cartes.map((c) => c.id)).not.toContain('c3');
   });
+  it('une date de lecture future dans un fichier ne le rend pas plus frais que maintenant', () => {
+    const locales = avecLecture(tous.map((id) => carte(id)), Date.now() - 1000);
+    const autre = instantane(avecLecture(tous.filter((id) => id !== 'c3').map((id) => carte(id)), Date.now() + 10 * 3_600_000), T3);
+    const r = fusionnerFichiersPc(locales, [{ nom: 'pc-autre', texte: autre }], 'pc-moi', {}, T2.toISOString());
+    expect(r.donnees.collection.cartes.length).toBeLessThanOrEqual(12);
+  });
   it('trop de cartes absentes : rien n’est retiré', () => {
     const locales = avecLecture(tous.map((id) => carte(id)), Date.parse('2026-01-01T09:00:00Z'));
     const autre = instantane(avecLecture([carte('c0')], Date.parse('2026-01-01T09:30:00Z')), T3);

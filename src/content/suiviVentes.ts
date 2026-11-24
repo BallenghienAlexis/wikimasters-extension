@@ -10,7 +10,7 @@
 // Relance : quand une place se libère, une mise aux enchères (`POST /api/marketplace`, même contrat que les lots) pour la
 // carte choisie par `choisirProchaineEnchere`, sans clic « Lancer », seulement si l’interrupteur est activé.
 // N’appelle jamais `fetch` lui-même : le transport de lecture et l’émetteur d’écriture sont injectés.
-import { CAUSE_VERIFICATION_HUMAINE, CODE_VERIFICATION_HUMAINE, estLimiteEncheres, type Action, type ResultatAction } from '../lib/actions';
+import { CAUSE_CARTE_INDISPONIBLE, CAUSE_VERIFICATION_HUMAINE, CODE_VERIFICATION_HUMAINE, estLimiteEncheres, type Action, type ResultatAction } from '../lib/actions';
 import type { Collection } from '../lib/collection';
 import type { Horloge } from '../lib/file';
 import { CONFIG_PRIX } from '../config/prix';
@@ -271,22 +271,15 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       await ecrireEtat(courant, { etat: 'pause', message: resultat.codeHttp === 401 ? 'Session du site expirée (401) : pause de 30 min' : 'Le site demande de ralentir (429) : pause de 30 min', jusqua: deps.horloge.now() + PAUSE_ECRITURE_MS });
       return { etat: 'stop' };
     }
-    // Un 409 qui n'est pas la limite d'enchères (exemplaire déjà en vente ou plus possédé, par exemple mis en vente depuis un autre PC)
-    // n'attend aucune place : la carte est écartée un jour et la relance passe à la suivante.
-    if (resultat.codeHttp === 409 && !estLimiteEncheres(diagnostic) && cause !== 'limite d’enchères atteinte') {
-      await deps.enregistrerEcartes(purgerEcartes({ ...ecartes, [choix.action.idExemplaire]: deps.horloge.now() + ECART_REFUS_MS }, deps.horloge.now())).catch(() => undefined);
-      await statut({ etat: 'attente', message: `Conflit du site pour ${choix.titre} (déjà en vente ou plus possédée) : carte écartée un jour`, jusqua: null, carte: null });
-      reessaiLe = deps.horloge.now() + DELAI_REESSAI_PLACE_MS;
-      return { etat: 'stop' };
-    }
-    if (resultat.codeHttp === 409 || estLimiteEncheres(diagnostic)) {
+    if ((resultat.codeHttp === 409 && cause !== CAUSE_CARTE_INDISPONIBLE) || estLimiteEncheres(diagnostic)) {
       // Le listing sous-compte peut-être : au plus un essai par minute tant qu’une lecture ne montre pas une place libre.
       await pause(DELAI_APRES_409_MS, 'Limite d’enchères actives atteinte : la relance attend une place', null);
       return { etat: 'stop' };
     }
     // Exemplaire vendu, défaussé ou introuvable : la carte est écartée un jour et la relance passe à la suivante ; à partir
     // de 3 refus de suite (le site peut s’en servir comme avertissement), attente progressive comme pour toute erreur.
-    if (cause !== CAUSE_VERIFICATION_HUMAINE && (resultat.codeHttp === 403 || resultat.codeHttp === 404)) {
+    // Un 409 qui n'est pas la limite d'enchères (exemplaire déjà en vente ou plus possédé, par exemple depuis un autre PC) se traite de même.
+    if (cause !== CAUSE_VERIFICATION_HUMAINE && (resultat.codeHttp === 403 || resultat.codeHttp === 404 || (resultat.codeHttp === 409 && cause === CAUSE_CARTE_INDISPONIBLE))) {
       await deps.enregistrerEcartes(purgerEcartes({ ...ecartes, [choix.action.idExemplaire]: deps.horloge.now() + ECART_REFUS_MS }, deps.horloge.now())).catch(() => undefined);
       refusSuite += 1;
       if (refusSuite < 3) {
