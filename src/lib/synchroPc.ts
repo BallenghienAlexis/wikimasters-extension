@@ -5,6 +5,8 @@ import { appliquerImport, creerSauvegarde, lireSauvegarde, serialiserSauvegarde,
 /** Écriture au plus une fois par minute ; lecture des autres PC au plus toutes les 5 minutes. */
 export const INTERVALLE_ECRITURE_MS = 60_000;
 export const INTERVALLE_LECTURE_MS = 5 * 60_000;
+/** Marque d'un fichier trop gros : il est signalé sans être lu ni chargé en mémoire. */
+export const FICHIER_TROP_GROS = '\u0000trop-gros';
 /** Un fichier plus gros est ignoré (la sauvegarde manuelle accepte 20 Mo). */
 export const TAILLE_MAX_FICHIER_PC = 20 * 1024 * 1024;
 
@@ -34,6 +36,15 @@ export function empreinte(texte: string): string {
   return lu.ok ? JSON.stringify({ ...lu.sauvegarde, creeLe: '' }) : texte;
 }
 
+/** Ce que le joueur a saisi (cartes éditées, réglages, ventes), sans les relevés du site ni la mémoire de synchro : un changement ici date une modification locale. */
+export function empreinteEdition(donnees: Donnees): string {
+  return JSON.stringify({
+    cartes: donnees.collection.cartes.map((c) => [c.id, c.prixCible, c.note, c.ami, c.choixFavori ?? null, c.themesChoisis ?? null]),
+    preferences: donnees.preferences,
+    ventes: donnees.ventes.filter((e) => e.type !== 'site'),
+  });
+}
+
 export interface FichierPc {
   nom: string;
   texte: string;
@@ -56,17 +67,18 @@ export interface RapportFusion {
 
 /**
  * Fusionne les fichiers des autres PC dans les données locales, du plus ancien au plus récent.
- * Règle « le plus récent gagne » : un fichier plus récent que `dernierEnvoi` (notre dernière écriture) l'emporte sur les cartes en conflit,
- * un fichier plus ancien laisse l'édition locale (thèmes, amis et ventes sont toujours réunis, voir `appliquerImport`).
+ * Règle « le plus récent gagne » : un fichier plus récent que `modifieLe` (dernière modification saisie ici ; `null` = jamais, par exemple PC neuf)
+ * l'emporte sur les cartes en conflit. Un fichier plus ancien laisse l'édition locale et n'ajoute aucune carte
+ * (une carte vendue ou défaussée ici ne ressuscite pas) ; thèmes, amis et ventes sont toujours réunis (voir `appliquerImport`).
  * Un fichier illisible, d'un format inconnu ou déjà lu est ignoré sans rien modifier.
  */
-export function fusionnerFichiersPc(locales: Donnees, fichiers: FichierPc[], monNom: string, dejaLus: Record<string, string>, dernierEnvoi: string | null): RapportFusion {
+export function fusionnerFichiersPc(locales: Donnees, fichiers: FichierPc[], monNom: string, dejaLus: Record<string, string>, modifieLe: string | null): RapportFusion {
   const ignores: FichierIgnore[] = [];
   const lus = { ...dejaLus };
   const valides: { nom: string; creeLe: string; sauvegarde: NonNullable<ReturnType<typeof lireOk>> }[] = [];
   for (const f of fichiers) {
     if (f.nom === monNom) continue;
-    if (f.texte.length > TAILLE_MAX_FICHIER_PC) {
+    if (f.texte === FICHIER_TROP_GROS || f.texte.length > TAILLE_MAX_FICHIER_PC) {
       ignores.push({ nom: f.nom, raison: 'fichier trop volumineux' });
       continue;
     }
@@ -84,8 +96,11 @@ export function fusionnerFichiersPc(locales: Donnees, fichiers: FichierPc[], mon
   let courantes = locales;
   const fusionnes: string[] = [];
   for (const v of valides) {
-    const politique: PolitiqueConflit = dernierEnvoi !== null && v.creeLe > dernierEnvoi ? 'remplacer' : 'garder-ici';
-    const r = appliquerImport(courantes, v.sauvegarde, politique);
+    const plusRecent = modifieLe === null || v.creeLe > modifieLe;
+    const politique: PolitiqueConflit = plusRecent ? 'remplacer' : 'garder-ici';
+    const locales_ = new Set(courantes.collection.cartes.map((c) => c.id));
+    const sauvegarde = plusRecent ? v.sauvegarde : { ...v.sauvegarde, cartes: v.sauvegarde.cartes.filter((c) => locales_.has(c.id)) };
+    const r = appliquerImport(courantes, sauvegarde, politique);
     if (!r.ok) {
       ignores.push({ nom: v.nom, raison: r.erreur });
       continue;

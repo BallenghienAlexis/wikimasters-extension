@@ -26,7 +26,7 @@
 | ID | Critère | Vérifiable par |
 |---|---|---|
 | SC-001 | Deux instantanés de PC différents fusionnés donnent, pour chaque champ, la valeur la plus récente, quel que soit l'ordre de lecture (idempotent, commutatif). | unitaire |
-| SC-002 | Un fichier illisible, tronqué, d'une version inconnue ou plus ancien que l'état local ne modifie rien et produit un message lisible. | unitaire |
+| SC-002 | Un fichier illisible, tronqué ou d'une version inconnue ne modifie rien et produit un message lisible. Un fichier plus ancien que ma dernière modification saisie ne remplace aucune carte et n'en ajoute aucune (une carte vendue ou défaussée ici ne ressuscite pas) ; seuls thèmes, amis et ventes sont réunis. | unitaire |
 | SC-003 | Le fichier écrit ne contient aucun jeton, cookie, identifiant d'exemplaire ni clé API ; il passe la même validation stricte que la sauvegarde. | unitaire |
 | SC-004 | Un PC n'écrit jamais que `wm-<son nom>.json` ; une écriture se fait par fichier temporaire puis remplacement, pour ne jamais laisser un fichier à moitié écrit. | unitaire |
 | SC-005 | Écritures espacées d'une minute au moins, lectures toutes les 5 minutes au plus ; aucune requête réseau (test de lint réseau inchangé). | unitaire |
@@ -34,10 +34,10 @@
 | SC-007 | Navigable au clavier, contrastes AA, section repliable comme les autres réglages. | e2e / capture |
 
 ## 4. Constraints
-- **Rétrocompatibilité** : champ ajouté au schéma de stockage (poignée en IndexedDB, nom du PC, état de synchro), avec migration ; format de sauvegarde inchangé.
-- **Performance** : instantané compressé (gzip via `CompressionStream`) si > 500 Ko ; écriture hors du fil principal quand c'est possible.
+- **Rétrocompatibilité** : une clé de stockage ajoutée (`synchroPc`, validée à la lecture, sans migration) et la poignée du dossier en IndexedDB ; format de sauvegarde inchangé.
+- **Performance** : instantané non compressé (la compression gzip est reportée, voir `retouches.md`).
 - **Cadre WikiMasters** : aucune requête ni écriture sur le site ; les données restent dans le Drive d'Alexis (tiers qu'il a lui-même choisi). À noter dans `AGENTS.md` (nouvelle section) à la mise en œuvre, avec la décision datée d'Alexis.
-- **Confidentialité** : le dossier contient la collection d'Alexis (titres, notes, amis, valeurs) ; il ne doit pas être partagé.
+- **Confidentialité** : le dossier contient la collection d'Alexis (titres, notes, amis, valeurs) ; il ne doit être partagé avec personne : quiconque peut y écrire peut déposer un fichier valide et modifier ses réglages (thèmes, amis, plafond).
 
 ## 5. Non-Goals
 - Synchro en temps réel à la seconde ; synchro sans Drive pour ordinateur ; support d'autres navigateurs.
@@ -48,5 +48,5 @@ Section Réglages : `[Choisir le dossier]  Dossier : WM Collection sync  ·  Ce 
 ## Hypothèses
 - Chrome accepte le lecteur `G:` de Google Drive pour ordinateur dans `showDirectoryPicker` (à tester sur le PC d'Alexis en premier : sinon repli sur un dossier miroir ou option B).
 - Le dossier est réglé en « disponible hors connexion » sur chaque PC.
-- Les horodatages par champ viennent du fil « import entre PC » ; en attendant, la fusion de `synchro-pc` repose sur la date de modification de la carte.
+- Les horodatages par champ viennent du fil « import entre PC » ; en attendant, la règle « le plus récent gagne » se décide par fichier : le fichier d'un autre PC l'emporte s'il est plus récent que la dernière modification saisie sur ce PC (`modifieLe`, détectée par changement des champs saisis). Limite : effacer une édition ne se propage pas (la carte redevient « vierge » et est recomplétée).
 - Nom de PC par défaut : `pc-` + 4 caractères aléatoires.

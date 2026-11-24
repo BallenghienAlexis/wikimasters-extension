@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Carte } from '../../src/lib/collection';
 import type { Donnees } from '../../src/lib/sauvegarde';
-import { empreinte, fusionnerFichiersPc, genererNomPc, instantane, nomFichierPc, nomPcDeFichier, nomPcValide } from '../../src/lib/synchroPc';
+import { empreinte, empreinteEdition, fusionnerFichiersPc, genererNomPc, instantane, nomFichierPc, nomPcDeFichier, nomPcValide } from '../../src/lib/synchroPc';
 
 const carte = (id: string, plus: Partial<Carte> = {}): Carte => ({
   id, titre: `Carte ${id}`, rarete: null, description: '', quantite: 1, url: null, favori: false,
@@ -52,12 +52,33 @@ describe('fusion des fichiers des autres PC', () => {
     expect(r.fusionnes).toEqual(['pc-autre']);
     expect(r.changements).toBe(true);
   });
-  it('un fichier plus ancien laisse l’édition locale mais apporte les cartes absentes', () => {
+  it('un fichier plus ancien laisse l’édition locale et n’ajoute aucune carte (SC-002)', () => {
     const locales = donnees([carte('a', { note: 'ici' })]);
     const autre = instantane(donnees([carte('a', { note: 'là-bas' }), carte('b')]), T1);
     const r = fusionnerFichiersPc(locales, [{ nom: 'pc-autre', texte: autre }], 'pc-moi', {}, T2.toISOString());
     expect(r.donnees.collection.cartes.find((c) => c.id === 'a')!.note).toBe('ici');
-    expect(r.donnees.collection.cartes.map((c) => c.id).sort()).toEqual(['a', 'b']);
+    expect(r.donnees.collection.cartes.map((c) => c.id)).toEqual(['a']);
+  });
+  it('un PC sans modification locale connue (neuf) prend la valeur de l’autre PC', () => {
+    const locales = donnees([carte('a', { note: 'périmée' })]);
+    const autre = instantane(donnees([carte('a', { note: 'récente' })]), T1);
+    const r = fusionnerFichiersPc(locales, [{ nom: 'pc-autre', texte: autre }], 'pc-moi', {}, null);
+    expect(r.donnees.collection.cartes[0]!.note).toBe('récente');
+  });
+  it('aller-retour : la note changée sur A arrive sur B et ne revient pas en arrière sur A', () => {
+    const a1 = donnees([carte('x', { note: 'new' })]);
+    const fichierA = instantane(a1, T2); // A a modifié à T1 et écrit à T2
+    const b = donnees([carte('x', { note: 'old' })]);
+    const surB = fusionnerFichiersPc(b, [{ nom: 'pc-a', texte: fichierA }], 'pc-b', {}, T1.toISOString()); // B n'a rien modifié depuis T1
+    expect(surB.donnees.collection.cartes[0]!.note).toBe('new');
+    const fichierB = instantane(surB.donnees, T3);
+    const surA = fusionnerFichiersPc(a1, [{ nom: 'pc-b', texte: fichierB }], 'pc-a', {}, T1.toISOString()); // A a modifié à T1, B écrit à T3
+    expect(surA.donnees.collection.cartes[0]!.note).toBe('new');
+  });
+  it('empreinte d’édition : insensible aux relevés du site, sensible à une note', () => {
+    const base = donnees([carte('a')]);
+    expect(empreinteEdition(donnees([carte('a', { valeurMarchande: 9, quantite: 3 })]))).toBe(empreinteEdition(base));
+    expect(empreinteEdition(donnees([carte('a', { note: 'n' })]))).not.toBe(empreinteEdition(base));
   });
   it('ignore mon propre fichier, un fichier déjà lu, et ne change rien (idempotent)', () => {
     const locales = donnees([carte('a')]);

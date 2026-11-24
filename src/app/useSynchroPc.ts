@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { chargerSynchroPc, ecrireDonneesSauvegarde, enregistrerSynchroPc, lireDonneesSauvegarde } from '../lib/stockage';
+import { chargerSynchroPc, ecrireDonneesSauvegarde, enregistrerSynchroPc, ErreurImportSynchroEnCours, lireDonneesSauvegarde } from '../lib/stockage';
 import type { Donnees } from '../lib/sauvegarde';
-import { empreinte, fusionnerFichiersPc, genererNomPc, instantane, INTERVALLE_ECRITURE_MS, INTERVALLE_LECTURE_MS, nomPcValide, type FichierIgnore } from '../lib/synchroPc';
-import { autorisation, chargerDossier, choisirDossier, ecrireFichierPc, listerFichiersPc, oublierDossier, synchroPcDisponible, type Dossier } from './dossierPc';
+import { empreinte, empreinteEdition, fusionnerFichiersPc, genererNomPc, instantane, INTERVALLE_ECRITURE_MS, INTERVALLE_LECTURE_MS, nomPcValide, type FichierIgnore } from '../lib/synchroPc';
+import { autorisation, chargerDossier, choisirDossier, ecrireFichierPc, listerFichiersPc, oublierDossier, supprimerFichierPc, synchroPcDisponible, type Dossier } from './dossierPc';
 
 export type EtatSynchroPc = 'indisponible' | 'sans-dossier' | 'autorisation' | 'actif' | 'erreur';
 
@@ -26,10 +26,14 @@ interface Memoire {
   nomPc: string;
   dernierEnvoi: string | null;
   empreinte: string | null;
+  /** Empreinte de ce que le joueur a saisi, au dernier cycle : un changement date `modifieLe`. */
+  edition: string | null;
+  /** Dernière modification saisie ici ; `null` tant qu'aucune n'est connue (PC neuf : l'autre PC l'emporte). */
+  modifieLe: string | null;
   lus: Record<string, string>;
 }
 
-const memoireParDefaut = (): Memoire => ({ nomPc: genererNomPc(), dernierEnvoi: null, empreinte: null, lus: {} });
+const memoireParDefaut = (): Memoire => ({ nomPc: genererNomPc(), dernierEnvoi: null, empreinte: null, edition: null, modifieLe: null, lus: {} });
 
 function lireMemoire(brut: Record<string, unknown> | null): Memoire {
   if (!brut) return memoireParDefaut();
@@ -41,6 +45,8 @@ function lireMemoire(brut: Record<string, unknown> | null): Memoire {
     nomPc: typeof brut.nomPc === 'string' && nomPcValide(brut.nomPc) ? brut.nomPc : genererNomPc(),
     dernierEnvoi: typeof brut.dernierEnvoi === 'string' ? brut.dernierEnvoi : null,
     empreinte: typeof brut.empreinte === 'string' ? brut.empreinte : null,
+    edition: typeof brut.edition === 'string' ? brut.edition : null,
+    modifieLe: typeof brut.modifieLe === 'string' ? brut.modifieLe : null,
     lus,
   };
 }
@@ -70,6 +76,9 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
       const maintenant = new Date();
       // 1. Envoi de ce PC (au plus une fois par minute, et seulement si le contenu a changé).
       let donnees = await lireDonneesSauvegarde();
+      const edition = empreinteEdition(donnees);
+      if (m.edition !== null && edition !== m.edition) m.modifieLe = maintenant.toISOString();
+      m.edition = edition;
       const texte = instantane(donnees, maintenant);
       const peutEcrire = m.dernierEnvoi === null || maintenant.getTime() - Date.parse(m.dernierEnvoi) >= INTERVALLE_ECRITURE_MS;
       if (peutEcrire && empreinte(texte) !== m.empreinte) {
@@ -82,10 +91,17 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
       // 2. Lecture des autres PC (au plus toutes les 5 minutes).
       if (Date.now() - derniereLectureMs.current >= INTERVALLE_LECTURE_MS) {
         derniereLectureMs.current = Date.now();
-        const rapport = fusionnerFichiersPc(donnees, await listerFichiersPc(d), m.nomPc, m.lus, m.dernierEnvoi);
+        const rapport = fusionnerFichiersPc(donnees, await listerFichiersPc(d), m.nomPc, m.lus, m.modifieLe);
         if (rapport.changements) {
+          // Une saisie faite pendant la lecture des fichiers ne doit pas être écrasée : on recommence au prochain tour.
+          if (empreinteEdition(await lireDonneesSauvegarde()) !== edition) {
+            derniereLectureMs.current = 0;
+            ecrireMemoire(m);
+            return;
+          }
           donnees = rapport.donnees;
           await ecrireDonneesSauvegarde(donnees);
+          m.edition = empreinteEdition(donnees);
           onFusionnee(donnees);
         }
         m.lus = rapport.lus;
@@ -95,6 +111,11 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
         setVue((v) => ({ ...v, etat: 'actif', erreur: null }));
       }
     } catch (e) {
+      if (e instanceof ErreurImportSynchroEnCours) {
+        // Une synchro du site tient le bail : on réessaie au prochain tour, sans afficher d'erreur.
+        derniereLectureMs.current = 0;
+        return;
+      }
       setVue((v) => ({ ...v, etat: 'erreur', erreur: e instanceof Error ? e.message : 'Synchro entre PC impossible.' }));
     } finally {
       occupe.current = false;
@@ -148,6 +169,8 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
   };
   const renommer = (nom: string): boolean => {
     if (!nomPcValide(nom)) return false;
+    const ancien = memoire.current.nomPc;
+    if (dossier.current && ancien !== nom) void supprimerFichierPc(dossier.current, ancien);
     memoire.current = { ...memoire.current, nomPc: nom, dernierEnvoi: null, empreinte: null };
     ecrireMemoire(memoire.current);
     setNomPc(nom);

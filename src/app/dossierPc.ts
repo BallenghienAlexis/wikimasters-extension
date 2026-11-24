@@ -1,6 +1,6 @@
 // Accès au dossier partagé de la synchro entre PC (File System Access API) : seul fichier de l'application qui le touche.
 // Aucun réseau : on lit et écrit des fichiers locaux que Google Drive pour ordinateur (ou un équivalent) recopie d'un PC à l'autre.
-import { nomPcDeFichier, TAILLE_MAX_FICHIER_PC, nomFichierPc, type FichierPc } from '../lib/synchroPc';
+import { FICHIER_TROP_GROS, nomPcDeFichier, TAILLE_MAX_FICHIER_PC, nomFichierPc, type FichierPc } from '../lib/synchroPc';
 
 export type Dossier = FileSystemDirectoryHandle & {
   queryPermission(d: { mode: 'readwrite' }): Promise<PermissionState>;
@@ -69,8 +69,8 @@ export async function listerFichiersPc(dossier: Dossier): Promise<FichierPc[]> {
     const nom = nomPcDeFichier(e.name);
     if (e.kind !== 'file' || nom === null) continue;
     const fichier = await (e as FileSystemFileHandle).getFile();
-    // Un fichier trop gros est transmis tel quel (texte vide) : la fusion le signale sans le lire.
-    fichiers.push({ nom, texte: fichier.size > TAILLE_MAX_FICHIER_PC ? ' '.repeat(TAILLE_MAX_FICHIER_PC + 1) : await fichier.text() });
+    // Un fichier trop gros n'est pas lu : la fusion le signale.
+    fichiers.push({ nom, texte: fichier.size > TAILLE_MAX_FICHIER_PC ? FICHIER_TROP_GROS : await fichier.text() });
   }
   return fichiers;
 }
@@ -86,4 +86,9 @@ export async function ecrireFichierPc(dossier: Dossier, nomPc: string, texte: st
     await flux.abort().catch(() => undefined);
     throw e;
   }
+}
+
+/** Supprime le fichier d'un ancien nom de ce PC (après un renommage), pour ne pas laisser de PC fantôme. */
+export async function supprimerFichierPc(dossier: Dossier, nomPc: string): Promise<void> {
+  await dossier.removeEntry(nomFichierPc(nomPc)).catch(() => undefined);
 }
