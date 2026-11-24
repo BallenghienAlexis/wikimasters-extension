@@ -219,7 +219,8 @@ const PanneauApercuLot: React.FC<Props> = ({
   });
   const precocheAuto = useRef(false);
   useEffect(() => {
-    if (chargement || precocheAuto.current) return undefined;
+    // Pas de pré-coche une fois l’aperçu ouvert : le calcul ne doit jamais retarder son affichage.
+    if (chargement || etat !== null || precocheAuto.current) return undefined;
     const t = setTimeout(() => {
       if (precocheAuto.current) return;
       precocheAuto.current = true;
@@ -228,7 +229,7 @@ const PanneauApercuLot: React.FC<Props> = ({
       setChoixManuels((prev) => precocher(d.cartes, d.preferences, prev, d.sansPrix));
     }, 300);
     return () => clearTimeout(t);
-  }, [chargement]);
+  }, [chargement, etat]);
   const choisir = (idCarte: string, c: ChoixCarte, exemplaires: number): void =>
     setChoixManuels(() => {
       const m = new Map(choix);
