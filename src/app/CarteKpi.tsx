@@ -13,11 +13,11 @@ interface Props {
   detail: string;
 }
 
-/** Carte de chiffre clé (D-01, D-61) : valeur de 30 px en gras, libellé, sous-texte. */
+/** Carte de chiffre clé compacte (D-01, D-61) : valeur de 24 px en gras, libellé, sous-texte. */
 const CarteKpi: React.FC<Props> = ({ libelle, valeur, suffixe, unite, detail }) => (
-  <div data-testid="kpi" className="rounded border border-line bg-ink-2 p-4 shadow-carte">
-    <p className="text-[15px] font-semibold text-paper">{libelle}</p>
-    <p className="text-3xl font-bold leading-tight text-paper">
+  <div data-testid="kpi" className="rounded border border-line bg-ink-2 px-3 py-2 shadow-carte">
+    <p className="text-sm font-semibold text-paper">{libelle}</p>
+    <p className="text-2xl font-bold leading-tight text-paper">
       {valeur === null ? (
         <span>
           <span className="sr-only">{`${libelle}\u00a0: valeur inconnue`}</span>
@@ -26,10 +26,10 @@ const CarteKpi: React.FC<Props> = ({ libelle, valeur, suffixe, unite, detail }) 
       ) : (
         <ChiffreAnime valeur={valeur} libelle={libelle} />
       )}
-      {suffixe && <span className="ml-1 text-3xl font-bold">{suffixe}</span>}
+      {suffixe && <span className="ml-1 text-2xl font-bold">{suffixe}</span>}
       {unite && <span className="ml-2 text-sm font-normal text-muted">{unite}</span>}
     </p>
-    <p className="text-sm text-muted">{detail}</p>
+    <p className="text-xs text-muted">{detail}</p>
   </div>
 );
 

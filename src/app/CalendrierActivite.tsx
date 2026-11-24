@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import SectionRepliable from './SectionRepliable';
+import BlocTableauDeBord from './BlocTableauDeBord';
 import {
   calendrierActivite, CATEGORIES_ACTIVITE, LIBELLES_ACTIVITE, niveauActivite, type ActiviteJours, type FiltreActivite,
 } from '../lib/graphiquesTableauDeBord';
@@ -21,10 +21,10 @@ const REMPLISSAGE = [
   'color-mix(in srgb, var(--color-garder) 75%, var(--color-ink-2))',
   'var(--color-garder)',
 ];
-const CASE = 14;
-const PAS = 17;
-const MARGE_G = 30;
-const MARGE_H = 16;
+const CASE = 11;
+const PAS = 13;
+const MARGE_G = 28;
+const MARGE_H = 14;
 
 const dateLongue = (jour: string): string => new Date(`${jour}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 const accorder = (n: number, s: string, p: string): string => `${n} ${n > 1 ? p : s}`;
@@ -52,18 +52,15 @@ const CalendrierActivite: React.FC<Props> = ({ activite, maintenant }) => {
   });
 
   return (
-    <SectionRepliable
+    <BlocTableauDeBord
       id="calendrier-activite"
-      testId="calendrier-activite"
-      className="mt-4"
       titre="Historique d’activité"
       resume={cal.total === 0 ? 'Aucune activité' : `${accorder(cal.total, 'action', 'actions')} · ${accorder(cal.joursActifs, 'jour actif', 'jours actifs')}`}
-      ouvertParDefaut
     >
-      <div className="mt-1 flex flex-wrap items-center gap-3 text-sm">
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
         <label className="inline-flex items-center gap-2">
           Période
-          <select className="min-h-11 rounded border border-line bg-ink px-2" value={semaines} onChange={(e) => setSemaines(Number(e.target.value))}>
+          <select className="min-h-9 rounded border border-line bg-ink px-1" value={semaines} onChange={(e) => setSemaines(Number(e.target.value))}>
             {PERIODES.map((p) => (
               <option key={p} value={p}>{p} semaines</option>
             ))}
@@ -71,20 +68,20 @@ const CalendrierActivite: React.FC<Props> = ({ activite, maintenant }) => {
         </label>
         <label className="inline-flex items-center gap-2">
           Activité
-          <select className="min-h-11 rounded border border-line bg-ink px-2" value={filtre} onChange={(e) => setFiltre(e.target.value as FiltreActivite)}>
+          <select className="min-h-9 rounded border border-line bg-ink px-1" value={filtre} onChange={(e) => setFiltre(e.target.value as FiltreActivite)}>
             {FILTRES.map((f) => (
               <option key={f} value={f}>{LIBELLES_ACTIVITE[f]}</option>
             ))}
           </select>
         </label>
       </div>
-      <p className="mt-2 min-h-6 text-sm" data-testid="activite-valeur" aria-live="off">
+      <p className="mt-1 min-h-5 text-xs" data-testid="activite-valeur" aria-live="off">
         {survol
           ? `${dateLongue(survol.jour)} : ${accorder(survol.n, 'action', 'actions')}${filtre === 'tout' && survol.n > 0 ? ` (${CATEGORIES_ACTIVITE.filter((k) => survol.detail[k] > 0).map((k) => `${survol.detail[k]} ${LIBELLES_ACTIVITE[k].toLowerCase()}`).join(', ')})` : ''}`
-          : 'Survolez ou focalisez une case pour lire son détail.'}
+          : 'Survolez une case pour son détail.'}
       </p>
-      <div className="mt-1 overflow-x-auto rounded border border-line bg-ink p-2">
-        <svg width={largeur} height={hauteur} viewBox={`0 0 ${largeur} ${hauteur}`} role="group" aria-label={`Activité des ${semaines} dernières semaines`} className="block max-w-none">
+      <div className="mt-1 overflow-x-auto rounded border border-line bg-ink p-1.5">
+        <svg viewBox={`0 0 ${largeur} ${hauteur}`} style={{ width: '100%', minWidth: largeur, maxWidth: largeur * 1.35 }} role="group" aria-label={`Activité des ${semaines} dernières semaines`} className="block">
           {JOURS.map((nom, i) =>
             i % 2 === 0 ? (
               <text key={nom} x={0} y={MARGE_H + i * PAS + CASE - 2} fontSize="10" fill="var(--color-muted)" aria-hidden="true">{nom}</text>
@@ -120,17 +117,14 @@ const CalendrierActivite: React.FC<Props> = ({ activite, maintenant }) => {
           )}
         </svg>
       </div>
-      <div className="mt-2 flex items-center gap-1 text-xs text-muted" aria-hidden="true">
+      <div className="mt-1 flex items-center gap-1 text-xs text-muted" aria-hidden="true">
         Moins
         {REMPLISSAGE.map((c) => (
-          <span key={c} className="inline-block size-3 rounded-sm" style={{ background: c }} />
+          <span key={c} className="inline-block size-2.5 rounded-sm" style={{ background: c }} />
         ))}
         Plus
       </div>
-      <p className="mt-2 text-xs text-muted">
-        Compté depuis le journal des actions (réussies seulement), les relances automatiques et les enchères terminées ; les
-        ventes sont datées de leur mise en vente. L’historique se cumule au fil de l’usage et suit la sauvegarde entre PC.
-      </p>
+      <p className="sr-only">Compté depuis le journal des actions réussies, les relances automatiques et les enchères terminées ; les ventes sont datées de leur mise en vente.</p>
       <div className="sr-only">
       <table>
         <caption>Actions par jour ({LIBELLES_ACTIVITE[filtre]})</caption>
@@ -144,7 +138,7 @@ const CalendrierActivite: React.FC<Props> = ({ activite, maintenant }) => {
         </tbody>
       </table>
       </div>
-    </SectionRepliable>
+    </BlocTableauDeBord>
   );
 };
 
