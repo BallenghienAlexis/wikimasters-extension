@@ -17,13 +17,13 @@ export interface TagsCarte {
 }
 
 /** Libellé → identifiant des thèmes du catalogue (« #Autres » exclu : jamais posé), reconstruit quand les thèmes changent. */
-let tableLibelles: { version: number; table: Map<string, string> } | null = null;
+let tableLibelles: { version: number; table: Map<string, string>; parCle: Map<string, string> } | null = null;
 function libellesDeTheme(): Map<string, string> {
   const version = versionThemes();
   if (tableLibelles?.version === version) return tableLibelles.table;
   const table = new Map<string, string>();
   for (const [id, libelle] of Object.entries(LIBELLES_THEMES)) if (id !== THEME_AUTRES) table.set(libelle, id);
-  tableLibelles = { version, table };
+  tableLibelles = { version, table, parCle: new Map([...table.keys()].map((l) => [cleNomEtiquette(l), l] as const)) };
   return table;
 }
 
@@ -31,7 +31,7 @@ export function tagsDeCarte(carte: CarteTags): TagsCarte {
   // Seules les étiquettes de thème comptent (« #À échanger… », « Statut · … » et étiquettes personnelles n’en sont pas).
   const table = libellesDeTheme();
   // Le site peut afficher « ##Nom » pour « #Nom » : on retrouve le libellé du catalogue par une clé tolérante (Alexis, 2026-11-24).
-  const parCle = new Map([...table.keys()].map((l) => [cleNomEtiquette(l), l] as const));
+  const parCle = tableLibelles!.parCle;
   const poses = [...new Set((carte.etiquettesSite ?? []).flatMap((n) => (table.has(n) ? [n] : parCle.has(cleNomEtiquette(n)) ? [parCle.get(cleNomEtiquette(n))!] : [])))];
   const surSite = new Set(poses);
   return { poses, aPoser: libellesThemesAffiches(carte).filter((l) => !surSite.has(l)) };

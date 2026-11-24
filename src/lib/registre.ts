@@ -66,8 +66,16 @@ export function supprimerEtiquetteDuRegistre(r: Registre, nom: string): Registre
  * (jamais à écrire un nom).
  */
 export function cleNomEtiquette(nom: string): string {
-  return nom.normalize('NFC').trim().replace(/^#+\s*/, '').trim().toLowerCase()
+  let cle = clesNomsEtiquettes.get(nom)
+  if (cle === undefined) {
+    if (clesNomsEtiquettes.size >= 20_000) clesNomsEtiquettes.clear()
+    cle = nom.normalize('NFC').trim().replace(/^#+\s*/, '').trim().toLowerCase()
+    clesNomsEtiquettes.set(nom, cle)
+  }
+  return cle
 }
+/** Clés mémorisées : les mêmes noms reviennent pour chaque carte (aperçu de milliers de cartes). */
+const clesNomsEtiquettes = new Map<string, string>()
 
 /** Étiquette du compte telle que le site la liste (identifiant et nom). */
 export interface EtiquetteDuSite {
