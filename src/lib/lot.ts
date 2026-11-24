@@ -16,7 +16,7 @@ import type {
   TypesDisponibles,
 } from './actions'
 import { estFavori, estFavoriVerrouille, normaliser, type Carte, type Collection } from './collection'
-import { estRefuse, LONGUEUR_MAX_ID } from './registre'
+import { cleNomEtiquette, estRefuse, LONGUEUR_MAX_ID } from './registre'
 import { amisConcernes, plafondDefausse, prixDepart, type Ami } from './tri'
 import type { TendancePrix } from './lectureApi'
 import { LIBELLES_THEMES, themesDeCarte, themesPrincipaux, versionThemes } from './themes'
@@ -134,7 +134,7 @@ function etiquettesEchange(carte: Carte, themes: readonly string[], amis: readon
  * Elle est écartée de toute vente, défausse et échange tant qu’elle n’est pas classée.
  */
 export function estACLasser(carte: Carte): boolean {
-  return carte.etiquettesSite.includes(ETIQUETTE_A_CLASSER) || themesPrincipaux(carte).length === 0
+  return carte.etiquettesSite.some((n) => cleNomEtiquette(n) === cleNomEtiquette(ETIQUETTE_A_CLASSER)) || themesPrincipaux(carte).length === 0
 }
 
 /**

@@ -40,7 +40,8 @@ import {
   enregistrerRegistre,
 } from '../lib/stockage';
 import { adopterEtiquettesImportees, realignerRegistreSurSite } from './adoptionEtiquettes';
-import { avecIdEtiquette, reconcilierAvecSite, refuserCouple } from '../lib/registre';
+import { avecIdEtiquette, enregistrerEtiquette, reconcilierAvecSite, refuserCouple } from '../lib/registre';
+import { idEtiquetteApresEchec } from './soinPose';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
 import type { CoupleRetrait } from './Journal';
 import { AUCUNE_PLACE_ENCHERE, ECHEC_LECTURE_ENCHERES, SYNCHRO_EN_COURS, bilanVide, configDuLot, type Bilan } from './apercuLot';
@@ -137,8 +138,29 @@ export function contexteExecution(): ContexteExecution {
       if (ordre.type !== 'pose-etiquette' && ordre.type !== 'retrait-etiquette') return execution.transport(ordre);
       // L’identifiant d’étiquette du site vient du registre, au moment d’envoyer (la création précède la pose).
       const complete = avecIdEtiquette(ordre, await chargerRegistre());
-      if (complete === null) return { classe: 'echec', codeHttp: null, cause: 'action non disponible' };
-      return execution.transport(complete);
+      // Étiquette sans identifiant connu (déjà sur le site mais invisible dans sa liste) : pose passée, pas une erreur du lot.
+      if (complete === null) return ordre.type === 'pose-etiquette' ? { classe: 'passee', codeHttp: null, cause: 'étiquette du site sans identifiant connu' } : { classe: 'echec', codeHttp: null, cause: 'action non disponible' };
+      const premier = await execution.transport(complete);
+      if (ordre.type !== 'pose-etiquette' || premier.classe !== 'echec' || premier.cause === CAUSE_VERIFICATION_HUMAINE) return premier;
+      if (premier.codeHttp === null || [401, 403, 429].includes(premier.codeHttp)) return premier;
+      // L'étiquette n'existe peut-être plus sur le site : relecture de la liste, recréation si besoin, un seul nouvel essai.
+      const idNeuf = await idEtiquetteApresEchec(ordre.nomEtiquette, complete.idEtiquette, {
+        lireListe: async () => {
+          const r = await execution.transport({ type: 'lecture', idCarte: ID_CARTE_ETIQUETTES, cible: 'etiquettes' });
+          if (r.classe !== 'reussie' || !r.etiquettes) return null;
+          return completerAvecTagsDuCompte(r.etiquettes);
+        },
+        creer: async (nom) => {
+          const r = await execution.transport({ type: 'creation-etiquette', idCarte: ordre.idCarte, nomEtiquette: nom });
+          return r.classe === 'reussie' && r.idEtiquette ? r.idEtiquette : null;
+        },
+        chargerRegistre,
+        noter: async (nom, id) => enregistrerRegistre(enregistrerEtiquette(await chargerRegistre(), nom, id)),
+        attendre: () => horlogeReelle.attendreJusqua(horlogeReelle.now() + INTERVALLE_MS + supplementAleatoire()),
+      }).catch(() => null);
+      if (idNeuf === null) return premier;
+      await horlogeReelle.attendreJusqua(horlogeReelle.now() + INTERVALLE_MS + supplementAleatoire());
+      return execution.transport({ ...ordre, idEtiquette: idNeuf });
     },
     reverifier: async (action) => {
       const [collection, registre, preferences, etatSynchro] = await Promise.all([chargerCollection(), chargerRegistre(), chargerPreferences(), chargerEtatSynchro().catch(() => null)]);
@@ -285,6 +307,18 @@ function refuserSiArret(r: ResultatAction, libelleRefus: string = ECHEC_LECTURE_
   throw new Error(r.cause === CAUSE_VERIFICATION_HUMAINE ? LIBELLE_VERIFICATION_HUMAINE : `${libelleRefus} (réponse ${r.codeHttp}).`);
 }
 
+/**
+ * Complète la liste de `my-collection/stats` par les étiquettes que le site ne y liste pas (aucune carte ne les porte) :
+ * lecture seule de `GET /rest/v1/tags` (Alexis, 2026-11-24), même cadence. Lecture impossible : la liste est rendue telle quelle.
+ */
+async function completerAvecTagsDuCompte<T extends { id: string; nom: string; nbCartes: number }>(liste: T[]): Promise<Array<{ id: string; nom: string; nbCartes: number }>> {
+  await horlogeReelle.attendreJusqua(horlogeReelle.now() + INTERVALLE_MS + supplementAleatoire());
+  const r = await contexteExecution().execution.transport({ type: 'lecture', idCarte: ID_CARTE_ETIQUETTES, cible: 'tags' }).catch(() => null);
+  if (r === null || r.classe !== 'reussie' || !r.etiquettes) return liste;
+  const ids = new Set(liste.map((e) => e.id));
+  return [...liste, ...r.etiquettes.filter((e) => !ids.has(e.id))];
+}
+
 const ECHEC_LECTURE_ETIQUETTES = 'Le site a refusé la lecture de tes étiquettes';
 
 /**
@@ -315,11 +349,13 @@ async function alignerSurLesEtiquettesDuSite(actions: readonly Action[]): Promis
   // Erreur d'écriture ignorée volontairement : simple mémoire d'affichage, le lot continue.
   if (lue.length > 0 || Object.keys(registre.etiquettes).length === 0) await enregistrerEtiquettesSite(lue).catch(() => undefined);
   // Étiquettes citées par une sauvegarde importée : reprises si le site les confirme (pas de doublon créé, pas de pose refaite).
-  await adopterEtiquettesImportees(lue).catch(() => null);
+  // Étiquettes sans carte (invisibles dans `stats`) : lues à part, pour ne pas recréer ce qui existe (409, Alexis, 2026-11-24).
+  const complete = await completerAvecTagsDuCompte(lue);
+  await adopterEtiquettesImportees(complete).catch(() => null);
   // Ce que le site porte déjà (liste relue à l'instant) entre au registre : ni création ni pose en double (Alexis, 2026-11-24).
-  await realignerRegistreSurSite(lue).catch(() => null);
+  await realignerRegistreSurSite(complete).catch(() => null);
   const registreAJour = await chargerRegistre().catch(() => registre);
-  const reconciliation = reconcilierAvecSite(registreAJour, lue);
+  const reconciliation = reconcilierAvecSite(registreAJour, complete);
   if (reconciliation.registre !== registreAJour) await enregistrerRegistre(reconciliation.registre);
   return ajusterLotAuSite(actions, reconciliation.registre, reconciliation.perdus, collection, configDuLot(preferences), typesDisponibles());
 }

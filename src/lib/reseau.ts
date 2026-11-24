@@ -8,6 +8,7 @@
  */
 import { CAUSE_VERIFICATION_HUMAINE, CODE_VERIFICATION_HUMAINE, type Action, type ResultatAction } from './actions'
 import type { EntreeContrat, TableContrat } from './contrat'
+import { ENTREE_LECTURE_TAGS } from './contrat/lecture'
 import { enteteAuthentification, sessionCourante, type SessionLue } from './jeton'
 import { analyserPrix, analyserTendance, type TendancePrix } from './lectureApi'
 import { prixDepartSelonTendance } from './prixTendance'
@@ -133,7 +134,8 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
   }
 
   const emettreBrut = async (ordre: Action): Promise<ResultatAction> => {
-    const entree: EntreeContrat | undefined = deps.table[ordre.type]
+    const lectureTags = ordre.type === 'lecture' && ordre.cible === 'tags'
+    const entree: EntreeContrat | undefined = lectureTags && deps.table.lecture !== undefined ? ENTREE_LECTURE_TAGS : deps.table[ordre.type]
     if (entree === undefined) return NON_DISPONIBLE
 
     // Validation sans toucher à la session : chemin, corps et origine d'abord.
@@ -148,7 +150,7 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
     const siteSeul = entree.hote === 'site'
     // Hôte du site : même origine que l’onglet, cookies du navigateur, ni jeton ni clé d’API.
     if (siteSeul && deps.origineOnglet !== ORIGINE_SITE) return NON_DISPONIBLE
-    const url = `${siteSeul ? ORIGINE_SITE : ORIGINE_REST}${chemin}`
+    let url = `${siteSeul ? ORIGINE_SITE : ORIGINE_REST}${chemin}`
     if (!siteSeul && entree.auth && enteteAuthentification(url, deps.origineOnglet, 'Authorization', () => 'x') === null) {
       return { classe: 'arret', codeHttp: null, cause: 'jeton-absent' }
     }
@@ -156,6 +158,12 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
     // Seule lecture du jeton : juste avant l'envoi, et seulement si l'entrée l'exige.
     const session = entree.auth ? (deps.session ?? sessionCourante)() : null
     if (entree.auth && session === null) return { classe: 'arret', codeHttp: null, cause: 'jeton-absent' }
+    // Lecture des étiquettes du compte : seulement celles du joueur (identifiant de session validé, jamais le jeton).
+    if (lectureTags) {
+      if (session === null || !/^[0-9a-f-]{36}$/i.test(session.idJoueur)) return { classe: 'arret', codeHttp: null, cause: 'jeton-absent' }
+      chemin = `${chemin}&user_id=eq.${encodeURIComponent(session.idJoueur)}`
+      url = `${ORIGINE_REST}${chemin}`
+    }
     const corps = entree.construireCorps(ordre, { idJoueur: session?.idJoueur ?? '', couleurEtiquette: COULEUR_ETIQUETTE })
     const jeton = entree.auth && session
       ? enteteAuthentification(url, deps.origineOnglet, 'Authorization', () => `Bearer ${session.jeton}`)
@@ -194,6 +202,15 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
       if (CODES_ARRET.includes(reponse.status)) {
         return { classe: 'echec', codeHttp: reponse.status, cause: 'action non disponible', ...(diagnostic ? { diagnostic } : {}) }
       }
+      // Pose d'une étiquette déjà posée (contrainte d'unicité, 23505) : l'état voulu est atteint, la pose compte comme réussie.
+      if (ordre.type === 'pose-etiquette' && reponse.status === 409 && typeof json === 'object' && json !== null && (json as Record<string, unknown>).code === '23505') {
+        return { classe: 'reussie', codeHttp: 409, cause: 'déjà posée sur le site' }
+      }
+      // Création d'une étiquette qui existe déjà (unicité « tags_user_name_lower_unique », 23505) : ce n'est pas une erreur du lot.
+      // Son identifiant n'est pas lisible ici (le site ne la liste pas) : l'action est passée, jamais recréée ni renommée.
+      if (ordre.type === 'creation-etiquette' && reponse.status === 409 && typeof json === 'object' && json !== null && (json as Record<string, unknown>).code === '23505') {
+        return { classe: 'passee', codeHttp: 409, cause: 'étiquette déjà sur le site (identifiant inconnu)', ...(diagnostic ? { diagnostic } : {}) }
+      }
       if (siteSeul && reponse.status === 409) {
         return { classe: 'echec', codeHttp: 409, cause: classerConflit(json), ...(diagnostic ? { diagnostic } : {}) }
       }
@@ -205,7 +222,7 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
       }
       const id = entree.lireIdEtiquette?.(json) ?? null
       const ventes = entree.lireVentes?.(json) ?? null
-      const etiquettes = ordre.type === 'lecture' && ordre.cible === 'etiquettes' ? (entree.lireEtiquettes?.(json) ?? null) : null
+      const etiquettes = ordre.type === 'lecture' && (ordre.cible === 'etiquettes' || ordre.cible === 'tags') ? (entree.lireEtiquettes?.(json) ?? null) : null
       return { classe: 'reussie', codeHttp: reponse.status, cause: 'action réussie', ...(id !== null ? { idEtiquette: id } : {}), ...(ventes !== null ? { ventes } : {}), ...(etiquettes !== null ? { etiquettes } : {}) }
     } catch (e) {
       const delai = e instanceof Error && e.name === 'AbortError'
