@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { observations, type EvenementVente } from '../lib/affluence';
 import { normaliser, type Carte } from '../lib/collection';
-import { conseilLancement, estProposable, raisonNonProposable, type Choix, type ChoixCarte } from '../lib/selectionLot';
+import { conseilLancement, estProposable, raisonNonProposable, type Choix, type ChoixCarte, type CodeVerdict, type Verdict } from '../lib/selectionLot';
 import { NB, CLASSE_BOUTON } from './apercuLot';
 import SectionRepliable from './SectionRepliable';
 import HeuresFortes from './HeuresFortes';
@@ -14,6 +14,8 @@ interface Props {
   sansPrix?: ReadonlySet<string>;
   /** Cartes sans prix défaussables par la pré-coche, et si leur nombre dépasse le plafond (rien n’est alors pré-coché). */
   resumeSansPrix?: { nombre: number; trop: boolean };
+  /** Verdict de chaque carte avec les règles courantes (recalculé à chaque rendu, jamais mis en cache). */
+  verdicts?: ReadonlyMap<string, Verdict>;
   onChoisir: (idCarte: string, choix: ChoixCarte, exemplaires: number) => void;
   /** Pré-coche selon mes thèmes, mes amis et le plafond (explicite, jamais automatique). */
   onPrecocher: () => void;
@@ -25,8 +27,22 @@ interface Props {
 const MAX_AFFICHEES = 30;
 const MAX_CHOISIES = 50;
 
+const LIBELLES_CODES: Record<CodeVerdict, string> = {
+  'defausse-plafond': 'Défausse proposée (valeur au plafond ou en dessous)',
+  'defausse-sans-prix': 'Défausse proposée (aucun prix trouvé)',
+  enchere: 'Enchère proposée',
+  'theme-garde': 'Gardées : thème que je garde',
+  ami: 'Gardées : ami concerné',
+  'valeur-inconnue': 'Gardées : valeur inconnue',
+  'sans-prix-trop': 'Gardées : sans prix, trop nombreuses (à choisir à la main)',
+  'a-classer': 'Gardées : sans thème fiable (« à classer »)',
+  favori: 'Gardées : favori',
+  'non-reliee': 'Gardées : non reliée au site',
+};
+const ORDRE_CODES = Object.keys(LIBELLES_CODES) as CodeVerdict[];
+
 /** Choix manuel des cartes à mettre aux enchères ou à défausser, avant l’aperçu du lot (rien n’est envoyé ici). */
-const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansPrix, resumeSansPrix, onChoisir, onPrecocher, onVider, ventes }) => {
+const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansPrix, resumeSansPrix, verdicts, onChoisir, onPrecocher, onVider, ventes }) => {
   const [recherche, setRecherche] = useState('');
   const proposables = useMemo(() => cartes.filter(estProposable), [cartes]);
   const choisies = useMemo(() => proposables.filter((c) => (choix.get(c.id)?.choix ?? 'aucun') !== 'aucun'), [proposables, choix]);
@@ -43,6 +59,20 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansP
   const nbVendre = choisies.filter((c) => choix.get(c.id)?.choix === 'vendre').length;
   const nbDefausser = choisies.length - nbVendre;
 
+  const [filtreCode, setFiltreCode] = useState<CodeVerdict | 'tous'>('theme-garde');
+  const [nbAffichees, setNbAffichees] = useState(MAX_AFFICHEES);
+  const comptes = useMemo(() => {
+    const m = new Map<CodeVerdict, number>();
+    for (const c of cartes) {
+      const v = verdicts?.get(c.id);
+      if (v) m.set(v.code, (m.get(v.code) ?? 0) + 1);
+    }
+    return m;
+  }, [cartes, verdicts]);
+  const parVerdict = useMemo(
+    () => (verdicts ? cartes.filter((c) => filtreCode === 'tous' || verdicts.get(c.id)?.code === filtreCode) : []),
+    [cartes, verdicts, filtreCode],
+  );
   const [maintenant] = useState(() => Date.now());
   const ligne = (c: Carte): React.ReactNode => {
     const x = choix.get(c.id) ?? { choix: 'aucun' as ChoixCarte, exemplaires: 1 };
@@ -84,6 +114,11 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansP
               />
             </label>
           )}
+          {verdicts?.get(c.id) && (
+            <span className="basis-full text-sm text-muted" data-testid="verdict-carte">
+              {verdicts.get(c.id)?.libelle}
+            </span>
+          )}
           {x.choix === 'vendre' && <span className="text-sm text-muted">{conseilLancement(c.valeurMarchande, maintenant, ventes)}</span>}
           {!defausseOk && <span className="text-sm text-muted">défausse impossible : valeur inconnue ou au-dessus de {plafond}</span>}
         </fieldset>
@@ -101,7 +136,7 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansP
       resume={choisies.length === 0 ? 'Aucune carte choisie' : `${nbVendre} enchère${nbVendre > 1 ? 's' : ''} · ${nbDefausser} défausse${nbDefausser > 1 ? 's' : ''}`}
     >
       <p className="mt-1 text-sm text-muted">
-        Choisissez les cartes ici, puis voyez l’aperçu du lot. Les cartes portant l’étiquette « Statut · Vendre » sur le site sont déjà choisies pour les enchères ; la défausse se choisit à la main. Un favori n’est jamais proposé. Rien n’est envoyé avant « Lancer ».
+        Choisissez les cartes ici, puis voyez l’aperçu du lot. Les cartes portant l’étiquette « Statut · Vendre » sur le site sont déjà choisies pour les enchères ; la défausse se choisit à la main ou par la pré-coche. Un favori n’est jamais proposé. Rien n’est envoyé avant « Lancer ».
       </p>
       <p className="mt-2 text-sm" data-testid="resume-selection">
         {choisies.length === 0 ? 'Aucune carte choisie.' : `${nbVendre} à mettre aux enchères · ${nbDefausser} à défausser`}
@@ -126,6 +161,43 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansP
             ? `${resumeSansPrix.nombre} cartes sans prix trouvé seraient défaussables : trop pour une pré-coche de masse, elles ne sont pas cochées. Choisissez-les à la main.`
             : `${resumeSansPrix.nombre} carte(s) sans prix trouvé sur le site seront pré-cochées en défausse (définitive, un exemplaire gardé si elle est en plusieurs).`}
         </p>
+      )}
+      {verdicts && (
+        <div className="mt-3" data-testid="verdicts-toutes-cartes">
+          <p className="text-sm">
+            Toutes les cartes sont revues avec les règles courantes à chaque ouverture : voici pourquoi chacune est proposée ou gardée. Vous pouvez choisir la défausse
+            (valeur au plafond ou sans prix trouvé) ou l’enchère de n’importe quelle carte, même gardée par une règle de thème ou d’ami.
+          </p>
+          <label className="mt-2 flex flex-col gap-1 text-sm">
+            Voir les cartes{NB}:
+            <select
+              className={`${CLASSE_BOUTON} justify-start border-line`}
+              value={filtreCode}
+              onChange={(e) => {
+                setFiltreCode(e.target.value as CodeVerdict | 'tous');
+                setNbAffichees(MAX_AFFICHEES);
+              }}
+            >
+              <option value="tous">Toutes ({cartes.length})</option>
+              {ORDRE_CODES.filter((k) => (comptes.get(k) ?? 0) > 0).map((k) => (
+                <option key={k} value={k}>
+                  {LIBELLES_CODES[k]} ({comptes.get(k)})
+                </option>
+              ))}
+            </select>
+          </label>
+          {parVerdict.length > 0 && <ul className="mt-2">{parVerdict.slice(0, nbAffichees).map((c) => (estProposable(c) ? ligne(c) : (
+            <li key={c.id} className="border-b border-line py-2 text-sm text-muted">
+              {c.titre}
+              {NB}: {verdicts.get(c.id)?.libelle}
+            </li>
+          )))}</ul>}
+          {parVerdict.length > nbAffichees && (
+            <button type="button" className={`${CLASSE_BOUTON} mt-2 border-muted`} onClick={() => setNbAffichees((n) => n + MAX_AFFICHEES)}>
+              Afficher plus ({parVerdict.length - nbAffichees} restantes)
+            </button>
+          )}
+        </div>
       )}
       {choisies.length > 0 && <ul className="mt-2">{choisies.slice(0, MAX_CHOISIES).map(ligne)}</ul>}
       {choisies.length > MAX_CHOISIES && <p className="mt-1 text-sm text-muted">… et {choisies.length - MAX_CHOISIES} autres cartes choisies (toutes seront dans le lot).</p>}
