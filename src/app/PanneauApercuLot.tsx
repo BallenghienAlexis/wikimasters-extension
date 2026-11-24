@@ -73,6 +73,8 @@ interface Props {
   executionIllisible?: boolean;
   /** Nombre d’onglets WikiMasters ouverts (comptés par la page d’exécution, T-017). */
   nbOnglets: number;
+  /** Synchro entre PC activée mais pas encore faite depuis l’ouverture de la page : « Lancer » attend (les PC d’abord, le site ensuite). */
+  attenteSynchroPc?: boolean;
   executionEnCours: boolean;
   /** Évènements de vente pour les heures de plus forte influence. */
   ventes?: readonly EvenementVente[];
@@ -101,6 +103,7 @@ const PanneauApercuLot: React.FC<Props> = ({
   registreIllisible = false,
   executionIllisible = false,
   nbOnglets,
+  attenteSynchroPc = false,
   executionEnCours,
   disponibles,
   ventes = [],
@@ -325,6 +328,7 @@ const PanneauApercuLot: React.FC<Props> = ({
     nbOnglets: nbOngletsReel,
     executionEnCours: enCours,
     executionIllisible,
+    attenteSynchroPc,
     nbDisponibles: nCochees,
     pauseJusqua,
     maintenant,

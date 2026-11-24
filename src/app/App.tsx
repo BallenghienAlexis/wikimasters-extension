@@ -64,7 +64,7 @@ const App: React.FC = () => {
         panneau = <OngletSynchro donnees={donnees} />;
         break;
       case 'lots':
-        panneau = <OngletLots donnees={donnees} />;
+        panneau = <OngletLots donnees={donnees} attenteSynchroPc={synchroPc.etat === 'actif' && synchroPc.derniereLecture === null} />;
         break;
       case 'mise-en-vente':
         panneau = <OngletMiseEnVente />;

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { Carte } from '../../src/lib/collection';
 import type { Donnees } from '../../src/lib/sauvegarde';
+import { cacheVide } from '../../src/lib/wikipedia';
+import { cacheIAVide } from '../../src/lib/classificationIA';
+import { etatApprisVide } from '../../src/lib/themesAppris';
+import { etatInitial } from '../../src/lib/ordonnanceur';
+import type { DonneesSynchro } from '../../src/lib/sauvegardeSynchro';
 import { aDesSaisies, empreinte, empreinteEdition, fusionnerFichiersPc, genererNomPc, instantane, nomFichierPc, nomPcDeFichier, nomPcValide } from '../../src/lib/synchroPc';
 
 const carte = (id: string, plus: Partial<Carte> = {}): Carte => ({
@@ -118,5 +123,67 @@ describe('fusion des fichiers des autres PC', () => {
     const r2 = fusionnerFichiersPc(locales, [f2, f1], 'pc-moi', {}, T1.toISOString());
     expect(r1.donnees.collection.cartes[0]!.note).toBe('deux');
     expect(r2.donnees.collection.cartes[0]!.note).toBe('deux');
+  });
+});
+
+describe('défausses propagées entre PC', () => {
+  const lecture = (t: number): DonneesSynchro => ({
+    derniereSynchro: t, etat: { ...etatInitial(), derniereComplete: t }, wikipedia: cacheVide(), classementIA: cacheIAVide(), themesAppris: etatApprisVide(), grapheWikidata: {},
+  });
+  const avecLecture = (cartes: Carte[], t: number): Donnees => ({ ...donnees(cartes), synchro: lecture(t) });
+  const tous = Array.from({ length: 12 }, (_, i) => `c${i}`);
+
+  it('une carte absente d’un fichier dont la lecture du site est plus récente disparaît ici', () => {
+    const locales = avecLecture(tous.map((id) => carte(id)), Date.parse('2026-01-01T09:00:00Z'));
+    const autre = instantane(avecLecture(tous.filter((id) => id !== 'c3').map((id) => carte(id)), Date.parse('2026-01-01T09:30:00Z')), T3);
+    const r = fusionnerFichiersPc(locales, [{ nom: 'pc-autre', texte: autre }], 'pc-moi', {}, T2.toISOString());
+    expect(r.donnees.collection.cartes.map((c) => c.id)).not.toContain('c3');
+    expect(r.donnees.collection.cartes).toHaveLength(11);
+  });
+  it('une carte avec saisie locale reste, déliée du site', () => {
+    const locales = avecLecture(tous.map((id) => carte(id, id === 'c3' ? { note: 'à moi' } : {})), Date.parse('2026-01-01T09:00:00Z'));
+    const autre = instantane(avecLecture(tous.filter((id) => id !== 'c3').map((id) => carte(id)), Date.parse('2026-01-01T09:30:00Z')), T3);
+    const r = fusionnerFichiersPc(locales, [{ nom: 'pc-autre', texte: autre }], 'pc-moi', {}, T2.toISOString());
+    const c = r.donnees.collection.cartes.find((x) => x.id === 'c3')!;
+    expect(c.note).toBe('à moi');
+    expect(c.idsSite).toBeNull();
+  });
+  it('un fichier plus ancien côté site ne retire rien et n’en ressuscite aucune, même avec des saisies plus récentes', () => {
+    const locales = avecLecture(tous.filter((id) => id !== 'c3').map((id) => carte(id)), Date.parse('2026-01-01T09:30:00Z'));
+    const autre = instantane(avecLecture(tous.map((id) => carte(id)), Date.parse('2026-01-01T09:00:00Z')), T3);
+    const r = fusionnerFichiersPc(locales, [{ nom: 'pc-autre', texte: autre }], 'pc-moi', {}, T2.toISOString());
+    expect(r.donnees.collection.cartes.map((c) => c.id)).not.toContain('c3');
+  });
+  it('une date de lecture future dans un fichier ne le rend pas plus frais que maintenant', () => {
+    // Ici la lecture locale est elle-même dans le futur : sans plafonnement, le fichier (plus loin encore) passerait pour plus frais.
+    const locales = avecLecture(tous.map((id) => carte(id)), Date.now() + 3_600_000);
+    const autre = instantane(avecLecture(tous.filter((id) => id !== 'c3').map((id) => carte(id)), Date.now() + 10 * 3_600_000), T3);
+    const r = fusionnerFichiersPc(locales, [{ nom: 'pc-autre', texte: autre }], 'pc-moi', {}, T2.toISOString());
+    expect(r.donnees.collection.cartes.map((c) => c.id)).toContain('c3');
+  });
+  it('trop de cartes absentes : rien n’est retiré', () => {
+    const locales = avecLecture(tous.map((id) => carte(id)), Date.parse('2026-01-01T09:00:00Z'));
+    const autre = instantane(avecLecture([carte('c0')], Date.parse('2026-01-01T09:30:00Z')), T3);
+    const r = fusionnerFichiersPc(locales, [{ nom: 'pc-autre', texte: autre }], 'pc-moi', {}, T2.toISOString());
+    expect(r.donnees.collection.cartes).toHaveLength(12);
+  });
+});
+
+describe('relance et fusion entre PC', () => {
+  it('synchroPcAJour : vrai sans dossier, faux si la dernière lecture est périmée', async () => {
+    const { vi } = await import('vitest');
+    let memoire: Record<string, unknown> | null = null;
+    vi.stubGlobal('chrome', { storage: { local: { get: async () => ({ synchroPc: memoire }) } } });
+    const { synchroPcAJour } = await import('../../src/lib/stockage');
+    expect(await synchroPcAJour(1_000_000)).toBe(true);
+    memoire = { actif: false };
+    expect(await synchroPcAJour(1_000_000)).toBe(true);
+    memoire = { actif: true, derniereLectureLe: 1_000_000 - 60_000 };
+    expect(await synchroPcAJour(1_000_000)).toBe(true);
+    memoire = { actif: true, derniereLectureLe: 1_000_000 - 11 * 60_000 };
+    expect(await synchroPcAJour(1_000_000)).toBe(false);
+    memoire = { actif: true };
+    expect(await synchroPcAJour(1_000_000)).toBe(false);
+    vi.unstubAllGlobals();
   });
 });

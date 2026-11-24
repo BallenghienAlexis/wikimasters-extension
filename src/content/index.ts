@@ -31,6 +31,7 @@ import {
   enregistrerEtatSynchro,
   enregistrerStatutRelanceVentes,
   enregistrerSuiviVentes,
+  synchroPcAJour,
 } from '../lib/stockage';
 import { chargerSurcouchesThemes } from './surcouchesThemes';
 import { demarrerExecutant } from './executant';
@@ -64,6 +65,7 @@ const suivi = creerSuiviVentes({
   verrou,
   chargerEtatSuivi: chargerEtatSuiviVentes,
   enregistrerEtatSuivi: enregistrerEtatSuiviVentes,
+  synchroPcAJour: () => synchroPcAJour(Date.now()),
   lotEnCours: async () => (await chargerExecution().catch(() => null))?.etat === 'en-cours',
   route: CONFIG_AFFLUENCE.routeMarche,
   relanceActive: chargerRelanceVentes,

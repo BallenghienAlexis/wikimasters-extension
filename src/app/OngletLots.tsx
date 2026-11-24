@@ -4,10 +4,11 @@ import type { DonneesPage } from './useDonneesPage';
 
 interface Props {
   donnees: DonneesPage;
+  attenteSynchroPc?: boolean;
 }
 
 /** Onglet Lots : aperçu du lot, lancement et journal (contenu actuel, déplacé tel quel). */
-const OngletLots: React.FC<Props> = ({ donnees }) => {
+const OngletLots: React.FC<Props> = ({ donnees, attenteSynchroPc }) => {
   const { collection, registre, preferences, stockageSynchroLu, cacheIALu, preferencesLues, registreIllisible, executionIllisible, executionEnCours, relireStockageSynchro, ventes, editer } = donnees;
   if (collection.cartes.length === 0) {
     return (
@@ -27,6 +28,7 @@ const OngletLots: React.FC<Props> = ({ donnees }) => {
         registreIllisible={registreIllisible}
         executionIllisible={executionIllisible}
         nbOnglets={0}
+        attenteSynchroPc={attenteSynchroPc}
         executionEnCours={executionEnCours}
         ventes={ventes}
         onReessayer={relireStockageSynchro}

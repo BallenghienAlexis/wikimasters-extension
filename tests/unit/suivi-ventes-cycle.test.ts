@@ -16,7 +16,7 @@ const carte: Carte = {
 }
 const vente = (id: string, finDans: number) => ({ id, card_id: `ex-${id}`, base_amount: 50, current_bid: null, effective_bid: 50, created_at: iso(T0), end_at: iso(T0 + finDans), card: { wikipedia_title: `T${id}` } })
 
-function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relance?: boolean; resultat?: ResultatAction; visible?: boolean; actif?: boolean; synchroRecente?: boolean; pauseLots?: number; lotEnCours?: boolean; etat?: EtatOrdonnanceur; surcouches?: () => Promise<void>; preferences?: Preferences; carte?: Carte }) {
+function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relance?: boolean; resultat?: ResultatAction; visible?: boolean; actif?: boolean; synchroRecente?: boolean; pauseLots?: number; lotEnCours?: boolean; etat?: EtatOrdonnanceur; surcouches?: () => Promise<void>; preferences?: Preferences; carte?: Carte; synchroPcAJour?: () => Promise<boolean> }) {
   let t = T0
   // Le bail du suivi est le sien : celui de la synchro globale (tenu ou non) ne le concerne pas.
   let bailValeur: number | null = null
@@ -40,6 +40,7 @@ function monde(opts: { reponses: Array<{ statut: number; json: unknown }>; relan
     chargerEtatSuivi: async () => etat.suiviEtat,
     enregistrerEtatSuivi: async (e) => void (etat.suiviEtat = e),
     lotEnCours: async () => opts.lotEnCours ?? false,
+    ...(opts.synchroPcAJour ? { synchroPcAJour: opts.synchroPcAJour } : {}),
     route: '/api/marketplace?page=1&limit=50&sort=recent&mine=1',
     relanceActive: async () => opts.relance ?? false,
     chargerSuivi: async () => etat.suivi,
@@ -111,6 +112,32 @@ describe('cycle de suivi des mises en vente', () => {
     expect(m.etat.ordres[0]).toMatchObject({ type: 'enchere', idExemplaire: 'ex-c' })
     expect(m.etat.lancements[0]).toMatchObject({ resultat: 'reussie', titre: 'Berger allemand' })
     expect(delai).toBe(2000)
+  })
+  it('relance : 409 « déjà en vente ou plus possédée » écarte l’exemplaire un jour, sans attente d’une minute', async () => {
+    const m = monde({ reponses: [ok([])], relance: true, resultat: { classe: 'echec', codeHttp: 409, cause: 'carte déjà en vente ou plus possédée' } })
+    await m.suivi.cycle()
+    expect(m.etat.ordres).toHaveLength(1)
+    expect(m.etat.ecartes['ex-c']).toBeGreaterThan(m.maintenant())
+    expect(m.etat.statut?.etat).not.toBe('pause')
+  })
+  it('relance : 409 limite d’enchères ou conflit non reconnu : attente d’une minute, rien d’écarté', async () => {
+    for (const cause of ['limite d’enchères atteinte', 'conflit signalé par le site']) {
+      const m = monde({ reponses: [ok([])], relance: true, resultat: { classe: 'echec', codeHttp: 409, cause } })
+      await m.suivi.cycle()
+      expect(m.etat.ecartes['ex-c']).toBeUndefined()
+      expect(m.etat.statut?.etat).toBe('pause')
+    }
+  })
+  it('relance : synchro entre PC périmée, aucune mise en vente ; dépendance qui échoue vaut périmée ; absente, comportement inchangé', async () => {
+    const m1 = monde({ reponses: [ok([])], relance: true, synchroPcAJour: async () => false })
+    await m1.suivi.cycle()
+    expect(m1.etat.ordres).toHaveLength(0)
+    const m2 = monde({ reponses: [ok([])], relance: true, synchroPcAJour: async () => { throw new Error('stockage') } })
+    await m2.suivi.cycle()
+    expect(m2.etat.ordres).toHaveLength(0)
+    const m3 = monde({ reponses: [ok([])], relance: true, synchroPcAJour: async () => true })
+    await m3.suivi.cycle()
+    expect(m3.etat.ordres).toHaveLength(1)
   })
   it('relance : un thème venu de Wikipédia et suivi par un ami garde la carte (jamais mise en vente)', async () => {
     const prefs: Preferences = { ...preferencesParDefaut(), amis: [{ nom: 'Quentin', themes: ['guerre'] }] }

@@ -120,6 +120,8 @@ export interface ConditionsLancement {
   /** L’état de l’exécution n’a pas pu être lu : on ne lance rien. */
   executionIllisible: boolean;
   executionEnCours: boolean;
+  /** Synchro entre PC activée mais pas encore faite depuis l’ouverture de la page. */
+  attenteSynchroPc?: boolean;
   nbDisponibles: number;
   /** Fin de la pause de 30 min (heure murale), si elle est connue. */
   pauseJusqua?: number | null;
@@ -135,6 +137,7 @@ export const RAISON_AUCUN_LOT = 'Aucun lot n’est coché.';
 export function raisonDesactivation(c: ConditionsLancement): string | null {
   if (c.executionIllisible) return `L’état de l’exécution est illisible${NB}: Lancer est impossible.`;
   if (c.executionEnCours) return 'Une exécution est déjà en cours.';
+  if (c.attenteSynchroPc) return `Synchro entre PC en cours${NB}: Lancer attend la fusion des autres PC (quelques secondes).`;
   const pause = raisonPause(c.pauseJusqua ?? null, c.maintenant ?? Date.now());
   if (pause !== null) return pause;
   if (c.nbLotsCoches === 0) return RAISON_AUCUN_LOT;

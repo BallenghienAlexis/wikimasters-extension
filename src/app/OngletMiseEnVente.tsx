@@ -98,7 +98,7 @@ const OngletMiseEnVente: React.FC = () => {
         </label>
         <p className="mt-1 text-sm text-muted">
           Quand une enchère se termine et qu’une place se libère, l’extension met en vente la carte suivante, sans clic « Lancer » : règle de pré-cochage des Lots
-          (favoris, thèmes gardés, amis et cartes « à classer » exclus), les plus chères d’abord, 1 h, au plus {max} enchères en même temps. Une enchère non vendue
+          (favoris, thèmes gardés, amis et cartes « à classer » exclus), les plus chères d’abord, durée selon l’affluence (1 h en heure forte, jusqu’à 12 h la nuit), au plus {max} enchères en même temps. Une enchère non vendue
           remet sa carte dans la file. Elle fait partie du suivi : elle ne tourne que si le suivi est activé.
         </p>
         <p className="mt-2 text-sm" aria-live="polite" data-testid="statut-relance">

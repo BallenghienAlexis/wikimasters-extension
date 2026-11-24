@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { CAUSE_VERIFICATION_HUMAINE, estVerificationHumaine, type Action } from '../../src/lib/actions'
 import { TABLE_CONTRAT } from '../../src/lib/contrat'
-import { classerConflit, creerEmetteur } from '../../src/lib/reseau'
+import { estCarteDejaPerdue, classerConflit, creerEmetteur } from '../../src/lib/reseau'
 import { avecIdEtiquette, registreVide, enregistrerEtiquette } from '../../src/lib/registre'
 
 const ORIGINE = 'https://www.wiki-masters.com'
@@ -362,5 +362,21 @@ describe('reseau : enchère avec relecture de la tendance (2026-11-21)', () => {
     const e = creerEmetteur({ table: TABLE_CONTRAT, origineOnglet: 'https://autre.example', fetchImpl: f as unknown as typeof fetch, attendre: async () => undefined })
     expect(await e(enchereTendance)).toEqual({ classe: 'echec', codeHttp: null, cause: 'action non disponible' })
     expect(f).not.toHaveBeenCalled()
+  })
+})
+
+describe('reseau : défausse déjà faite', () => {
+  const defausse409: Action = { type: 'defausse', idCarte: 'R|T', idExemplaire: EX }
+  it('409 « Vous ne possédez plus cette carte » : état atteint, pas une erreur', async () => {
+    const f = vi.fn(async () => reponse(409, JSON.stringify({ error: 'Vous ne possédez plus cette carte' })))
+    const r = await emetteur(f as unknown as typeof fetch)(defausse409)
+    expect(r.classe).toBe('reussie')
+    expect(r.codeHttp).toBe(409)
+  })
+  it('un autre 409 reste une erreur', async () => {
+    const f = vi.fn(async () => reponse(409, JSON.stringify({ error: 'autre conflit' })))
+    const r = await emetteur(f as unknown as typeof fetch)(defausse409)
+    expect(r.classe).toBe('echec')
+    expect(estCarteDejaPerdue({ message: 'Vous ne possédez plus cette carte' })).toBe(true)
   })
 })
