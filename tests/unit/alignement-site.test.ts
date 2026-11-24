@@ -87,3 +87,17 @@ describe('réalignement du registre sur le site', () => {
     expect(ajuste.filter((a) => a.type === 'creation-etiquette' || a.type === 'pose-etiquette')).toEqual([]);
   });
 });
+
+describe('noms d’étiquettes tolérants (« ##Nom » côté site)', () => {
+  it('retrouve l’étiquette et la pose sous « ##Nom » ou une autre forme Unicode, sans création ni pose', () => {
+    const nom = themeDe(carte('a'));
+    const surSite = `#${nom}`.normalize('NFD');
+    const c = carte('a', { etiquettesSite: [surSite] });
+    const collection: Collection = { version: 4, cartes: [c] };
+    const { registre, etiquettes, couples } = alignerRegistreSurSite(registreVide(), collection.cartes, [{ id: 't', nom: surSite, nbCartes: 1 }], config);
+    expect(etiquettes + couples).toBeGreaterThan(0);
+    expect(registre.etiquettes[nom]).toBe('t');
+    const lot = construireLot(collection, registre, config, TOUS);
+    expect(lot.actions.filter((a) => a.type === 'creation-etiquette' || a.type === 'pose-etiquette')).toEqual([]);
+  });
+});

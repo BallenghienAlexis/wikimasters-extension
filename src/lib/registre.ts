@@ -60,6 +60,15 @@ export function supprimerEtiquetteDuRegistre(r: Registre, nom: string): Registre
   return { ...r, etiquettes, couples: r.couples.filter((c) => c.nom !== nom), ...(r.refus ? { refus: r.refus.filter((x) => x.nom !== nom) } : {}) }
 }
 
+/**
+ * Clé de comparaison des noms d’étiquettes (Alexis, 2026-11-24 : le site affiche « ##Nom » pour « #Nom ») : forme Unicode composée,
+ * espaces rognés, zéro, un ou deux « # » de tête ignorés, casse ignorée. Ne sert qu’à retrouver une étiquette existante
+ * (jamais à écrire un nom).
+ */
+export function cleNomEtiquette(nom: string): string {
+  return nom.normalize('NFC').trim().replace(/^#+\s*/, '').trim().toLowerCase()
+}
+
 /** Étiquette du compte telle que le site la liste (identifiant et nom). */
 export interface EtiquetteDuSite {
   id: string
@@ -88,7 +97,7 @@ export function reconcilierAvecSite(r: Registre, site: readonly EtiquetteDuSite[
   if (site === null || (site.length === 0 && Object.keys(r.etiquettes).length > 0)) return { registre: r, perdus: [], manquantes: [] }
   const idsSite = new Set(site.map((e) => e.id))
   const idParNom = new Map<string, string>()
-  for (const e of site) if (!idParNom.has(e.nom)) idParNom.set(e.nom, e.id)
+  for (const e of site) if (!idParNom.has(cleNomEtiquette(e.nom))) idParNom.set(cleNomEtiquette(e.nom), e.id)
 
   const etiquettes = tableVide()
   const perdues = new Set<string>()
@@ -99,7 +108,7 @@ export function reconcilierAvecSite(r: Registre, site: readonly EtiquetteDuSite[
       continue
     }
     perdues.add(nom)
-    const autre = idParNom.get(nom)
+    const autre = idParNom.get(cleNomEtiquette(nom))
     if (autre !== undefined) etiquettes[nom] = autre
     else manquantes.push(nom)
   }

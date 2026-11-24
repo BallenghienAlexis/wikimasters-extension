@@ -8,7 +8,7 @@
 import type { Carte } from './collection'
 import type { Registre } from './actions'
 import { etiquettesDeCarte, type Config } from './lot'
-import { estRefuse } from './registre'
+import { cleNomEtiquette, estRefuse } from './registre'
 
 export interface EcartCarte {
   idCarte: string
@@ -29,11 +29,12 @@ export function calculerEcarts(
   for (const c of cartes) {
     if (c.idsSite === null) continue
     const attendues = etiquettesDeCarte(c, config).retenues
-    const surSite = new Set(c.etiquettesSite)
-    const prevues = new Set(attendues)
+    // Le site affiche (et peut stocker) « ##Nom » pour « #Nom » : comparaison tolérante (Alexis, 2026-11-24).
+    const surSite = new Set(c.etiquettesSite.map(cleNomEtiquette))
+    const prevues = new Set(attendues.map(cleNomEtiquette))
     const refusee = (nom: string): boolean => registre !== undefined && c.idsSite !== null && c.idsSite.some((ex) => estRefuse(registre, ex, nom))
-    const manquantes = attendues.filter((nom) => !surSite.has(nom) && !refusee(nom))
-    const enTrop = [...surSite].filter((nom) => !prevues.has(nom))
+    const manquantes = attendues.filter((nom) => !surSite.has(cleNomEtiquette(nom)) && !refusee(nom))
+    const enTrop = [...new Set(c.etiquettesSite)].filter((nom) => !prevues.has(cleNomEtiquette(nom)))
     if (manquantes.length > 0 || enTrop.length > 0) {
       ecarts.push({ idCarte: c.id, titre: c.titre, manquantes, enTrop })
     }

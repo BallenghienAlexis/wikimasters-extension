@@ -194,6 +194,10 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
       if (CODES_ARRET.includes(reponse.status)) {
         return { classe: 'echec', codeHttp: reponse.status, cause: 'action non disponible', ...(diagnostic ? { diagnostic } : {}) }
       }
+      // Pose d'une étiquette déjà posée (contrainte d'unicité, 23505) : l'état voulu est atteint, la pose compte comme réussie.
+      if (ordre.type === 'pose-etiquette' && reponse.status === 409 && typeof json === 'object' && json !== null && (json as Record<string, unknown>).code === '23505') {
+        return { classe: 'reussie', codeHttp: 409, cause: 'déjà posée sur le site' }
+      }
       if (siteSeul && reponse.status === 409) {
         return { classe: 'echec', codeHttp: 409, cause: classerConflit(json), ...(diagnostic ? { diagnostic } : {}) }
       }

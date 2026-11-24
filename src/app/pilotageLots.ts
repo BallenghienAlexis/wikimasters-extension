@@ -40,7 +40,8 @@ import {
   enregistrerRegistre,
 } from '../lib/stockage';
 import { adopterEtiquettesImportees, realignerRegistreSurSite } from './adoptionEtiquettes';
-import { avecIdEtiquette, reconcilierAvecSite, refuserCouple } from '../lib/registre';
+import { avecIdEtiquette, enregistrerEtiquette, reconcilierAvecSite, refuserCouple } from '../lib/registre';
+import { idEtiquetteApresEchec } from './soinPose';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
 import type { CoupleRetrait } from './Journal';
 import { AUCUNE_PLACE_ENCHERE, ECHEC_LECTURE_ENCHERES, SYNCHRO_EN_COURS, bilanVide, configDuLot, type Bilan } from './apercuLot';
@@ -138,7 +139,26 @@ export function contexteExecution(): ContexteExecution {
       // L’identifiant d’étiquette du site vient du registre, au moment d’envoyer (la création précède la pose).
       const complete = avecIdEtiquette(ordre, await chargerRegistre());
       if (complete === null) return { classe: 'echec', codeHttp: null, cause: 'action non disponible' };
-      return execution.transport(complete);
+      const premier = await execution.transport(complete);
+      if (ordre.type !== 'pose-etiquette' || premier.classe !== 'echec' || premier.cause === CAUSE_VERIFICATION_HUMAINE) return premier;
+      if (premier.codeHttp === null || [401, 403, 429].includes(premier.codeHttp)) return premier;
+      // L'étiquette n'existe peut-être plus sur le site : relecture de la liste, recréation si besoin, un seul nouvel essai.
+      const idNeuf = await idEtiquetteApresEchec(ordre.nomEtiquette, complete.idEtiquette, {
+        lireListe: async () => {
+          const r = await execution.transport({ type: 'lecture', idCarte: ID_CARTE_ETIQUETTES, cible: 'etiquettes' });
+          return r.classe === 'reussie' && r.etiquettes ? r.etiquettes : null;
+        },
+        creer: async (nom) => {
+          const r = await execution.transport({ type: 'creation-etiquette', idCarte: ordre.idCarte, nomEtiquette: nom });
+          return r.classe === 'reussie' && r.idEtiquette ? r.idEtiquette : null;
+        },
+        chargerRegistre,
+        noter: async (nom, id) => enregistrerRegistre(enregistrerEtiquette(await chargerRegistre(), nom, id)),
+        attendre: () => horlogeReelle.attendreJusqua(horlogeReelle.now() + INTERVALLE_MS + supplementAleatoire()),
+      }).catch(() => null);
+      if (idNeuf === null) return premier;
+      await horlogeReelle.attendreJusqua(horlogeReelle.now() + INTERVALLE_MS + supplementAleatoire());
+      return execution.transport({ ...ordre, idEtiquette: idNeuf });
     },
     reverifier: async (action) => {
       const [collection, registre, preferences, etatSynchro] = await Promise.all([chargerCollection(), chargerRegistre(), chargerPreferences(), chargerEtatSynchro().catch(() => null)]);

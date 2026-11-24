@@ -4,6 +4,7 @@
  * pour qu’une carte filtrée sur un thème montre ce thème (ou l’un de ses enfants) parmi ses tags. Logique pure.
  */
 import type { Carte } from './collection';
+import { cleNomEtiquette } from './registre';
 import { LIBELLES_THEMES, libellesThemesAffiches, parentsDe, THEME_AUTRES, versionThemes } from './themes';
 
 type CarteTags = Pick<Carte, 'titre' | 'description' | 'etiquettesSite'> & { themesChoisis?: string[] | null };
@@ -29,7 +30,9 @@ function libellesDeTheme(): Map<string, string> {
 export function tagsDeCarte(carte: CarteTags): TagsCarte {
   // Seules les étiquettes de thème comptent (« #À échanger… », « Statut · … » et étiquettes personnelles n’en sont pas).
   const table = libellesDeTheme();
-  const poses = (carte.etiquettesSite ?? []).filter((n) => table.has(n));
+  // Le site peut afficher « ##Nom » pour « #Nom » : on retrouve le libellé du catalogue par une clé tolérante (Alexis, 2026-11-24).
+  const parCle = new Map([...table.keys()].map((l) => [cleNomEtiquette(l), l] as const));
+  const poses = [...new Set((carte.etiquettesSite ?? []).flatMap((n) => (table.has(n) ? [n] : parCle.has(cleNomEtiquette(n)) ? [parCle.get(cleNomEtiquette(n))!] : [])))];
   const surSite = new Set(poses);
   return { poses, aPoser: libellesThemesAffiches(carte).filter((l) => !surSite.has(l)) };
 }
