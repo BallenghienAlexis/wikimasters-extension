@@ -263,3 +263,15 @@ describe('messages : enchère à tendance et résultat « passée » (2026-11-21
     expect(r({ classe: 'reussie', codeHttp: 201, cause: 'action réussie', prix: 1.5 })).toBeNull()
   })
 })
+
+describe('causes émises par reseau.ts', () => {
+  it.each([
+    'carte déjà en vente ou plus possédée',
+    'déjà défaussée ou absente du site',
+    'déjà posée sur le site',
+    'étiquette déjà sur le site (identifiant inconnu)',
+  ])('accepte la cause « %s » (sinon un lot resterait bloqué)', (cause) => {
+    const message = messageResultat({ classe: 'echec', codeHttp: 409, cause })
+    expect(validerResultat(message)).not.toBeNull()
+  })
+})

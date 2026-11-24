@@ -9,7 +9,7 @@
  * Logique pure : pas de `chrome.runtime` ici.
  */
 import { estDureeSite } from './affluence'
-import { CAUSE_VERIFICATION_HUMAINE, ID_CARTE_ETIQUETTES, TYPES_ACTION, type Action, type ResultatAction, type TypeAction } from './actions'
+import { CAUSE_CARTE_INDISPONIBLE, CAUSE_VERIFICATION_HUMAINE, ID_CARTE_ETIQUETTES, TYPES_ACTION, type Action, type ResultatAction, type TypeAction } from './actions'
 
 const LONGUEUR_MAX = 200
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -41,6 +41,10 @@ export const CAUSES_RESULTAT: readonly string[] = [
   'limite d’enchères atteinte',
   CAUSE_VERIFICATION_HUMAINE,
   'conflit signalé par le site',
+  CAUSE_CARTE_INDISPONIBLE,
+  'déjà défaussée ou absente du site',
+  'déjà posée sur le site',
+  'étiquette déjà sur le site (identifiant inconnu)',
 ]
 
 const CLASSES: ReadonlyArray<ResultatAction['classe']> = ['reussie', 'echec', 'arret', 'inconnu', 'passee']
