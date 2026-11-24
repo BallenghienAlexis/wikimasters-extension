@@ -54,6 +54,7 @@ const CLE_ETIQUETTES_SITE = 'etiquettesSite';
 const CLE_IGNOREES = 'ignorees';
 const CLE_HISTORIQUE = 'historique';
 const CLE_AFFICHAGE = 'affichage';
+const CLE_SYNCHRO_PC = 'synchroPc';
 const CLE_SUIVI_VENTES = 'suiviVentes';
 const CLE_LANCEMENTS_VENTES = 'lancementsVentes';
 const CLE_RELANCE_VENTES = 'relanceVentes';
@@ -99,6 +100,7 @@ export const CLES_STOCKAGE = {
   ignorees: CLE_IGNOREES,
   historique: CLE_HISTORIQUE,
   affichage: CLE_AFFICHAGE,
+  synchroPc: CLE_SYNCHRO_PC,
   suiviVentes: CLE_SUIVI_VENTES,
   lancementsVentes: CLE_LANCEMENTS_VENTES,
   relanceVentes: CLE_RELANCE_VENTES,
@@ -436,6 +438,16 @@ export async function enregistrerAffichage(affichage: Affichage): Promise<void> 
   const valide = validerAffichage(affichage);
   if (valide === null) throw new Error('Préférence d’affichage invalide.');
   await chrome.storage.local.set({ [CLE_AFFICHAGE]: valide });
+}
+
+/** Mémoire locale de la synchro entre PC (nom de ce PC, dernier envoi, relevés des autres PC) : propre à ce PC, jamais sauvegardée. */
+export async function chargerSynchroPc(): Promise<Record<string, unknown> | null> {
+  const brut = (await chrome.storage.local.get(CLE_SYNCHRO_PC))[CLE_SYNCHRO_PC] as unknown;
+  return typeof brut === 'object' && brut !== null && !Array.isArray(brut) ? (brut as Record<string, unknown>) : null;
+}
+
+export async function enregistrerSynchroPc(memoire: Record<string, unknown>): Promise<void> {
+  await chrome.storage.local.set({ [CLE_SYNCHRO_PC]: memoire });
 }
 
 const CLES_SYNCHRO_AUTO = [CLE_SYNC_AUTO, CLE_STATUT_SYNCHRO, CLE_BAIL_SYNCHRO, CLE_DERNIERE_SYNCHRO];
