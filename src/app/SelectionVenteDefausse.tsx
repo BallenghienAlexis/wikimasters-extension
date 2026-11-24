@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { observations, type EvenementVente } from '../lib/affluence';
+import { detailDureeEnchere, observations, type EvenementVente } from '../lib/affluence';
 import { normaliser, type Carte } from '../lib/collection';
 import { conseilLancement, estProposable, type Choix, type ChoixCarte, type Verdict } from '../lib/selectionLot';
 import { NB, CLASSE_BOUTON } from './apercuLot';
@@ -37,6 +37,8 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansP
   const [recherche, setRecherche] = useState('');
   const [affichees, setAffichees] = useState(PAS);
   const [maintenant] = useState(() => Date.now());
+  // Calculé une seule fois : même instant et mêmes évènements pour toutes les lignes.
+  const detailConseil = useMemo(() => detailDureeEnchere(maintenant, ventes), [maintenant, ventes]);
 
   const proposables = useMemo(() => cartes.filter(estProposable), [cartes]);
   const nbDefausser = useMemo(() => proposables.filter((c) => choix.get(c.id)?.choix === 'defausser').length, [proposables, choix]);
@@ -103,7 +105,7 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansP
                 />
               </label>
             )}
-            {x.choix === 'vendre' && <span className="text-sm text-muted">{conseilLancement(c.valeurMarchande, maintenant, ventes)}</span>}
+            {x.choix === 'vendre' && <span className="text-sm text-muted">{conseilLancement(c.valeurMarchande, maintenant, ventes, detailConseil)}</span>}
           </fieldset>
         ) : (
           <span className="text-sm text-muted">Non proposable</span>

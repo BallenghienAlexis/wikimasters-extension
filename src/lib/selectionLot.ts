@@ -5,7 +5,7 @@
  * Logique pure, sans `chrome.*`. Rien n’est stocké : la sélection vit le temps de l’aperçu.
  */
 import { CONFIG_AFFLUENCE } from '../config/affluence'
-import { detailDureeEnchere, estHeureForte, libelleDuree, type EvenementVente } from './affluence'
+import { detailDureeEnchere, libelleDuree, type DureeEnchere, type EvenementVente } from './affluence'
 import { estFavoriVerrouille, normaliser, type Carte } from './collection'
 import { estACLasser, type SelectionLot } from './lot'
 import { LIBELLES_THEMES, themesDeCarte, themesPrincipaux } from './themes'
@@ -227,10 +227,9 @@ export function precocher(cartes: readonly Carte[], preferences: Preferences, ac
  * Conseil de moment de lancement pour une mise aux enchères (Alexis, 2026-11-24) : la durée suit l’affluence, 1 h en heure
  * forte, plus longue en zone creuse (`CONFIG_AFFLUENCE`) ; les cartes chères restent à réserver aux heures fortes.
  */
-export function conseilLancement(valeur: number | null, at: number, evenements: readonly EvenementVente[]): string {
+export function conseilLancement(valeur: number | null, at: number, evenements: readonly EvenementVente[], detail: DureeEnchere = detailDureeEnchere(at, evenements)): string {
   if (valeur === null) return 'valeur inconnue'
-  const forte = estHeureForte(at, evenements)
-  const detail = detailDureeEnchere(at, evenements)
+  const forte = detail.niveau === 'forte'
   const duree = libelleDuree(detail.minutes) + (detail.empiete ? ', empiète sur une heure forte' : detail.bornee ? ', raccourcie avant l’heure forte' : '')
   const chere = valeur >= CONFIG_AFFLUENCE.seuilCarteChere
   if (chere) return forte ? `heure forte : bon moment, durée ${duree}` : `carte chère : attendre une heure forte (durée ${duree} maintenant)`
