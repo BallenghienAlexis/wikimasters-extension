@@ -3,7 +3,14 @@ import { collectionVide, type Collection } from '../lib/collection';
 import { chargerCollection, chargerIgnorees, chargerPreferences, ecouterCollection, ecouterIgnorees } from '../lib/stockage';
 import { calculerTableauDeBord, lignesSante as lignesSanteDe, type ContexteTableauDeBord, type LigneSante } from '../lib/tableauDeBord';
 import { peremptionPrixMs } from '../lib/ordonnanceur';
-import { preferencesParDefaut, type Preferences } from '../lib/tri';
+import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
+import { idsSansPrixConfirme, FRAICHEUR_SANS_PRIX_MS, verdictsDesCartes } from '../lib/selectionLot';
+import { repartitionDestinations, repartitionThemes, type IdDestination, type Part } from '../lib/graphiquesTableauDeBord';
+import type { CacheWikipedia } from '../lib/wikipedia';
+import CalendrierActivite from './CalendrierActivite';
+import CamembertRepartition from './CamembertRepartition';
+import ProfilAffluenceSemaine from './ProfilAffluenceSemaine';
+import { useDonneesGraphiques } from './useDonneesGraphiques';
 import CarteKpi from './CarteKpi';
 import SectionRepliable from './SectionRepliable';
 import SanteSynchro from './SanteSynchro';
@@ -15,12 +22,26 @@ const accorder = (n: number, singulier: string, pluriel: string): string => `${n
  * Onglet Tableau de bord (T-305) : trois chiffres clés, santé de la synchro.
  * Lecture seule du stockage (collection, préférences, état de synchro) ; aucune requête, aucune vérification Wikipédia.
  */
-const OngletTableauDeBord: React.FC = () => {
+const COULEURS_DESTINATION: Record<IdDestination, string> = {
+  moi: 'var(--color-garder)',
+  amis: 'var(--color-echanger)',
+  vendre: 'var(--color-vendre)',
+  defausser: 'var(--color-defausser)',
+  'a-traiter': 'var(--color-muted)',
+};
+
+interface Props {
+  /** Cache Wikipédia de la page : change les thèmes lus, donc les répartitions (surcouche en mémoire). */
+  cacheWiki?: CacheWikipedia;
+}
+
+const OngletTableauDeBord: React.FC<Props> = ({ cacheWiki }) => {
   const [collection, setCollection] = useState<Collection>(collectionVide);
   const [preferences, setPreferences] = useState<Preferences>(preferencesParDefaut);
   const [chargee, setChargee] = useState(false);
   const synchro = useLectureSynchro();
   const [nbIgnorees, setNbIgnorees] = useState(0);
+  const graphiques = useDonneesGraphiques();
 
   useEffect(() => {
     void chargerPreferences().then(setPreferences).catch(() => undefined);
@@ -60,6 +81,22 @@ const OngletTableauDeBord: React.FC = () => {
         maintenant: synchro.maintenant,
       }),
     [synchro, tableau, nbIgnorees],
+  );
+
+  const sansPrix = useMemo(
+    () => new Set(idsSansPrixConfirme(collection.cartes, synchro.etat?.prix ?? {}, synchro.maintenant, FRAICHEUR_SANS_PRIX_MS, plafondDefausse(preferences))),
+    [collection.cartes, synchro.etat?.prix, synchro.maintenant, preferences],
+  );
+  const partsThemes = useMemo(
+    (): Part[] => repartitionThemes(collection.cartes),
+    // `cacheWiki` change les thèmes lus (surcouche Wikipédia, état de module).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [collection.cartes, cacheWiki],
+  );
+  const partsDestinations = useMemo(
+    (): Part[] => repartitionDestinations(verdictsDesCartes(collection.cartes, preferences, sansPrix)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [collection.cartes, preferences, sansPrix, cacheWiki],
   );
 
   // Avant la lecture du stockage, les chiffres partent de 0 : le compteur défile ensuite jusqu’à la valeur (D-61).
@@ -110,6 +147,27 @@ const OngletTableauDeBord: React.FC = () => {
       </SectionRepliable>
 
       {vide && <p className="mt-4 rounded border border-line bg-ink-2 p-4">Aucune carte</p>}
+
+      <CalendrierActivite activite={graphiques.activite} />
+      <CamembertRepartition
+        id="repartition-themes"
+        titre="Répartition des thèmes"
+        explication="Thème principal de chaque carte (le mieux établi), cartes distinctes. Les thèmes rares sont regroupés."
+        parts={partsThemes}
+        vide="Aucune carte à répartir."
+        unite="cartes"
+        couleurDe={(p, rang) => (p.id === 'autres' || p.id === 'sans-theme' ? 'var(--color-muted)' : undefined) ?? ['var(--color-garder)', 'var(--color-echanger)', 'var(--color-vendre)', 'var(--color-defausser)', 'var(--color-paper)'][rang % 5]!}
+      />
+      <CamembertRepartition
+        id="repartition-destinations"
+        titre="Ma collection : gardée, amis, vente, défausse"
+        explication="Verdict de garde de chaque carte (mêmes règles que les lots et les filtres « Cartes gardées » de la Collection), cartes distinctes."
+        parts={partsDestinations}
+        vide="Aucune carte à répartir."
+        unite="cartes"
+        couleurDe={(p) => COULEURS_DESTINATION[p.id as IdDestination]}
+      />
+      <ProfilAffluenceSemaine evenements={graphiques.affluence} />
 
       <SanteSynchro
         pastille={tableau.sante.pastille}

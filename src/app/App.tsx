@@ -58,7 +58,7 @@ const App: React.FC = () => {
   if (!blocage && chargee) {
     switch (actif) {
       case 'tableau-de-bord':
-        panneau = <OngletTableauDeBord />;
+        panneau = <OngletTableauDeBord cacheWiki={donnees.cacheWiki} />;
         break;
       case 'synchro':
         panneau = <OngletSynchro donnees={donnees} />;
