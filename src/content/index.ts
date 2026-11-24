@@ -32,6 +32,7 @@ import {
   enregistrerStatutRelanceVentes,
   enregistrerSuiviVentes,
 } from '../lib/stockage';
+import { chargerSurcouchesThemes } from './surcouchesThemes';
 import { demarrerExecutant } from './executant';
 import { demarrerSynchroAuto, horlogeReelle, transportSite } from './synchroAuto';
 import { creerSuiviVentes, demarrerSuiviVentes } from './suiviVentes';
@@ -72,6 +73,7 @@ const suivi = creerSuiviVentes({
   enregistrerStatut: enregistrerStatutRelanceVentes,
   chargerCollection,
   chargerPreferences,
+  chargerSurcouchesThemes,
   chargerLancements: chargerLancementsVentes,
   ajouterLancement: ajouterLancementVente,
   chargerEcartes: chargerEcartesVentes,
