@@ -16,12 +16,13 @@ import { validerEtiquettesSite, type EtiquetteSite } from './etiquettesPreexista
 import type { EtatOrdonnanceur } from './ordonnanceur';
 import { validerEtatSynchro } from './validerEtatSynchro';
 import { AMIS_INITIAUX, VERSION_AMIS_INITIAUX } from '../config/amis';
-import { ajouterEvenement, validerEvenements, VERSION_VENTES, type EvenementVente } from './affluence';
+import { ajouterEvenement, poidsResultat, validerEvenements, VERSION_VENTES, type EvenementVente } from './affluence';
 import { fusionnerAmisInitiaux, lirePreferences, preferencesParDefaut, type Preferences } from './tri';
 import { estObjet } from './valider';
+import { ajouterMesures, validerMesures, type CategorieDuree, type MesuresDurees } from './durees';
 import type { EtatVerrouRequete } from './verrouRequete';
 import { CLES_GARDEES, collectionReduite, preferencesGardees } from './reinitialisation';
-import { VERSION_SUIVI, suiviVide, validerLancements, type LancementVente, type SuiviVentes } from './ventes';
+import { VERSION_SUIVI, suiviVide, validerLancements, issueDe, type LancementVente, type SuiviVentes, type VenteTerminee } from './ventes';
 
 const CLE = 'collection';
 const CLE_PREFERENCES = 'preferences';
@@ -45,6 +46,8 @@ const CLE_CLASSEMENT_IA = 'classementIA';
 const CLE_THEMES_APPRIS = 'themesAppris';
 const CLE_VENTES = 'ventes';
 const CLE_AFFLUENCE_SITE = 'affluenceSite';
+const CLE_RESULTATS_VENTES = 'resultatsVentes';
+const MAX_RESULTATS_VENTES = 500;
 const MAX_RELEVES_SITE = 2000;
 const CLE_RELEVE_MARCHE = 'releveMarche';
 const CLE_ETIQUETTES_SITE = 'etiquettesSite';
@@ -61,6 +64,7 @@ const CLE_ETAT_SUIVI = 'etatSuiviVentes';
 const CLE_SIGNAL_SUIVI = 'signalSuiviVentes';
 const CLE_BAIL_SUIVI = 'bailSuiviVentes';
 const CLE_VERROU_REQUETE = 'verrouRequete';
+const CLE_DUREES = 'dureesMesurees';
 
 export type { StatutSynchro };
 
@@ -105,10 +109,31 @@ export const CLES_STOCKAGE = {
   signalSuiviVentes: CLE_SIGNAL_SUIVI,
   bailSuiviVentes: CLE_BAIL_SUIVI,
   verrouRequete: CLE_VERROU_REQUETE,
+  dureesMesurees: CLE_DUREES,
 } as const;
 
 function illisible(detail: string): Error {
   return new Error(`Données stockées illisibles. ${detail}`);
+}
+
+/** Durées mesurées par process (estimations de temps) : illisible ou absent vaut « aucune mesure », jamais une erreur. */
+export async function chargerDureesMesurees(): Promise<MesuresDurees> {
+  const contenu = await chrome.storage.local.get(CLE_DUREES);
+  return validerMesures(contenu[CLE_DUREES]);
+}
+
+/** Relit puis ajoute (les mesures de la synchro et des lots viennent de deux contextes) : jamais de requête. */
+export async function ajouterDureesMesurees(ajouts: Partial<Record<CategorieDuree, number[]>>): Promise<void> {
+  const actuelles = await chargerDureesMesurees();
+  await chrome.storage.local.set({ [CLE_DUREES]: ajouterMesures(actuelles, ajouts) });
+}
+
+export function ecouterDureesMesurees(rappel: () => void): () => void {
+  const ecouteur = (changes: Record<string, unknown>, zone: string): void => {
+    if (zone === 'local' && CLE_DUREES in changes) rappel();
+  };
+  chrome.storage.onChanged.addListener(ecouteur);
+  return () => chrome.storage.onChanged.removeListener(ecouteur);
 }
 
 /** Étiquettes du compte lues sur le site (identifiant, nom, nombre de cartes) ; illisible ou absent : `null`. */
@@ -443,6 +468,35 @@ export async function chargerSuiviVentes(): Promise<SuiviVentes> {
 
 export async function enregistrerSuiviVentes(suivi: SuiviVentes): Promise<void> {
   await chrome.storage.local.set({ [CLE_SUIVI_VENTES]: suivi });
+  // Cumul des enchères terminées (Alexis, 2026-11-24) : l’historique du site est borné, le calcul des heures fortes garde tout.
+  await noterResultatsVentes(suivi.terminees).catch(() => undefined);
+}
+
+/** Enchères terminées du joueur (rendement par heure de mise en vente), 500 au plus ; valeur illisible : liste vide. */
+export async function chargerResultatsVentes(): Promise<EvenementVente[]> {
+  const contenu = await chrome.storage.local.get(CLE_RESULTATS_VENTES);
+  const brut = contenu[CLE_RESULTATS_VENTES];
+  if (!estObjet(brut) || brut.version !== VERSION_VENTES) return [];
+  return validerEvenements(brut.evenements, MAX_RESULTATS_VENTES).filter((e) => e.type === 'resultat');
+}
+
+let fileResultats: Promise<unknown> = Promise.resolve();
+
+/** Ajoute les enchères terminées pas encore comptées (clé : heure de mise en vente ; les annulées sont ignorées). */
+export function noterResultatsVentes(terminees: readonly VenteTerminee[]): Promise<EvenementVente[]> {
+  const tache = fileResultats.then(async () => {
+    const actuels = await chargerResultatsVentes();
+    const connus = new Set(actuels.map((e) => e.at));
+    const nouveaux = terminees
+      .filter((v) => issueDe(v) !== 'annulee' && !connus.has(v.creeLe))
+      .map((v): EvenementVente => ({ type: 'resultat', at: v.creeLe, poids: poidsResultat({ ...v, vendue: issueDe(v) === 'vendue' }) }));
+    if (nouveaux.length === 0) return actuels;
+    const suite = [...actuels, ...nouveaux].sort((a, b) => a.at - b.at).slice(-MAX_RESULTATS_VENTES);
+    await chrome.storage.local.set({ [CLE_RESULTATS_VENTES]: { version: VERSION_VENTES, evenements: suite } });
+    return suite;
+  });
+  fileResultats = tache.catch(() => undefined);
+  return tache;
 }
 
 export const ecouterSuiviVentes = (rappel: () => void): (() => void) => ecouterCle(CLE_SUIVI_VENTES, rappel);
@@ -597,7 +651,7 @@ export async function chargerVentes(): Promise<EvenementVente[]> {
   const contenu = await chrome.storage.local.get(CLE_VENTES);
   const brut = contenu[CLE_VENTES];
   if (typeof brut !== 'object' || brut === null || (brut as { version?: unknown }).version !== VERSION_VENTES) return [];
-  return validerEvenements((brut as { evenements?: unknown }).evenements).filter((e) => e.type !== 'site');
+  return validerEvenements((brut as { evenements?: unknown }).evenements).filter((e) => e.type !== 'site' && e.type !== 'resultat');
 }
 
 // Les écritures sont chaînées : deux clics rapprochés ne doivent pas perdre un évènement.
@@ -658,7 +712,7 @@ export async function enregistrerReleveMarche(releve: ReleveMarche): Promise<voi
 
 /** Remplace le journal des ventes du joueur (écritures chaînées avec `noterEvenementVente`). */
 export function enregistrerVentes(evenements: EvenementVente[]): Promise<void> {
-  const tache = fileVentes.then(() => chrome.storage.local.set({ [CLE_VENTES]: { version: VERSION_VENTES, evenements: validerEvenements(evenements).filter((e) => e.type !== 'site') } }));
+  const tache = fileVentes.then(() => chrome.storage.local.set({ [CLE_VENTES]: { version: VERSION_VENTES, evenements: validerEvenements(evenements).filter((e) => e.type !== 'site' && e.type !== 'resultat') } }));
   fileVentes = tache.catch(() => undefined);
   return tache;
 }

@@ -194,7 +194,7 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansP
       )}
       <details className="mt-3 text-sm">
         <summary className="cursor-pointer">Heures de plus forte influence</summary>
-        <HeuresFortes nbObservations={observations(ventes)} />
+        <HeuresFortes nbObservations={observations(ventes)} nbResultats={ventes.filter((e) => e.type === 'resultat').length} />
       </details>
     </SectionRepliable>
   );

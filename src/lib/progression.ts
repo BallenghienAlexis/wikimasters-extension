@@ -11,6 +11,7 @@
  */
 import type { EntreeJournal, EtatExecutionV2, FamilleLot, LotExecution } from './actions'
 import type { EtapeSynchro, StatutSynchroV2 } from './statutSynchro'
+import { DUREES_PAR_DEFAUT, secondesPar } from './durees'
 
 export interface Barre {
   valeur: number | null
@@ -20,9 +21,10 @@ export interface Barre {
   texte: string
 }
 
-export const SECONDES_PAR_ACTION = 0.25
+/** Tarifs de repli (sans mesure) ; les estimations utilisent la médiane des durées mesurées (`durees.ts`). */
+export const SECONDES_PAR_ACTION = DUREES_PAR_DEFAUT.ecriture
 /** Rythme réel d’une demande de prix : 0,2 s + gigue moyenne 0,05 s + pause de prix 1,2 s + variation moyenne 0,2 s. */
-export const SECONDES_PAR_PRIX = 1.65
+export const SECONDES_PAR_PRIX = DUREES_PAR_DEFAUT.prix
 export const INTERVALLE_ANNONCE_MS = 2000
 export const ETAPES_SYNCHRO: readonly EtapeSynchro[] = ['stats', 'pages', 'prix', 'ventes']
 
@@ -128,7 +130,7 @@ export function annoncer(
 
 /** Exécution : actions restantes × 0,25 s, sans division par la concurrence (H4). */
 export function secondesExecution(restantes: number): number {
-  return Math.max(0, restantes) * SECONDES_PAR_ACTION
+  return Math.max(0, restantes) * secondesPar('ecriture')
 }
 
 /** Synchro : (pages restantes + prix restants + 1) × 0,25 s (H4). */
@@ -136,7 +138,7 @@ export function secondesSynchro(statut: StatutSynchroV2): number {
   const enLecture = statut.etape === 'stats' || statut.etape === 'pages'
   const pages = enLecture && statut.page !== null && statut.pages !== null ? Math.max(0, statut.pages - statut.page + 1) : 0
   const prix = statut.prixPrevus === null ? 0 : Math.max(0, statut.prixPrevus - (statut.prixFaits ?? 0))
-  return (pages + 1) * SECONDES_PAR_ACTION + prix * SECONDES_PAR_PRIX
+  return (pages + 1) * secondesPar('lecture') + prix * secondesPar('prix')
 }
 
 /** « moins d’une minute » sous 60 s, sinon « environ N min » (N arrondi au supérieur). */

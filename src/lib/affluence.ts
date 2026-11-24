@@ -2,8 +2,10 @@ import { CONFIG_AFFLUENCE, type ConfigAffluence } from '../config/affluence';
 
 /** Évènement de vente noté par le joueur (horodatages en ms). */
 export interface EvenementVente {
-  type: 'debut' | 'fin' | 'site';
+  type: 'debut' | 'fin' | 'site' | 'resultat';
   at: number;
+  /** `resultat` seulement : rendement de l’enchère terminée (voir `poidsResultat`), 0 si non vendue. */
+  poids?: number;
 }
 
 export const VERSION_VENTES = 1;
@@ -19,7 +21,7 @@ export function histogramme(evenements: readonly EvenementVente[]): Histogramme 
   const h: Histogramme = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
   for (const e of evenements) {
     const d = new Date(e.at);
-    h[d.getDay()]![d.getHours()]! += 1;
+    h[d.getDay()]![d.getHours()]! += e.poids ?? 1;
   }
   return h;
 }
@@ -31,7 +33,12 @@ export function validerEvenements(brut: unknown, max: number = MAX_EVENEMENTS): 
   for (const e of brut) {
     if (typeof e !== 'object' || e === null) continue;
     const o = e as Record<string, unknown>;
-    if ((o.type !== 'debut' && o.type !== 'fin' && o.type !== 'site') || typeof o.at !== 'number' || !Number.isSafeInteger(o.at) || o.at < 0 || o.at > DATE_MAX) continue;
+    if ((o.type !== 'debut' && o.type !== 'fin' && o.type !== 'site' && o.type !== 'resultat') || typeof o.at !== 'number' || !Number.isSafeInteger(o.at) || o.at < 0 || o.at > DATE_MAX) continue;
+    if (o.type === 'resultat') {
+      if (typeof o.poids !== 'number' || !Number.isFinite(o.poids) || o.poids < 0 || o.poids > POIDS_MAX) continue;
+      sortie.push({ type: 'resultat', at: o.at, poids: o.poids });
+      continue;
+    }
     sortie.push({ type: o.type, at: o.at });
   }
   return sortie.slice(-max);
@@ -48,8 +55,12 @@ export function observations(evenements: readonly EvenementVente[]): number {
 }
 
 /** Vrai si l’instant est une heure forte : créneaux par défaut, ou top 25 % des créneaux observés. */
-export function estHeureForte(at: number, evenements: readonly EvenementVente[], config: ConfigAffluence = CONFIG_AFFLUENCE): boolean {
+export function estHeureForte(at: number, tous: readonly EvenementVente[], config: ConfigAffluence = CONFIG_AFFLUENCE): boolean {
   const d = new Date(at);
+  const resultats = tous.filter((e) => e.type === 'resultat');
+  // Assez d’enchères terminées (Alexis, 2026-11-24) : les heures fortes viennent de ce qui s’est vraiment vendu.
+  if (resultats.length >= config.minVentesConclues) return estHeureForteParResultats(d, resultats);
+  const evenements = tous.filter((e) => e.type !== 'resultat');
   if (observations(evenements) < config.minObservations) {
     const weekend = d.getDay() === 0 || d.getDay() === 6;
     return dansCreneaux(d.getHours(), weekend ? config.creneauxWeekend : config.creneauxSemaine);
@@ -61,6 +72,46 @@ export function estHeureForte(at: number, evenements: readonly EvenementVente[],
   const rangQuartile = Math.max(0, Math.ceil(utilises.length / 4) - 1);
   const seuil = Math.max(2, utilises[rangQuartile]!);
   return h[d.getDay()]![d.getHours()]! >= seuil;
+}
+
+/** Plus grand rendement retenu (un prix final au-delà de 20 fois le départ est ramené à 20). */
+export const POIDS_MAX = 20;
+/** Mises en vente d’un même créneau nécessaires pour qu’il compte. */
+const MIN_PAR_CRENEAU = 2;
+
+/**
+ * Rendement d’une enchère terminée : 0 si elle n’a pas été vendue ; sinon prix final ÷ prix de départ (plafonné), divisé
+ * par la durée réelle en heures (prolongations comprises, au moins 1 h) : une enchère qui monte plus haut et plus vite pèse plus.
+ */
+export function poidsResultat(r: { prixDepart: number; prixFinal: number | null; creeLe: number; finLe: number; vendue: boolean }): number {
+  if (!r.vendue || r.prixFinal === null || r.prixFinal <= 0 || r.prixDepart <= 0) return 0;
+  const heures = Math.max(1, (r.finLe - r.creeLe) / 3_600_000);
+  return Math.min(POIDS_MAX, r.prixFinal / r.prixDepart) / heures;
+}
+
+const typeDeJour = (d: Date): number => (d.getDay() === 0 || d.getDay() === 6 ? 1 : 0);
+
+/** Rendement moyen par créneau (semaine ou week-end, heure) des enchères terminées ; `null` : créneau sans assez de données. */
+export function rendementParCreneau(resultats: readonly EvenementVente[]): (number | null)[][] {
+  const somme = [new Array<number>(24).fill(0), new Array<number>(24).fill(0)];
+  const n = [new Array<number>(24).fill(0), new Array<number>(24).fill(0)];
+  for (const e of resultats) {
+    if (e.type !== 'resultat') continue;
+    const d = new Date(e.at);
+    somme[typeDeJour(d)]![d.getHours()]! += e.poids ?? 0;
+    n[typeDeJour(d)]![d.getHours()]! += 1;
+  }
+  return somme.map((l, t) => l.map((v, h) => (n[t]![h]! >= MIN_PAR_CRENEAU ? v / n[t]![h]! : null)));
+}
+
+/** Heure forte d’après les enchères terminées : le quart des créneaux au meilleur rendement moyen, jamais un rendement nul. */
+function estHeureForteParResultats(d: Date, resultats: readonly EvenementVente[]): boolean {
+  const r = rendementParCreneau(resultats);
+  const utilises = r.flat().filter((v): v is number => v !== null && v > 0).sort((a, b) => b - a);
+  if (utilises.length === 0) return false;
+  const seuil = utilises[Math.max(0, Math.ceil(utilises.length / 4) - 1)]!;
+  const v = r[typeDeJour(d)]![d.getHours()];
+  return v !== null && v !== undefined && v > 0 && v >= seuil;
 }
 
 export interface Conseil {
