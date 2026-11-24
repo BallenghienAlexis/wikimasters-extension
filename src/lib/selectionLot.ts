@@ -52,7 +52,8 @@ export const MAX_PRECOCHE_SANS_PRIX = 10
 export function resumerSansPrix(cartes: readonly Carte[], preferences: Preferences, sansPrix: ReadonlySet<string>): { nombre: number; trop: boolean } {
   let nombre = 0
   for (const c of cartes) {
-    if (!estProposable(c) || c.valeurMarchande !== null || !sansPrix.has(c.id)) continue
+    // Conditions peu coûteuses d’abord : `estProposable` lit les thèmes de la carte.
+    if (c.valeurMarchande !== null || !sansPrix.has(c.id) || !estProposable(c)) continue
     const themes = themesDeCarte(c)
     if (preferences.mesThemes.some((t) => themes.includes(t))) continue
     if (amisConcernes(themes, preferences.amis).length > 0 || c.ami !== null) continue
