@@ -1,7 +1,9 @@
+import { plafondDefausse } from '../lib/tri';
 import { trierEtiquettesSite } from '../lib/etiquettesPreexistantes';
 import { CONFIG_PRIX } from '../config/prix';
 import { CAUSE_VERIFICATION_HUMAINE, ID_CARTE_ETIQUETTES } from '../lib/actions';
 import { ajusterLotAuSite, limiterEncheres } from '../lib/lot';
+import { dureeEnchereMinutes } from '../lib/affluence';
 import { typesDisponibles } from '../lib/contrat';
 import type { Action, CauseJournal, EtatExecutionV2, ErreurExecution, FamilleLot, Registre, ResultatAction } from '../lib/actions';
 import type { Collection } from '../lib/collection';
@@ -12,11 +14,13 @@ import { CODES_ARRET, INTERVALLE_MS, SUPPLEMENT_MAX_MS, creerFile, type Contexte
 import { LIBELLES_THEMES } from '../lib/themes';
 import { actionsReinitSite, planSite, type OptionsReinitSite } from '../lib/reinitialisation';
 import { familleDe } from '../lib/familles';
+import { creerCollecteur } from '../lib/durees';
 import { ajouterIgnoree } from '../lib/ignorees';
 import { LIBELLE_VERIFICATION_HUMAINE, completerEntree, ouvrirEntree, ouvrirEntreePassee, passerEntree } from '../lib/journal';
 import { PAUSE_LOTS_MS, RAISON_RESULTAT_INCONNU, calculerPauseJusqua, raisonPause, resultatInconnu } from '../lib/reprise';
 import { appliquerResultat, reverifierAction } from '../lib/revision';
 import {
+  ajouterDureesMesurees,
   chargerCollection,
   chargerBailSynchro,
   chargerExecution,
@@ -26,6 +30,7 @@ import {
   chargerEtatSynchro,
   chargerRegistre,
   chargerEtiquettesSite,
+  chargerEvenementsAffluence,
   enregistrerEtiquettesSite,
   enregistrerCollection,
   enregistrerBailSynchro,
@@ -106,6 +111,7 @@ async function construireErreur(c: ContexteErreur, maintenant: number): Promise<
 let restantesMem: Action[] = [];
 let suiteMem: SuiteExecution | null = null;
 let idLotMem = '';
+const collecteurDurees = creerCollecteur(ajouterDureesMesurees);
 /** « Arrêter tout » demandé pendant l'exécution : les restantes sont abandonnées à la fin. */
 let abandon = false;
 
@@ -120,6 +126,8 @@ export function contexteExecution(): ContexteExecution {
   const pont: Pont = { idLot: '', bilan: bilanVide(), deconnecte: false };
   const file = creerFile({
     horloge: horlogeReelle,
+    // Durée réelle par action réussie : estimation de temps des aperçus et du bandeau (aucune requête).
+    mesurer: (ms) => collecteurDurees.noter('ecriture', ms),
     // Délai variable entre les requêtes (décision d’Alexis du 2026-11-11), en plus de la seconde minimale.
     delaiSupplementaire: supplementAleatoire,
     // Poses et retraits d’étiquettes en parallèle, par défaut (Alexis, 2026-11-12).
@@ -133,7 +141,7 @@ export function contexteExecution(): ContexteExecution {
     },
     reverifier: async (action) => {
       const [collection, registre, preferences, etatSynchro] = await Promise.all([chargerCollection(), chargerRegistre(), chargerPreferences(), chargerEtatSynchro().catch(() => null)]);
-      const sansPrix = idsSansPrixConfirme(collection.cartes, etatSynchro?.prix ?? {}, Date.now(), FRAICHEUR_SANS_PRIX_MS);
+      const sansPrix = idsSansPrixConfirme(collection.cartes, etatSynchro?.prix ?? {}, Date.now(), FRAICHEUR_SANS_PRIX_MS, plafondDefausse(preferences));
       return reverifierAction(action, collection, registre, configDuLot(preferences, null, null, sansPrix));
     },
     appliquer: async (action, resultat) => {
@@ -256,7 +264,7 @@ async function lancerAvec(preparer: () => Promise<Lancement>): Promise<void> {
  * 30 minutes (message « Reprise possible à HH:MM »). Résout à la fin de l'exécution (terminée, arrêtée ou en erreur).
  */
 export async function lancerLot(actions: readonly Action[], idLot: string): Promise<void> {
-  return lancerAvec(async () => ({ actions: await limiterAuxPlacesLibres(await alignerSurLesEtiquettesDuSite(actions), idLot), idLot }));
+  return lancerAvec(async () => ({ actions: await avecDureeEnchere(await limiterAuxPlacesLibres(await alignerSurLesEtiquettesDuSite(actions), idLot)), idLot }));
 }
 
 /** Une entrée « Passée » par enchère écartée (20 au plus), pour que le joueur voie pourquoi elle n'est pas partie. */
@@ -308,6 +316,16 @@ async function alignerSurLesEtiquettesDuSite(actions: readonly Action[]): Promis
   const reconciliation = reconcilierAvecSite(registre, lue);
   if (reconciliation.registre !== registre) await enregistrerRegistre(reconciliation.registre);
   return ajusterLotAuSite(actions, reconciliation.registre, reconciliation.perdus, collection, configDuLot(preferences), typesDisponibles());
+}
+
+/**
+ * Durée de chaque enchère du lot selon l’affluence au moment du lancement (Alexis, 2026-11-24) : 1 h en heure forte, 3 h en
+ * zone creuse (`CONFIG_AFFLUENCE`). Calcul local, sans requête ; le site accepte ces durées (10, 30, 60, 180, 360, 720 min).
+ */
+async function avecDureeEnchere(actions: readonly Action[]): Promise<readonly Action[]> {
+  if (!actions.some((a) => a.type === 'enchere')) return actions;
+  const duree = dureeEnchereMinutes(Date.now(), await chargerEvenementsAffluence().catch(() => []));
+  return actions.map((a) => (a.type === 'enchere' ? { ...a, dureeMinutes: duree } : a));
 }
 
 /**

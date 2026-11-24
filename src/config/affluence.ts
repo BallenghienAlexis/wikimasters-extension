@@ -4,12 +4,14 @@
 export interface ConfigAffluence {
   /** Valeur marchande à partir de laquelle une carte est « chère ». */
   seuilCarteChere: number;
-  /** Délai conseillé (heures) pour une carte chère en heure forte. */
+  /** Durée d’enchère (heures) lancée en heure forte (Alexis, 2026-11-24). Le site accepte 10 min, 30 min, 1, 3, 6 ou 12 h : toute autre valeur retombe sur 1 h. */
   delaiHeureForte: number;
-  /** Délai conseillé (heures) pour une carte moins chère sur temps libre. */
+  /** Durée d’enchère (heures) lancée en temps libre, c’est-à-dire en zone creuse (Alexis, 2026-11-24). Mêmes valeurs acceptées. */
   delaiTempsLibre: number;
   /** Mises en vente notées nécessaires avant de remplacer les créneaux par défaut. */
   minObservations: number;
+  /** Enchères terminées (vendues ou non) nécessaires pour que les heures fortes viennent des ventes réelles (2026-11-24). */
+  minVentesConclues: number;
   /** Créneaux par défaut, en attendant les données : [heure de début incluse, heure de fin exclue]. */
   creneauxSemaine: [number, number][];
   creneauxWeekend: [number, number][];
@@ -24,6 +26,7 @@ export const CONFIG_AFFLUENCE: ConfigAffluence = {
   delaiHeureForte: 1,
   delaiTempsLibre: 3,
   minObservations: 20,
+  minVentesConclues: 20,
   creneauxSemaine: [[12, 14], [19, 23]],
   creneauxWeekend: [[10, 12], [15, 23]],
   // Relevée par Alexis le 2026-11-11 : répond `{ auctions: [...] }`, chaque annonce porte `created_at` (ISO, mise en vente) et `end_at`.

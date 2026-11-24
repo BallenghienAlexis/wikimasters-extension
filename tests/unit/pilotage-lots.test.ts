@@ -113,7 +113,7 @@ vi.mock('../../src/lib/registre', async (importOriginal) => ({
 }));
 
 const defausse = (n: number): Action => ({ type: 'defausse', idCarte: `Rare|Carte ${n}`, idExemplaire: `ex-${n}` });
-const enchere = (n: number): Action => ({ type: 'enchere', idCarte: `Rare|Carte ${n}`, idExemplaire: `ex-${n}`, prix: 10 });
+const enchere = (n: number): Action => ({ type: 'enchere', idCarte: `Rare|Carte ${n}`, idExemplaire: `ex-${n}`, prix: 10, dureeMinutes: 180 });
 const creation = (carte: string, nom: string): Action => ({ type: 'creation-etiquette', idCarte: `Rare|Carte ${carte}`, nomEtiquette: nom });
 const pose = (carte: string, ex: string, nom: string): Action => ({
   type: 'pose-etiquette',

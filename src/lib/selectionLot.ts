@@ -5,10 +5,10 @@
  * Logique pure, sans `chrome.*`. Rien n’est stocké : la sélection vit le temps de l’aperçu.
  */
 import { CONFIG_AFFLUENCE } from '../config/affluence'
-import { estHeureForte, type EvenementVente } from './affluence'
+import { dureeEnchereMinutes, estHeureForte, libelleDuree, type EvenementVente } from './affluence'
 import { estFavoriVerrouille, normaliser, type Carte } from './collection'
 import { estACLasser, type SelectionLot } from './lot'
-import { themesDeCarte } from './themes'
+import { LIBELLES_THEMES, themesDeCarte, themesPrincipaux } from './themes'
 import { amisConcernes, plafondDefausse, type Preferences } from './tri'
 
 /** Choix possibles pour une carte. */
@@ -31,34 +31,33 @@ export const raisonNonProposable = (c: Carte): string | null => {
  */
 export function idsSansPrixConfirme(
   cartes: readonly Carte[],
-  prix: Readonly<Record<string, { valeur: number | null; releveLe: number; sansVente?: boolean }>>,
+  prix: Readonly<Record<string, { valeur: number | null; releveLe: number; sansVente?: boolean; ancienMax?: number }>>,
   maintenant: number,
   ancienneteMaxMs: number,
+  plafond?: number,
 ): string[] {
   return cartes
     .filter((c) => {
       const r = prix[c.id]
-      return c.valeurMarchande === null && r !== undefined && r.sansVente === true && r.valeur === null && maintenant - r.releveLe <= ancienneteMaxMs
+      return c.valeurMarchande === null && r !== undefined && r.sansVente === true && r.valeur === null && maintenant - r.releveLe <= ancienneteMaxMs && (r.ancienMax === undefined || plafond === undefined || r.ancienMax <= plafond)
     })
     .map((c) => c.id)
 }
 
 /** Fraîcheur du relevé « aucun prix » pour proposer une défausse : une semaine (la défausse est définitive). */
 export const FRAICHEUR_SANS_PRIX_MS = 7 * 86_400_000
-/** Au-delà de ce nombre de cartes sans prix à défausser, la pré-coche de masse ne les coche pas : le joueur les choisit à la main. */
-export const MAX_PRECOCHE_SANS_PRIX = 10
-
-/** Cartes sans prix que la pré-coche défausserait (hors règles de garde), et si leur nombre dépasse le plafond de pré-coche. */
-export function resumerSansPrix(cartes: readonly Carte[], preferences: Preferences, sansPrix: ReadonlySet<string>): { nombre: number; trop: boolean } {
+/** Cartes sans prix que la pré-coche défausserait (hors règles de garde). Plus de plafond de nombre (Alexis, 2026-11-24). */
+export function resumerSansPrix(cartes: readonly Carte[], preferences: Preferences, sansPrix: ReadonlySet<string>): { nombre: number } {
   let nombre = 0
   for (const c of cartes) {
-    if (!estProposable(c) || c.valeurMarchande !== null || !sansPrix.has(c.id)) continue
+    // Conditions peu coûteuses d’abord : `estProposable` lit les thèmes de la carte.
+    if (c.valeurMarchande !== null || !sansPrix.has(c.id) || !estProposable(c)) continue
     const themes = themesDeCarte(c)
     if (preferences.mesThemes.some((t) => themes.includes(t))) continue
     if (amisConcernes(themes, preferences.amis).length > 0 || c.ami !== null) continue
     nombre++
   }
-  return { nombre, trop: nombre > MAX_PRECOCHE_SANS_PRIX }
+  return { nombre }
 }
 
 const sansDieseEtAccents = (nom: string): string => normaliser(nom).replace(/^#\s*/, '').trim()
@@ -73,6 +72,8 @@ export interface ChoixParCarte {
   choix: ChoixCarte
   /** Nombre d’exemplaires à défausser (1 au moins, `quantite` au plus) ; sans objet pour les autres choix. */
   exemplaires: number
+  /** `regle` : coche posée par la pré-coche, recalculée à chaque fois ; absent : choix du joueur (ou étiquette du site), jamais touché. */
+  origine?: 'regle'
 }
 
 export type Choix = ReadonlyMap<string, ChoixParCarte>
@@ -101,42 +102,133 @@ export function versSelection(cartes: readonly Carte[], choix: Choix): Selection
   return { vendre, defausser }
 }
 
+/** Raison du verdict d’une carte (stable : sert aux filtres et aux comptes de l’interface). */
+export type CodeVerdict =
+  | 'favori'
+  | 'non-reliee'
+  | 'a-classer'
+  | 'theme-garde'
+  | 'ami'
+  | 'valeur-inconnue'
+  | 'defausse-plafond'
+  | 'defausse-sans-prix'
+  | 'enchere'
+
+/** Verdict des règles pour une carte : ce que la pré-coche proposerait, avec le motif exact (Alexis, 2026-11-24 : « pourquoi gardée ? »). */
+export interface Verdict {
+  /** `garder` : aucune proposition ; sinon l’action que la pré-coche cocherait. */
+  action: 'garder' | 'defausser' | 'vendre'
+  code: CodeVerdict
+  /** Motif lisible, sans majuscule initiale ni point final. */
+  motif: string
+  /** Motif en quelques mots pour les listes (« Thème gardé : Rock », « Valeur 2 ≤ 20 »). */
+  court: string
+  /** Libellé complet pour la ligne de la carte (« Gardée : … », « Défausse proposée : … »). */
+  libelle: string
+  /** Exemplaires à défausser (défausse seulement). */
+  exemplaires: number
+}
+
+const libelleTheme = (id: string): string => (LIBELLES_THEMES[id] ?? id).replace(/^#/, '')
+
+const exemplairesADefausser = (c: Carte): number => Math.max(1, Math.min(c.quantite - 1, (c.idsSite?.length ?? 1) - 1))
+
 /**
- * Pré-coche d’après les règles de l’ancien assistant (Alexis, 2026-11-15), sans rien imposer : le joueur garde la main
- * sur chaque case avant « Lancer ». Un favori n’est jamais coché. Un thème gardé (« Mes thèmes ») : rien. Un ami concerné :
- * rien non plus, l’échange passe uniquement par les étiquettes « #À échanger <nom> » que le lot pose (jamais « Statut · Échanger »).
- * Valeur inconnue : rien. Valeur au plafond de défausse ou en dessous : défausse. Sinon : mise aux enchères.
- * Une coche déjà faite (`actuel`) n’est jamais remplacée.
- * Aucun prix trouvé (`sansPrix`, Alexis 2026-11-23) : une carte qui ne tombe sous aucune règle de garde ci-dessus est pré-cochée en
- * défausse (la valeur inconnue ne la protège plus) ; les cartes « à classer » restent exclues (`estProposable`).
+ * Verdict d’une carte avec les règles courantes (aucun cache : recalculé à chaque appel). Source unique de la pré-coche,
+ * de la relance automatique et de l’affichage du motif. Ordre des règles : favori, non reliée, « à classer », thème gardé,
+ * ami, puis la valeur (inconnue, au plafond ou en dessous : défausse ; au-dessus : enchère).
  */
-export function precocher(cartes: readonly Carte[], preferences: Preferences, actuel: Choix, sansPrix: ReadonlySet<string> = new Set()): Choix {
-  const m = new Map(actuel)
-  const plafond = plafondDefausse(preferences)
-  const sansPrixAutorise = resumerSansPrix(cartes, preferences, sansPrix).nombre <= MAX_PRECOCHE_SANS_PRIX
-  for (const c of cartes) {
-    if (!estProposable(c) || m.has(c.id)) continue
-    const themes = themesDeCarte(c)
-    if (preferences.mesThemes.some((t) => themes.includes(t))) continue
-    if (amisConcernes(themes, preferences.amis).length > 0 || c.ami !== null) continue
-    // Défausse définitive : on garde un exemplaire quand la carte est en plusieurs (les doublons seulement).
-    if (c.valeurMarchande === null && sansPrix.has(c.id) && sansPrixAutorise) {
-      m.set(c.id, { choix: 'defausser', exemplaires: Math.max(1, Math.min(c.quantite - 1, (c.idsSite?.length ?? 1) - 1)) })
+export function verdictCarte(c: Carte, preferences: Preferences, sansPrix: ReadonlySet<string>): Verdict {
+  const v = (action: Verdict['action'], code: CodeVerdict, motif: string, court: string, exemplaires = 1): Verdict => ({
+    action,
+    code,
+    motif,
+    court,
+    exemplaires,
+    libelle: `${action === 'garder' ? 'Gardée' : action === 'defausser' ? 'Défausse proposée' : 'Enchère proposée'} : ${motif}`,
+  })
+  const raison = raisonNonProposable(c)
+  if (raison !== null) {
+    const code: CodeVerdict = estFavoriVerrouille(c) ? 'favori' : c.idsSite === null || c.idsSite.length === 0 || c.quantite <= 0 ? 'non-reliee' : 'a-classer'
+    return v('garder', code, raison, code === 'favori' ? 'Favori' : code === 'non-reliee' ? 'Non reliée au site' : 'Sans thème fiable')
+  }
+  const themes = themesDeCarte(c)
+  const gardes = preferences.mesThemes.filter((t) => themes.includes(t))
+  if (gardes.length > 0) {
+    const directs = new Set(themesPrincipaux(c))
+    const noms = gardes.map((t) => `« ${libelleTheme(t)} »${directs.has(t) ? '' : ' (famille d’un thème de la carte)'}`)
+    return v('garder', 'theme-garde', `thème que vous gardez ${noms.join(', ')}`, `Thème gardé : ${gardes.map(libelleTheme).join(', ')}`)
+  }
+  const amis = amisConcernes(themes, preferences.amis)
+  if (amis.length > 0) return v('garder', 'ami', `thème suivi par ${amis.map((a) => a.nom).join(', ')} (échange par « #À échanger »)`, `Ami : ${amis.map((a) => a.nom).join(', ')}`)
+  if (c.ami !== null) return v('garder', 'ami', `carte réservée à ${c.ami}`, `Ami : ${c.ami}`)
+  if (c.valeurMarchande === null) {
+    if (sansPrix.has(c.id)) {
+      return v('defausser', 'defausse-sans-prix', 'aucun prix trouvé sur le site et aucune règle de garde', 'Aucun prix trouvé', exemplairesADefausser(c))
+    }
+    return v('garder', 'valeur-inconnue', 'valeur marchande inconnue (prix pas encore relevé de façon sûre)', 'Valeur inconnue')
+  }
+  if (c.valeurMarchande <= plafondDefausse(preferences)) {
+    return v('defausser', 'defausse-plafond', `valeur ${c.valeurMarchande}, au plafond de défausse (${plafondDefausse(preferences)}) ou en dessous`, `Valeur ${c.valeurMarchande} ≤ ${plafondDefausse(preferences)}`, exemplairesADefausser(c))
+  }
+  return v('vendre', 'enchere', `valeur ${c.valeurMarchande}, au-dessus du plafond de défausse (${plafondDefausse(preferences)})`, `Valeur ${c.valeurMarchande} > ${plafondDefausse(preferences)}`)
+}
+
+/** Verdict de toutes les cartes, recalculé avec les règles courantes (appelé à chaque ouverture des lots et à chaque affichage). */
+export function verdictsDesCartes(
+  cartes: readonly Carte[],
+  preferences: Preferences,
+  sansPrix: ReadonlySet<string> = new Set(),
+): Map<string, Verdict> {
+  const m = new Map<string, Verdict>()
+  for (const c of cartes) m.set(c.id, verdictCarte(c, preferences, sansPrix))
+  return m
+}
+
+/**
+ * Retire des choix les coches de règle (`origine: 'regle'`) que les règles courantes ne proposent plus (nouveau favori, thème
+ * gardé, prix relevé…) : plus de coche périmée au lancement. Les choix du joueur (sans origine) sont gardés tels quels.
+ */
+export function retirerCochesPerimees(choix: Choix, verdicts: ReadonlyMap<string, Verdict>): Choix {
+  let change = false
+  const m = new Map<string, ChoixParCarte>()
+  for (const [id, x] of choix) {
+    const v = verdicts.get(id)
+    const attendu: ChoixCarte = v?.action === 'defausser' ? 'defausser' : v?.action === 'vendre' ? 'vendre' : 'aucun'
+    if (x.origine === 'regle' && x.choix !== attendu) {
+      change = true
       continue
     }
-    if (c.valeurMarchande === null) continue
-    // Défausse définitive : on garde un exemplaire quand la carte est en plusieurs (les doublons seulement).
-    if (c.valeurMarchande <= plafond) m.set(c.id, { choix: 'defausser', exemplaires: Math.max(1, Math.min(c.quantite - 1, (c.idsSite?.length ?? 1) - 1)) })
-    else m.set(c.id, { choix: 'vendre', exemplaires: 1 })
+    m.set(id, x)
+  }
+  return change ? m : choix
+}
+
+/**
+ * Pré-coche d’après les règles de l’ancien assistant (Alexis, 2026-11-15), sans rien imposer : le joueur garde la main
+ * sur chaque case avant « Lancer ». Voir `verdictCarte` pour les règles et leurs motifs. Les coches posées par une pré-coche
+ * précédente (`origine: 'regle'`) sont **recalculées** à chaque fois (Alexis, 2026-11-24 : toutes les cartes revues à chaque
+ * fois) ; un choix du joueur n’est jamais remplacé. Aucun prix trouvé (`sansPrix`, Alexis 2026-11-23) : voir `verdictCarte`.
+ */
+export function precocher(cartes: readonly Carte[], preferences: Preferences, actuel: Choix, sansPrix: ReadonlySet<string> = new Set()): Choix {
+  const m = new Map<string, ChoixParCarte>()
+  for (const [id, x] of actuel) if (x.origine !== 'regle') m.set(id, x)
+  for (const [id, v] of verdictsDesCartes(cartes, preferences, sansPrix)) {
+    if (v.action === 'garder' || m.has(id)) continue
+    m.set(id, v.action === 'defausser' ? { choix: 'defausser', exemplaires: v.exemplaires, origine: 'regle' } : { choix: 'vendre', exemplaires: 1, origine: 'regle' })
   }
   return m
 }
 
-/** Conseil de moment de lancement pour une mise aux enchères (durée toujours 1 h, Alexis 2026-11-15) : chères en heure forte, moins chères en temps libre. */
+/**
+ * Conseil de moment de lancement pour une mise aux enchères (Alexis, 2026-11-24) : la durée suit l’affluence, 1 h en heure
+ * forte, plus longue en zone creuse (`CONFIG_AFFLUENCE`) ; les cartes chères restent à réserver aux heures fortes.
+ */
 export function conseilLancement(valeur: number | null, at: number, evenements: readonly EvenementVente[]): string {
   if (valeur === null) return 'valeur inconnue'
   const forte = estHeureForte(at, evenements)
+  const duree = libelleDuree(dureeEnchereMinutes(at, evenements))
   const chere = valeur >= CONFIG_AFFLUENCE.seuilCarteChere
-  if (chere) return forte ? 'heure forte : bon moment' : 'carte chère : attendre une heure forte'
-  return forte ? 'heure forte : mieux vaut réserver ce créneau aux cartes chères' : 'temps libre : bon moment'
+  if (chere) return forte ? `heure forte : bon moment, durée ${duree}` : `carte chère : attendre une heure forte (durée ${duree} maintenant)`
+  return forte ? `heure forte : mieux vaut réserver ce créneau aux cartes chères (durée ${duree})` : `zone creuse : bon moment, durée ${duree}`
 }

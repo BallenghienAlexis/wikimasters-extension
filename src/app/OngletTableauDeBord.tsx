@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { collectionVide, type Collection } from '../lib/collection';
 import { chargerCollection, chargerIgnorees, chargerPreferences, ecouterCollection, ecouterIgnorees } from '../lib/stockage';
 import { calculerTableauDeBord, lignesSante as lignesSanteDe, type ContexteTableauDeBord, type LigneSante } from '../lib/tableauDeBord';
+import { peremptionPrixMs } from '../lib/ordonnanceur';
 import { preferencesParDefaut, type Preferences } from '../lib/tri';
 import CarteKpi from './CarteKpi';
 import SectionRepliable from './SectionRepliable';
@@ -54,6 +55,7 @@ const OngletTableauDeBord: React.FC = () => {
         derniereTerminee: synchro.derniere,
         etiquettesLues: synchro.statut?.etiquettes ?? 0,
         releves: Object.values(synchro.etat?.prix ?? {}).map((r) => r.releveLe),
+        perimes: Object.values(synchro.etat?.prix ?? {}).filter((r) => synchro.maintenant - r.releveLe > peremptionPrixMs(r)).length,
         ignorees: nbIgnorees,
         maintenant: synchro.maintenant,
       }),

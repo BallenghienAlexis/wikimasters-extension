@@ -20,6 +20,8 @@ interface Props {
   onEdition: (id: string, edition: EditionCarte) => void;
   /** Change quand les thèmes lus (Wikipédia, IA) changent : seule raison de refaire une ligne dont la carte est la même. */
   versionThemes?: unknown;
+  /** Verdict des règles courantes (gardée ou proposée, avec le motif), recalculé à chaque rendu de la liste. */
+  verdict?: string;
   /** Ref de la ligne, pour le FLIP du tri (T-315). */
   refLigne?: (el: HTMLElement | null) => void;
 }
@@ -32,7 +34,7 @@ const Etiquette: React.FC<{ texte: string }> = ({ texte }) => (
 const CELLULE = 'block px-3 py-1 min-[600px]:table-cell min-[600px]:align-top min-[600px]:py-3';
 
 /** Ligne éditable du tableau de la Collection (T-308) : `tr` empilée sous 600 px. */
-const CarteLigne: React.FC<Props> = ({ carte, onEdition: onEditionCarte, refLigne }) => {
+const CarteLigne: React.FC<Props> = ({ carte, onEdition: onEditionCarte, refLigne, verdict }) => {
   const onEdition = (edition: EditionCarte): void => onEditionCarte(carte.id, edition);
   // Retourne undefined et rétablit le champ si le nombre saisi est invalide.
   const lireNombre = (champ: HTMLInputElement, actuel: number | null): number | null | undefined => {
@@ -84,6 +86,12 @@ const CarteLigne: React.FC<Props> = ({ carte, onEdition: onEditionCarte, refLign
           {favori ? ' · Favori, verrouillé sur le site' : ''}
           {carte.themesChoisis ? ' · Thèmes choisis par vous' : ''}
         </p>
+        {verdict && (
+          <p className="text-sm break-words" data-testid="verdict-ligne">
+            {verdict}
+            {verdict.startsWith('Défausse proposée') || verdict.startsWith('Enchère proposée') ? ' · à cocher dans l’onglet Lots (« Pré-cocher »), puis « Lancer »' : ''}
+          </p>
+        )}
         <button type="button" className={`${CLASSE_PETIT_BOUTON} mt-1`} onClick={() => setThemesOuverts(true)} aria-label={`Modifier les thèmes de ${carte.titre}`}>
           Modifier les thèmes
         </button>

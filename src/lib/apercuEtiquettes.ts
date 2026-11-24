@@ -8,11 +8,10 @@
 import type { Registre, TypeAction } from './actions'
 import { TYPES_ACTION } from './actions'
 import type { Collection } from './collection'
+import { secondesPar } from './durees'
 import { construireLot, etiquettesDeCarte, type Config, type EtiquetteNonPosee } from './lot'
 import { IDS_THEMES, LIBELLES_THEMES, parentsDe } from './themes'
 
-/** Secondes par écriture d’étiquette en moyenne : 0,2 s minimale plus un supplément de 0 à 0,1 s. */
-const SECONDES_PAR_REQUETE = 0.25
 
 /** Nombre maximal de lignes rendues par l’aperçu (DT-05). */
 export const LIGNES_MAX = 100
@@ -56,7 +55,7 @@ export interface ApercuEtiquettes {
   nonPosees: EtiquetteNonPosee[]
 }
 
-export const dureeMinutesApercu = (nbRequetes: number): number => Math.ceil((nbRequetes * SECONDES_PAR_REQUETE) / 60)
+export const dureeMinutesApercu = (nbRequetes: number): number => Math.ceil((nbRequetes * secondesPar('ecriture')) / 60)
 
 /** « 45 min » jusqu’à une heure, « 1 h 5 min » au-delà. */
 export function texteDureeLongue(minutes: number): string {

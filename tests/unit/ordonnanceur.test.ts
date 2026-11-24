@@ -8,6 +8,7 @@ import {
   PAUSE_PRIX_MS,
   SEUIL_AVERTISSEMENT_PRIX,
   ancienneteMaxPrixMs,
+  peremptionPrixMs,
   etatInitial,
   synchroniser,
   type DependancesSynchro,
@@ -474,8 +475,85 @@ describe('ordonnanceur — critère 3 : prix', () => {
     expect(demandes.length).toBeGreaterThan(0);
   });
 
-  it('la périodicité est de 30 jours', () => {
-    expect(ancienneteMaxPrixMs).toBe(30 * JOUR);
+  it('la périodicité est de 7 jours', () => {
+    expect(ancienneteMaxPrixMs).toBe(7 * JOUR);
+  });
+
+  it('rafraîchit les prix de plus de 7 jours, les plus anciens d’abord, et laisse les récents', async () => {
+    const cartes = [1, 2, 3, 4].map((n) => carteLocale(n, { valeurMarchande: 50 + n }));
+    const collection = collectionDe(cartes);
+    const ids = Object.fromEntries(cartes.map((c, i) => [c.id, `card-${i + 1}`]));
+    const etat = etatLu(collection, ids);
+    etat.prix[idCarte(1)] = { valeur: 51, releveLe: T0 - 8 * JOUR };
+    etat.prix[idCarte(2)] = { valeur: 52, releveLe: T0 - 20 * JOUR };
+    etat.prix[idCarte(3)] = { valeur: 53, releveLe: T0 - 6 * JOUR }; // 6 jours : encore frais
+    etat.prix[idCarte(4)] = { valeur: 54, releveLe: T0 - 1 * JOUR };
+    const b = banc(siteFictif(4), collection, etat);
+    const r = await synchroniser(b.deps);
+    expect(cheminsPrix(b).map((c) => /card-(\d)/.exec(c)![1])).toEqual(['2', '1']);
+    expect(r.etat.prix[idCarte(2)]?.releveLe).toBeGreaterThanOrEqual(T0);
+    expect(r.etat.prix[idCarte(3)]?.releveLe).toBe(T0 - 6 * JOUR);
+  });
+
+  it('une carte sans route de prix (404) reste mémorisée 30 jours, pas 7', async () => {
+    const cartes = [carteLocale(1, {})];
+    const collection = collectionDe(cartes);
+    const etat = etatLu(collection, { [idCarte(1)]: 'card-1' });
+    etat.prix[idCarte(1)] = { valeur: null, releveLe: T0 - 10 * JOUR, v: 2 };
+    const b = banc(siteFictif(1), collection, etat);
+    await synchroniser(b.deps);
+    expect(cheminsPrix(b)).toEqual([]);
+  });
+
+  it.each([
+    ['avec une valeur précédente', { valeur: 52, releveLe: T0 - 20 * JOUR, v: 2 as const }],
+    ['avec une absence de vente constatée', { valeur: null, releveLe: T0 - 20 * JOUR, v: 2 as const, sansVente: true }],
+  ])('prix : une carte passée %s est redemandée dans 1 jour', async (_nom, precedent) => {
+    const cartes = [carteLocale(1, precedent.valeur === null ? {} : { valeurMarchande: precedent.valeur })];
+    const collection = collectionDe(cartes);
+    const etat = etatLu(collection, { [idCarte(1)]: 'card-1' });
+    etat.prix[idCarte(1)] = precedent;
+    let demande = false;
+    const b = banc((chemin) => (chemin.includes('card-1/price-history') ? { statut: 403, json: null } : siteFictif(1)(chemin)), collection, etat);
+    const r = await synchroniser({
+      ...b.deps,
+      annoncerAttente: (a) => {
+        if (a !== null && a.essai > SEUIL_AVERTISSEMENT_PRIX) demande = true;
+      },
+      passerCarteDemandee: () => {
+        const d = demande;
+        demande = false;
+        return d;
+      },
+    });
+    const rec = r.etat.prix[idCarte(1)]!;
+    const echeance = rec.releveLe + peremptionPrixMs(rec);
+    expect(Math.abs(echeance - (T0 + JOUR))).toBeLessThan(JOUR / 2 + 6 * 3_600_000);
+    expect(echeance - r.etat.derniereComplete!).toBeGreaterThan(0);
+  });
+
+  it('une carte en 404 gardant une valeur précédente reste mémorisée 30 jours', async () => {
+    const cartes = [carteLocale(1, { valeurMarchande: 50 })];
+    const collection = collectionDe(cartes);
+    const etat = etatLu(collection, { [idCarte(1)]: 'card-1' });
+    etat.prix[idCarte(1)] = { valeur: 50, releveLe: T0 - 20 * JOUR, v: 2 };
+    const b = banc((chemin) => (chemin.includes('/price-history') ? { statut: 404, json: null } : siteFictif(1)(chemin)), collection, etat);
+    const r = await synchroniser(b.deps);
+    expect(r.etat.prix[idCarte(1)]?.sansRoute).toBe(true);
+    expect(peremptionPrixMs(r.etat.prix[idCarte(1)])).toBe(30 * JOUR);
+    const b2 = banc(siteFictif(1), r.collection, { ...r.etat, derniereComplete: T0 - 1 });
+    await synchroniser(b2.deps);
+    expect(cheminsPrix(b2)).toEqual([]);
+  });
+
+  it('une absence de vente constatée est re-relevée après 7 jours', async () => {
+    const cartes = [carteLocale(1, {})];
+    const collection = collectionDe(cartes);
+    const etat = etatLu(collection, { [idCarte(1)]: 'card-1' });
+    etat.prix[idCarte(1)] = { valeur: null, releveLe: T0 - 8 * JOUR, v: 2, sansVente: true };
+    const b = banc(siteFictif(1), collection, etat);
+    await synchroniser(b.deps);
+    expect(cheminsPrix(b).length).toBe(1);
   });
 
   it('ne relève pas et ne réécrit pas une valeur saisie à la main', async () => {
@@ -822,6 +900,23 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(r404.etat.prix[idCarte(1)]?.sansVente).toBeUndefined();
     const avecValeur = await synchroniser(banc(siteFictif(2)).deps);
     expect(avecValeur.etat.prix[idCarte(1)]?.sansVente).toBeUndefined();
+  })
+
+  it('prix : une rareté avec des ventes seulement anciennes pose sansVente et le plus haut prix ancien (2026-11-24)', async () => {
+    const site = siteFictif(2);
+    const b = banc((chemin) => (/price-history/.test(chemin) ? { statut: 200, json: { by_rarity: { R: { weekly: [{ start: '1970-01-05', avg: 40, min: 30, max: 50, count: 2 }, { start: '1970-01-12', avg: 7, min: 7, max: 7, count: 1 }], monthly: [] } } } } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.etat.prix[idCarte(1)]).toMatchObject({ valeur: null, sansVente: true, ancienMax: 40, v: 2 });
+  })
+
+  it('prix : un relevé nul d’avant la règle (sans v) est redemandé une fois, pas un 404 marqué', async () => {
+    const b = banc(siteFictif(2, { prix: () => null }));
+    const premiere = await synchroniser(b.deps);
+    const vieux = { ...premiere.etat, prix: { [idCarte(1)]: { valeur: null, releveLe: b.horloge.t }, [idCarte(2)]: { valeur: null, releveLe: b.horloge.t, v: 2 as const } } };
+    const b2 = banc(siteFictif(2, { prix: () => null }), b.enregistrements[b.enregistrements.length - 1]!.collection, vieux);
+    await synchroniser(b2.deps);
+    const redemandes = b2.departs.filter((d) => d.chemin.includes('/price-history'));
+    expect(redemandes).toHaveLength(1);
   })
 
   it('un 429 sur une page ou les stats arrête tout de suite, sans pause ni reprise', async () => {

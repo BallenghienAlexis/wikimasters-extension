@@ -98,6 +98,8 @@ export interface DependancesFile {
    * [0, SUPPLEMENT_MAX_MS] et arrondi ; absent ou invalide : 0.
    */
   delaiSupplementaire?: () => number
+  /** Durée réelle entre deux actions réussies (estimations de temps, parallélisme compris) ; sans effet sur la cadence. */
+  mesurer?: (ms: number) => void
 }
 
 export type RaisonArret =
@@ -226,6 +228,7 @@ export function creerFile(deps: DependancesFile): File {
   let tous: Entree[] = []
   let etat: EtatFile | null = null
   let reussies = 0
+  let derniereReussie: number | null = null
   let arretDemande = false
   let reveil: () => void = () => {}
   let signalArret: Promise<void> = Promise.resolve()
@@ -435,6 +438,11 @@ export function creerFile(deps: DependancesFile): File {
       echecs.refus = 0
       entree.reussie = true
       reussies++
+      // Écart avec la réussite précédente (ou durée de l’action si le lot vient de commencer ou a attendu longtemps).
+      const finAction = horloge.now()
+      const repere = derniereReussie !== null && finAction - derniereReussie < 30_000 ? derniereReussie : debut
+      deps.mesurer?.(finAction - repere)
+      derniereReussie = finAction
     }
     if (exception) arretApres = new Arret('transport', entree, null)
     else if (resultat.classe === 'echec') {

@@ -12,7 +12,7 @@ import { chargerExecution, chargerIgnorees, ecouterExecution, enregistrerJournal
 import { PLAFOND_VALEUR_DEFAUSSE } from '../config/prix';
 import { plafondDefausse, preferencesParDefaut, type Preferences } from '../lib/tri';
 import SelectionVenteDefausse from './SelectionVenteDefausse';
-import { FRAICHEUR_SANS_PRIX_MS, choixInitial, idsSansPrixConfirme, precocher, resumerSansPrix, versSelection, type Choix, type ChoixCarte } from '../lib/selectionLot';
+import { FRAICHEUR_SANS_PRIX_MS, choixInitial, idsSansPrixConfirme, precocher, resumerSansPrix, retirerCochesPerimees, verdictsDesCartes, versSelection, type Choix, type ChoixCarte } from '../lib/selectionLot';
 import SelectionFavoris from './SelectionFavoris';
 import { basculesApresTout, favorisDecoches as calculerDecoches, propositionsFavori, sansFavorisDecoches } from '../lib/selectionFavoris';
 import type { EditionCarte } from '../lib/collection';
@@ -194,7 +194,42 @@ const PanneauApercuLot: React.FC<Props> = ({
   }, []);
   // Choix manuels (vente, défausse) : préremplis par les étiquettes du site tant que le joueur n’a rien touché.
   // Fixé au montage : une synchro pendant l’aperçu n’ajoute aucune enchère sans geste du joueur.
-  const [choix, setChoixManuels] = useState<Choix>(() => choixInitial(collection.cartes));
+  const [choixBrut, setChoixManuels] = useState<Choix>(() => choixInitial(collection.cartes));
+  // Verdicts recalculés avec les règles courantes à chaque rendu (aucun cache) : une coche de règle que les règles ne proposent
+  // plus (nouveau favori, thème gardé, prix relevé…) disparaît avant l’aperçu et le lancement (Alexis, 2026-11-24).
+  const [maintenantPrix] = useState(() => Date.now());
+  const prefsVerdicts = preferences;
+  const sansPrixVerdicts = useMemo(
+    () => new Set(idsSansPrixConfirme(collection.cartes, prixLus, maintenantPrix, FRAICHEUR_SANS_PRIX_MS, plafondDefausse(prefsVerdicts))),
+    [collection.cartes, prixLus, maintenantPrix, prefsVerdicts],
+  );
+  // Calcul paresseux (5 000 cartes : coûteux) : seulement s’il y a des coches de règle à contrôler ou si le joueur demande le détail.
+  const [verdictsDemandes, setVerdictsDemandes] = useState(false);
+  const aCochesRegle = useMemo(() => [...choixBrut.values()].some((x) => x.origine === 'regle'), [choixBrut]);
+  const verdicts = useMemo(
+    () => (aCochesRegle || verdictsDemandes ? verdictsDesCartes(collection.cartes, prefsVerdicts, sansPrixVerdicts) : null),
+    [aCochesRegle, verdictsDemandes, collection.cartes, prefsVerdicts, sansPrixVerdicts],
+  );
+  const choix = useMemo(() => (verdicts ? retirerCochesPerimees(choixBrut, verdicts) : choixBrut), [choixBrut, verdicts]);
+  // Pré-coche automatique à l’ouverture (Alexis, 2026-11-24) : une fois les préférences et les prix lus, les propositions des règles
+  // sont cochées (défausse, enchère). Rien ne part avant l’aperçu puis « Lancer » ; un choix du joueur n’est jamais remplacé.
+  const dernierRef = useRef({ cartes: collection.cartes, preferences, sansPrix: sansPrixVerdicts });
+  useEffect(() => {
+    dernierRef.current = { cartes: collection.cartes, preferences, sansPrix: sansPrixVerdicts };
+  });
+  const precocheAuto = useRef(false);
+  useEffect(() => {
+    // Pas de pré-coche une fois l’aperçu ouvert : le calcul ne doit jamais retarder son affichage.
+    if (chargement || etat !== null || precocheAuto.current) return undefined;
+    const t = setTimeout(() => {
+      if (precocheAuto.current) return;
+      precocheAuto.current = true;
+      const d = dernierRef.current;
+      setVerdictsDemandes(true);
+      setChoixManuels((prev) => precocher(d.cartes, d.preferences, prev, d.sansPrix));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [chargement, etat]);
   const choisir = (idCarte: string, c: ChoixCarte, exemplaires: number): void =>
     setChoixManuels(() => {
       const m = new Map(choix);
@@ -296,9 +331,8 @@ const PanneauApercuLot: React.FC<Props> = ({
     nbLotsCoches: lotsAffiches.length > 0 ? cochees.size : undefined,
   });
   const plafond = plafondDefausse(preferences);
-  const [maintenantPrix] = useState(() => Date.now());
-  const sansPrix = idsSansPrixConfirme(collection.cartes, prixLus, maintenantPrix, FRAICHEUR_SANS_PRIX_MS);
-  const sansPrixEns: ReadonlySet<string> = new Set(sansPrix);
+  const sansPrixEns: ReadonlySet<string> = sansPrixVerdicts;
+  const sansPrix = [...sansPrixVerdicts];
   const resumeSansPrix = resumerSansPrix(collection.cartes, preferences, sansPrixEns);
 
   const phase = exec?.etat.etat ?? null;
@@ -439,8 +473,13 @@ const PanneauApercuLot: React.FC<Props> = ({
           plafond={plafond}
           sansPrix={sansPrixEns}
           resumeSansPrix={resumeSansPrix}
+          verdicts={verdicts ?? undefined}
+          onVoirVerdicts={() => setVerdictsDemandes(true)}
           onChoisir={choisir}
-          onPrecocher={() => setChoixManuels(precocher(collection.cartes, preferences, choix, sansPrixEns))}
+          onPrecocher={() => {
+            setVerdictsDemandes(true);
+            setChoixManuels(precocher(collection.cartes, preferences, choix, sansPrixEns));
+          }}
           onVider={() => setChoixManuels(new Map())}
           ventes={ventes}
         />

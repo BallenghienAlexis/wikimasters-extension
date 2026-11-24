@@ -18,14 +18,22 @@ import { CODE_VERIFICATION_HUMAINE } from './actions';
 import { PAS_ATTENTE_MS } from './ventes';
 import { CODES_ARRET, INTERVALLE_MS, type Horloge } from './file';
 import { VERSION_SCHEMA, aEditionLocale, type Carte, type Collection } from './collection';
-import { absenceDeVenteProuvee, analyserPage, analyserPrix, analyserTendance, type TendancePrix, sensDuPrix, type SensPrix, decrireForme, diagnosticStats, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
+import { absenceDeVenteProuvee, absenceDeVenteRecente, analyserPage, analyserPrix, analyserTendance, type TendancePrix, sensDuPrix, type SensPrix, decrireForme, diagnosticStats, analyserStats, analyserVentes, type CarteLue, type StatsLues } from './lectureApi';
 
 /** Aucune reprise automatique avant ce délai après un arrêt (401, 403 ou 429 des pages et stats). Même durée que la pause des lots (`PAUSE_LOTS_MS`). */
 export const PAUSE_APRES_ARRET_MS = PAUSE_LOTS_MS;
 /** Une carte passée par le joueur est redemandée dans 1 jour. */
 export const REPORT_CARTE_PASSEE_MS = 86_400_000;
-/** Une valeur marchande relevée est périmée après 30 jours. */
-export const ancienneteMaxPrixMs = 30 * 86_400_000;
+/** Un prix du marché relevé (valeur ou absence de vente constatée) est périmé après 7 jours et re-relevé (Alexis, 2026-11-24). */
+export const ancienneteMaxPrixMs = 7 * 86_400_000;
+/** Une carte sans route de prix (404) ou sans relevé exploitable n’est pas redemandée avant 30 jours. */
+export const memoireSansRoutePrixMs = 30 * 86_400_000;
+/** Durée de validité d’un relevé : 7 jours s’il porte une valeur ou une absence de vente constatée, 30 jours sinon (404, carte passée). */
+export function peremptionPrixMs(r: Pick<PrixReleve, 'valeur' | 'sansVente' | 'sansRoute'> | undefined): number {
+  if (r === undefined) return ancienneteMaxPrixMs;
+  if (r.sansRoute === true) return memoireSansRoutePrixMs;
+  return r.valeur === null && r.sansVente !== true ? memoireSansRoutePrixMs : ancienneteMaxPrixMs;
+}
 /** Durée d’un bail ; renouvelé avant chaque requête. */
 export const DUREE_BAIL_MS = 2 * 60_000;
 /** Petite pause ajoutée avant chaque demande de prix (en plus de l’intervalle et de la gigue). */
@@ -64,6 +72,12 @@ export interface PrixReleve {
   tendance?: TendancePrix;
   /** Aucune vente prouvée par `price-history` (Alexis, 2026-11-23) : posé seulement sur une absence prouvée, jamais sur 404, carte passée ou erreur. */
   sansVente?: boolean;
+  /** Carte sans route de prix (404) : redemandée après 30 jours même si une valeur précédente est gardée (2026-11-24). */
+  sansRoute?: boolean;
+  /** Avec `sansVente` : plus haut prix moyen d'une semaine plus ancienne que les 4 dernières (2026-11-24) ; absent si aucune vente jamais lue. */
+  ancienMax?: number;
+  /** 2 : relevé fait avec la règle du 2026-11-24 ; une valeur nulle sans cette marque est redemandée une fois. */
+  v?: 2;
 }
 
 /** État conservé entre deux exécutions (à persister par l’appelant ; ne contient aucun secret). */
@@ -128,6 +142,8 @@ export interface DependancesSynchro {
   passerCarteDemandee?: () => boolean;
   /** Millisecondes ajoutées à l’intervalle minimal entre deux requêtes (délai variable). Absent : 0. */
   gigue?: () => number;
+  /** Durée réelle d’une page lue ou d’un prix relevé (estimations de temps) ; sans effet sur le plan. */
+  mesurer?: (categorie: 'lecture' | 'prix', ms: number) => void;
 }
 
 /** Attente de la phase Prix après une erreur : seul le joueur peut l’arrêter. */
@@ -566,6 +582,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         journal(total === null ? `Arrêt de la lecture : plus de ${maxPages} pages (total inconnu).` : `Arrêt de la lecture : plus de ${maxPages} pages pour ${total} exemplaires.`);
         return { ok: false, vus: null, tete: null, lus: exemplairesLus };
       }
+      const debutPage = horloge.now();
       const r = await requete(cheminPage(page, tri));
       if (r === null) {
         ok = false;
@@ -614,6 +631,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         parId.set(c.id, { ...locale, quantite: c.quantite, favori: c.favori, idsSite: c.idsSite, etiquettesSite: c.etiquettesSite });
       }
       await deps.enregistrer(instantane(), etat);
+      deps.mesurer?.('lecture', horloge.now() - debutPage);
       // Une page identique au local ne suffit pas : tout l’écart de total doit être expliqué par ce qui a été lu.
       if (gain !== null && ordreConfirme && toutIdentique && exemplairesGagnes === gain.exemplaires && cartesGagnees === gain.cartes) return { ok, vus: null, tete, lus: exemplairesLus };
       // Fin atteinte sans demander la page suivante (le site la refuse parfois en 403) : page incomplète,
@@ -634,7 +652,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
 
   function candidatsPrix(): Carte[] {
     const maintenant = horloge.now();
-    const fraiche = (r: PrixReleve | undefined): r is PrixReleve => r !== undefined && maintenant - r.releveLe <= ancienneteMaxPrixMs;
+    const fraiche = (r: PrixReleve | undefined): r is PrixReleve => r !== undefined && maintenant - r.releveLe <= peremptionPrixMs(r);
     const absentes: Carte[] = [];
     const perimees: Carte[] = [];
     const anciennete = (c: Carte): number => etat.prix[c.id]?.releveLe ?? 0;
@@ -644,7 +662,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       if (!c.rarete || !etat.cardIds[c.id]) continue;
       const rec = etat.prix[c.id];
       const saisieMain = c.valeurMarchande !== null && rec?.valeur !== c.valeurMarchande;
-      const aJour = c.valeurMarchande === null ? fraiche(rec) && rec.valeur === null : fraiche(rec) && !saisieMain;
+      const aJour = c.valeurMarchande === null ? fraiche(rec) && rec.valeur === null && rec.v === 2 : fraiche(rec) && !saisieMain;
       if (!saisieMain && !aJour) {
         (c.valeurMarchande === null ? absentes : perimees).push(c);
       }
@@ -678,16 +696,21 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       const cardId = etat.cardIds[carte.id];
       if (cardId === undefined) continue;
       // Réessaie sans fin (5 s, 10 s, 15 s…) jusqu’à une réponse exploitable ; seul un 404 (sans marché) renvoie `null`.
+      const debutPrix = horloge.now();
       const obtenu = await requetePrix(cheminPrix(cardId), carte.titre, carte.rarete as string);
       if (obtenu === 'passee') {
         // Passée par le joueur : valeur précédente gardée, redemandée dans un jour.
-        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() - ancienneteMaxPrixMs + REPORT_CARTE_PASSEE_MS };
+        const precedente = etat.prix[carte.id];
+        // Une carte passée perd `sansVente` : la durée se calcule sur le nouveau relevé, pour qu’elle soit bien redemandée dans 1 jour.
+        const passee: PrixReleve = { valeur: precedente?.valeur ?? null, releveLe: 0, v: 2 };
+        passee.releveLe = horloge.now() - peremptionPrixMs(passee) + REPORT_CARTE_PASSEE_MS;
+        etat.prix[carte.id] = passee;
         deps.prixTermine?.();
         continue;
       }
       if (obtenu === null) {
         // Carte sans route de prix : ignorée, valeur précédente gardée, pas redemandée avant 30 jours.
-        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now() };
+        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now(), v: 2, sansRoute: true };
         deps.prixTermine?.();
         continue;
       }
@@ -700,8 +723,11 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       const tendance = analyserTendance(r.json, carte.rarete as string, horloge.now());
       const courante = parId.get(carte.id) as Carte;
       const saisieMain = courante.valeurMarchande !== null && etat.prix[carte.id]?.valeur !== courante.valeurMarchande;
-      const sansVente = valeur === null && sens === 'aucune-vente' && absenceDeVenteProuvee(r.json, carte.rarete as string);
-      etat.prix[carte.id] = { valeur, releveLe: horloge.now(), ...(tendance ? { tendance } : {}), ...(sansVente ? { sansVente: true } : {}) };
+      const prouvee = valeur === null && sens === 'aucune-vente' && absenceDeVenteProuvee(r.json, carte.rarete as string);
+      const recente = valeur === null && sens === 'aucune-vente' && !prouvee ? absenceDeVenteRecente(r.json, carte.rarete as string, horloge.now()) : undefined;
+      const sansVente = prouvee || recente !== undefined;
+      const ancienMax = recente?.ancienMax ?? null;
+      etat.prix[carte.id] = { valeur, releveLe: horloge.now(), v: 2, ...(tendance ? { tendance } : {}), ...(sansVente ? { sansVente: true } : {}), ...(ancienMax !== null ? { ancienMax } : {}) };
       if (valeur === null) {
         if (sens !== 'aucune-vente') journal(`Pas de valeur marchande pour « ${carte.titre} ».`);
       } else if (saisieMain) {
@@ -714,6 +740,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       }
       resultat.prixReleves += 1;
       await deps.enregistrer(instantane(), etat);
+      // Un prix lu sans attente d’erreur : une carte qui a attendu (réessais) n’est pas représentative et est écartée par la médiane.
+      deps.mesurer?.('prix', horloge.now() - debutPrix);
     }
   }
 }

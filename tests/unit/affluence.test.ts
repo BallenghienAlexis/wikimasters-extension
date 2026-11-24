@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CONFIG_AFFLUENCE } from '../../src/config/affluence';
-import { extraireHorodatages, routeMarcheValide, ajouterEvenement, conseillerDelai, estHeureForte, histogramme, MAX_EVENEMENTS, validerEvenements, type EvenementVente } from '../../src/lib/affluence';
+import { extraireHorodatages, routeMarcheValide, ajouterEvenement, conseillerDelai, estHeureForte, histogramme, poidsResultat, MAX_EVENEMENTS, validerEvenements, type EvenementVente } from '../../src/lib/affluence';
 
 // Mardi 2026-11-10 à 20 h locales, puis à 15 h.
 const soir = new Date(2026, 10, 10, 20, 0).getTime();
@@ -99,5 +99,32 @@ describe('route relevée du marché', () => {
   it('ne retient que created_at, jamais le vendeur ni la fin', () => {
     const json = { auctions: [{ created_at: '2026-11-10T20:05:00.000Z', end_at: '2026-11-10T21:05:00.000Z', seller: { username: 'fictif' } }] };
     expect(extraireHorodatages(json, CONFIG_AFFLUENCE.champsHorodatage)).toEqual([Date.parse('2026-11-10T20:05:00.000Z')]);
+  });
+});
+
+describe('heures fortes d’après les enchères terminées (2026-11-24)', () => {
+  const H = 3_600_000;
+  const ev = (jour: number, heure: number, poids: number): EvenementVente => ({ type: 'resultat', at: new Date(2026, 10, jour, heure).getTime(), poids });
+  // Lundi 2 novembre 2026 = semaine ; 21 enchères : 19 h très rendantes, 8 h vendues peu, 3 h jamais vendues.
+  const resultats = [
+    ...[2, 3, 4, 5, 6, 9, 10].map((j) => ev(j, 19, 8)),
+    ...[2, 3, 4, 5, 6, 9, 10].map((j) => ev(j, 8, 1.5)),
+    ...[2, 3, 4, 5, 6, 9, 10].map((j) => ev(j, 3, 0)),
+  ];
+  it('poidsResultat : 0 si non vendue, monte avec le prix final, baisse avec la durée', () => {
+    expect(poidsResultat({ prixDepart: 10, prixFinal: null, creeLe: 0, finLe: H, vendue: false })).toBe(0);
+    expect(poidsResultat({ prixDepart: 10, prixFinal: 40, creeLe: 0, finLe: H, vendue: true })).toBe(4);
+    expect(poidsResultat({ prixDepart: 10, prixFinal: 40, creeLe: 0, finLe: 2 * H, vendue: true })).toBe(2);
+    expect(poidsResultat({ prixDepart: 1, prixFinal: 1000, creeLe: 0, finLe: H, vendue: true })).toBe(20);
+  });
+  it('utilise les créneaux par défaut sous le seuil de ventes conclues', () => {
+    const peu = resultats.slice(0, 5);
+    expect(estHeureForte(new Date(2026, 10, 9, 13).getTime(), peu)).toBe(true); // créneau par défaut 12-14 h
+    expect(estHeureForte(new Date(2026, 10, 9, 19).getTime(), [])).toBe(true);
+  });
+  it('au-delà du seuil, seul le rendement réel compte (le créneau par défaut est ignoré)', () => {
+    expect(estHeureForte(new Date(2026, 10, 9, 19).getTime(), resultats)).toBe(true);
+    expect(estHeureForte(new Date(2026, 10, 9, 13).getTime(), resultats)).toBe(false);
+    expect(estHeureForte(new Date(2026, 10, 9, 3).getTime(), resultats)).toBe(false);
   });
 });

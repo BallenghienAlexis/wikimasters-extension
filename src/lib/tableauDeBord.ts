@@ -96,6 +96,8 @@ export interface EntreeLignesSante {
   etiquettesLues: number
   /** Dates de relevé des prix connus. */
   releves: readonly number[]
+  /** Nombre de prix à rafraîchir selon la péremption de chaque relevé (7 ou 30 jours) ; à défaut, tous les relevés de plus de 7 jours. */
+  perimes?: number
   ignorees: number
   maintenant: number
 }
@@ -104,7 +106,7 @@ const accord = (n: number, singulier: string, pluriel: string): string => `${n} 
 
 /** Santé de la synchro en quatre lignes (maquette) : Lecture, Étiquettes, Prix, Ignorées. Symbole et mot, jamais la couleur seule. */
 export function lignesSante(e: EntreeLignesSante): LigneSante[] {
-  const perimes = e.releves.filter((d) => e.maintenant - d > ancienneteMaxPrixMs).length
+  const perimes = e.perimes ?? e.releves.filter((d) => e.maintenant - d > ancienneteMaxPrixMs).length
   return [
     e.derniereTerminee !== null
       ? { symbole: '✓', nom: 'Lecture', texte: `${accord(e.exemplaires, 'exemplaire', 'exemplaires')} · ${e.ageLibelle}` }
@@ -113,7 +115,7 @@ export function lignesSante(e: EntreeLignesSante): LigneSante[] {
       ? { symbole: '✓', nom: 'Étiquettes', texte: `${accord(e.etiquettesLues, 'étiquette lue', 'étiquettes lues')} à la dernière synchro` }
       : { symbole: '○', nom: 'Étiquettes', texte: 'Aucune étiquette lue' },
     perimes > 0
-      ? { symbole: '○', nom: 'Prix', texte: `${accord(perimes, 'prix à rafraîchir', 'prix à rafraîchir')} (plus de 30 jours)` }
+      ? { symbole: '○', nom: 'Prix', texte: `${accord(perimes, 'prix à rafraîchir', 'prix à rafraîchir')} (plus de 7 jours)` }
       : e.releves.length > 0
         ? { symbole: '✓', nom: 'Prix', texte: `${accord(e.releves.length, 'prix relevé', 'prix relevés')}, tous récents` }
         : { symbole: '○', nom: 'Prix', texte: 'Aucun prix relevé' },

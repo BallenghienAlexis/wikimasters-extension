@@ -6,7 +6,7 @@ import { collectionVide } from '../../src/lib/collection'
 import { construireLot, type Config, type SelectionLot } from '../../src/lib/lot'
 import { preferencesParDefaut } from '../../src/lib/tri'
 import { registreVide } from '../../src/lib/registre'
-import { MAX_PRECOCHE_SANS_PRIX, choixInitial, conseilLancement, estEtiquetteAVendre, idsSansPrixConfirme, precocher, resumerSansPrix, versSelection } from '../../src/lib/selectionLot'
+import { choixInitial, conseilLancement, estEtiquetteAVendre, idsSansPrixConfirme, precocher, resumerSansPrix, retirerCochesPerimees, verdictCarte, verdictsDesCartes, versSelection } from '../../src/lib/selectionLot'
 
 const TOUS: TypesDisponibles = new Set<TypeAction>(TYPES_ACTION)
 const CHIEN = { titre: 'Berger allemand', description: 'race de chien' }
@@ -144,9 +144,9 @@ describe('conseil de lancement', () => {
   const heureForte = new Date(2026, 10, 16, 20).getTime() // lundi 20 h : créneau par défaut
   const heureLibre = new Date(2026, 10, 16, 15).getTime()
   it('chères en heure forte, moins chères en temps libre', () => {
-    expect(conseilLancement(300, heureForte, [])).toBe('heure forte : bon moment')
-    expect(conseilLancement(300, heureLibre, [])).toBe('carte chère : attendre une heure forte')
-    expect(conseilLancement(50, heureLibre, [])).toBe('temps libre : bon moment')
+    expect(conseilLancement(300, heureForte, [])).toBe('heure forte : bon moment, durée 1\u00a0h')
+    expect(conseilLancement(300, heureLibre, [])).toBe('carte chère : attendre une heure forte (durée 3\u00a0h maintenant)')
+    expect(conseilLancement(50, heureLibre, [])).toBe('zone creuse : bon moment, durée 3\u00a0h')
     expect(conseilLancement(50, heureForte, [])).toContain('réserver')
     expect(conseilLancement(null, heureForte, [])).toBe('valeur inconnue')
   })
@@ -187,11 +187,20 @@ describe('cartes sans prix trouvé (Alexis, 2026-11-23)', () => {
     expect(idsSansPrixConfirme(cartes, prix, maintenant, 7 * 86_400_000)).toEqual(['s1'])
   })
 
+  it('idsSansPrixConfirme : une ancienne vente au-dessus du plafond bloque la défausse', () => {
+    const cartes = [sans(1), sans(2)]
+    const prix = {
+      s1: { valeur: null, releveLe: maintenant, sansVente: true, ancienMax: 3 },
+      s2: { valeur: null, releveLe: maintenant, sansVente: true, ancienMax: 40 },
+    }
+    expect(idsSansPrixConfirme(cartes, prix, maintenant, 7 * 86_400_000, 5)).toEqual(['s1'])
+  })
+
   it('la pré-coche défausse un doublon en gardant un exemplaire, sauf favori, ami, thème gardé', () => {
     const cartes = [sans(1), carte('f', { valeurMarchande: null, favori: true }), carte('g', { valeurMarchande: null, ami: 'Zoé' })]
     const ids = new Set(['s1', 'f', 'g'])
     const choix = precocher(cartes, prefs, new Map(), ids)
-    expect(choix.get('s1')).toEqual({ choix: 'defausser', exemplaires: 1 })
+    expect(choix.get('s1')).toEqual({ choix: 'defausser', exemplaires: 1, origine: 'regle' })
     expect(choix.has('f')).toBe(false)
     expect(choix.has('g')).toBe(false)
     expect(precocher(cartes, { ...prefs, mesThemes: ['chien'] }, new Map(), ids).size).toBe(0)
@@ -201,11 +210,11 @@ describe('cartes sans prix trouvé (Alexis, 2026-11-23)', () => {
     expect(precocher([sans(1)], prefs, new Map()).size).toBe(0)
   })
 
-  it('au-delà du plafond de pré-coche, aucune carte sans prix n’est cochée et le résumé le dit', () => {
-    const cartes = Array.from({ length: MAX_PRECOCHE_SANS_PRIX + 1 }, (_, i) => sans(i))
+  it('plus de limite de nombre : toutes les cartes sans prix confirmées sont pré-cochées', () => {
+    const cartes = Array.from({ length: 40 }, (_, i) => sans(i))
     const ids = new Set(cartes.map((c) => c.id))
-    expect(resumerSansPrix(cartes, prefs, ids)).toEqual({ nombre: MAX_PRECOCHE_SANS_PRIX + 1, trop: true })
-    expect(precocher(cartes, prefs, new Map(), ids).size).toBe(0)
+    expect(resumerSansPrix(cartes, prefs, ids)).toEqual({ nombre: 40 })
+    expect(precocher(cartes, prefs, new Map(), ids).size).toBe(40)
   })
 
   it('le lot accepte la défausse d’une carte sans prix confirmée, jamais sans confirmation', () => {
@@ -213,5 +222,64 @@ describe('cartes sans prix trouvé (Alexis, 2026-11-23)', () => {
     const sel = { vendre: [], defausser: { s1: 1 } }
     expect(de(lot([c], sel, { sansPrix: ['s1'] }).actions, 'defausse')).toHaveLength(1)
     expect(de(lot([c], sel).actions, 'defausse')).toHaveLength(0)
+  })
+})
+
+describe('verdict par carte et recalcul (2026-11-24)', () => {
+  const prefs = { ...preferencesParDefaut(), mesThemes: ['chien'] }
+  const sans = new Set<string>()
+
+  it('donne le motif exact d’une carte gardée par un thème gardé', () => {
+    const v = verdictCarte(carte('a', { valeurMarchande: 2 }), prefs, sans)
+    expect(v.action).toBe('garder')
+    expect(v.code).toBe('theme-garde')
+    expect(v.libelle).toContain('thème que vous gardez')
+  })
+
+  it('propose la défausse d’une carte de petite valeur sans garde, et l’enchère au-dessus du plafond', () => {
+    const p = preferencesParDefaut()
+    expect(verdictCarte(carte('a', { valeurMarchande: 2 }), p, sans)).toMatchObject({ action: 'defausser', code: 'defausse-plafond' })
+    expect(verdictCarte(carte('b', { valeurMarchande: 50 }), p, sans)).toMatchObject({ action: 'vendre', code: 'enchere' })
+  })
+
+  it('explique la valeur inconnue et propose la défausse sans prix', () => {
+    const p = preferencesParDefaut()
+    expect(verdictCarte(carte('a', { valeurMarchande: null }), p, sans).code).toBe('valeur-inconnue')
+    expect(verdictCarte(carte('b', { valeurMarchande: null }), p, new Set(['b'])).action).toBe('defausser')
+  })
+
+  it('la pré-coche suit les verdicts et recalcule ses propres coches', () => {
+    const p = preferencesParDefaut()
+    const cartes = [carte('a', { valeurMarchande: 2 }), carte('b', { valeurMarchande: 2 })]
+    const premier = precocher(cartes, p, new Map())
+    expect([...premier.keys()].sort()).toEqual(['a', 'b'])
+    // Un thème gardé arrive : la coche de règle disparaît ; un choix manuel reste.
+    const manuel = new Map(premier).set('b', { choix: 'defausser', exemplaires: 1 })
+    const apres = precocher(cartes, prefs, manuel)
+    expect(apres.has('a')).toBe(false)
+    expect(apres.get('b')).toEqual({ choix: 'defausser', exemplaires: 1 })
+  })
+
+  it('retire les coches de règle périmées sans toucher aux choix du joueur', () => {
+    const cartes = [carte('a', { valeurMarchande: 2 }), carte('b', { valeurMarchande: 2 })]
+    const choix = new Map([
+      ['a', { choix: 'defausser' as const, exemplaires: 1, origine: 'regle' as const }],
+      ['b', { choix: 'defausser' as const, exemplaires: 1 }],
+    ])
+    const r = retirerCochesPerimees(choix, verdictsDesCartes(cartes, prefs))
+    expect([...r.keys()]).toEqual(['b'])
+  })
+})
+
+describe('thèmes gardés réels d’Alexis (2026-11-24)', () => {
+  const prefs = { ...preferencesParDefaut(), mesThemes: ['automobile', 'metal', 'moto', 'rock', 'tracteur', 'alcool', 'camion', 'ia', 'reggae', 'techno'] }
+  const base = { idsSite: ['ex-1'], quantite: 1 }
+  it('une carte de train ou de théâtre et musique n’est pas gardée par ces thèmes : défausse proposée à petite valeur', () => {
+    const train = carte('t', { ...base, titre: 'Compagnie du chemin de fer de Paris à Orléans', description: 'compagnie de chemin de fer française', valeurMarchande: 2 })
+    const rita = carte('r', { ...base, titre: 'Rita Brantalou', description: 'personnage de théâtre et de musique', valeurMarchande: 4 })
+    for (const c of [train, rita]) {
+      const v = verdictCarte(c, prefs, new Set())
+      expect(v.code).not.toBe('theme-garde')
+    }
   })
 })
