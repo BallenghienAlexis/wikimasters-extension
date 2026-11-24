@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DUREES_SITE_MINUTES, dureeEnchereMinutes, estDureeSite, libelleDuree, niveauAffluence, type EvenementVente } from '../../src/lib/affluence'
+import { DUREES_SITE_MINUTES, detailDureeEnchere, dureeEnchereMinutes, estDureeSite, libelleDuree, niveauAffluence, type EvenementVente } from '../../src/lib/affluence'
 import { CONFIG_AFFLUENCE } from '../../src/config/affluence'
 import { ENTREES_ENCHERE } from '../../src/lib/contrat/enchere'
 import { validerOrdre } from '../../src/lib/messages'
@@ -20,7 +20,8 @@ describe('durée d’enchère selon l’affluence', () => {
   it('1 h en heure forte, 3 h en creux modéré, 12 h la nuit', () => {
     expect(dureeEnchereMinutes(forte, [])).toBe(60)
     expect(dureeEnchereMinutes(creuse, [])).toBe(180)
-    expect(dureeEnchereMinutes(nuit, [])).toBe(720)
+    expect(dureeEnchereMinutes(nuit, [])).toBe(360) // 4 h + 12 h tomberait dans le créneau de 12 h : ramenée à 6 h
+    expect(dureeEnchereMinutes(new Date(2026, 10, 25, 0, 0).getTime(), [])).toBe(720) // fin à 12 h pile : n'empiète pas
   })
   it('6 h en creux profond : créneau mesuré sans aucune vente', () => {
     expect(niveauAffluence(creuse, resultats)).toBe('creux-profond')
@@ -32,7 +33,7 @@ describe('durée d’enchère selon l’affluence', () => {
   it('suit les durées de la configuration', () => {
     const config = { ...CONFIG_AFFLUENCE, delaiHeureForte: 0.5, delaiTempsLibre: 6, delaiNuit: 6 }
     expect(dureeEnchereMinutes(forte, [], config)).toBe(30)
-    expect(dureeEnchereMinutes(creuse, [], config)).toBe(360)
+    expect(dureeEnchereMinutes(creuse, [], config)).toBe(180) // 6 h irait à 22 h, dans 19 à 23 h : bornée à 3 h
     expect(dureeEnchereMinutes(nuit, [], config)).toBe(360)
   })
   it('une valeur que le site n’accepte pas retombe sur 1 h', () => {
@@ -49,6 +50,32 @@ describe('durée d’enchère selon l’affluence', () => {
   it('libellé lisible', () => {
     expect(libelleDuree(180)).toBe('3 h')
     expect(libelleDuree(30)).toBe('30 min')
+  })
+})
+
+describe('la fin ne tombe jamais dans une heure forte (Alexis, 2026-11-24)', () => {
+  const t = (j: number, h: number, m = 0) => new Date(2026, 10, j, h, m).getTime() // 25 = mercredi, 28 = samedi, 29 = dimanche, 30 = lundi
+  it('minuit et changement de jour', () => {
+    expect(detailDureeEnchere(t(25, 1), [])).toMatchObject({ minutes: 360, bornee: true, empiete: false }) // 12 h irait jusqu'à 13 h
+    expect(detailDureeEnchere(t(25, 23), [])).toMatchObject({ minutes: 180, bornee: false }) // fin à 2 h, jeudi
+    expect(detailDureeEnchere(t(29, 23, 30), [])).toMatchObject({ minutes: 180, bornee: false }) // dimanche soir vers lundi 2 h 30
+  })
+  it('changement de semaine à week-end : les créneaux du samedi comptent', () => {
+    expect(detailDureeEnchere(t(28, 0, 30), []).minutes).toBe(360) // fin à 6 h 30, avant les 10 h du samedi
+    expect(detailDureeEnchere(t(29, 6), []).minutes).toBe(180) // 6 h irait à 12 h, dans 10 à 12 h
+  })
+  it('heure forte juste après : ramène à 1 h, 30 min puis 10 min', () => {
+    expect(detailDureeEnchere(t(28, 9), []).minutes).toBe(60) // fin à 10 h pile
+    expect(detailDureeEnchere(t(28, 9, 30), []).minutes).toBe(30)
+    expect(detailDureeEnchere(t(28, 9, 55), [])).toMatchObject({ minutes: 10, bornee: true, empiete: true }) // même 10 min empiète : la plus courte est gardée
+  })
+  it('en heure forte, aucune borne (1 h)', () => {
+    expect(detailDureeEnchere(forte, [])).toMatchObject({ minutes: 60, bornee: false, empiete: false })
+  })
+  it('avec des enchères terminées, les heures fortes viennent des mesures', () => {
+    // Avec les enchères terminées, seul le créneau de 13 h est fort : 6 h depuis 16 h (fin 22 h) n'y touche pas.
+    expect(detailDureeEnchere(creuse, resultats)).toMatchObject({ minutes: 360, bornee: false })
+    expect(detailDureeEnchere(new Date(2026, 10, 25, 8, 30).getTime(), resultats).minutes).toBe(180) // nuit finie, 3 h : fin 11 h 30, avant 13 h
   })
 })
 

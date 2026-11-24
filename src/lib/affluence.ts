@@ -138,17 +138,54 @@ export function niveauAffluence(at: number, evenements: readonly EvenementVente[
   return 'creuse';
 }
 
-/**
- * Durée d’une enchère lancée à cet instant (Alexis, 2026-11-24 : « en zone creuse il faut allonger le temps de vente ») :
- * 1 h en heure forte, 3 h en creux modéré, 6 h en creux profond, 12 h la nuit (`delai*` de la configuration). Une valeur
- * que le site n’accepte pas (10 min, 30 min, 1, 3, 6 ou 12 h seulement) est remplacée par 1 h plutôt qu’envoyée.
- */
-export function dureeEnchereMinutes(at: number, evenements: readonly EvenementVente[], config: ConfigAffluence = CONFIG_AFFLUENCE): number {
-  const niveau = niveauAffluence(at, evenements, config);
-  const heures = { forte: config.delaiHeureForte, creuse: config.delaiTempsLibre, 'creux-profond': config.delaiCreuxProfond, nuit: config.delaiNuit }[niveau];
-  const minutes = Math.round(heures * 60);
-  return estDureeSite(minutes) ? minutes : DUREE_PAR_DEFAUT_MINUTES;
+const HEURE_MS = 3_600_000
+
+/** Vrai si l’enchère [début, début + durée) touche une heure forte (une fin pile au début d’une heure forte n’y empiète pas). */
+function empieteSurHeureForte(at: number, minutes: number, evenements: readonly EvenementVente[], config: ConfigAffluence): boolean {
+  const fin = at + minutes * 60_000
+  const debutHeure = new Date(at)
+  debutHeure.setMinutes(0, 0, 0)
+  for (let h = debutHeure.getTime(); h < fin; ) {
+    if (h + HEURE_MS > at && estHeureForte(h, evenements, config)) return true
+    // Pas d’une heure locale (le changement d’heure ne décale pas l’instant testé de plus d’une heure).
+    const suivante = new Date(h)
+    suivante.setHours(suivante.getHours() + 1, 0, 0, 0)
+    h = suivante.getTime() > h ? suivante.getTime() : h + HEURE_MS
+  }
+  return false
 }
+
+export interface DureeEnchere {
+  minutes: number
+  niveau: NiveauAffluence
+  /** Raccourcie pour que la fin ne tombe pas dans une heure forte. */
+  bornee: boolean
+  /** Même la plus courte durée (10 min) empiète sur une heure forte : elle est gardée telle quelle. */
+  empiete: boolean
+}
+
+/**
+ * Durée d’une enchère lancée à cet instant (Alexis, 2026-11-24 : « en zone creuse il faut allonger le temps de vente »,
+ * « une enchère lancée en heure creuse n’empiète pas sur une heure affluente ») : 1 h en heure forte, 3 h en creux
+ * modéré, 6 h en creux profond, 12 h la nuit (`delai*`). Hors heure forte, la durée est ramenée à la plus longue durée du
+ * site (10 min, 30 min, 1, 3, 6 ou 12 h) qui ne dépasse pas la durée du niveau et dont la fin reste hors des heures
+ * fortes ; si aucune ne tient, la plus courte (10 min) est gardée. Une valeur de configuration que le site n’accepte
+ * pas est remplacée par 1 h plutôt qu’envoyée.
+ */
+export function detailDureeEnchere(at: number, evenements: readonly EvenementVente[], config: ConfigAffluence = CONFIG_AFFLUENCE): DureeEnchere {
+  const niveau = niveauAffluence(at, evenements, config)
+  const heures = { forte: config.delaiHeureForte, creuse: config.delaiTempsLibre, 'creux-profond': config.delaiCreuxProfond, nuit: config.delaiNuit }[niveau]
+  const visee = Math.round(heures * 60)
+  const minutes = estDureeSite(visee) ? visee : DUREE_PAR_DEFAUT_MINUTES
+  if (niveau === 'forte') return { minutes, niveau, bornee: false, empiete: false }
+  const candidates = DUREES_SITE_MINUTES.filter((d) => d <= minutes).sort((x, y) => y - x)
+  const retenue = candidates.find((d) => !empieteSurHeureForte(at, d, evenements, config))
+  if (retenue === undefined) return { minutes: DUREES_SITE_MINUTES[0]!, niveau, bornee: true, empiete: true }
+  return { minutes: retenue, niveau, bornee: retenue < minutes, empiete: false }
+}
+
+export const dureeEnchereMinutes = (at: number, evenements: readonly EvenementVente[], config: ConfigAffluence = CONFIG_AFFLUENCE): number =>
+  detailDureeEnchere(at, evenements, config).minutes
 
 /** « 1 h », « 3 h » ou « 30 min ». */
 export const libelleDuree = (minutes: number): string => (minutes % 60 === 0 ? `${minutes / 60}\u00a0h` : `${minutes}\u00a0min`);
