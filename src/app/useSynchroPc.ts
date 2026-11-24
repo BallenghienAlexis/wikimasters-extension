@@ -152,14 +152,17 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
   const choisir = async (): Promise<void> => {
     try {
       const d = await choisirDossier();
-      if (!d) return;
+      if (!d) {
+        setVue((v) => ({ ...v, erreur: 'Aucun dossier retenu : la fenêtre a été fermée ou Chrome a refusé ce dossier (dossier protégé ou lecteur virtuel). Essaie un sous-dossier ordinaire, ou dis-moi ce que Chrome a affiché.' }));
+        return;
+      }
       dossier.current = d;
       derniereLectureMs.current = 0;
       setVue((v) => ({ ...v, nomDossier: d.name, etat: 'actif', erreur: null }));
       await autorisation(d, true);
       await cycle();
     } catch (e) {
-      setVue((v) => ({ ...v, etat: 'erreur', erreur: e instanceof Error ? `Dossier refusé : ${e.message}` : 'Dossier refusé par Chrome.' }));
+      setVue((v) => ({ ...v, etat: 'erreur', erreur: e instanceof Error ? `Dossier refusé (${e.name}) : ${e.message}` : 'Dossier refusé par Chrome.' }));
     }
   };
   const autoriser = async (): Promise<void> => {
