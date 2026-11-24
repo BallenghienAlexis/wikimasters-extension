@@ -1,8 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { filtrerCartes, resumer, type Filtres } from '../lib/collection';
 import { versionThemes } from '../lib/themes';
 import { correspondAuTheme } from '../lib/tagsCarte';
 import { trierLignes } from '../lib/ordreTableau';
+import { FRAICHEUR_SANS_PRIX_MS, idsSansPrixConfirme, verdictsDesCartes } from '../lib/selectionLot';
+import { chargerEtatSynchro } from '../lib/stockage';
+import type { EtatOrdonnanceur } from '../lib/ordonnanceur';
 import AnalysesCollection from './AnalysesCollection';
 import SectionRepliable from './SectionRepliable';
 import GraphiqueEvolution from './GraphiqueEvolution';
@@ -32,7 +35,22 @@ const CLASSE_BOUTON = 'inline-flex min-h-11 cursor-pointer items-center rounded 
  * n’y est montée que dans cette vue liste, pour les cartes affichées (pages de 200).
  */
 const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, revision, onFiltres, onTheme, onLimite }) => {
-  const { collection, cacheWiki, appliquerCacheWiki, editer } = donnees;
+  const { collection, cacheWiki, appliquerCacheWiki, editer, preferences } = donnees;
+  // Relevés de prix de la dernière synchro : pour savoir quelles cartes n’ont aucun prix trouvé (verdict de défausse).
+  const [maintenantPrix] = useState(() => Date.now());
+  const [prixLus, setPrixLus] = useState<EtatOrdonnanceur['prix']>({});
+  useEffect(() => {
+    let actif = true;
+    void chargerEtatSynchro()
+      .then((e) => {
+        if (actif && e) setPrixLus(e.prix);
+      })
+      .catch(() => undefined);
+    return () => {
+      actif = false;
+    };
+  }, []);
+
   const visibles = useMemo(
     () => filtrerCartes(collection.cartes, filtres).filter((c) => theme === 'tous' || correspondAuTheme(c, theme)),
     // `cacheWiki` change les thèmes lus par `correspondAuTheme` (surcouche Wikipédia).
@@ -47,6 +65,13 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
     const triees = cle === null ? visibles : trierLignes(visibles, (c) => valeurDeTri(c, cle), tri.sens);
     return triees.slice(0, limite);
   }, [visibles, tri, limite]);
+  // Verdict des lignes affichées seulement (règles courantes, recalculé quand cartes, préférences, thèmes lus ou prix changent).
+  const verdicts = useMemo(
+    () => verdictsDesCartes(rendues, preferences, new Set(idsSansPrixConfirme(collection.cartes, prixLus, maintenantPrix, FRAICHEUR_SANS_PRIX_MS)), collection.cartes),
+    // `cacheWiki` change les thèmes lus (surcouche Wikipédia).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rendues, collection.cartes, preferences, prixLus, maintenantPrix, cacheWiki],
+  );
   const titresConsultes = useMemo(() => rendues.map((c) => c.titre), [rendues]);
   const resume = useMemo(() => resumer(collection.cartes), [collection.cartes]);
 
@@ -86,6 +111,7 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
             onTri={setTri}
             onEdition={editer}
             versionThemes={versionThemes()}
+            verdicts={verdicts}
           />
         )}
 
