@@ -176,8 +176,14 @@ export function verdictCarte(c: Carte, preferences: Preferences, sansPrix: Reado
 }
 
 /** Verdict de toutes les cartes, recalculé avec les règles courantes (appelé à chaque ouverture des lots et à chaque affichage). */
-export function verdictsDesCartes(cartes: readonly Carte[], preferences: Preferences, sansPrix: ReadonlySet<string> = new Set()): Map<string, Verdict> {
-  const autorise = resumerSansPrix(cartes, preferences, sansPrix).nombre <= MAX_PRECOCHE_SANS_PRIX
+export function verdictsDesCartes(
+  cartes: readonly Carte[],
+  preferences: Preferences,
+  sansPrix: ReadonlySet<string> = new Set(),
+  /** Collection entière, pour décider si les cartes sans prix sont trop nombreuses quand `cartes` n’en est qu’une partie (lignes affichées). */
+  ensemble: readonly Carte[] = cartes,
+): Map<string, Verdict> {
+  const autorise = resumerSansPrix(ensemble, preferences, sansPrix).nombre <= MAX_PRECOCHE_SANS_PRIX
   const m = new Map<string, Verdict>()
   for (const c of cartes) m.set(c.id, verdictCarte(c, preferences, sansPrix, autorise))
   return m

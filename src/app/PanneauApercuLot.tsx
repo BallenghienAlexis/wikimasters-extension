@@ -203,8 +203,14 @@ const PanneauApercuLot: React.FC<Props> = ({
     () => new Set(idsSansPrixConfirme(collection.cartes, prixLus, maintenantPrix, FRAICHEUR_SANS_PRIX_MS)),
     [collection.cartes, prixLus, maintenantPrix],
   );
-  const verdicts = useMemo(() => verdictsDesCartes(collection.cartes, prefsVerdicts, sansPrixVerdicts), [collection.cartes, prefsVerdicts, sansPrixVerdicts]);
-  const choix = useMemo(() => retirerCochesPerimees(choixBrut, verdicts), [choixBrut, verdicts]);
+  // Calcul paresseux (5 000 cartes : coûteux) : seulement s’il y a des coches de règle à contrôler ou si le joueur demande le détail.
+  const [verdictsDemandes, setVerdictsDemandes] = useState(false);
+  const aCochesRegle = useMemo(() => [...choixBrut.values()].some((x) => x.origine === 'regle'), [choixBrut]);
+  const verdicts = useMemo(
+    () => (aCochesRegle || verdictsDemandes ? verdictsDesCartes(collection.cartes, prefsVerdicts, sansPrixVerdicts) : null),
+    [aCochesRegle, verdictsDemandes, collection.cartes, prefsVerdicts, sansPrixVerdicts],
+  );
+  const choix = useMemo(() => (verdicts ? retirerCochesPerimees(choixBrut, verdicts) : choixBrut), [choixBrut, verdicts]);
   const choisir = (idCarte: string, c: ChoixCarte, exemplaires: number): void =>
     setChoixManuels(() => {
       const m = new Map(choix);
@@ -448,7 +454,8 @@ const PanneauApercuLot: React.FC<Props> = ({
           plafond={plafond}
           sansPrix={sansPrixEns}
           resumeSansPrix={resumeSansPrix}
-          verdicts={verdicts}
+          verdicts={verdicts ?? undefined}
+          onVoirVerdicts={() => setVerdictsDemandes(true)}
           onChoisir={choisir}
           onPrecocher={() => setChoixManuels(precocher(collection.cartes, preferences, choix, sansPrixEns))}
           onVider={() => setChoixManuels(new Map())}

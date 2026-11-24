@@ -50,13 +50,7 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
       actif = false;
     };
   }, []);
-  // Verdict de chaque carte avec les règles courantes : recalculé dès que cartes, préférences, thèmes lus ou prix changent.
-  const verdicts = useMemo(
-    () => verdictsDesCartes(collection.cartes, preferences, new Set(idsSansPrixConfirme(collection.cartes, prixLus, maintenantPrix, FRAICHEUR_SANS_PRIX_MS))),
-    // `cacheWiki` change les thèmes lus (surcouche Wikipédia).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [collection.cartes, preferences, prixLus, maintenantPrix, cacheWiki],
-  );
+
   const visibles = useMemo(
     () => filtrerCartes(collection.cartes, filtres).filter((c) => theme === 'tous' || correspondAuTheme(c, theme)),
     // `cacheWiki` change les thèmes lus par `correspondAuTheme` (surcouche Wikipédia).
@@ -71,6 +65,13 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
     const triees = cle === null ? visibles : trierLignes(visibles, (c) => valeurDeTri(c, cle), tri.sens);
     return triees.slice(0, limite);
   }, [visibles, tri, limite]);
+  // Verdict des lignes affichées seulement (règles courantes, recalculé quand cartes, préférences, thèmes lus ou prix changent).
+  const verdicts = useMemo(
+    () => verdictsDesCartes(rendues, preferences, new Set(idsSansPrixConfirme(collection.cartes, prixLus, maintenantPrix, FRAICHEUR_SANS_PRIX_MS)), collection.cartes),
+    // `cacheWiki` change les thèmes lus (surcouche Wikipédia).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rendues, collection.cartes, preferences, prixLus, maintenantPrix, cacheWiki],
+  );
   const titresConsultes = useMemo(() => rendues.map((c) => c.titre), [rendues]);
   const resume = useMemo(() => resumer(collection.cartes), [collection.cartes]);
 

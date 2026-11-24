@@ -16,6 +16,8 @@ interface Props {
   resumeSansPrix?: { nombre: number; trop: boolean };
   /** Verdict de chaque carte avec les règles courantes (recalculé à chaque rendu, jamais mis en cache). */
   verdicts?: ReadonlyMap<string, Verdict>;
+  /** Demande le calcul des verdicts (paresseux : coûteux sur une grosse collection). */
+  onVoirVerdicts?: () => void;
   onChoisir: (idCarte: string, choix: ChoixCarte, exemplaires: number) => void;
   /** Pré-coche selon mes thèmes, mes amis et le plafond (explicite, jamais automatique). */
   onPrecocher: () => void;
@@ -42,7 +44,7 @@ const LIBELLES_CODES: Record<CodeVerdict, string> = {
 const ORDRE_CODES = Object.keys(LIBELLES_CODES) as CodeVerdict[];
 
 /** Choix manuel des cartes à mettre aux enchères ou à défausser, avant l’aperçu du lot (rien n’est envoyé ici). */
-const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansPrix, resumeSansPrix, verdicts, onChoisir, onPrecocher, onVider, ventes }) => {
+const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansPrix, resumeSansPrix, verdicts, onVoirVerdicts, onChoisir, onPrecocher, onVider, ventes }) => {
   const [recherche, setRecherche] = useState('');
   const proposables = useMemo(() => cartes.filter(estProposable), [cartes]);
   const choisies = useMemo(() => proposables.filter((c) => (choix.get(c.id)?.choix ?? 'aucun') !== 'aucun'), [proposables, choix]);
@@ -161,6 +163,11 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansP
             ? `${resumeSansPrix.nombre} cartes sans prix trouvé seraient défaussables : trop pour une pré-coche de masse, elles ne sont pas cochées. Choisissez-les à la main.`
             : `${resumeSansPrix.nombre} carte(s) sans prix trouvé sur le site seront pré-cochées en défausse (définitive, un exemplaire gardé si elle est en plusieurs).`}
         </p>
+      )}
+      {!verdicts && onVoirVerdicts && (
+        <button type="button" className={`${CLASSE_BOUTON} mt-3 border-muted`} onClick={onVoirVerdicts}>
+          Voir pourquoi chaque carte est gardée ou proposée
+        </button>
       )}
       {verdicts && (
         <div className="mt-3" data-testid="verdicts-toutes-cartes">
