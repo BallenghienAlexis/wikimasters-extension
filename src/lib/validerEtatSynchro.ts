@@ -25,7 +25,7 @@ export function validerEtatSynchro(brut: unknown): EtatOrdonnanceur | null {
       estObjet(t) && (t.variationPct === null || typeof t.variationPct === 'number') && Number.isInteger(t.min4) && (t.min4 as number) >= 0 && Number.isInteger(t.max4) && (t.max4 as number) >= 0 && Number.isInteger(t.ventes4) && (t.ventes4 as number) >= 0
         ? { variationPct: t.variationPct as number | null, min4: t.min4 as number, max4: t.max4 as number, ventes4: t.ventes4 as number }
         : null;
-    releves[id] = { valeur: r.valeur, releveLe: r.releveLe, ...(tendance ? { tendance } : {}), ...(r.sansVente === true && r.valeur === null ? { sansVente: true } : {}) };
+    releves[id] = { valeur: r.valeur, releveLe: r.releveLe, ...(tendance ? { tendance } : {}), ...(r.v === 2 ? { v: 2 as const } : {}), ...(r.sansVente === true && r.valeur === null ? { sansVente: true } : {}), ...(r.sansVente === true && r.valeur === null && Number.isInteger(r.ancienMax) && (r.ancienMax as number) >= 0 ? { ancienMax: r.ancienMax as number } : {}) };
   }
   const vs = brut.ventesSite;
   const ventesSite =

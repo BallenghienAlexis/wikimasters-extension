@@ -187,6 +187,15 @@ describe('cartes sans prix trouvé (Alexis, 2026-11-23)', () => {
     expect(idsSansPrixConfirme(cartes, prix, maintenant, 7 * 86_400_000)).toEqual(['s1'])
   })
 
+  it('idsSansPrixConfirme : une ancienne vente au-dessus du plafond bloque la défausse', () => {
+    const cartes = [sans(1), sans(2)]
+    const prix = {
+      s1: { valeur: null, releveLe: maintenant, sansVente: true, ancienMax: 3 },
+      s2: { valeur: null, releveLe: maintenant, sansVente: true, ancienMax: 40 },
+    }
+    expect(idsSansPrixConfirme(cartes, prix, maintenant, 7 * 86_400_000, 5)).toEqual(['s1'])
+  })
+
   it('la pré-coche défausse un doublon en gardant un exemplaire, sauf favori, ami, thème gardé', () => {
     const cartes = [sans(1), carte('f', { valeurMarchande: null, favori: true }), carte('g', { valeurMarchande: null, ami: 'Zoé' })]
     const ids = new Set(['s1', 'f', 'g'])

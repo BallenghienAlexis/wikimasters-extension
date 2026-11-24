@@ -43,6 +43,9 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansP
   const nbVendre = useMemo(() => proposables.filter((c) => choix.get(c.id)?.choix === 'vendre').length, [proposables, choix]);
   const nbGardees = useMemo(() => (verdicts ? cartes.filter((c) => verdicts.get(c.id)?.action === 'garder').length : 0), [cartes, verdicts]);
 
+  // Cartes sans valeur dont le site n’a pas (encore) confirmé l’absence de prix : défausse impossible tant que le prix n’est pas relevé.
+  const nbSansValeur = useMemo(() => proposables.filter((c) => c.valeurMarchande === null && sansPrix?.has(c.id) !== true).length, [proposables, sansPrix]);
+
   const liste = useMemo(() => {
     const q = normaliser(recherche.trim());
     if (q !== '') return cartes.filter((c) => normaliser(c.titre).includes(q));
@@ -77,7 +80,7 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansP
               return (
                 <label
                   key={k}
-                  title={desactive ? `Défausse impossible : valeur inconnue ou au-dessus de ${plafond}` : undefined}
+                  title={desactive ? c.valeurMarchande === null ? 'Défausse impossible : le prix n’est pas relevé ou une vente passée dépasse le plafond (lancez « Forcer la synchro »)' : `Défausse impossible : valeur au-dessus de ${plafond}` : undefined}
                   className={`inline-flex min-h-11 cursor-pointer items-center rounded border px-3 text-sm ${actif ? 'border-paper font-semibold' : 'border-line'} ${desactive ? 'opacity-40' : ''}`}
                 >
                   <input type="radio" className="sr-only" name={`choix-${c.id}`} checked={actif} disabled={desactive} onChange={() => onChoisir(c.id, k, x.exemplaires)} />
@@ -153,6 +156,11 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansP
           {resumeSansPrix.trop
             ? `${resumeSansPrix.nombre} cartes sans prix trouvé : trop pour une pré-coche, choisissez-les à la main.`
             : `${resumeSansPrix.nombre} carte(s) sans prix trouvé proposée(s) en défausse.`}
+        </p>
+      )}
+      {nbSansValeur > 0 && (
+        <p className="mt-2 text-sm" data-testid="avertissement-sans-valeur">
+          {nbSansValeur} carte(s) sans valeur connue ne peuvent pas être défaussées : le site n’a pas encore confirmé qu’aucun prix n’existe. Lancez « Forcer la synchro » (onglet Synchro) pour relever les prix : celles sans vente récente seront ensuite proposées en défausse si aucune règle ne les garde.
         </p>
       )}
       <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Vue des cartes">

@@ -200,8 +200,8 @@ const PanneauApercuLot: React.FC<Props> = ({
   const [maintenantPrix] = useState(() => Date.now());
   const prefsVerdicts = preferences;
   const sansPrixVerdicts = useMemo(
-    () => new Set(idsSansPrixConfirme(collection.cartes, prixLus, maintenantPrix, FRAICHEUR_SANS_PRIX_MS)),
-    [collection.cartes, prixLus, maintenantPrix],
+    () => new Set(idsSansPrixConfirme(collection.cartes, prixLus, maintenantPrix, FRAICHEUR_SANS_PRIX_MS, plafondDefausse(prefsVerdicts))),
+    [collection.cartes, prixLus, maintenantPrix, prefsVerdicts],
   );
   // Calcul paresseux (5 000 cartes : coûteux) : seulement s’il y a des coches de règle à contrôler ou si le joueur demande le détail.
   const [verdictsDemandes, setVerdictsDemandes] = useState(false);

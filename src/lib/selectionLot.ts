@@ -31,14 +31,15 @@ export const raisonNonProposable = (c: Carte): string | null => {
  */
 export function idsSansPrixConfirme(
   cartes: readonly Carte[],
-  prix: Readonly<Record<string, { valeur: number | null; releveLe: number; sansVente?: boolean }>>,
+  prix: Readonly<Record<string, { valeur: number | null; releveLe: number; sansVente?: boolean; ancienMax?: number }>>,
   maintenant: number,
   ancienneteMaxMs: number,
+  plafond?: number,
 ): string[] {
   return cartes
     .filter((c) => {
       const r = prix[c.id]
-      return c.valeurMarchande === null && r !== undefined && r.sansVente === true && r.valeur === null && maintenant - r.releveLe <= ancienneteMaxMs
+      return c.valeurMarchande === null && r !== undefined && r.sansVente === true && r.valeur === null && maintenant - r.releveLe <= ancienneteMaxMs && (r.ancienMax === undefined || plafond === undefined || r.ancienMax <= plafond)
     })
     .map((c) => c.id)
 }

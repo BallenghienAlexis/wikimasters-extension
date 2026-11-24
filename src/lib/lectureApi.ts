@@ -222,6 +222,25 @@ export function absenceDeVenteProuvee(json: unknown, rarete: string): boolean {
   return estObjet(entree) && Array.isArray(entree.weekly) && entree.weekly.length === 0;
 }
 
+/**
+ * Absence de vente **récente** (Alexis, 2026-11-24 : « tant de cartes sans valeur ») : l'historique est lisible, la rareté y a des
+ * semaines mais aucune dans les 4 dernières. `ancienMax` = plus haut prix moyen d'une semaine plus ancienne (le plafond de défausse
+ * le compare) ; `null` si la rareté n'a jamais eu de vente lisible. `undefined` : pas ce cas (forme illisible, vente récente, rareté absente).
+ */
+export function absenceDeVenteRecente(json: unknown, rarete: string, maintenant: number): { ancienMax: number | null } | undefined {
+  if (!estObjet(json) || !estObjet(json.by_rarity) || !Object.prototype.hasOwnProperty.call(json.by_rarity, rarete)) return undefined;
+  const entree = json.by_rarity[rarete];
+  if (!estObjet(entree) || !Array.isArray(entree.weekly) || entree.weekly.length === 0) return undefined;
+  if (lireHistorique(json, rarete, maintenant) !== null) return undefined;
+  let max: number | null = null;
+  for (const w of entree.weekly) {
+    if (!estObjet(w) || typeof w.avg !== 'number' || !Number.isFinite(w.avg) || w.avg < 0 || typeof w.count !== 'number' || w.count <= 0) continue;
+    const a = Math.round(w.avg);
+    if (max === null || a > max) max = a;
+  }
+  return { ancienMax: max };
+}
+
 /** Tendance de la rareté (`null` si la réponse n’est pas un historique lisible ou sans vente sur 4 semaines). */
 export function analyserTendance(json: unknown, rarete: string, maintenant: number): TendancePrix | null {
   const h = lireHistorique(json, rarete, maintenant);

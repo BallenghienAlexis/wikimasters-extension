@@ -1,3 +1,4 @@
+import { plafondDefausse } from '../lib/tri';
 import { trierEtiquettesSite } from '../lib/etiquettesPreexistantes';
 import { CONFIG_PRIX } from '../config/prix';
 import { CAUSE_VERIFICATION_HUMAINE, ID_CARTE_ETIQUETTES } from '../lib/actions';
@@ -133,7 +134,7 @@ export function contexteExecution(): ContexteExecution {
     },
     reverifier: async (action) => {
       const [collection, registre, preferences, etatSynchro] = await Promise.all([chargerCollection(), chargerRegistre(), chargerPreferences(), chargerEtatSynchro().catch(() => null)]);
-      const sansPrix = idsSansPrixConfirme(collection.cartes, etatSynchro?.prix ?? {}, Date.now(), FRAICHEUR_SANS_PRIX_MS);
+      const sansPrix = idsSansPrixConfirme(collection.cartes, etatSynchro?.prix ?? {}, Date.now(), FRAICHEUR_SANS_PRIX_MS, plafondDefausse(preferences));
       return reverifierAction(action, collection, registre, configDuLot(preferences, null, null, sansPrix));
     },
     appliquer: async (action, resultat) => {

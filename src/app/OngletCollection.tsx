@@ -1,3 +1,4 @@
+import { plafondDefausse } from '../lib/tri';
 import React, { useEffect, useMemo, useState } from 'react';
 import { filtrerCartes, resumer, type Filtres } from '../lib/collection';
 import { versionThemes } from '../lib/themes';
@@ -67,7 +68,7 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
   }, [visibles, tri, limite]);
   // Verdict des lignes affichées seulement (règles courantes, recalculé quand cartes, préférences, thèmes lus ou prix changent).
   const verdicts = useMemo(
-    () => verdictsDesCartes(rendues, preferences, new Set(idsSansPrixConfirme(collection.cartes, prixLus, maintenantPrix, FRAICHEUR_SANS_PRIX_MS)), collection.cartes),
+    () => verdictsDesCartes(rendues, preferences, new Set(idsSansPrixConfirme(collection.cartes, prixLus, maintenantPrix, FRAICHEUR_SANS_PRIX_MS, plafondDefausse(preferences))), collection.cartes),
     // `cacheWiki` change les thèmes lus (surcouche Wikipédia).
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [rendues, collection.cartes, preferences, prixLus, maintenantPrix, cacheWiki],

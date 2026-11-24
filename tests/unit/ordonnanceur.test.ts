@@ -824,6 +824,23 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(avecValeur.etat.prix[idCarte(1)]?.sansVente).toBeUndefined();
   })
 
+  it('prix : une rareté avec des ventes seulement anciennes pose sansVente et le plus haut prix ancien (2026-11-24)', async () => {
+    const site = siteFictif(2);
+    const b = banc((chemin) => (/price-history/.test(chemin) ? { statut: 200, json: { by_rarity: { R: { weekly: [{ start: '1970-01-05', avg: 40, min: 30, max: 50, count: 2 }, { start: '1970-01-12', avg: 7, min: 7, max: 7, count: 1 }], monthly: [] } } } } : site(chemin)));
+    const r = await synchroniser(b.deps);
+    expect(r.etat.prix[idCarte(1)]).toMatchObject({ valeur: null, sansVente: true, ancienMax: 40, v: 2 });
+  })
+
+  it('prix : un relevé nul d’avant la règle (sans v) est redemandé une fois, pas un 404 marqué', async () => {
+    const b = banc(siteFictif(2, { prix: () => null }));
+    const premiere = await synchroniser(b.deps);
+    const vieux = { ...premiere.etat, prix: { [idCarte(1)]: { valeur: null, releveLe: b.horloge.t }, [idCarte(2)]: { valeur: null, releveLe: b.horloge.t, v: 2 as const } } };
+    const b2 = banc(siteFictif(2, { prix: () => null }), b.enregistrements[b.enregistrements.length - 1]!.collection, vieux);
+    await synchroniser(b2.deps);
+    const redemandes = b2.departs.filter((d) => d.chemin.includes('/price-history'));
+    expect(redemandes).toHaveLength(1);
+  })
+
   it('un 429 sur une page ou les stats arrête tout de suite, sans pause ni reprise', async () => {
     const site = siteFictif(4);
     const b = banc((chemin) => (/page=/.test(chemin) ? { statut: 429, json: null } : site(chemin)));
