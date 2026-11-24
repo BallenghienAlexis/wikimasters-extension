@@ -1,10 +1,13 @@
 import React from 'react';
 import type { Filtres } from '../lib/collection';
 import { IDS_THEMES, LIBELLES_THEMES } from '../lib/themes';
+import { FILTRE_GARDE_MOI, filtreGardeAmi } from '../lib/selectionLot';
 
 interface Props {
   filtres: Filtres;
   theme: string;
+  /** Noms des amis, pour les entrées « cartes gardées ». */
+  amis?: readonly string[];
   onFiltres: (filtres: Filtres) => void;
   onTheme: (theme: string) => void;
 }
@@ -12,7 +15,7 @@ interface Props {
 const CLASSE_CHAMP = 'min-h-11 rounded border border-line bg-ink px-3';
 
 /** Recherche, thème et doublons de la liste (état remonté dans `App`, conservé au changement d’onglet). */
-const FiltresCollection: React.FC<Props> = ({ filtres, theme, onFiltres, onTheme }) => (
+const FiltresCollection: React.FC<Props> = ({ filtres, theme, amis = [], onFiltres, onTheme }) => (
   <div className="mt-4 flex flex-wrap items-center gap-3">
     <input
       type="search"
@@ -24,6 +27,12 @@ const FiltresCollection: React.FC<Props> = ({ filtres, theme, onFiltres, onTheme
     />
     <select aria-label="Filtrer par thème" className={CLASSE_CHAMP} value={theme} onChange={(e) => onTheme(e.target.value)}>
       <option value="tous">Tous les thèmes</option>
+      <optgroup label="Cartes gardées">
+        <option value={FILTRE_GARDE_MOI}>Mes cartes</option>
+        {amis.map((nom) => (
+          <option key={nom} value={filtreGardeAmi(nom)}>{nom}</option>
+        ))}
+      </optgroup>
       {IDS_THEMES.map((id) => (
         <option key={id} value={id}>{LIBELLES_THEMES[id]}</option>
       ))}

@@ -127,6 +127,8 @@ export interface Verdict {
   libelle: string
   /** Exemplaires à défausser (défausse seulement). */
   exemplaires: number
+  /** Amis pour qui la carte est gardée (code `ami`), pour le filtre de la Collection. */
+  amis: readonly string[]
 }
 
 const libelleTheme = (id: string): string => (LIBELLES_THEMES[id] ?? id).replace(/^#/, '')
@@ -139,12 +141,13 @@ const exemplairesADefausser = (c: Carte): number => Math.max(1, Math.min(c.quant
  * ami, puis la valeur (inconnue, au plafond ou en dessous : défausse ; au-dessus : enchère).
  */
 export function verdictCarte(c: Carte, preferences: Preferences, sansPrix: ReadonlySet<string>): Verdict {
-  const v = (action: Verdict['action'], code: CodeVerdict, motif: string, court: string, exemplaires = 1): Verdict => ({
+  const v = (action: Verdict['action'], code: CodeVerdict, motif: string, court: string, exemplaires = 1, amisGardes: readonly string[] = []): Verdict => ({
     action,
     code,
     motif,
     court,
     exemplaires,
+    amis: amisGardes,
     libelle: `${action === 'garder' ? 'Gardée' : action === 'defausser' ? 'Défausse proposée' : 'Enchère proposée'} : ${motif}`,
   })
   const raison = raisonNonProposable(c)
@@ -160,8 +163,8 @@ export function verdictCarte(c: Carte, preferences: Preferences, sansPrix: Reado
     return v('garder', 'theme-garde', `thème que vous gardez ${noms.join(', ')}`, `Thème gardé : ${gardes.map(libelleTheme).join(', ')}`)
   }
   const amis = amisConcernes(themes, preferences.amis)
-  if (amis.length > 0) return v('garder', 'ami', `thème suivi par ${amis.map((a) => a.nom).join(', ')} (échange par « #À échanger »)`, `Ami : ${amis.map((a) => a.nom).join(', ')}`)
-  if (c.ami !== null) return v('garder', 'ami', `carte réservée à ${c.ami}`, `Ami : ${c.ami}`)
+  if (amis.length > 0) return v('garder', 'ami', `thème suivi par ${amis.map((a) => a.nom).join(', ')} (échange par « #À échanger »)`, `Ami : ${amis.map((a) => a.nom).join(', ')}`, 1, amis.map((a) => a.nom))
+  if (c.ami !== null) return v('garder', 'ami', `carte réservée à ${c.ami}`, `Ami : ${c.ami}`, 1, [c.ami])
   if (c.valeurMarchande === null) {
     if (sansPrix.has(c.id)) {
       return v('defausser', 'defausse-sans-prix', 'aucun prix trouvé sur le site et aucune règle de garde', 'Aucun prix trouvé', exemplairesADefausser(c))
@@ -231,4 +234,20 @@ export function conseilLancement(valeur: number | null, at: number, evenements: 
   const chere = valeur >= CONFIG_AFFLUENCE.seuilCarteChere
   if (chere) return forte ? `heure forte : bon moment, durée ${duree}` : `carte chère : attendre une heure forte (durée ${duree} maintenant)`
   return forte ? `heure forte : mieux vaut réserver ce créneau aux cartes chères (durée ${duree})` : `zone creuse : bon moment, durée ${duree}`
+}
+
+/** Valeurs du filtre « cartes gardées » de la Collection : `garde:moi` ou `garde:ami:<nom>`. */
+export const FILTRE_GARDE_MOI = 'garde:moi'
+export const filtreGardeAmi = (nom: string): string => `garde:ami:${nom}`
+export const estFiltreGarde = (valeur: string): boolean => valeur.startsWith('garde:')
+
+/**
+ * Une carte passe le filtre « gardée » selon son verdict affiché : « Mes cartes » = gardée pour moi (favori ou thème gardé) ;
+ * un ami = gardée parce que son thème est suivi par lui (ou carte réservée à lui).
+ */
+export function correspondAuFiltreGarde(v: Verdict | undefined, valeur: string): boolean {
+  if (!v || v.action !== 'garder') return false
+  if (valeur === FILTRE_GARDE_MOI) return v.code === 'favori' || v.code === 'theme-garde'
+  if (valeur.startsWith('garde:ami:')) return v.code === 'ami' && v.amis.includes(valeur.slice('garde:ami:'.length))
+  return false
 }

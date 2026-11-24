@@ -6,7 +6,7 @@ import { collectionVide } from '../../src/lib/collection'
 import { construireLot, type Config, type SelectionLot } from '../../src/lib/lot'
 import { preferencesParDefaut } from '../../src/lib/tri'
 import { registreVide } from '../../src/lib/registre'
-import { choixInitial, conseilLancement, estEtiquetteAVendre, idsSansPrixConfirme, precocher, resumerSansPrix, retirerCochesPerimees, verdictCarte, verdictsDesCartes, versSelection } from '../../src/lib/selectionLot'
+import { correspondAuFiltreGarde, filtreGardeAmi, FILTRE_GARDE_MOI, choixInitial, conseilLancement, estEtiquetteAVendre, idsSansPrixConfirme, precocher, resumerSansPrix, retirerCochesPerimees, verdictCarte, verdictsDesCartes, versSelection } from '../../src/lib/selectionLot'
 
 const TOUS: TypesDisponibles = new Set<TypeAction>(TYPES_ACTION)
 const CHIEN = { titre: 'Berger allemand', description: 'race de chien' }
@@ -281,5 +281,18 @@ describe('thèmes gardés réels d’Alexis (2026-11-24)', () => {
       const v = verdictCarte(c, prefs, new Set())
       expect(v.code).not.toBe('theme-garde')
     }
+  })
+})
+
+describe('filtre « cartes gardées » avec les vrais verdicts (2026-11-24)', () => {
+  it('« Mes cartes » suit le thème gardé, un ami suit son thème, cohérent avec le verdict affiché', () => {
+    const prefs = { ...preferencesParDefaut(), mesThemes: ['chien'], amis: [{ nom: 'Quentin', themes: ['chat'] }] }
+    const moi = carte('a', { valeurMarchande: 2 })
+    const v = verdictCarte(moi, prefs, new Set())
+    expect(v.code).toBe('theme-garde')
+    expect(correspondAuFiltreGarde(v, FILTRE_GARDE_MOI)).toBe(true)
+    expect(correspondAuFiltreGarde(v, filtreGardeAmi('Quentin'))).toBe(false)
+    const vieux = verdictCarte(carte('b', { valeurMarchande: 50 }), { ...prefs, mesThemes: [] }, new Set())
+    expect(correspondAuFiltreGarde(vieux, FILTRE_GARDE_MOI)).toBe(false)
   })
 })

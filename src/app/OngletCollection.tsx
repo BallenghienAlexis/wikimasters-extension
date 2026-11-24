@@ -4,7 +4,7 @@ import { filtrerCartes, resumer, type Filtres } from '../lib/collection';
 import { versionThemes } from '../lib/themes';
 import { correspondAuTheme } from '../lib/tagsCarte';
 import { trierLignes } from '../lib/ordreTableau';
-import { FRAICHEUR_SANS_PRIX_MS, idsSansPrixConfirme, verdictsDesCartes } from '../lib/selectionLot';
+import { correspondAuFiltreGarde, estFiltreGarde, FRAICHEUR_SANS_PRIX_MS, idsSansPrixConfirme, verdictsDesCartes } from '../lib/selectionLot';
 import { chargerEtatSynchro } from '../lib/stockage';
 import type { EtatOrdonnanceur } from '../lib/ordonnanceur';
 import AnalysesCollection from './AnalysesCollection';
@@ -52,12 +52,24 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
     };
   }, []);
 
-  const visibles = useMemo(
-    () => filtrerCartes(collection.cartes, filtres).filter((c) => theme === 'tous' || correspondAuTheme(c, theme)),
+  const sansPrix = useMemo(
+    () => new Set(idsSansPrixConfirme(collection.cartes, prixLus, maintenantPrix, FRAICHEUR_SANS_PRIX_MS, plafondDefausse(preferences))),
+    // `cacheWiki` change les thèmes lus (surcouche Wikipédia).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [collection.cartes, preferences, prixLus, maintenantPrix, cacheWiki],
+  );
+  const visibles = useMemo(() => {
+    const base = filtrerCartes(collection.cartes, filtres);
+    if (theme === 'tous') return base;
+    if (estFiltreGarde(theme)) {
+      // Même verdict que celui affiché sur chaque ligne : le filtre ne peut pas diverger du motif.
+      const v = verdictsDesCartes(base, preferences, sansPrix);
+      return base.filter((c) => correspondAuFiltreGarde(v.get(c.id), theme));
+    }
+    return base.filter((c) => correspondAuTheme(c, theme));
     // `cacheWiki` change les thèmes lus par `correspondAuTheme` (surcouche Wikipédia).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [collection.cartes, filtres, theme, cacheWiki],
-  );
+  }, [collection.cartes, filtres, theme, cacheWiki, preferences, sansPrix]);
   // Cartes consultées = cartes affichées dans la liste (les pages suivantes comptent quand on les ouvre).
   const [tri, setTri] = useState<EtatTri>({ cle: null, sens: null });
   // Le tri est d’affichage seulement : jamais écrit. Il précède la coupe à `limite` lignes.
@@ -68,10 +80,9 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
   }, [visibles, tri, limite]);
   // Verdict des lignes affichées seulement (règles courantes, recalculé quand cartes, préférences, thèmes lus ou prix changent).
   const verdicts = useMemo(
-    () => verdictsDesCartes(rendues, preferences, new Set(idsSansPrixConfirme(collection.cartes, prixLus, maintenantPrix, FRAICHEUR_SANS_PRIX_MS, plafondDefausse(preferences)))),
-    // `cacheWiki` change les thèmes lus (surcouche Wikipédia).
+    () => verdictsDesCartes(rendues, preferences, sansPrix),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rendues, collection.cartes, preferences, prixLus, maintenantPrix, cacheWiki],
+    [rendues, preferences, sansPrix, cacheWiki],
   );
   const titresConsultes = useMemo(() => rendues.map((c) => c.titre), [rendues]);
   const resume = useMemo(() => resumer(collection.cartes), [collection.cartes]);
@@ -99,7 +110,7 @@ const OngletCollection: React.FC<Props> = ({ donnees, filtres, theme, limite, re
         titre="Cartes"
         resume={`${visibles.length} ${visibles.length > 1 ? 'cartes' : 'carte'}`}
       >
-        <FiltresCollection filtres={filtres} theme={theme} onFiltres={onFiltres} onTheme={onTheme} />
+        <FiltresCollection filtres={filtres} theme={theme} amis={preferences.amis.map((a) => a.nom)} onFiltres={onFiltres} onTheme={onTheme} />
 
         {visibles.length === 0 ? (
           <p className="mt-6">Aucune carte ne correspond à ces filtres.</p>
