@@ -7,6 +7,8 @@ import { purger } from '../lib/ignorees';
 import { registreVide } from '../lib/registre';
 import {
   chargerAffluenceSite,
+  chargerResultatsVentes,
+  ecouterSuiviVentes,
   chargerCacheIA,
   chargerCacheWikipedia,
   chargerThemesAppris,
@@ -67,7 +69,8 @@ export function useDonneesPage() {
   const [preferences, setPreferences] = useState<Preferences>(preferencesParDefaut);
   const [ventesJoueur, setVentes] = useState<EvenementVente[]>([]);
   const [releveSite, setReleveSite] = useState<EvenementVente[]>([]);
-  const ventes = useMemo(() => [...ventesJoueur, ...releveSite], [ventesJoueur, releveSite]);
+  const [resultatsVentes, setResultatsVentes] = useState<EvenementVente[]>([]);
+  const ventes = useMemo(() => [...ventesJoueur, ...releveSite, ...resultatsVentes], [ventesJoueur, releveSite, resultatsVentes]);
   const [etiquettesSite, setEtiquettesSite] = useState<EtiquetteSite[] | null>(null);
   const [registre, setRegistre] = useState<Registre>(registreVide);
   const [executionEnCours, setExecutionEnCours] = useState(false);
@@ -121,12 +124,16 @@ export function useDonneesPage() {
       .then(setVentes)
       .catch(() => setMessage('Le journal des ventes n’a pas pu être lu (stockage indisponible).'));
     void chargerAffluenceSite().then(setReleveSite).catch(() => undefined);
+    const relireResultats = (): void => void chargerResultatsVentes().then(setResultatsVentes).catch(() => undefined);
+    relireResultats();
+    const arreterResultats = ecouterSuiviVentes(relireResultats);
     void lireStockageSynchro().then(appliquerStockageSynchro);
     const relireEtiquettes = (): void => void chargerEtiquettesSite().then(setEtiquettesSite).catch(() => setEtiquettesSite(null));
     relireEtiquettes();
     const arreterEtiquettes = ecouterEtiquettesSite(relireEtiquettes);
     return () => {
       arreterEtiquettes();
+      arreterResultats();
     };
   }, []);
 
