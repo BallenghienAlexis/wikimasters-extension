@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { INTERVALLE_MS, type Horloge } from '../../src/lib/file';
 import type { Carte, Collection } from '../../src/lib/collection';
-import { VERSION_SCHEMA } from '../../src/lib/collection';
+import { VERSION_SCHEMA, resumer } from '../../src/lib/collection';
 import {
   MAX_PAGES_SANS_TOTAL,
   PAUSE_APRES_ARRET_MS,
@@ -1241,5 +1241,29 @@ describe('ordonnanceur — robustesse aux changements pendant la lecture (Alexis
     expect(r.collection.cartes.some((c) => c.id === idCarte(1))).toBe(true);
     expect(r.collection.cartes.some((c) => c.id === idCarte(999))).toBe(true);
     expect(b.departs.filter((d) => /page=1/.test(d.chemin)).length).toBeLessThanOrEqual(3);
+  });
+});
+
+describe('ordonnanceur — doublons répartis sur plusieurs pages (2026-11-24)', () => {
+  it('additionne les exemplaires d’une même carte lus sur deux pages', async () => {
+    // 59 cartes distinctes puis un second exemplaire de la carte 1 sur la page suivante : 60 exemplaires, 59 cartes.
+    const exemplaires = Array.from({ length: 59 }, (_, i) => exemplaire(i + 1));
+    exemplaires.push({ ...exemplaire(1), id: 'ex-1-bis', obtained_at: new Date(Date.UTC(2025, 0, 1)).toISOString() });
+    const site = (chemin: string): ReponseApi => {
+      if (chemin.startsWith('/api/my-collection/stats')) return { statut: 200, json: statsJson(60, 59) };
+      const page = /\/api\/my-collection\?.*page=(\d+)/.exec(chemin);
+      if (page) {
+        const p = Number(page[1]);
+        return { statut: 200, json: { collection: exemplaires.slice(p * 50, (p + 1) * 50) } };
+      }
+      return { statut: 404, json: null };
+    };
+    const b = banc(site);
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.collection.cartes).toHaveLength(59);
+    const c = r.collection.cartes.find((x) => x.id === idCarte(1));
+    expect(c?.quantite).toBe(2);
+    expect([...(c?.idsSite ?? [])].sort()).toEqual(['ex-1', 'ex-1-bis']);
+    expect(resumer(r.collection.cartes).doublons).toBe(1);
   });
 });

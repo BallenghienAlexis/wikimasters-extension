@@ -615,18 +615,32 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       }
       const toutIdentique = lue.cartes.length > 0 && lue.cartes.every((c) => identique(parId.get(c.id), c));
       for (const c of lue.cartes) {
+        // Même carte déjà lue sur une page précédente de cette lecture : les exemplaires s’additionnent (le site les
+        // répartit sur plusieurs pages), sans quoi la dernière page écraserait la quantité et aucun doublon n’apparaîtrait.
+        const dejaLue = vus.has(c.id);
         vus.add(c.id);
         const nouveaux = c.idsSite.filter((id) => !idsComptes.has(id));
         for (const id of nouveaux) idsComptes.add(id);
-        exemplairesLus += nouveaux.length === c.idsSite.length ? c.quantite : Math.round((c.quantite * nouveaux.length) / c.idsSite.length);
+        const ajout = nouveaux.length === c.idsSite.length ? c.quantite : Math.round((c.quantite * nouveaux.length) / c.idsSite.length);
+        exemplairesLus += ajout;
         etat.cardIds[c.id] = c.cardId;
         const locale = parId.get(c.id);
-        exemplairesGagnes += c.quantite - (locale?.quantite ?? 0);
-        if (!locale) cartesGagnees += 1;
         if (!locale) {
+          exemplairesGagnes += c.quantite;
+          cartesGagnees += 1;
           parId.set(c.id, nouvelleCarte(c));
           continue;
         }
+        if (dejaLue) {
+          exemplairesGagnes += ajout;
+          const idsSite = [...(locale.idsSite ?? [])];
+          for (const id of nouveaux) if (!idsSite.includes(id)) idsSite.push(id);
+          const etiquettesSite = [...locale.etiquettesSite];
+          for (const nom of c.etiquettesSite) if (!etiquettesSite.includes(nom)) etiquettesSite.push(nom);
+          parId.set(c.id, { ...locale, quantite: locale.quantite + ajout, favori: locale.favori || c.favori, idsSite, etiquettesSite });
+          continue;
+        }
+        exemplairesGagnes += c.quantite - locale.quantite;
         // Faits du site seulement : l’édition locale (dont `decidePar`) n’est jamais touchée.
         parId.set(c.id, { ...locale, quantite: c.quantite, favori: c.favori, idsSite: c.idsSite, etiquettesSite: c.etiquettesSite });
       }
