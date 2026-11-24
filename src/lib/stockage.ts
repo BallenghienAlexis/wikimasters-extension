@@ -22,12 +22,14 @@ import { estObjet } from './valider';
 import { ajouterMesures, validerMesures, type CategorieDuree, type MesuresDurees } from './durees';
 import type { EtatVerrouRequete } from './verrouRequete';
 import { CLES_GARDEES, collectionReduite, preferencesGardees } from './reinitialisation';
+import { validerImportees, type EtiquettesImportees } from './sauvegardeRegistre';
 import { VERSION_SUIVI, suiviVide, validerLancements, issueDe, type LancementVente, type SuiviVentes, type VenteTerminee } from './ventes';
 
 const CLE = 'collection';
 const CLE_PREFERENCES = 'preferences';
 const CLE_AMIS_INITIAUX = 'amisInitiaux';
 const CLE_REGISTRE = 'registre';
+const CLE_ETIQUETTES_IMPORTEES = 'etiquettesImportees';
 const CLE_JOURNAL = 'journal';
 const CLE_EXECUTION = 'execution';
 const CLE_SIGNAL = 'signalSynchro';
@@ -77,6 +79,7 @@ export const CLES_STOCKAGE = {
   preferences: CLE_PREFERENCES,
   amisInitiaux: CLE_AMIS_INITIAUX,
   registre: CLE_REGISTRE,
+  etiquettesImportees: CLE_ETIQUETTES_IMPORTEES,
   journal: CLE_JOURNAL,
   execution: CLE_EXECUTION,
   signalSynchro: CLE_SIGNAL,
@@ -210,6 +213,17 @@ export async function chargerRegistre(): Promise<Registre> {
 
 export async function enregistrerRegistre(registre: Registre): Promise<void> {
   await chrome.storage.local.set({ [CLE_REGISTRE]: registre });
+}
+
+/** Revendications d'étiquettes laissées par un import, en attente d'une synchro ; illisible ou absent : `null` (jamais bloquant). */
+export async function chargerEtiquettesImportees(): Promise<EtiquettesImportees | null> {
+  const contenu = await chrome.storage.local.get(CLE_ETIQUETTES_IMPORTEES);
+  return validerImportees(contenu[CLE_ETIQUETTES_IMPORTEES]);
+}
+
+export async function enregistrerEtiquettesImportees(e: EtiquettesImportees | null): Promise<void> {
+  if (e === null) await chrome.storage.local.remove(CLE_ETIQUETTES_IMPORTEES);
+  else await chrome.storage.local.set({ [CLE_ETIQUETTES_IMPORTEES]: e });
 }
 
 export async function chargerJournal(): Promise<Journal> {
@@ -735,7 +749,9 @@ export async function lireDonneesSauvegarde(): Promise<Donnees> {
     chargerThemesAppris(),
     chargerGrapheWikidata(MAX_ENTITES_GRAPHE),
   ]);
-  return { collection, preferences, syncAuto, ventes, synchro: { derniereSynchro, etat, wikipedia, classementIA, themesAppris, grapheWikidata } };
+  // Registre et revendications : facultatifs (illisibles = absents, la sauvegarde n'en dépend pas pour fonctionner).
+  const [registre, importees] = await Promise.all([chargerRegistre().catch(() => undefined), chargerEtiquettesImportees()]);
+  return { collection, preferences, syncAuto, ventes, synchro: { derniereSynchro, etat, wikipedia, classementIA, themesAppris, grapheWikidata }, ...(registre ? { registre } : {}), importees };
 }
 
 /** Une synchronisation tient le bail : l'importer maintenant écraserait son état. */
@@ -755,6 +771,7 @@ export async function ecrireDonneesSauvegarde(donnees: Donnees): Promise<void> {
   await enregistrerPreferences(donnees.preferences);
   await enregistrerVentes(donnees.ventes);
   await enregistrerSyncAuto(donnees.syncAuto);
+  if (donnees.importees !== undefined) await enregistrerEtiquettesImportees(donnees.importees);
   const s = donnees.synchro;
   if (s) {
     await enregistrerCacheWikipedia(s.wikipedia);

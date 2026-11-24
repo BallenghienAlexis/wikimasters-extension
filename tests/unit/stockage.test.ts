@@ -186,7 +186,7 @@ describe('affluenceSite', () => {
 describe('CLES_STOCKAGE', () => {
   it('AC4 : énumère exactement les clés locales de l’extension', () => {
     expect([...cles()].sort()).toEqual([
-      'affichage', 'affluenceSite', 'amisInitiaux', 'arretSynchro', 'bailSuiviVentes', 'bailSynchro', 'classementIA', 'collection', 'derniereRelance', 'derniereSynchro', 'dureesMesurees', 'ecartesVentes', 'etatSuiviVentes', 'etatSynchro', 'etiquettesSite', 'execution', 'historique', 'ignorees', 'journal', 'lancementsVentes', 'passerCarteSynchro', 'preferences', 'registre', 'relanceSynchro', 'relanceVentes', 'releveMarche', 'signalSuiviVentes', 'signalSynchro', 'statutRelanceVentes', 'statutSynchro', 'suiviVentes', 'suiviVentesActif', 'syncAuto', 'themesAppris', 'ventes', 'verrouRequete', 'wikipedia',
+      'affichage', 'affluenceSite', 'amisInitiaux', 'arretSynchro', 'bailSuiviVentes', 'bailSynchro', 'classementIA', 'collection', 'derniereRelance', 'derniereSynchro', 'dureesMesurees', 'ecartesVentes', 'etatSuiviVentes', 'etatSynchro', 'etiquettesImportees', 'etiquettesSite', 'execution', 'historique', 'ignorees', 'journal', 'lancementsVentes', 'passerCarteSynchro', 'preferences', 'registre', 'relanceSynchro', 'relanceVentes', 'releveMarche', 'signalSuiviVentes', 'signalSynchro', 'statutRelanceVentes', 'statutSynchro', 'suiviVentes', 'suiviVentesActif', 'syncAuto', 'themesAppris', 'ventes', 'verrouRequete', 'wikipedia',
     ]);
   });
 

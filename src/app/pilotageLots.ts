@@ -39,6 +39,7 @@ import {
   enregistrerJournal,
   enregistrerRegistre,
 } from '../lib/stockage';
+import { adopterEtiquettesImportees } from './adoptionEtiquettes';
 import { avecIdEtiquette, reconcilierAvecSite, refuserCouple } from '../lib/registre';
 import { creerExecutionReelle, horlogeReelle, type Execution } from './execution';
 import type { CoupleRetrait } from './Journal';
@@ -313,7 +314,9 @@ async function alignerSurLesEtiquettesDuSite(actions: readonly Action[]): Promis
   // Une liste vide alors que le registre connaît des étiquettes n'est pas mémorisée (réponse allégée possible du site).
   // Erreur d'écriture ignorée volontairement : simple mémoire d'affichage, le lot continue.
   if (lue.length > 0 || Object.keys(registre.etiquettes).length === 0) await enregistrerEtiquettesSite(lue).catch(() => undefined);
-  const reconciliation = reconcilierAvecSite(registre, lue);
+  // Étiquettes citées par une sauvegarde importée : reprises si le site les confirme (pas de doublon créé, pas de pose refaite).
+  const adopte = await adopterEtiquettesImportees().catch(() => null);
+  const reconciliation = reconcilierAvecSite(adopte ?? registre, lue);
   if (reconciliation.registre !== registre) await enregistrerRegistre(reconciliation.registre);
   return ajusterLotAuSite(actions, reconciliation.registre, reconciliation.perdus, collection, configDuLot(preferences), typesDisponibles());
 }

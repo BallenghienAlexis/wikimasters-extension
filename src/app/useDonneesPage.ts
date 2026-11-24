@@ -1,3 +1,4 @@
+import { adopterEtiquettesImportees } from './adoptionEtiquettes';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { appliquerEdition, collectionVide, partagerCartes, type Collection, type EditionCarte } from '../lib/collection';
 import type { Registre } from '../lib/actions';
@@ -92,6 +93,8 @@ export function useDonneesPage() {
   const lireStockageSynchro = async (): Promise<EtatStockageSynchro> => {
     const etat: EtatStockageSynchro = { registre: null, executionEnCours: false, executionIllisible: false };
     try {
+      // Étiquettes d'un import reprises avant de lire le registre (l'aperçu ne proposera pas de recréer ce que le site a déjà).
+      await adopterEtiquettesImportees().catch(() => null);
       etat.registre = await chargerRegistre();
     } catch {
       etat.registre = null;
