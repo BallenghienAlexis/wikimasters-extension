@@ -35,15 +35,21 @@ async function transaction<T>(mode: IDBTransactionMode, action: (m: IDBObjectSto
 
 export const synchroPcDisponible = (): boolean => typeof indexedDB !== 'undefined' && 'showDirectoryPicker' in window;
 
-/** Le joueur choisit le dossier (geste obligatoire). `null` s'il annule. */
-export async function choisirDossier(): Promise<Dossier | null> {
+/** Le joueur choisit le dossier (geste obligatoire). `null` seulement s'il ferme la fenêtre : toute autre erreur remonte avec son nom. */
+export async function choisirDossier(): Promise<{ dossier: Dossier | null; erreurMemoire: string | null }> {
+  let choisi: Dossier;
   try {
-    const choisi = await (window as unknown as { showDirectoryPicker(o: { mode: 'readwrite'; id: string }): Promise<Dossier> }).showDirectoryPicker({ mode: 'readwrite', id: 'wm-synchro-pc' });
-    await transaction('readwrite', (m) => m.put(choisi, CLE));
-    return choisi;
+    choisi = await (window as unknown as { showDirectoryPicker(o: { mode: 'readwrite'; id: string }): Promise<Dossier> }).showDirectoryPicker({ mode: 'readwrite', id: 'wm-synchro-pc' });
   } catch (e) {
-    if (e instanceof DOMException && e.name === 'AbortError') return null;
+    if (e instanceof DOMException && e.name === 'AbortError') return { dossier: null, erreurMemoire: null };
     throw e;
+  }
+  // Une erreur de mémorisation (IndexedDB) ne doit jamais passer pour une annulation : le dossier sert pour cette session.
+  try {
+    await transaction('readwrite', (m) => m.put(choisi, CLE));
+    return { dossier: choisi, erreurMemoire: null };
+  } catch (e) {
+    return { dossier: choisi, erreurMemoire: e instanceof Error ? `${e.name} : ${e.message}` : 'erreur inconnue' };
   }
 }
 

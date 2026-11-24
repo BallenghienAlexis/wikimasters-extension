@@ -57,6 +57,7 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
   const memoire = useRef<Memoire>(memoireParDefaut());
   const memoireLue = useRef<Promise<void> | null>(null);
   const dossier = useRef<Dossier | null>(null);
+  const avertissement = useRef<string | null>(null);
   const occupe = useRef(false);
   const derniereLectureMs = useRef(0);
   const [vue, setVue] = useState({ etat: (synchroPcDisponible() ? 'sans-dossier' : 'indisponible') as EtatSynchroPc, nomDossier: null as string | null, derniereLecture: null as string | null, pcVus: [] as string[], ignores: [] as FichierIgnore[], erreur: null as string | null });
@@ -106,9 +107,9 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
         }
         m.lus = rapport.lus;
         ecrireMemoire(m);
-        setVue((v) => ({ ...v, etat: 'actif', derniereLecture: new Date().toISOString(), pcVus: Object.keys(rapport.lus).sort(), ignores: rapport.ignores, erreur: null }));
+        setVue((v) => ({ ...v, etat: 'actif', derniereLecture: new Date().toISOString(), pcVus: Object.keys(rapport.lus).sort(), ignores: rapport.ignores, erreur: avertissement.current }));
       } else {
-        setVue((v) => ({ ...v, etat: 'actif', erreur: null }));
+        setVue((v) => ({ ...v, etat: 'actif', erreur: avertissement.current }));
       }
     } catch (e) {
       if (e instanceof ErreurImportSynchroEnCours) {
@@ -151,14 +152,15 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
 
   const choisir = async (): Promise<void> => {
     try {
-      const d = await choisirDossier();
+      const { dossier: d, erreurMemoire } = await choisirDossier();
       if (!d) {
         setVue((v) => ({ ...v, erreur: 'Aucun dossier retenu : la fenêtre a été fermée ou Chrome a refusé ce dossier. Essaie un autre dossier, par exemple un sous-dossier ordinaire du Drive.' }));
         return;
       }
       dossier.current = d;
       derniereLectureMs.current = 0;
-      setVue((v) => ({ ...v, nomDossier: d.name, etat: 'actif', erreur: null }));
+      avertissement.current = erreurMemoire ? `Dossier choisi, mais Chrome ne l’a pas mémorisé (${erreurMemoire}) : il faudra le choisir à nouveau à chaque ouverture.` : null;
+      setVue((v) => ({ ...v, nomDossier: d.name, etat: 'actif', erreur: avertissement.current }));
       await autorisation(d, true);
       await cycle();
     } catch (e) {
@@ -183,6 +185,7 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
   const desactiver = async (): Promise<void> => {
     dossier.current = null;
     await oublierDossier().catch(() => undefined);
+    avertissement.current = null;
     setVue((v) => ({ ...v, etat: 'sans-dossier', nomDossier: null, erreur: null }));
   };
   const maintenant = async (): Promise<void> => {
