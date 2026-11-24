@@ -3,9 +3,9 @@
 import { aEditionLocale } from './collection';
 import { appliquerImport, creerSauvegarde, lireSauvegarde, serialiserSauvegarde, type Donnees, type PolitiqueConflit } from './sauvegarde';
 
-/** Écriture au plus une fois par minute ; lecture des autres PC au plus toutes les 5 minutes. */
-export const INTERVALLE_ECRITURE_MS = 60_000;
-export const INTERVALLE_LECTURE_MS = 5 * 60_000;
+/** Écriture et lecture des autres PC au plus toutes les 15 s (Alexis, 2026-11-24 : « instantanément entre les différents PC ») ; rien n'est écrit si le contenu n'a pas changé. */
+export const INTERVALLE_ECRITURE_MS = 15_000;
+export const INTERVALLE_LECTURE_MS = 15_000;
 /** Marque d'un fichier trop gros : il est signalé sans être lu ni chargé en mémoire. */
 export const FICHIER_TROP_GROS = '\u0000trop-gros';
 /** Un fichier plus gros est ignoré (la sauvegarde manuelle accepte 20 Mo). */

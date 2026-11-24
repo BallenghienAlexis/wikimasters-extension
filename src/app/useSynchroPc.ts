@@ -31,9 +31,13 @@ interface Memoire {
   /** Dernière modification saisie ici ; `null` tant qu'aucune n'est connue (PC neuf : l'autre PC l'emporte). */
   modifieLe: string | null;
   lus: Record<string, string>;
+  /** Un dossier est configuré sur ce PC : la relance automatique attend alors une fusion récente. */
+  actif: boolean;
+  /** Dernière lecture des autres PC (ms) ; lue par le content script. */
+  derniereLectureLe: number | null;
 }
 
-const memoireParDefaut = (): Memoire => ({ nomPc: genererNomPc(), dernierEnvoi: null, empreinte: null, edition: null, modifieLe: null, lus: {} });
+const memoireParDefaut = (): Memoire => ({ nomPc: genererNomPc(), dernierEnvoi: null, empreinte: null, edition: null, modifieLe: null, lus: {}, actif: false, derniereLectureLe: null });
 
 function lireMemoire(brut: Record<string, unknown> | null): Memoire {
   if (!brut) return memoireParDefaut();
@@ -48,6 +52,8 @@ function lireMemoire(brut: Record<string, unknown> | null): Memoire {
     edition: typeof brut.edition === 'string' ? brut.edition : null,
     modifieLe: typeof brut.modifieLe === 'string' ? brut.modifieLe : null,
     lus,
+    actif: brut.actif === true,
+    derniereLectureLe: typeof brut.derniereLectureLe === 'number' ? brut.derniereLectureLe : null,
   };
 }
 const ecrireMemoire = (m: Memoire): void => void enregistrerSynchroPc({ ...m }).catch(() => undefined);
@@ -106,6 +112,8 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
           onFusionnee(donnees);
         }
         m.lus = rapport.lus;
+        m.actif = true;
+        m.derniereLectureLe = Date.now();
         ecrireMemoire(m);
         setVue((v) => ({ ...v, etat: 'actif', derniereLecture: new Date().toISOString(), pcVus: Object.keys(rapport.lus).sort(), ignores: rapport.ignores, erreur: avertissement.current }));
       } else {
@@ -139,11 +147,15 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
       .then(async (d) => {
         if (!actif || !d) return;
         dossier.current = d;
+        if (!memoire.current.actif) {
+          memoire.current.actif = true;
+          ecrireMemoire(memoire.current);
+        }
         setVue((v) => ({ ...v, nomDossier: d.name, etat: 'actif' }));
         await cycle();
       })
       .catch(() => setVue((v) => ({ ...v, etat: 'erreur', erreur: 'Le dossier mémorisé est illisible : choisis-le à nouveau.' })));
-    const minuteur = setInterval(() => void cycle(), 30_000);
+    const minuteur = setInterval(() => void cycle(), 10_000);
     return () => {
       actif = false;
       clearInterval(minuteur);
@@ -158,6 +170,7 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
         return;
       }
       dossier.current = d;
+      memoire.current.actif = true;
       derniereLectureMs.current = 0;
       avertissement.current = erreurMemoire ? `Dossier choisi, mais Chrome ne l’a pas mémorisé (${erreurMemoire}) : il faudra le choisir à nouveau à chaque ouverture.` : null;
       setVue((v) => ({ ...v, nomDossier: d.name, etat: 'actif', erreur: avertissement.current }));
@@ -185,6 +198,8 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
   const desactiver = async (): Promise<void> => {
     dossier.current = null;
     await oublierDossier().catch(() => undefined);
+    memoire.current.actif = false;
+    ecrireMemoire(memoire.current);
     avertissement.current = null;
     setVue((v) => ({ ...v, etat: 'sans-dossier', nomDossier: null, erreur: null }));
   };

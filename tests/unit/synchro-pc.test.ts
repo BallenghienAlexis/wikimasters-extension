@@ -161,3 +161,22 @@ describe('défausses propagées entre PC', () => {
     expect(r.donnees.collection.cartes).toHaveLength(12);
   });
 });
+
+describe('relance et fusion entre PC', () => {
+  it('synchroPcAJour : vrai sans dossier, faux si la dernière lecture est périmée', async () => {
+    const { vi } = await import('vitest');
+    let memoire: Record<string, unknown> | null = null;
+    vi.stubGlobal('chrome', { storage: { local: { get: async () => ({ synchroPc: memoire }) } } });
+    const { synchroPcAJour } = await import('../../src/lib/stockage');
+    expect(await synchroPcAJour(1_000_000)).toBe(true);
+    memoire = { actif: false };
+    expect(await synchroPcAJour(1_000_000)).toBe(true);
+    memoire = { actif: true, derniereLectureLe: 1_000_000 - 60_000 };
+    expect(await synchroPcAJour(1_000_000)).toBe(true);
+    memoire = { actif: true, derniereLectureLe: 1_000_000 - 11 * 60_000 };
+    expect(await synchroPcAJour(1_000_000)).toBe(false);
+    memoire = { actif: true };
+    expect(await synchroPcAJour(1_000_000)).toBe(false);
+    vi.unstubAllGlobals();
+  });
+});

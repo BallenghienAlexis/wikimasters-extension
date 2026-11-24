@@ -71,6 +71,8 @@ export interface DependancesSuiviVentes {
   enregistrerEtatSuivi: (e: EtatSuiviVentes) => Promise<void>;
   /** Un lot d’écriture est en cours : la relance (écriture) lui laisse la place ; la lecture n’en dépend pas. */
   lotEnCours: () => Promise<boolean>;
+  /** Synchro entre PC : faux si elle est configurée mais que les autres PC n'ont pas été lus récemment (page de gestion fermée) ; la relance attend alors. */
+  synchroPcAJour?: () => Promise<boolean>;
   route: string | null;
   relanceActive: () => Promise<boolean>;
   chargerSuivi: () => Promise<SuiviVentes>;
@@ -176,6 +178,11 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
     if (enCoursReel >= maxSite) return { etat: 'bloque' };
     // Un lot d’écriture en cours garde la main sur les enchères (le 409 reste le garde-fou) ; la synchro globale, elle, ne gêne pas.
     if (await deps.lotEnCours().catch(() => false)) {
+      reessaiLe = maintenant + DELAI_REESSAI_PLACE_MS;
+      return { etat: 'bloque' };
+    }
+    // Les PC d'abord, le site ensuite (Alexis, 2026-11-24) : sans fusion récente entre PC, rien n'est mis en vente.
+    if (deps.synchroPcAJour && !(await deps.synchroPcAJour().catch(() => false))) {
       reessaiLe = maintenant + DELAI_REESSAI_PLACE_MS;
       return { etat: 'bloque' };
     }

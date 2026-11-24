@@ -462,6 +462,16 @@ export async function chargerSynchroPc(): Promise<Record<string, unknown> | null
   return typeof brut === 'object' && brut !== null && !Array.isArray(brut) ? (brut as Record<string, unknown>) : null;
 }
 
+/** Au-delà, la fusion entre PC est jugée trop ancienne pour que la relance automatique envoie quoi que ce soit. */
+export const FUSION_PC_PERIMEE_MS = 10 * 60_000;
+
+/** Vrai si la synchro entre PC n'est pas configurée, ou si les autres PC ont été lus il y a moins de `maxMs` : la relance automatique n'agit que sur des données fusionnées. */
+export async function synchroPcAJour(maintenant: number, maxMs: number = FUSION_PC_PERIMEE_MS): Promise<boolean> {
+  const m = await chargerSynchroPc();
+  if (m === null || m.actif !== true) return true;
+  return typeof m.derniereLectureLe === 'number' && maintenant - m.derniereLectureLe <= maxMs;
+}
+
 export async function enregistrerSynchroPc(memoire: Record<string, unknown>): Promise<void> {
   await chrome.storage.local.set({ [CLE_SYNCHRO_PC]: memoire });
 }
