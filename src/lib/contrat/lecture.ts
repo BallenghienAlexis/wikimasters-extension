@@ -9,6 +9,34 @@ import { MAX_ETIQUETTES_SITE } from '../etiquettesPreexistantes'
  * Alexis, 2026-11-11, relue juste avant un lot d'enchères le 2026-11-15) : même origine que l'onglet, cookies du
  * navigateur, aucun en-tête, aucun jeton. Seuls le nombre d'enchères en cours et le maximum sont retenus.
  */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Lecture seule des étiquettes du compte par l'hôte Supabase du site (Alexis, 2026-11-24 : « oui » à `GET /rest/v1/tags`) :
+ * le site ne liste pas, dans `my-collection/stats`, une étiquette que plus aucune carte ne porte, alors que sa création
+ * répond 409 (« tags_user_name_lower_unique »). Mêmes hôte, en-têtes et jeton en mémoire que les écritures d'étiquettes ;
+ * `reseau.ts` ajoute le filtre `user_id` de la session. Aucun en-tête, aucune permission de plus.
+ */
+export const ENTREE_LECTURE_TAGS: EntreeContrat = {
+  methode: 'GET',
+  modeleChemin: '/rest/v1/tags?select=id,name&limit=1000',
+  construireChemin: () => '/rest/v1/tags?select=id,name&limit=1000',
+  construireCorps: () => null,
+  sansCorps: true,
+  auth: { entete: 'session' },
+  lireEtiquettes: (json) => {
+    // Liste tronquée (limite atteinte) ou entrée illisible : jamais prise pour preuve.
+    if (!Array.isArray(json) || json.length >= 1000) return null
+    const liste: Array<{ id: string; nom: string; nbCartes: number }> = []
+    for (const e of json) {
+      if (!estObjet(e) || typeof e.id !== 'string' || !UUID.test(e.id) || typeof e.name !== 'string' || e.name.trim() === '') return null
+      liste.push({ id: e.id, nom: e.name, nbCartes: 0 })
+    }
+    return liste
+  },
+  validerReponse: (statut, json) => (statut === 200 && Array.isArray(json) ? 'reussie' : 'hors-contrat'),
+}
+
 export const ENTREES_LECTURE: Partial<Record<TypeAction, EntreeContrat>> = {
   lecture: {
     methode: 'GET',

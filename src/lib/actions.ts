@@ -33,9 +33,11 @@ export interface ActionLecture extends ActionBase {
   type: 'lecture'
   /**
    * Absente : lecture des enchères (`marketplace/mine`). `etiquettes` : lecture de `my-collection/stats` pour vérifier,
-   * avant un lot, que les étiquettes attendues existent encore sur le site (Alexis, 2026-11-23).
+   * avant un lot, que les étiquettes attendues existent encore sur le site (Alexis, 2026-11-23). `tags` : lecture seule de
+   * `GET /rest/v1/tags` (hôte Supabase du site) pour retrouver aussi les étiquettes sans carte, que `my-collection/stats` ne
+   * liste pas (Alexis, 2026-11-24).
    */
-  cible?: 'etiquettes'
+  cible?: 'etiquettes' | 'tags'
 }
 
 export interface ActionCreationEtiquette extends ActionBase {
