@@ -29,8 +29,10 @@ export const ancienneteMaxPrixMs = 7 * 86_400_000;
 /** Une carte sans route de prix (404) ou sans relevé exploitable n’est pas redemandée avant 30 jours. */
 export const memoireSansRoutePrixMs = 30 * 86_400_000;
 /** Durée de validité d’un relevé : 7 jours s’il porte une valeur ou une absence de vente constatée, 30 jours sinon (404, carte passée). */
-export function peremptionPrixMs(r: Pick<PrixReleve, 'valeur' | 'sansVente'> | undefined): number {
-  return r !== undefined && r.valeur === null && r.sansVente !== true ? memoireSansRoutePrixMs : ancienneteMaxPrixMs;
+export function peremptionPrixMs(r: Pick<PrixReleve, 'valeur' | 'sansVente' | 'sansRoute'> | undefined): number {
+  if (r === undefined) return ancienneteMaxPrixMs;
+  if (r.sansRoute === true) return memoireSansRoutePrixMs;
+  return r.valeur === null && r.sansVente !== true ? memoireSansRoutePrixMs : ancienneteMaxPrixMs;
 }
 /** Durée d’un bail ; renouvelé avant chaque requête. */
 export const DUREE_BAIL_MS = 2 * 60_000;
@@ -70,6 +72,8 @@ export interface PrixReleve {
   tendance?: TendancePrix;
   /** Aucune vente prouvée par `price-history` (Alexis, 2026-11-23) : posé seulement sur une absence prouvée, jamais sur 404, carte passée ou erreur. */
   sansVente?: boolean;
+  /** Carte sans route de prix (404) : redemandée après 30 jours même si une valeur précédente est gardée (2026-11-24). */
+  sansRoute?: boolean;
   /** Avec `sansVente` : plus haut prix moyen d'une semaine plus ancienne que les 4 dernières (2026-11-24) ; absent si aucune vente jamais lue. */
   ancienMax?: number;
   /** 2 : relevé fait avec la règle du 2026-11-24 ; une valeur nulle sans cette marque est redemandée une fois. */
@@ -697,13 +701,16 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
       if (obtenu === 'passee') {
         // Passée par le joueur : valeur précédente gardée, redemandée dans un jour.
         const precedente = etat.prix[carte.id];
-        etat.prix[carte.id] = { valeur: precedente?.valeur ?? null, releveLe: horloge.now() - peremptionPrixMs(precedente) + REPORT_CARTE_PASSEE_MS, v: 2 };
+        // Une carte passée perd `sansVente` : la durée se calcule sur le nouveau relevé, pour qu’elle soit bien redemandée dans 1 jour.
+        const passee: PrixReleve = { valeur: precedente?.valeur ?? null, releveLe: 0, v: 2 };
+        passee.releveLe = horloge.now() - peremptionPrixMs(passee) + REPORT_CARTE_PASSEE_MS;
+        etat.prix[carte.id] = passee;
         deps.prixTermine?.();
         continue;
       }
       if (obtenu === null) {
         // Carte sans route de prix : ignorée, valeur précédente gardée, pas redemandée avant 30 jours.
-        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now(), v: 2 };
+        etat.prix[carte.id] = { valeur: etat.prix[carte.id]?.valeur ?? null, releveLe: horloge.now(), v: 2, sansRoute: true };
         deps.prixTermine?.();
         continue;
       }

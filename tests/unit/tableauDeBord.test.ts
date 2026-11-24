@@ -210,6 +210,11 @@ describe('lignesSante : santé de la synchro en quatre lignes', () => {
     expect(perime[2]).toMatchObject({ symbole: '○', texte: '1 prix à rafraîchir (plus de 7 jours)' })
   })
 
+  it('prix périmés : le décompte fourni par l’appelant (péremption propre à chaque relevé) l’emporte', () => {
+    const l = lignesSante({ ...base, releves: [100 * JOUR - 20 * JOUR], perimes: 0 })
+    expect(l[2]?.symbole).toBe('✓')
+  })
+
   it('actions ignorées : symbole d’alerte et lien nommé', () => {
     const l = lignesSante({ ...base, ignorees: 2 })
     expect(l[3]).toMatchObject({ symbole: '✕', texte: '2 actions ignorées jusqu’à la prochaine synchro' })
