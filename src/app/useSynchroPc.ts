@@ -185,6 +185,7 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
   const desactiver = async (): Promise<void> => {
     dossier.current = null;
     await oublierDossier().catch(() => undefined);
+    avertissement.current = null;
     setVue((v) => ({ ...v, etat: 'sans-dossier', nomDossier: null, erreur: null }));
   };
   const maintenant = async (): Promise<void> => {
