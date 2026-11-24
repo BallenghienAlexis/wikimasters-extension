@@ -448,3 +448,11 @@ describe('libelleCause : conflit 409', () => {
     expect(texte).toContain('relancer la synchronisation')
   })
 })
+
+describe('Lancer attend la synchro entre PC', () => {
+  it('désactivé tant que la fusion des autres PC n’a pas eu lieu', () => {
+    const base = { nbOnglets: 1, executionIllisible: false, executionEnCours: false, nbDisponibles: 3 };
+    expect(raisonDesactivation({ ...base, attenteSynchroPc: true })).toMatch(/Synchro entre PC/);
+    expect(raisonDesactivation({ ...base, attenteSynchroPc: false })).toBeNull();
+  });
+});
