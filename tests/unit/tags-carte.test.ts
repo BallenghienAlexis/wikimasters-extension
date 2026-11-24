@@ -63,3 +63,20 @@ describe('performance et « #Autres »', () => {
     expect(tagsDeCarte(carte(['#Autres'])).poses).toEqual([]);
   });
 });
+
+describe('filtre sur un thème parent (2026-11-24)', () => {
+  it('un parent liste aussi les cartes de ses thèmes enfants', () => {
+    expect(correspondAuTheme(carte(['#Metalcore']), 'metal')).toBe(true);
+    expect(correspondAuTheme(carte(['#Metalcore']), 'musique')).toBe(true);
+    expect(correspondAuTheme(carte(['#Metalcore']), 'metalcore')).toBe(true);
+  });
+
+  it('un enfant ne liste pas son parent ni un thème sans lien', () => {
+    expect(correspondAuTheme(carte(['#Musique']), 'metalcore')).toBe(false);
+    expect(correspondAuTheme(carte(['#Metalcore']), 'nazis')).toBe(false);
+  });
+
+  it('suit aussi les thèmes prévus quand rien n’est posé', () => {
+    expect(correspondAuTheme(carte([], 'C', '', ['metalcore']), 'musique')).toBe(true);
+  });
+});

@@ -1,10 +1,10 @@
 /**
  * Tags d’une carte dans la Collection : ce que le site porte vraiment (étiquettes posées, qui font foi) et ce que
  * l’extension prévoit en plus. Le filtre par thème, le compteur de thèmes et la ligne affichée utilisent la même source,
- * pour qu’une carte filtrée sur un thème montre ce thème parmi ses tags. Logique pure.
+ * pour qu’une carte filtrée sur un thème montre ce thème (ou l’un de ses enfants) parmi ses tags. Logique pure.
  */
 import type { Carte } from './collection';
-import { LIBELLES_THEMES, libellesThemesAffiches, THEME_AUTRES, versionThemes } from './themes';
+import { LIBELLES_THEMES, libellesThemesAffiches, parentsDe, THEME_AUTRES, versionThemes } from './themes';
 
 type CarteTags = Pick<Carte, 'titre' | 'description' | 'etiquettesSite'> & { themesChoisis?: string[] | null };
 
@@ -40,15 +40,25 @@ function tagsRetenus(carte: CarteTags): string[] {
   return poses.length > 0 ? poses : aPoser;
 }
 
-/** Une carte correspond à un thème si ce thème figure parmi les tags affichés. */
+/**
+ * Une carte correspond à un thème si ce thème figure parmi les tags affichés, ou si l’un des tags en est un descendant
+ * (Alexis, 2026-11-24 : filtrer sur un parent liste aussi les cartes de ses thèmes enfants). Les parents ne sont jamais
+ * posés comme étiquettes : sans cette règle, une famille ne trouverait aucune carte.
+ */
 export function correspondAuTheme(carte: CarteTags, theme: string): boolean {
   const tags = tagsRetenus(carte);
   if (theme === THEME_AUTRES) return tags.length === 0;
   const libelle = LIBELLES_THEMES[theme];
-  return libelle !== undefined && tags.includes(libelle);
+  if (libelle === undefined) return false;
+  if (tags.includes(libelle)) return true;
+  const table = libellesDeTheme();
+  return tags.some((tag) => {
+    const id = table.get(tag);
+    return id !== undefined && parentsDe(id).includes(theme);
+  });
 }
 
-/** Nombre de cartes par thème, avec la même source que le filtre : le chiffre affiché égale le nombre de cartes filtrées. */
+/** Nombre de cartes par thème, avec la même source que le filtre : le chiffre affiché égale le nombre de cartes filtrées, sauf pour un parent, dont le filtre ajoute aussi les cartes de ses enfants. */
 export function compterParTheme(cartes: readonly CarteTags[], themes: readonly string[]): Record<string, number> {
   const compte: Record<string, number> = Object.fromEntries(themes.map((t) => [t, 0]));
   const table = libellesDeTheme();
