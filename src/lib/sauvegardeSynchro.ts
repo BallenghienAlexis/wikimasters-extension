@@ -10,6 +10,8 @@ import { validerEtatAppris, type EtatAppris } from './themesAppris';
 import { MAX_ENTITES_GRAPHE, validerGraphe, type GrapheWikidata } from './classesWikidata';
 import { validerEtatSynchro } from './validerEtatSynchro';
 import { estObjet } from './valider';
+import { fusionnerActiviteJours, validerActiviteJours, type ActiviteJours } from './graphiquesTableauDeBord';
+import { MAX_EVENEMENTS, validerEvenements, type EvenementVente } from './affluence';
 
 /** Partie de l'état de l'ordonnanceur qui voyage : de quoi savoir que la collection a déjà été lue en entier. */
 export type EtatSauvegarde = Pick<EtatOrdonnanceur, 'total' | 'totalUnique' | 'signatureEtiquettes' | 'derniereComplete' | 'prix'>;
@@ -22,6 +24,9 @@ export interface DonneesSynchro {
   classementIA: CacheIA;
   themesAppris: EtatAppris;
   grapheWikidata: GrapheWikidata;
+  /** Graphiques du tableau de bord (2026-11-24) : activité par jour et enchères terminées (heures de forte affluence). Facultatifs : absents des anciens fichiers. */
+  activite?: ActiviteJours;
+  resultatsVentes?: EvenementVente[];
 }
 
 export interface SynchroSauvegardee {
@@ -31,6 +36,8 @@ export interface SynchroSauvegardee {
   classementIA: CacheIA;
   themesAppris: EtatAppris;
   grapheWikidata: GrapheWikidata;
+  activite?: ActiviteJours;
+  resultatsVentes?: EvenementVente[];
 }
 
 export function exporterSynchro(d: DonneesSynchro): SynchroSauvegardee {
@@ -44,6 +51,8 @@ export function exporterSynchro(d: DonneesSynchro): SynchroSauvegardee {
     classementIA: d.classementIA,
     themesAppris: d.themesAppris,
     grapheWikidata: d.grapheWikidata,
+    ...(d.activite ? { activite: d.activite } : {}),
+    ...(d.resultatsVentes ? { resultatsVentes: d.resultatsVentes } : {}),
   };
 }
 
@@ -75,7 +84,10 @@ export function lireSynchro(brut: unknown): SynchroSauvegardee | undefined | str
   if (themesAppris === null) return 'Les thèmes appris de la sauvegarde sont invalides.';
   const grapheWikidata = validerGraphe(brut.grapheWikidata, MAX_ENTITES_GRAPHE);
   if (grapheWikidata === null) return 'Le graphe Wikidata de la sauvegarde est invalide.';
-  return { derniereSynchro: d, etat, wikipedia, classementIA, themesAppris, grapheWikidata };
+  // Facultatifs et tolérants : une partie illisible est ignorée (le graphique se reconstruit), jamais une erreur d'import.
+  const activite = brut.activite === undefined ? undefined : validerActiviteJours(brut.activite);
+  const resultatsVentes = brut.resultatsVentes === undefined ? undefined : validerEvenements(brut.resultatsVentes).filter((e) => e.type === 'resultat');
+  return { derniereSynchro: d, etat, wikipedia, classementIA, themesAppris, grapheWikidata, ...(activite ? { activite } : {}), ...(resultatsVentes ? { resultatsVentes } : {}) };
 }
 
 const plusRecent = (a: number | null, b: number | null): number | null => (a === null ? b : b === null ? a : Math.max(a, b));
@@ -131,7 +143,20 @@ export function fusionnerSynchro(locale: DonneesSynchro, s: SynchroSauvegardee, 
     classementIA: { version: 1, modele: locale.classementIA.modele, entrees: entreesIA },
     themesAppris: apprisIci ? locale.themesAppris : s.themesAppris,
     grapheWikidata: graphe,
+    ...fusionnerGraphiques(locale, s),
   };
+}
+
+/** Activité : le plus grand compte par jour et par catégorie ; enchères terminées : union par date de mise en vente (500 au plus, les plus récentes). */
+function fusionnerGraphiques(locale: DonneesSynchro, s: SynchroSauvegardee): Pick<DonneesSynchro, 'activite' | 'resultatsVentes'> {
+  const sortie: Pick<DonneesSynchro, 'activite' | 'resultatsVentes'> = {};
+  if (locale.activite || s.activite) sortie.activite = fusionnerActiviteJours(locale.activite ?? {}, s.activite ?? {});
+  if (locale.resultatsVentes || s.resultatsVentes) {
+    const parDate = new Map<number, EvenementVente>();
+    for (const e of [...(s.resultatsVentes ?? []), ...(locale.resultatsVentes ?? [])]) parDate.set(e.at, e);
+    sortie.resultatsVentes = [...parDate.values()].sort((a, b) => a.at - b.at).slice(-MAX_EVENEMENTS);
+  }
+  return sortie;
 }
 
 /** Relevés de la sauvegarde repris : la carte existe et sa valeur marchande concorde (sinon la synchro y verrait une saisie à la main). */
