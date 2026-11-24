@@ -27,8 +27,28 @@ export const nomFichierPc = (nom: string): string => `wm-sync-${nom}.json`;
 /** Nom de PC d'un fichier du dossier, ou `null` si ce n'est pas un fichier de la synchro (fichiers temporaires et copies de conflit exclus). */
 export const nomPcDeFichier = (fichier: string): string | null => MOTIF_FICHIER.exec(fichier)?.[1] ?? null;
 
-/** Texte du fichier de ce PC à `maintenant`. */
-export const instantane = (donnees: Donnees, maintenant: Date): string => serialiserSauvegarde(creerSauvegarde(donnees, maintenant));
+/**
+ * Texte du fichier de ce PC à `maintenant`. `modifieLe` (dernière saisie faite sur ce PC) est écrit à côté de la sauvegarde :
+ * c'est lui, et non l'heure d'écriture, que les autres PC comparent (un PC qui réécrit son fichier sans rien saisir ne gagne pas).
+ */
+export function instantane(donnees: Donnees, maintenant: Date, modifieLe: string | null = null): string {
+  const s = creerSauvegarde(donnees, maintenant);
+  return serialiserSauvegarde(modifieLe === null ? s : ({ ...s, modifieLe } as typeof s));
+}
+
+/** Date de dernière saisie annoncée par un fichier (texte ISO), ou `null` si absente ou illisible. */
+export function modifieLeDuFichier(texte: string): string | null {
+  try {
+    const v = (JSON.parse(texte) as { modifieLe?: unknown }).modifieLe;
+    return typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Le joueur a-t-il déjà saisi quelque chose ici (note, prix cible, ami, favori ou thèmes choisis) ? */
+export const aDesSaisies = (donnees: Donnees): boolean =>
+  donnees.collection.cartes.some((c) => c.note !== '' || c.prixCible !== null || c.ami !== null || c.choixFavori != null || c.themesChoisis != null);
 
 /** Contenu sans la date : deux instantanés identiques à la date près ne justifient pas une écriture (évite les va-et-vient entre PC). */
 export function empreinte(texte: string): string {
@@ -67,7 +87,7 @@ export interface RapportFusion {
 
 /**
  * Fusionne les fichiers des autres PC dans les données locales, du plus ancien au plus récent.
- * Règle « le plus récent gagne » : un fichier plus récent que `modifieLe` (dernière modification saisie ici ; `null` = jamais, par exemple PC neuf)
+ * Règle « le plus récent gagne » : un fichier dont la dernière saisie (`modifieLe` écrit dedans, sinon sa date d'écriture) est plus récente que `modifieLe` d'ici (`null` = jamais, par exemple PC neuf)
  * l'emporte sur les cartes en conflit. Un fichier plus ancien laisse l'édition locale et n'ajoute aucune carte
  * (une carte vendue ou défaussée ici ne ressuscite pas) ; thèmes, amis et ventes sont toujours réunis (voir `appliquerImport`).
  * Un fichier illisible, d'un format inconnu ou déjà lu est ignoré sans rien modifier.
@@ -75,6 +95,7 @@ export interface RapportFusion {
 export function fusionnerFichiersPc(locales: Donnees, fichiers: FichierPc[], monNom: string, dejaLus: Record<string, string>, modifieLe: string | null): RapportFusion {
   const ignores: FichierIgnore[] = [];
   const lus = { ...dejaLus };
+  const texteDe = new Map(fichiers.map((f) => [f.nom, f.texte]));
   const valides: { nom: string; creeLe: string; sauvegarde: NonNullable<ReturnType<typeof lireOk>> }[] = [];
   for (const f of fichiers) {
     if (f.nom === monNom) continue;
@@ -96,7 +117,8 @@ export function fusionnerFichiersPc(locales: Donnees, fichiers: FichierPc[], mon
   let courantes = locales;
   const fusionnes: string[] = [];
   for (const v of valides) {
-    const plusRecent = modifieLe === null || v.creeLe > modifieLe;
+    const sienne = modifieLeDuFichier(texteDe.get(v.nom) ?? '') ?? v.creeLe;
+    const plusRecent = modifieLe === null || sienne > modifieLe;
     const politique: PolitiqueConflit = plusRecent ? 'remplacer' : 'garder-ici';
     const locales_ = new Set(courantes.collection.cartes.map((c) => c.id));
     const sauvegarde = plusRecent ? v.sauvegarde : { ...v.sauvegarde, cartes: v.sauvegarde.cartes.filter((c) => locales_.has(c.id)) };

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Carte } from '../../src/lib/collection';
 import type { Donnees } from '../../src/lib/sauvegarde';
-import { empreinte, empreinteEdition, fusionnerFichiersPc, genererNomPc, instantane, nomFichierPc, nomPcDeFichier, nomPcValide } from '../../src/lib/synchroPc';
+import { aDesSaisies, empreinte, empreinteEdition, fusionnerFichiersPc, genererNomPc, instantane, nomFichierPc, nomPcDeFichier, nomPcValide } from '../../src/lib/synchroPc';
 
 const carte = (id: string, plus: Partial<Carte> = {}): Carte => ({
   id, titre: `Carte ${id}`, rarete: null, description: '', quantite: 1, url: null, favori: false,
@@ -74,6 +74,20 @@ describe('fusion des fichiers des autres PC', () => {
     const fichierB = instantane(surB.donnees, T3);
     const surA = fusionnerFichiersPc(a1, [{ nom: 'pc-b', texte: fichierB }], 'pc-a', {}, T1.toISOString()); // A a modifié à T1, B écrit à T3
     expect(surA.donnees.collection.cartes[0]!.note).toBe('new');
+  });
+  it('un PC qui réécrit son fichier sans rien saisir ne fait pas perdre la saisie de l’autre', () => {
+    const a = donnees([carte('x', { note: 'new' })]); // A a saisi à T1
+    const fichierB = instantane(donnees([carte('x', { note: 'old' })]), T2, T1.toISOString().replace('10:00', '09:00')); // B réécrit à T2, sa dernière saisie date d'avant
+    const surA = fusionnerFichiersPc(a, [{ nom: 'pc-b', texte: fichierB }], 'pc-a', {}, T1.toISOString());
+    expect(surA.donnees.collection.cartes[0]!.note).toBe('new');
+  });
+  it('un PC dont la saisie est plus récente l’emporte, quelle que soit la date d’écriture', () => {
+    const surA = fusionnerFichiersPc(donnees([carte('x', { note: 'old' })]), [{ nom: 'pc-b', texte: instantane(donnees([carte('x', { note: 'new' })]), T2, T2.toISOString()) }], 'pc-a', {}, T1.toISOString());
+    expect(surA.donnees.collection.cartes[0]!.note).toBe('new');
+  });
+  it('détecte les saisies existantes', () => {
+    expect(aDesSaisies(donnees([carte('a')]))).toBe(false);
+    expect(aDesSaisies(donnees([carte('a', { note: 'n' })]))).toBe(true);
   });
   it('empreinte d’édition : insensible aux relevés du site, sensible à une note', () => {
     const base = donnees([carte('a')]);

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { chargerSynchroPc, ecrireDonneesSauvegarde, enregistrerSynchroPc, ErreurImportSynchroEnCours, lireDonneesSauvegarde } from '../lib/stockage';
 import type { Donnees } from '../lib/sauvegarde';
-import { empreinte, empreinteEdition, fusionnerFichiersPc, genererNomPc, instantane, INTERVALLE_ECRITURE_MS, INTERVALLE_LECTURE_MS, nomPcValide, type FichierIgnore } from '../lib/synchroPc';
+import { aDesSaisies, empreinte, empreinteEdition, fusionnerFichiersPc, genererNomPc, instantane, INTERVALLE_ECRITURE_MS, INTERVALLE_LECTURE_MS, nomPcValide, type FichierIgnore } from '../lib/synchroPc';
 import { autorisation, chargerDossier, choisirDossier, ecrireFichierPc, listerFichiersPc, oublierDossier, supprimerFichierPc, synchroPcDisponible, type Dossier } from './dossierPc';
 
 export type EtatSynchroPc = 'indisponible' | 'sans-dossier' | 'autorisation' | 'actif' | 'erreur';
@@ -77,9 +77,9 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
       // 1. Envoi de ce PC (au plus une fois par minute, et seulement si le contenu a changé).
       let donnees = await lireDonneesSauvegarde();
       const edition = empreinteEdition(donnees);
-      if (m.edition !== null && edition !== m.edition) m.modifieLe = maintenant.toISOString();
+      if ((m.edition !== null && edition !== m.edition) || (m.edition === null && m.modifieLe === null && aDesSaisies(donnees))) m.modifieLe = maintenant.toISOString();
       m.edition = edition;
-      const texte = instantane(donnees, maintenant);
+      const texte = instantane(donnees, maintenant, m.modifieLe);
       const peutEcrire = m.dernierEnvoi === null || maintenant.getTime() - Date.parse(m.dernierEnvoi) >= INTERVALLE_ECRITURE_MS;
       if (peutEcrire && empreinte(texte) !== m.empreinte) {
         await ecrireFichierPc(d, m.nomPc, texte);
