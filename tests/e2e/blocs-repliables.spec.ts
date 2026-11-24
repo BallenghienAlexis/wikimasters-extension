@@ -1,20 +1,28 @@
 import { allerA, chargerCollectionFictive, ecrireJeuRiche, expect, test } from './extension';
 
 // Épuration (2026-11-16) : les blocs secondaires sont repliés avec un résumé, se déplient au clavier, et leur contenu replié est hors tabulation.
-test('tableau de bord : santé repliée avec la pastille et l’âge en résumé', async ({ pageCollection: page }) => {
+test('tableau de bord : santé toujours visible avec la pastille et l’âge', async ({ pageCollection: page }) => {
   await ecrireJeuRiche(page);
   await page.evaluate(() => chrome.storage.local.set({ syncAuto: true }));
   await page.reload();
   await allerA(page, 'tableau-de-bord');
-  const bouton = page.getByTestId('sante-synchro').getByRole('button', { name: /^Santé de la synchro/ });
-  await expect(bouton).toHaveAttribute('aria-expanded', 'false');
-  await expect(bouton).toContainText('À jour');
-  await bouton.focus();
-  await page.keyboard.press('Enter');
-  await expect(bouton).toHaveAttribute('aria-expanded', 'true');
+  const sante = page.getByTestId('sante-synchro');
+  await expect(sante).toBeVisible();
+  await expect(sante).toContainText('À jour');
+  await expect(sante.getByRole('button')).toHaveCount(0);
 });
 
-test('tableau de bord : une synchro arrêtée ouvre la santé et montre la pastille', async ({ pageCollection: page }) => {
+test('tableau de bord : aucun bloc repliable, graphiques directement visibles', async ({ pageCollection: page }) => {
+  await chargerCollectionFictive(page);
+  await allerA(page, 'tableau-de-bord');
+  await expect(page.getByTestId('calendrier-activite')).toBeVisible();
+  await expect(page.getByTestId('repartition-themes')).toBeVisible();
+  await expect(page.getByTestId('repartition-destinations')).toBeVisible();
+  await expect(page.getByTestId('profil-affluence')).toBeVisible();
+  await expect(page.getByRole('tabpanel').locator('button[aria-expanded]')).toHaveCount(0);
+});
+
+test('tableau de bord : une synchro arrêtée montre la pastille d’erreur', async ({ pageCollection: page }) => {
   await ecrireJeuRiche(page);
   await page.evaluate(() =>
     chrome.storage.local.set({
@@ -26,9 +34,7 @@ test('tableau de bord : une synchro arrêtée ouvre la santé et montre la pasti
     }),
   );
   await allerA(page, 'tableau-de-bord');
-  const bouton = page.getByTestId('sante-synchro').getByRole('button', { name: /^Santé de la synchro/ });
-  await expect(bouton).toContainText('Erreur');
-  await expect(bouton).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByTestId('sante-synchro')).toContainText('Erreur');
 });
 
 test('collection : analyses et évolution repliées, contenu hors tabulation', async ({ pageCollection: page }) => {
@@ -72,7 +78,6 @@ test('tableau de bord : santé en quatre lignes Lecture, Étiquettes, Prix, Igno
   await page.evaluate(() => chrome.storage.local.set({ syncAuto: true }));
   await page.reload();
   await allerA(page, 'tableau-de-bord');
-  await page.getByTestId('sante-synchro').getByRole('button', { name: /^Santé de la synchro/ }).click();
   const lignes = page.getByTestId('lignes-sante').getByRole('listitem');
   await expect(lignes).toHaveCount(4);
   await expect(lignes.nth(0)).toContainText('Lecture');
@@ -97,12 +102,4 @@ test('collection : le bloc « Cartes » est replié avec le nombre de cartes, se
   await expect(page.getByTestId('tableau-cartes')).toBeVisible();
   await page.keyboard.press('Enter');
   await expect(bouton).toHaveAttribute('aria-expanded', 'false');
-});
-
-test('tableau de bord : chiffres clés repliés avec un résumé', async ({ pageCollection: page }) => {
-  await chargerCollectionFictive(page);
-  await allerA(page, 'tableau-de-bord');
-  const bouton = page.getByTestId('chiffres-cles').getByRole('button').first();
-  await expect(bouton).toHaveAttribute('aria-expanded', 'false');
-  await expect(bouton).toContainText('exemplaires');
 });

@@ -402,8 +402,7 @@ for (const mode of ['reduce', 'reglage'] as const) {
     test('SC-026 : chiffres clés à leur valeur finale dès le premier affichage', async ({ pageCollection: page }) => {
       await page.reload();
       await allerA(page, 'tableau-de-bord');
-      await ouvrirBloc(page, 'chiffres-cles');
-      const kpis = page.getByTestId('kpi');
+          const kpis = page.getByTestId('kpi');
       await expect(kpis).toHaveCount(3);
       const lire = (): Promise<string[]> => kpis.evaluateAll((els) => els.map((e) => (e.textContent ?? '').replace(/\s+/g, ' ').trim()));
       const premier = await lire();

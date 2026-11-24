@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import SectionRepliable from './SectionRepliable';
+import BlocTableauDeBord from './BlocTableauDeBord';
 import { CONFIG_AFFLUENCE } from '../config/affluence';
 import type { EvenementVente } from '../lib/affluence';
 import { JOURS_AFFICHES, libelleTranche, NOMS_JOURS, profilAffluence, TRANCHES, type CelluleAffluence } from '../lib/graphiquesTableauDeBord';
@@ -8,15 +8,15 @@ interface Props {
   evenements: readonly EvenementVente[];
 }
 
-const COL = 38;
-const LIG = 28;
-const MARGE_G = 64;
-const MARGE_H = 30;
+const COL = 17;
+const LIG = 20;
+const MARGE_G = 34;
+const MARGE_H = 16;
 
 const intensite = (c: CelluleAffluence, maximum: number): number => (maximum <= 0 ? 0 : Math.min(1, c.valeur / maximum));
 
 /**
- * Heures de plus forte affluence sur une semaine : 7 jours par tranches de 3 h (Alexis, 2026-11-24). Les données sont celles de
+ * Heures de plus forte affluence sur une semaine : 7 jours × 24 heures (Alexis, 2026-11-24). Les données sont celles de
  * VOS enchères (pas de tout le site) : le graphique s’affine à chaque enchère terminée, et suit exactement la règle qui choisit
  * la durée des enchères. Contour = heure forte ; valeur écrite au survol et au focus ; tableau alternatif.
  */
@@ -41,24 +41,22 @@ const ProfilAffluenceSemaine: React.FC<Props> = ({ evenements }) => {
   };
 
   return (
-    <SectionRepliable
+    <BlocTableauDeBord
       id="profil-affluence"
-      testId="profil-affluence"
-      className="mt-4"
       titre="Heures de forte affluence"
       resume={profil.source === 'resultats' ? `Vos ${profil.nombre} enchères` : 'Créneaux par défaut'}
     >
-      <p className="mt-1 text-sm text-muted">Sur une semaine, par tranches de 3 h. <strong>Calculé sur vos propres enchères</strong>, pas sur tout le site. {origine}</p>
-      <p className="mt-2 min-h-6 text-sm" data-testid="affluence-valeur" aria-live="off">
-        {actif ? texte(actif) : 'Survolez ou focalisez une case pour lire son détail.'}
+      <p className="mt-1 text-xs text-muted">Heure par heure, <strong>sur vos propres enchères</strong>. {origine}</p>
+      <p className="mt-1 min-h-5 text-xs" data-testid="affluence-valeur" aria-live="off">
+        {actif ? texte(actif) : 'Survolez une case pour son détail.'}
       </p>
-      <div className="mt-1 overflow-x-auto rounded border border-line bg-ink p-2">
-        <svg width={largeur} height={hauteur} viewBox={`0 0 ${largeur} ${hauteur}`} role="group" aria-label="Affluence par jour et par tranche de 3 heures" className="block max-w-none">
-          {Array.from({ length: TRANCHES }, (_, t) => (
-            <text key={t} x={MARGE_G + t * COL + COL / 2 - 1} y={12} fontSize="10" textAnchor="middle" fill="var(--color-muted)" aria-hidden="true">{t * 3}h</text>
-          ))}
+      <div className="mt-1 overflow-x-auto rounded border border-line bg-ink p-1.5">
+        <svg viewBox={`0 0 ${largeur} ${hauteur}`} style={{ width: '100%', minWidth: largeur, maxWidth: largeur * 1.5 }} role="group" aria-label="Affluence par jour et par heure" className="block">
+          {Array.from({ length: TRANCHES }, (_, t) => t % 3 === 0 ? (
+            <text key={t} x={MARGE_G + t * COL + COL / 2 - 1} y={11} fontSize="9" textAnchor="middle" fill="var(--color-muted)" aria-hidden="true">{t}h</text>
+          ) : null)}
           {JOURS_AFFICHES.map((jour, y) => (
-            <text key={jour} x={0} y={MARGE_H + y * LIG + LIG / 2 + 3} fontSize="11" fill="var(--color-muted)" aria-hidden="true">{NOMS_JOURS[jour]!.slice(0, 3)}.</text>
+            <text key={jour} x={0} y={MARGE_H + y * LIG + LIG / 2 + 3} fontSize="10" fill="var(--color-muted)" aria-hidden="true">{NOMS_JOURS[jour]!.slice(0, 3)}.</text>
           ))}
           {profil.jours.map((ligne, y) =>
             ligne.map((c) => {
@@ -89,15 +87,15 @@ const ProfilAffluenceSemaine: React.FC<Props> = ({ evenements }) => {
           )}
         </svg>
       </div>
-      <p className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted" aria-hidden="true">
-        <span className="inline-flex items-center gap-1"><span className="inline-block h-3 w-5 rounded-sm" style={{ background: 'color-mix(in srgb, var(--color-vendre) 100%, var(--color-ink))' }} />plus de rendement</span>
-        <span className="inline-flex items-center gap-1"><span className="inline-block h-3 w-5 rounded-sm border-2 border-paper" />heure forte (durée d’enchère courte)</span>
+      <p className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted" aria-hidden="true">
+        <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-4 rounded-sm" style={{ background: 'color-mix(in srgb, var(--color-vendre) 100%, var(--color-ink))' }} />plus de rendement</span>
+        <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-4 rounded-sm border-2 border-paper" />heure forte</span>
       </p>
       <div className="sr-only">
       <table>
-        <caption>Affluence par jour et tranche de 3 heures</caption>
+        <caption>Affluence par jour et par heure</caption>
         <thead>
-          <tr><th scope="col">Jour</th><th scope="col">Tranche</th><th scope="col">Détail</th></tr>
+          <tr><th scope="col">Jour</th><th scope="col">Heure</th><th scope="col">Détail</th></tr>
         </thead>
         <tbody>
           {profil.jours.flat().filter((c) => c.nombre > 0 || c.forte).map((c) => (
@@ -106,7 +104,7 @@ const ProfilAffluenceSemaine: React.FC<Props> = ({ evenements }) => {
         </tbody>
       </table>
       </div>
-    </SectionRepliable>
+    </BlocTableauDeBord>
   );
 };
 

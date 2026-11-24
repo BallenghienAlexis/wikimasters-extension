@@ -192,31 +192,17 @@ export interface Part {
   valeur: number
 }
 
-export const ID_AUTRES = 'autres'
 export const ID_SANS_THEME = 'sans-theme'
 
-/** Répartition des cartes par thème principal (le mieux établi de chaque carte) ; au plus `max` parts, le reste dans « Autres thèmes ». */
-export function repartitionThemes(cartes: readonly Carte[], max = 6): Part[] {
+/** Répartition des cartes par thème principal (le mieux établi de chaque carte) : une part par thème, sans regroupement « Autres » (Alexis, 2026-11-24). */
+export function repartitionThemes(cartes: readonly Carte[]): Part[] {
   const compte = new Map<string, number>()
   for (const c of cartes) {
     const id = themesPrincipaux(c)[0] ?? ID_SANS_THEME
     compte.set(id, (compte.get(id) ?? 0) + 1)
   }
   const libelle = (id: string): string => (id === ID_SANS_THEME ? 'Sans thème fiable' : (LIBELLES_THEMES[id] ?? id).replace(/^#/, ''))
-  const parts = [...compte].map(([id, valeur]): Part => ({ id, libelle: libelle(id), valeur })).sort((a, b) => b.valeur - a.valeur || a.libelle.localeCompare(b.libelle, 'fr'))
-  if (parts.length <= max) return parts
-  // « Sans thème fiable » reste visible même s’il est petit : c’est un manque à combler, pas un thème.
-  const tete = parts.slice(0, max - 1)
-  const reste = parts.slice(max - 1)
-  const sans = reste.find((p) => p.id === ID_SANS_THEME)
-  if (sans && !tete.some((p) => p.id === ID_SANS_THEME)) {
-    tete.pop()
-    reste.push(...parts.slice(max - 2, max - 1))
-    reste.splice(reste.indexOf(sans), 1)
-    tete.push(sans)
-  }
-  const autres = parts.filter((p) => !tete.includes(p)).reduce((s, p) => s + p.valeur, 0)
-  return [...tete, { id: ID_AUTRES, libelle: 'Autres thèmes', valeur: autres }]
+  return [...compte].map(([id, valeur]): Part => ({ id, libelle: libelle(id), valeur })).sort((a, b) => b.valeur - a.valeur || a.libelle.localeCompare(b.libelle, 'fr'))
 }
 
 export type IdDestination = 'moi' | 'amis' | 'vendre' | 'defausser' | 'a-traiter'
@@ -298,12 +284,13 @@ export function cheminSecteur(cx: number, cy: number, rExterieur: number, rInter
   return `${exterieur} L ${arrondi(x3)} ${arrondi(y3)} A ${rInterieur} ${rInterieur} 0 ${grand} 0 ${arrondi(x4)} ${arrondi(y4)} Z`
 }
 
-/* ───────────── Profil d’affluence (7 jours × 8 tranches de 3 h) ───────────── */
+/* ───────────── Profil d’affluence (7 jours × 24 heures) ───────────── */
 
 export type SourceAffluence = 'resultats' | 'observations' | 'defaut'
 
-export const TRANCHES = 8
-export const HEURES_PAR_TRANCHE = 3
+/** Une colonne par heure (Alexis, 2026-11-24 : détail heure par heure) ; le profil se recalcule des évènements bruts, aucun agrégat n’est stocké ni sauvegardé par tranche. */
+export const TRANCHES = 24
+export const HEURES_PAR_TRANCHE = 1
 /** Ordre d’affichage : lundi d’abord ; valeurs de `Date.getDay()`. */
 export const JOURS_AFFICHES: readonly number[] = [1, 2, 3, 4, 5, 6, 0]
 export const NOMS_JOURS: Readonly<Record<number, string>> = { 0: 'Dimanche', 1: 'Lundi', 2: 'Mardi', 3: 'Mercredi', 4: 'Jeudi', 5: 'Vendredi', 6: 'Samedi' }
@@ -311,7 +298,7 @@ export const NOMS_JOURS: Readonly<Record<number, string>> = { 0: 'Dimanche', 1: 
 export interface CelluleAffluence {
   /** Valeur de `getDay()` (0 = dimanche). */
   jour: number
-  /** 0 à 7 : tranche de 3 h commençant à `tranche × 3` h. */
+  /** 0 à 23 : heure commençant à `tranche` h. */
   tranche: number
   /** Rendement moyen (enchères terminées), nombre de mises en vente (observations) ou 1/0 (créneaux par défaut). */
   valeur: number
@@ -325,7 +312,7 @@ export interface ProfilAffluence {
   source: SourceAffluence
   /** Enchères terminées (source `resultats`) ou observations (source `observations`) ; 0 par défaut. */
   nombre: number
-  /** Une ligne par jour de `JOURS_AFFICHES`, 8 tranches chacune. */
+  /** Une ligne par jour de `JOURS_AFFICHES`, 24 heures chacune. */
   jours: CelluleAffluence[][]
   maximum: number
 }
@@ -336,7 +323,7 @@ export const libelleTranche = (t: number): string => `${t * HEURES_PAR_TRANCHE} 
 const dateReference = (jour: number, heure: number): number => new Date(2026, 10, 23 + ((jour + 6) % 7), heure, 30).getTime()
 
 /**
- * Profil de la semaine : 7 jours par tranches de 3 h, calculé avec la même règle que le conseil de lancement
+ * Profil de la semaine : 7 jours × 24 heures, calculé avec la même règle que le conseil de lancement
  * (`estHeureForte`), donc cohérent avec les durées d’enchère choisies. Les données sont celles des enchères du joueur, pas de
  * tout le site ; il s’affine à chaque enchère terminée (source `resultats` dès `minVentesConclues`).
  */
