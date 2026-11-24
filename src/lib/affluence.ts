@@ -114,6 +114,28 @@ function estHeureForteParResultats(d: Date, resultats: readonly EvenementVente[]
   return v !== null && v !== undefined && v > 0 && v >= seuil;
 }
 
+/** Durées d’enchère proposées par le site (relevé du formulaire, `specs/synchro-complete/tasks.md`), en minutes. */
+export const DUREES_SITE_MINUTES: readonly number[] = [10, 30, 60, 180, 360, 720];
+/** Durée de repli : 1 h, celle des enchères depuis le début. */
+export const DUREE_PAR_DEFAUT_MINUTES = 60;
+
+/** Vrai si le site accepte cette durée (en minutes). */
+export const estDureeSite = (minutes: unknown): minutes is number => typeof minutes === 'number' && DUREES_SITE_MINUTES.includes(minutes);
+
+/**
+ * Durée d’une enchère lancée à cet instant (Alexis, 2026-11-24 : « en zone creuse il faut allonger le temps de vente ») :
+ * `delaiHeureForte` (1 h) en heure forte, `delaiTempsLibre` (3 h) en temps libre. Une valeur de la configuration que le site
+ * n’accepte pas est remplacée par 1 h plutôt qu’envoyée.
+ */
+export function dureeEnchereMinutes(at: number, evenements: readonly EvenementVente[], config: ConfigAffluence = CONFIG_AFFLUENCE): number {
+  const heures = estHeureForte(at, evenements, config) ? config.delaiHeureForte : config.delaiTempsLibre;
+  const minutes = Math.round(heures * 60);
+  return estDureeSite(minutes) ? minutes : DUREE_PAR_DEFAUT_MINUTES;
+}
+
+/** « 1 h », « 3 h » ou « 30 min ». */
+export const libelleDuree = (minutes: number): string => (minutes % 60 === 0 ? `${minutes / 60}\u00a0h` : `${minutes}\u00a0min`);
+
 export interface Conseil {
   delaiHeures: number | null;
   texte: string;
