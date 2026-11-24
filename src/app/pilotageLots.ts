@@ -138,7 +138,8 @@ export function contexteExecution(): ContexteExecution {
       if (ordre.type !== 'pose-etiquette' && ordre.type !== 'retrait-etiquette') return execution.transport(ordre);
       // L’identifiant d’étiquette du site vient du registre, au moment d’envoyer (la création précède la pose).
       const complete = avecIdEtiquette(ordre, await chargerRegistre());
-      if (complete === null) return { classe: 'echec', codeHttp: null, cause: 'action non disponible' };
+      // Étiquette sans identifiant connu (déjà sur le site mais invisible dans sa liste) : pose passée, pas une erreur du lot.
+      if (complete === null) return ordre.type === 'pose-etiquette' ? { classe: 'passee', codeHttp: null, cause: 'étiquette du site sans identifiant connu' } : { classe: 'echec', codeHttp: null, cause: 'action non disponible' };
       const premier = await execution.transport(complete);
       if (ordre.type !== 'pose-etiquette' || premier.classe !== 'echec' || premier.cause === CAUSE_VERIFICATION_HUMAINE) return premier;
       if (premier.codeHttp === null || [401, 403, 429].includes(premier.codeHttp)) return premier;

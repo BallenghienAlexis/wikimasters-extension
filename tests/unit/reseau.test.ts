@@ -42,6 +42,19 @@ describe('reseau : émetteur des étiquettes', () => {
     expect((init.headers as Record<string, string>).Prefer).toBe('return=representation')
   })
 
+  it('création d’une étiquette déjà existante (409, 23505) : passée, pas une erreur', async () => {
+    const corps = JSON.stringify({ code: '23505', message: 'duplicate key value violates unique constraint "tags_user_name_lower_unique"' })
+    const r = await emetteur((async () => reponse(409, corps)) as unknown as typeof fetch)(creation)
+    expect(r.classe).toBe('passee')
+    expect(r.codeHttp).toBe(409)
+    expect(r.idEtiquette).toBeUndefined()
+  })
+
+  it('pose déjà faite (409, 23505) : réussie', async () => {
+    const r = await emetteur((async () => reponse(409, JSON.stringify({ code: '23505' }))) as unknown as typeof fetch)(pose)
+    expect(r.classe).toBe('reussie')
+  })
+
   it('sans session : arrêt « jeton-absent », aucune requête', async () => {
     const f = vi.fn()
     expect(await emetteur(f as unknown as typeof fetch, null)(pose)).toEqual({ classe: 'arret', codeHttp: null, cause: 'jeton-absent' })

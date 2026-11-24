@@ -198,6 +198,11 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
       if (ordre.type === 'pose-etiquette' && reponse.status === 409 && typeof json === 'object' && json !== null && (json as Record<string, unknown>).code === '23505') {
         return { classe: 'reussie', codeHttp: 409, cause: 'déjà posée sur le site' }
       }
+      // Création d'une étiquette qui existe déjà (unicité « tags_user_name_lower_unique », 23505) : ce n'est pas une erreur du lot.
+      // Son identifiant n'est pas lisible ici (le site ne la liste pas) : l'action est passée, jamais recréée ni renommée.
+      if (ordre.type === 'creation-etiquette' && reponse.status === 409 && typeof json === 'object' && json !== null && (json as Record<string, unknown>).code === '23505') {
+        return { classe: 'passee', codeHttp: 409, cause: 'étiquette déjà sur le site (identifiant inconnu)', ...(diagnostic ? { diagnostic } : {}) }
+      }
       if (siteSeul && reponse.status === 409) {
         return { classe: 'echec', codeHttp: 409, cause: classerConflit(json), ...(diagnostic ? { diagnostic } : {}) }
       }
