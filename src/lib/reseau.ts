@@ -58,6 +58,14 @@ export function classerConflit(json: unknown): string {
   return /actives?|simultan|concurrent|maximum|limite|limit/i.test(message) ? 'limite d’enchères atteinte' : 'conflit signalé par le site'
 }
 
+/** 409 « Vous ne possédez plus cette carte » : message du site, lu sans être recopié. */
+export function estCarteDejaPerdue(json: unknown): boolean {
+  if (typeof json !== 'object' || json === null) return false
+  const o = json as Record<string, unknown>
+  const message = [o.message, o.error].filter((v): v is string => typeof v === 'string').join(' ').slice(0, 300)
+  return /ne poss[ée]dez plus/i.test(message)
+}
+
 /** Le site demande une vérification humaine : champ `code` de la réponse JSON, à défaut le texte brut. */
 export function verificationHumaine(json: unknown, texte: string): boolean {
   if (typeof json === 'object' && json !== null && !Array.isArray(json)) {
@@ -210,6 +218,11 @@ export function creerEmetteur(deps: DependancesReseau): (ordre: Action) => Promi
       // Son identifiant n'est pas lisible ici (le site ne la liste pas) : l'action est passée, jamais recréée ni renommée.
       if (ordre.type === 'creation-etiquette' && reponse.status === 409 && typeof json === 'object' && json !== null && (json as Record<string, unknown>).code === '23505') {
         return { classe: 'passee', codeHttp: 409, cause: 'étiquette déjà sur le site (identifiant inconnu)', ...(diagnostic ? { diagnostic } : {}) }
+      }
+      // Défausse d'une carte que le joueur ne possède plus (déjà défaussée, par exemple depuis un autre PC) : l'état voulu est atteint,
+      // la carte est retirée localement comme après une défausse réussie ; rien n'est renvoyé ni compté comme erreur.
+      if (ordre.type === 'defausse' && reponse.status === 409 && estCarteDejaPerdue(json)) {
+        return { classe: 'reussie', codeHttp: 409, cause: 'déjà défaussée ou absente du site' }
       }
       if (siteSeul && reponse.status === 409) {
         return { classe: 'echec', codeHttp: 409, cause: classerConflit(json), ...(diagnostic ? { diagnostic } : {}) }

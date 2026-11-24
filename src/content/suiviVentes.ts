@@ -264,6 +264,14 @@ export function creerSuiviVentes(deps: DependancesSuiviVentes): SuiviVentesAuto 
       await ecrireEtat(courant, { etat: 'pause', message: resultat.codeHttp === 401 ? 'Session du site expirée (401) : pause de 30 min' : 'Le site demande de ralentir (429) : pause de 30 min', jusqua: deps.horloge.now() + PAUSE_ECRITURE_MS });
       return { etat: 'stop' };
     }
+    // Un 409 qui n'est pas la limite d'enchères (exemplaire déjà en vente ou plus possédé, par exemple mis en vente depuis un autre PC)
+    // n'attend aucune place : la carte est écartée un jour et la relance passe à la suivante.
+    if (resultat.codeHttp === 409 && !estLimiteEncheres(diagnostic) && cause !== 'limite d’enchères atteinte') {
+      await deps.enregistrerEcartes(purgerEcartes({ ...ecartes, [choix.action.idExemplaire]: deps.horloge.now() + ECART_REFUS_MS }, deps.horloge.now())).catch(() => undefined);
+      await statut({ etat: 'attente', message: `Conflit du site pour ${choix.titre} (déjà en vente ou plus possédée) : carte écartée un jour`, jusqua: null, carte: null });
+      reessaiLe = deps.horloge.now() + DELAI_REESSAI_PLACE_MS;
+      return { etat: 'stop' };
+    }
     if (resultat.codeHttp === 409 || estLimiteEncheres(diagnostic)) {
       // Le listing sous-compte peut-être : au plus un essai par minute tant qu’une lecture ne montre pas une place libre.
       await pause(DELAI_APRES_409_MS, 'Limite d’enchères actives atteinte : la relance attend une place', null);
