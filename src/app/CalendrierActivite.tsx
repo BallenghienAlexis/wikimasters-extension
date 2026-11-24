@@ -21,10 +21,6 @@ const REMPLISSAGE = [
   'color-mix(in srgb, var(--color-garder) 75%, var(--color-ink-2))',
   'var(--color-garder)',
 ];
-const CASE = 11;
-const PAS = 13;
-const MARGE_G = 28;
-const MARGE_H = 14;
 
 const dateLongue = (jour: string): string => new Date(`${jour}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 const accorder = (n: number, s: string, p: string): string => `${n} ${n > 1 ? p : s}`;
@@ -42,8 +38,6 @@ const CalendrierActivite: React.FC<Props> = ({ activite, maintenant }) => {
   const cal = useMemo(() => calendrierActivite(activite, filtre, semaines, horloge), [activite, filtre, semaines, horloge]);
   const jours = cal.semaines.flat();
   const survol = jours.find((j) => j.jour === actif && !j.futur);
-  const largeur = MARGE_G + cal.semaines.length * PAS;
-  const hauteur = MARGE_H + 7 * PAS;
   const mois = cal.semaines.map((s, i) => {
     const premier = s.find((j) => j.jour.endsWith('-01') || j === s[0]);
     const m = new Date(`${s[0]!.jour}T12:00:00`).getMonth();
@@ -54,6 +48,7 @@ const CalendrierActivite: React.FC<Props> = ({ activite, maintenant }) => {
   return (
     <BlocTableauDeBord
       id="calendrier-activite"
+      className="flex flex-col"
       titre="Historique d’activité"
       resume={cal.total === 0 ? 'Aucune activité' : `${accorder(cal.total, 'action', 'actions')} · ${accorder(cal.joursActifs, 'jour actif', 'jours actifs')}`}
     >
@@ -80,30 +75,39 @@ const CalendrierActivite: React.FC<Props> = ({ activite, maintenant }) => {
           ? `${dateLongue(survol.jour)} : ${accorder(survol.n, 'action', 'actions')}${filtre === 'tout' && survol.n > 0 ? ` (${CATEGORIES_ACTIVITE.filter((k) => survol.detail[k] > 0).map((k) => `${survol.detail[k]} ${LIBELLES_ACTIVITE[k].toLowerCase()}`).join(', ')})` : ''}`
           : 'Survolez une case pour son détail.'}
       </p>
-      <div className="mt-1 overflow-x-auto rounded border border-line bg-ink p-1.5">
-        <svg viewBox={`0 0 ${largeur} ${hauteur}`} style={{ width: '100%', minWidth: largeur, maxWidth: largeur * 1.35 }} role="group" aria-label={`Activité des ${semaines} dernières semaines`} className="block">
-          {JOURS.map((nom, i) =>
-            i % 2 === 0 ? (
-              <text key={nom} x={0} y={MARGE_H + i * PAS + CASE - 2} fontSize="10" fill="var(--color-muted)" aria-hidden="true">{nom}</text>
+      <div className="mt-1 flex min-h-40 flex-1 rounded border border-line bg-ink p-1.5">
+        <div
+          role="group"
+          aria-label={`Activité des ${semaines} dernières semaines`}
+          className="grid w-full gap-[3px]"
+          style={{ gridTemplateColumns: `1.75rem repeat(${cal.semaines.length}, minmax(0, 1fr))`, gridTemplateRows: 'auto repeat(7, minmax(0, 1fr))' }}
+        >
+          {mois.map((m) =>
+            m ? (
+              <span key={m.i} className="overflow-visible whitespace-nowrap text-[10px] leading-none text-muted" style={{ gridColumn: m.i + 2, gridRow: 1 }} aria-hidden="true">{m.nom}</span>
             ) : null,
           )}
-          {mois.map((m) => (m ? <text key={m.i} x={MARGE_G + m.i * PAS} y={10} fontSize="10" fill="var(--color-muted)" aria-hidden="true">{m.nom}</text> : null))}
+          {JOURS.map((nom, i) =>
+            i % 2 === 0 ? (
+              <span key={nom} className="flex items-center text-[10px] leading-none text-muted" style={{ gridColumn: 1, gridRow: i + 2 }} aria-hidden="true">{nom}</span>
+            ) : null,
+          )}
           {cal.semaines.map((s, x) =>
             s.map((j, y) =>
               j.futur ? null : (
-                <rect
+                <div
                   key={j.jour}
                   data-testid="activite-case"
                   data-jour={j.jour}
                   data-niveau={niveauActivite(j.n, cal.maximum)}
-                  x={MARGE_G + x * PAS}
-                  y={MARGE_H + y * PAS}
-                  width={CASE}
-                  height={CASE}
-                  rx={3}
-                  fill={REMPLISSAGE[niveauActivite(j.n, cal.maximum)]}
-                  stroke={actif === j.jour ? 'var(--color-paper)' : 'none'}
-                  strokeWidth={2}
+                  className="min-h-3 min-w-0 rounded-[3px]"
+                  style={{
+                    gridColumn: x + 2,
+                    gridRow: y + 2,
+                    background: REMPLISSAGE[niveauActivite(j.n, cal.maximum)],
+                    outline: actif === j.jour ? '2px solid var(--color-paper)' : 'none',
+                    outlineOffset: -1,
+                  }}
                   tabIndex={j.n > 0 ? 0 : undefined}
                   role={j.n > 0 ? 'img' : undefined}
                   aria-label={j.n > 0 ? `${dateLongue(j.jour)} : ${accorder(j.n, 'action', 'actions')}` : undefined}
@@ -115,7 +119,7 @@ const CalendrierActivite: React.FC<Props> = ({ activite, maintenant }) => {
               ),
             ),
           )}
-        </svg>
+        </div>
       </div>
       <div className="mt-1 flex items-center gap-1 text-xs text-muted" aria-hidden="true">
         Moins
