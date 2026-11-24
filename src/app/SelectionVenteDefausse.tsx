@@ -13,7 +13,7 @@ interface Props {
   /** Cartes sans aucun prix trouvé sur le site : défaussables malgré la valeur inconnue (2026-11-23). */
   sansPrix?: ReadonlySet<string>;
   /** Cartes sans prix défaussables par la pré-coche, et si leur nombre dépasse le plafond (rien n’est alors pré-coché). */
-  resumeSansPrix?: { nombre: number; trop: boolean };
+  resumeSansPrix?: { nombre: number };
   /** Verdict de chaque carte avec les règles courantes (recalculé, jamais mis en cache). */
   verdicts?: ReadonlyMap<string, Verdict>;
   /** Demande le calcul des verdicts (paresseux : coûteux sur une grosse collection). */
@@ -41,6 +41,7 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansP
   const proposables = useMemo(() => cartes.filter(estProposable), [cartes]);
   const nbDefausser = useMemo(() => proposables.filter((c) => choix.get(c.id)?.choix === 'defausser').length, [proposables, choix]);
   const nbVendre = useMemo(() => proposables.filter((c) => choix.get(c.id)?.choix === 'vendre').length, [proposables, choix]);
+  const nbExemplairesDefausses = useMemo(() => proposables.reduce((n, c) => (choix.get(c.id)?.choix === 'defausser' ? n + (choix.get(c.id)?.exemplaires ?? 1) : n), 0), [proposables, choix]);
   const nbGardees = useMemo(() => (verdicts ? cartes.filter((c) => verdicts.get(c.id)?.action === 'garder').length : 0), [cartes, verdicts]);
 
   // Cartes sans valeur dont le site n’a pas (encore) confirmé l’absence de prix : défausse impossible tant que le prix n’est pas relevé.
@@ -139,7 +140,7 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansP
       resume={nbDefausser + nbVendre === 0 ? 'Aucune carte choisie' : `${nbDefausser} à défausser · ${nbVendre} en enchère`}
     >
       <p className="mt-1 text-sm" data-testid="resume-selection">
-        {nbDefausser} à défausser · {nbVendre} à mettre aux enchères{verdicts ? ` · ${nbGardees} gardées` : ''}. La défausse est définitive : rien ne part avant « Lancer ».
+        {nbDefausser} à défausser ({nbExemplairesDefausses} exemplaire(s) au total) · {nbVendre} à mettre aux enchères{verdicts ? ` · ${nbGardees} gardées` : ''}. La défausse est définitive : rien ne part avant « Lancer ».
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
         <button type="button" className={`${CLASSE_BOUTON} border-muted`} onClick={onPrecocher}>
@@ -153,9 +154,7 @@ const SelectionVenteDefausse: React.FC<Props> = ({ cartes, choix, plafond, sansP
       </div>
       {resumeSansPrix && resumeSansPrix.nombre > 0 && (
         <p className="mt-2 text-sm" data-testid="avertissement-sans-prix">
-          {resumeSansPrix.trop
-            ? `${resumeSansPrix.nombre} cartes sans prix trouvé : trop pour une pré-coche, choisissez-les à la main.`
-            : `${resumeSansPrix.nombre} carte(s) sans prix trouvé proposée(s) en défausse.`}
+          {resumeSansPrix.nombre} carte(s) sans prix trouvé proposée(s) en défausse (relevé de moins de 7 jours, aucune règle de garde).
         </p>
       )}
       {nbSansValeur > 0 && (
