@@ -8,6 +8,12 @@ export interface ConfigAffluence {
   delaiHeureForte: number;
   /** Durée d’enchère (heures) lancée en temps libre, c’est-à-dire en zone creuse (Alexis, 2026-11-24). Mêmes valeurs acceptées. */
   delaiTempsLibre: number;
+  /** Durée (heures) d’un creux profond : créneau où les enchères terminées n’ont jamais été vendues (2026-11-24). */
+  delaiCreuxProfond: number;
+  /** Durée (heures) la nuit, en dehors des heures fortes (2026-11-24). */
+  delaiNuit: number;
+  /** Heures de nuit : [heure de début incluse, heure de fin exclue], heure locale. */
+  heuresNuit: [number, number];
   /** Mises en vente notées nécessaires avant de remplacer les créneaux par défaut. */
   minObservations: number;
   /** Enchères terminées (vendues ou non) nécessaires pour que les heures fortes viennent des ventes réelles (2026-11-24). */
@@ -25,6 +31,9 @@ export const CONFIG_AFFLUENCE: ConfigAffluence = {
   seuilCarteChere: 200,
   delaiHeureForte: 1,
   delaiTempsLibre: 3,
+  delaiCreuxProfond: 6,
+  delaiNuit: 12,
+  heuresNuit: [0, 7],
   minObservations: 20,
   minVentesConclues: 20,
   creneauxSemaine: [[12, 14], [19, 23]],
