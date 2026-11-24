@@ -211,6 +211,24 @@ const PanneauApercuLot: React.FC<Props> = ({
     [aCochesRegle, verdictsDemandes, collection.cartes, prefsVerdicts, sansPrixVerdicts],
   );
   const choix = useMemo(() => (verdicts ? retirerCochesPerimees(choixBrut, verdicts) : choixBrut), [choixBrut, verdicts]);
+  // Pré-coche automatique à l’ouverture (Alexis, 2026-11-24) : une fois les préférences et les prix lus, les propositions des règles
+  // sont cochées (défausse, enchère). Rien ne part avant l’aperçu puis « Lancer » ; un choix du joueur n’est jamais remplacé.
+  const dernierRef = useRef({ cartes: collection.cartes, preferences, sansPrix: sansPrixVerdicts });
+  useEffect(() => {
+    dernierRef.current = { cartes: collection.cartes, preferences, sansPrix: sansPrixVerdicts };
+  });
+  const precocheAuto = useRef(false);
+  useEffect(() => {
+    if (chargement || precocheAuto.current) return undefined;
+    const t = setTimeout(() => {
+      if (precocheAuto.current) return;
+      precocheAuto.current = true;
+      const d = dernierRef.current;
+      setVerdictsDemandes(true);
+      setChoixManuels((prev) => precocher(d.cartes, d.preferences, prev, d.sansPrix));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [chargement]);
   const choisir = (idCarte: string, c: ChoixCarte, exemplaires: number): void =>
     setChoixManuels(() => {
       const m = new Map(choix);
@@ -457,7 +475,10 @@ const PanneauApercuLot: React.FC<Props> = ({
           verdicts={verdicts ?? undefined}
           onVoirVerdicts={() => setVerdictsDemandes(true)}
           onChoisir={choisir}
-          onPrecocher={() => setChoixManuels(precocher(collection.cartes, preferences, choix, sansPrixEns))}
+          onPrecocher={() => {
+            setVerdictsDemandes(true);
+            setChoixManuels(precocher(collection.cartes, preferences, choix, sansPrixEns));
+          }}
           onVider={() => setChoixManuels(new Map())}
           ventes={ventes}
         />

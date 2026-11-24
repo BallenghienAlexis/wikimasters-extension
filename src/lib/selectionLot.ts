@@ -123,6 +123,8 @@ export interface Verdict {
   code: CodeVerdict
   /** Motif lisible, sans majuscule initiale ni point final. */
   motif: string
+  /** Motif en quelques mots pour les listes (« Thème gardé : Rock », « Valeur 2 ≤ 20 »). */
+  court: string
   /** Libellé complet pour la ligne de la carte (« Gardée : … », « Défausse proposée : … »). */
   libelle: string
   /** Exemplaires à défausser (défausse seulement). */
@@ -140,39 +142,40 @@ const exemplairesADefausser = (c: Carte): number => Math.max(1, Math.min(c.quant
  * `sansPrixAutorise` : faux quand trop de cartes sans prix seraient défaussées d’un coup (elles se choisissent alors à la main).
  */
 export function verdictCarte(c: Carte, preferences: Preferences, sansPrix: ReadonlySet<string>, sansPrixAutorise: boolean): Verdict {
-  const v = (action: Verdict['action'], code: CodeVerdict, motif: string, exemplaires = 1): Verdict => ({
+  const v = (action: Verdict['action'], code: CodeVerdict, motif: string, court: string, exemplaires = 1): Verdict => ({
     action,
     code,
     motif,
+    court,
     exemplaires,
     libelle: `${action === 'garder' ? 'Gardée' : action === 'defausser' ? 'Défausse proposée' : 'Enchère proposée'} : ${motif}`,
   })
   const raison = raisonNonProposable(c)
   if (raison !== null) {
     const code: CodeVerdict = estFavoriVerrouille(c) ? 'favori' : c.idsSite === null || c.idsSite.length === 0 || c.quantite <= 0 ? 'non-reliee' : 'a-classer'
-    return v('garder', code, raison)
+    return v('garder', code, raison, code === 'favori' ? 'Favori' : code === 'non-reliee' ? 'Non reliée au site' : 'Sans thème fiable')
   }
   const themes = themesDeCarte(c)
   const gardes = preferences.mesThemes.filter((t) => themes.includes(t))
   if (gardes.length > 0) {
     const directs = new Set(themesPrincipaux(c))
     const noms = gardes.map((t) => `« ${libelleTheme(t)} »${directs.has(t) ? '' : ' (famille d’un thème de la carte)'}`)
-    return v('garder', 'theme-garde', `thème que vous gardez ${noms.join(', ')}`)
+    return v('garder', 'theme-garde', `thème que vous gardez ${noms.join(', ')}`, `Thème gardé : ${gardes.map(libelleTheme).join(', ')}`)
   }
   const amis = amisConcernes(themes, preferences.amis)
-  if (amis.length > 0) return v('garder', 'ami', `thème suivi par ${amis.map((a) => a.nom).join(', ')} (échange par « #À échanger »)`)
-  if (c.ami !== null) return v('garder', 'ami', `carte réservée à ${c.ami}`)
+  if (amis.length > 0) return v('garder', 'ami', `thème suivi par ${amis.map((a) => a.nom).join(', ')} (échange par « #À échanger »)`, `Ami : ${amis.map((a) => a.nom).join(', ')}`)
+  if (c.ami !== null) return v('garder', 'ami', `carte réservée à ${c.ami}`, `Ami : ${c.ami}`)
   if (c.valeurMarchande === null) {
     if (sansPrix.has(c.id)) {
-      if (sansPrixAutorise) return v('defausser', 'defausse-sans-prix', 'aucun prix trouvé sur le site et aucune règle de garde', exemplairesADefausser(c))
-      return v('garder', 'sans-prix-trop', `aucun prix trouvé, mais plus de ${MAX_PRECOCHE_SANS_PRIX} cartes dans ce cas : à choisir à la main`)
+      if (sansPrixAutorise) return v('defausser', 'defausse-sans-prix', 'aucun prix trouvé sur le site et aucune règle de garde', 'Aucun prix trouvé', exemplairesADefausser(c))
+      return v('garder', 'sans-prix-trop', `aucun prix trouvé, mais plus de ${MAX_PRECOCHE_SANS_PRIX} cartes dans ce cas : à choisir à la main`, 'Sans prix, trop nombreuses')
     }
-    return v('garder', 'valeur-inconnue', 'valeur marchande inconnue (prix pas encore relevé de façon sûre)')
+    return v('garder', 'valeur-inconnue', 'valeur marchande inconnue (prix pas encore relevé de façon sûre)', 'Valeur inconnue')
   }
   if (c.valeurMarchande <= plafondDefausse(preferences)) {
-    return v('defausser', 'defausse-plafond', `valeur ${c.valeurMarchande}, au plafond de défausse (${plafondDefausse(preferences)}) ou en dessous`, exemplairesADefausser(c))
+    return v('defausser', 'defausse-plafond', `valeur ${c.valeurMarchande}, au plafond de défausse (${plafondDefausse(preferences)}) ou en dessous`, `Valeur ${c.valeurMarchande} ≤ ${plafondDefausse(preferences)}`, exemplairesADefausser(c))
   }
-  return v('vendre', 'enchere', `valeur ${c.valeurMarchande}, au-dessus du plafond de défausse (${plafondDefausse(preferences)})`)
+  return v('vendre', 'enchere', `valeur ${c.valeurMarchande}, au-dessus du plafond de défausse (${plafondDefausse(preferences)})`, `Valeur ${c.valeurMarchande} > ${plafondDefausse(preferences)}`)
 }
 
 /** Verdict de toutes les cartes, recalculé avec les règles courantes (appelé à chaque ouverture des lots et à chaque affichage). */
