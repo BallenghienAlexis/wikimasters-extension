@@ -89,6 +89,7 @@ const CarteLigne: React.FC<Props> = ({ carte, onEdition: onEditionCarte, refLign
         {verdict && (
           <p className="text-sm break-words" data-testid="verdict-ligne">
             {verdict}
+            {verdict.startsWith('Défausse proposée') || verdict.startsWith('Enchère proposée') ? ' · à cocher dans l’onglet Lots (« Pré-cocher »), puis « Lancer »' : ''}
           </p>
         )}
         <button type="button" className={`${CLASSE_PETIT_BOUTON} mt-1`} onClick={() => setThemesOuverts(true)} aria-label={`Modifier les thèmes de ${carte.titre}`}>
