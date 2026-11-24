@@ -12,7 +12,7 @@ import type { Registre } from './actions'
 import type { Carte } from './collection'
 import type { EtiquetteSite } from './etiquettesPreexistantes'
 import { ETIQUETTE_A_CLASSER, exemplairesAttendus, type Config } from './lot'
-import { enregistrerEtiquette, estRefuse, poserCouple } from './registre'
+import { cleNomEtiquette, enregistrerEtiquette, estRefuse, poserCouple } from './registre'
 
 const NOMS_INTERDITS: ReadonlySet<string> = new Set([ETIQUETTE_A_CLASSER, '#Autres'])
 
@@ -35,17 +35,17 @@ export function alignerRegistreSurSite(
   // Une liste absente ou vide n'est pas une preuve (réponse allégée possible du site).
   if (site === null || site.length === 0) return rien
   const idParNom = new Map<string, string>()
-  for (const e of site) if (!idParNom.has(e.nom)) idParNom.set(e.nom, e.id)
+  for (const e of site) if (!idParNom.has(cleNomEtiquette(e.nom))) idParNom.set(cleNomEtiquette(e.nom), e.id)
 
   let r = registre
   let nbEtiquettes = 0
   let nbCouples = 0
   for (const c of cartes) {
-    const sur = new Set(c.etiquettesSite)
+    const sur = new Set(c.etiquettesSite.map(cleNomEtiquette))
     for (const { idExemplaire, etiquettes } of exemplairesAttendus(c, config)) {
       for (const nom of etiquettes) {
         if (NOMS_INTERDITS.has(nom)) continue
-        const id = idParNom.get(nom)
+        const id = idParNom.get(cleNomEtiquette(nom))
         if (id === undefined) continue
         if (!Object.hasOwn(r.etiquettes, nom)) {
           const suivant = enregistrerEtiquette(r, nom, id)
@@ -53,7 +53,7 @@ export function alignerRegistreSurSite(
           r = suivant
           nbEtiquettes += 1
         }
-        if (!sur.has(nom) || estRefuse(r, idExemplaire, nom)) continue
+        if (!sur.has(cleNomEtiquette(nom)) || estRefuse(r, idExemplaire, nom)) continue
         const suivant = poserCouple(r, idExemplaire, nom)
         if (suivant !== r) nbCouples += 1
         r = suivant

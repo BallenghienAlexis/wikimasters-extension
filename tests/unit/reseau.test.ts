@@ -42,6 +42,38 @@ describe('reseau : émetteur des étiquettes', () => {
     expect((init.headers as Record<string, string>).Prefer).toBe('return=representation')
   })
 
+  it('création d’une étiquette déjà existante (409, 23505) : passée, pas une erreur', async () => {
+    const corps = JSON.stringify({ code: '23505', message: 'duplicate key value violates unique constraint "tags_user_name_lower_unique"' })
+    const r = await emetteur((async () => reponse(409, corps)) as unknown as typeof fetch)(creation)
+    expect(r.classe).toBe('passee')
+    expect(r.codeHttp).toBe(409)
+    expect(r.idEtiquette).toBeUndefined()
+  })
+
+  it('pose déjà faite (409, 23505) : réussie', async () => {
+    const r = await emetteur((async () => reponse(409, JSON.stringify({ code: '23505' }))) as unknown as typeof fetch)(pose)
+    expect(r.classe).toBe('reussie')
+  })
+
+  it('lecture des étiquettes du compte : GET Supabase filtré sur le joueur, jeton en mémoire, sans corps', async () => {
+    const f = vi.fn(async () => reponse(200, JSON.stringify([{ id: ET, name: '#Égypte antique' }])))
+    const r = await emetteur(f as unknown as typeof fetch)({ type: 'lecture', idCarte: 'x', cible: 'tags' })
+    expect(r).toEqual({ classe: 'reussie', codeHttp: 200, cause: 'action réussie', etiquettes: [{ id: ET, nom: '#Égypte antique', nbCartes: 0 }] })
+    const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe(`https://cyrxjeppjqsxxjayfrur.supabase.co/rest/v1/tags?select=id,name&limit=1000&user_id=eq.${SESSION.idJoueur}`)
+    expect(init.method).toBe('GET')
+    expect(init.body).toBeUndefined()
+    expect((init.headers as Record<string, string>).Authorization).toBe(`Bearer ${SESSION.jeton}`)
+  })
+
+  it('lecture des étiquettes du compte : sans session, arrêt sans requête ; réponse illisible, jamais une preuve', async () => {
+    const f = vi.fn()
+    expect(await emetteur(f as unknown as typeof fetch, null)({ type: 'lecture', idCarte: 'x', cible: 'tags' })).toEqual({ classe: 'arret', codeHttp: null, cause: 'jeton-absent' })
+    expect(f).not.toHaveBeenCalled()
+    const r = await emetteur((async () => reponse(200, JSON.stringify([{ id: 'pas-un-uuid', name: 'x' }]))) as unknown as typeof fetch)({ type: 'lecture', idCarte: 'x', cible: 'tags' })
+    expect(r.etiquettes).toBeUndefined()
+  })
+
   it('sans session : arrêt « jeton-absent », aucune requête', async () => {
     const f = vi.fn()
     expect(await emetteur(f as unknown as typeof fetch, null)(pose)).toEqual({ classe: 'arret', codeHttp: null, cause: 'jeton-absent' })

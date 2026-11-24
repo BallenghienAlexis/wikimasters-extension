@@ -6,7 +6,7 @@
 import type { Carte } from './collection';
 import type { Registre } from './actions';
 import type { EtiquetteSite } from './etiquettesPreexistantes';
-import { enregistrerEtiquette, estRefuse, poserCouple, refuserCouple } from './registre';
+import { cleNomEtiquette, enregistrerEtiquette, estRefuse, poserCouple, refuserCouple } from './registre';
 import { MODES_ETIQUETTES, type ModeEtiquettes } from './tri';
 import { estObjet } from './valider';
 
@@ -178,7 +178,7 @@ export function adopterEtiquettes(registre: Registre, importees: EtiquettesImpor
   const rien: BilanAdoption = { registre, etiquettes: 0, couples: 0, refus: 0, ignorees: 0 };
   if (site === null || site.length === 0) return rien;
   const idParNom = new Map<string, string>();
-  for (const e of site) if (!idParNom.has(e.nom)) idParNom.set(e.nom, e.id);
+  for (const e of site) if (!idParNom.has(cleNomEtiquette(e.nom))) idParNom.set(cleNomEtiquette(e.nom), e.id);
 
   let r = registre;
   let nbEtiquettes = 0;
@@ -187,7 +187,7 @@ export function adopterEtiquettes(registre: Registre, importees: EtiquettesImpor
   const revendiquees = new Set([...importees.noms, ...Object.values(importees.parCarte).flat()]);
   const refuses = new Set<string>();
   for (const nom of revendiquees) {
-    const id = idParNom.get(nom);
+    const id = idParNom.get(cleNomEtiquette(nom));
     if (id !== undefined && !adoptable(nom)) {
       refuses.add(nom);
       continue;
@@ -199,9 +199,9 @@ export function adopterEtiquettes(registre: Registre, importees: EtiquettesImpor
   for (const c of cartes) {
     const exemplaires = c.idsSite ?? [];
     if (exemplaires.length === 0) continue;
-    const sur = new Set(c.etiquettesSite);
+    const sur = new Set(c.etiquettesSite.map(cleNomEtiquette));
     for (const nom of noms_de(importees.parCarte, c.id)) {
-      if (!sur.has(nom) || !Object.hasOwn(r.etiquettes, nom) || !adoptable(nom)) continue;
+      if (!sur.has(cleNomEtiquette(nom)) || !Object.hasOwn(r.etiquettes, nom) || !adoptable(nom)) continue;
       for (const ex of exemplaires) {
         if (estRefuse(r, ex, nom)) continue;
         const suivant = poserCouple(r, ex, nom);
@@ -210,7 +210,7 @@ export function adopterEtiquettes(registre: Registre, importees: EtiquettesImpor
       }
     }
     for (const nom of noms_de(importees.refus, c.id)) {
-      if (sur.has(nom) || !adoptable(nom)) continue;
+      if (sur.has(cleNomEtiquette(nom)) || !adoptable(nom)) continue;
       for (const ex of exemplaires) {
         if (r.couples.some((x) => x.ex === ex && x.nom === nom)) continue;
         const suivant = refuserCouple(r, ex, nom);

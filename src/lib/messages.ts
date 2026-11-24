@@ -136,7 +136,7 @@ export function validerOrdre(brut: unknown): Action | null {
 
   switch (type as TypeAction) {
     case 'lecture':
-      if ('cible' in ordre) return cles(ordre, ['type', 'idCarte', 'cible']) && ordre.cible === 'etiquettes' ? { type: 'lecture', idCarte, cible: 'etiquettes' } : null
+      if ('cible' in ordre) return cles(ordre, ['type', 'idCarte', 'cible']) && (ordre.cible === 'etiquettes' || ordre.cible === 'tags') ? { type: 'lecture', idCarte, cible: ordre.cible } : null
       return cles(ordre, ['type', 'idCarte']) ? { type: 'lecture', idCarte } : null
     case 'creation-etiquette': {
       const nomEtiquette = texte(ordre.nomEtiquette)
