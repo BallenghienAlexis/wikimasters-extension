@@ -262,3 +262,16 @@ describe('verdict par carte et recalcul (2026-11-24)', () => {
     expect([...r.keys()]).toEqual(['b'])
   })
 })
+
+describe('thèmes gardés réels d’Alexis (2026-11-24)', () => {
+  const prefs = { ...preferencesParDefaut(), mesThemes: ['automobile', 'metal', 'moto', 'rock', 'tracteur', 'alcool', 'camion', 'ia', 'reggae', 'techno'] }
+  const base = { idsSite: ['ex-1'], quantite: 1 }
+  it('une carte de train ou de théâtre et musique n’est pas gardée par ces thèmes : défausse proposée à petite valeur', () => {
+    const train = carte('t', { ...base, titre: 'Compagnie du chemin de fer de Paris à Orléans', description: 'compagnie de chemin de fer française', valeurMarchande: 2 })
+    const rita = carte('r', { ...base, titre: 'Rita Brantalou', description: 'personnage de théâtre et de musique', valeurMarchande: 4 })
+    for (const c of [train, rita]) {
+      const v = verdictCarte(c, prefs, new Set(), true)
+      expect(v.code).not.toBe('theme-garde')
+    }
+  })
+})
