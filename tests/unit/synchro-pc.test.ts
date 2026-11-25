@@ -187,3 +187,30 @@ describe('relance et fusion entre PC', () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe('prix repris d’un autre PC (2026-11-25)', () => {
+  const synchroAvec = (prix: Record<string, { valeur: number | null; releveLe: number }>, derniereComplete: number): DonneesSynchro => ({
+    derniereSynchro: derniereComplete,
+    etat: { ...etatInitial(), derniereComplete, prix },
+    wikipedia: cacheVide(), classementIA: cacheIAVide(), themesAppris: etatApprisVide(), grapheWikidata: {},
+  });
+  it('un prix plus récent d’un autre PC est repris même si la valeur d’ici était un ancien relevé', () => {
+    const ici: Donnees = { ...donnees([carte('a', { valeurMarchande: 10 })]), synchro: synchroAvec({ a: { valeur: 10, releveLe: 1000 } }, 1000) };
+    const la: Donnees = { ...donnees([carte('a', { valeurMarchande: 25 })]), synchro: synchroAvec({ a: { valeur: 25, releveLe: Date.now() - 1000 } }, Date.now() - 1000) };
+    const r = fusionnerFichiersPc(ici, [{ nom: 'pc-autre', texte: instantane(la, T3) }], 'pc-moi', {}, null);
+    expect(r.donnees.synchro?.etat?.prix.a?.valeur).toBe(25);
+    expect(r.donnees.collection.cartes[0]!.valeurMarchande).toBe(25);
+  });
+  it('une valeur saisie à la main ici n’est pas écrasée', () => {
+    const ici: Donnees = { ...donnees([carte('a', { valeurMarchande: 99 })]), synchro: synchroAvec({ a: { valeur: 10, releveLe: 1000 } }, 1000) };
+    const la: Donnees = { ...donnees([carte('a', { valeurMarchande: 25 })]), synchro: synchroAvec({ a: { valeur: 25, releveLe: Date.now() - 1000 } }, Date.now() - 1000) };
+    const r = fusionnerFichiersPc(ici, [{ nom: 'pc-autre', texte: instantane(la, T3) }], 'pc-moi', {}, null);
+    expect(r.donnees.collection.cartes[0]!.valeurMarchande).toBe(99);
+  });
+  it('un PC neuf reprend les prix du fichier sans rien redemander', () => {
+    const ici: Donnees = { ...donnees([carte('a')]), synchro: synchroAvec({}, 0) };
+    const la: Donnees = { ...donnees([carte('a', { valeurMarchande: 7 })]), synchro: synchroAvec({ a: { valeur: 7, releveLe: Date.now() - 1000 } }, Date.now() - 1000) };
+    const r = fusionnerFichiersPc(ici, [{ nom: 'pc-autre', texte: instantane(la, T3) }], 'pc-moi', {}, null);
+    expect(r.donnees.synchro?.etat?.prix.a?.valeur).toBe(7);
+  });
+});

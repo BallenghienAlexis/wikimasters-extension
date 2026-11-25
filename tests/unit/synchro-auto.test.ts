@@ -890,3 +890,42 @@ describe('stats inexploitables : pauses, réessais, jamais d’arrêt', () => {
     expect((b.statuts.at(-1) as StatutSynchro).etat).toBe('termine');
   });
 });
+
+describe('Synchro entre PC avant le site (2026-11-25)', () => {
+  it('attend la fusion des PC avant la première requête, et demande la page de gestion', async () => {
+    const b = banc();
+    let aJour = false;
+    let demandes = 0;
+    let sondages = 0;
+    b.deps.fusionPcAJour = async () => {
+      sondages += 1;
+      if (sondages >= 4) aJour = true;
+      return aJour;
+    };
+    b.deps.demanderPagePc = () => {
+      demandes += 1;
+    };
+    const t0 = b.horloge.t;
+    expect((await creerSynchroAuto(b.deps).declencher())?.issue).toBe('termine');
+    expect(demandes).toBe(1);
+    expect(b.horloge.t - t0).toBeGreaterThanOrEqual(15_000);
+    expect(b.chemins.length).toBeGreaterThan(0);
+  });
+
+  it('ne bloque pas au-delà de 3 min si la page de gestion ne répond pas', async () => {
+    const b = banc();
+    b.deps.fusionPcAJour = async () => false;
+    b.deps.demanderPagePc = () => undefined;
+    const t0 = b.horloge.t;
+    expect((await creerSynchroAuto(b.deps).declencher())?.issue).toBe('termine');
+    expect(b.horloge.t - t0).toBeGreaterThanOrEqual(3 * MIN);
+  });
+
+  it('« Forcer la synchro » ne l’attend pas', async () => {
+    const b = banc();
+    b.deps.fusionPcAJour = async () => false;
+    const t0 = b.horloge.t;
+    await creerSynchroAuto(b.deps).relancer();
+    expect(b.horloge.t - t0).toBeLessThan(MIN);
+  });
+});

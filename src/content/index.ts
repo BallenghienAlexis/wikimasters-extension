@@ -34,6 +34,7 @@ import {
   synchroPcAJour,
 } from '../lib/stockage';
 import { chargerSurcouchesThemes } from './surcouchesThemes';
+import { garderPageSynchroPcOuverte } from './pagePc';
 import { demarrerExecutant } from './executant';
 import { demarrerSynchroAuto, horlogeReelle, transportSite } from './synchroAuto';
 import { creerSuiviVentes, demarrerSuiviVentes } from './suiviVentes';
@@ -99,3 +100,6 @@ demarrerSuiviVentes({
 });
 // Bouton « Forcer » du suivi (onglet Mise en vente) : un passage tout de suite, même si l’onglet WikiMasters est en arrière-plan.
 ecouterSignalSuiviVentes(() => void suivi.forcer().catch(() => undefined));
+
+// Synchro entre PC : garde la page de gestion ouverte en arrière-plan pour que le dossier partagé reste à jour même pendant que le joueur ne regarde que le site.
+garderPageSynchroPcOuverte();

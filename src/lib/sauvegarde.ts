@@ -308,6 +308,17 @@ export function appliquerImport(locales: Donnees, s: Sauvegarde, politique: Poli
       url: locale.url ?? sauvee.url,
     });
   }
+  // Prix plus frais dans le fichier (relevé ailleurs) : la valeur de la carte le suit si la valeur d'ici n'était pas une saisie à la main,
+  // sinon `prixRepris` l'écarterait (valeur différente) et le prix serait redemandé au site.
+  if (locales.synchro && s.synchro?.etat) {
+    for (const [id, r] of Object.entries(s.synchro.etat.prix)) {
+      const carte = parId.get(id);
+      const ici = locales.synchro.etat?.prix[id];
+      if (!carte || r.valeur === null || carte.valeurMarchande === r.valeur || (ici !== undefined && ici.releveLe >= r.releveLe)) continue;
+      const releveAuto = ici === undefined ? carte.valeurMarchande === null : carte.valeurMarchande === ici.valeur;
+      if (releveAuto) parId.set(id, { ...carte, valeurMarchande: r.valeur });
+    }
+  }
   if (parId.size > MAX_CARTES) return { ok: false, erreur: `La collection dépasserait ${MAX_CARTES} cartes.` };
 
   const preferences = fusionnerPreferences(locales.preferences, s.preferences);
