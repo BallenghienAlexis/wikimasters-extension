@@ -24,6 +24,10 @@ test.beforeEach(async ({ pageCollection }) => {
 });
 
 test.describe('SC-028 : sections repliables', () => {
+  test('la version du manifeste est affichée en bas des Réglages', async ({ pageCollection: page }) => {
+    await expect(page.getByTestId('version-extension')).toContainText(/version \d+\.\d+\.\d+/);
+  });
+
   test('SC-028 : sept sections fermées par défaut, avec résumé', async ({ pageCollection: page }) => {
     for (const titre of SECTIONS) {
       await expect(bouton(page, titre)).toHaveAttribute('aria-expanded', 'false');

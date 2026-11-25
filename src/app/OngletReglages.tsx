@@ -27,6 +27,15 @@ interface Props {
 
 const NB = ' ';
 
+/** Version de l’extension, telle que Chrome l’affiche (manifeste) ; absente hors extension (tests). */
+function versionExtension(): string | null {
+  try {
+    return chrome.runtime.getManifest().version;
+  } catch {
+    return null;
+  }
+}
+
 const LIBELLES_MODES = { suspendre: 'Pose suspendue', 'retirer-tout': 'Retrait général', poser: 'Pose selon les règles' } as const;
 
 function telechargerCopie(contenu: string, nom: string): void {
@@ -132,6 +141,10 @@ const OngletReglages: React.FC<Props> = ({ donnees, onImportee, synchroPc }) => 
           onChange={(valeur) => void enregistrerAffichage({ version: 1, animations: valeur }).catch(() => setMessage('Enregistrement du réglage impossible.'))}
         />
       </SectionRepliable>
+
+      <p className="px-1 text-xs text-muted" data-testid="version-extension">
+        WM Collection{NB}: version {versionExtension() ?? 'inconnue'}
+      </p>
     </div>
   );
 };
