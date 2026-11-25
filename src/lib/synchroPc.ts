@@ -117,7 +117,8 @@ export function fusionnerFichiersPc(locales: Donnees, fichiers: FichierPc[], mon
 
   let courantes = locales;
   // Garde 10 cartes et 10 % calculée une fois sur la collection d'avant fusion, cumulée sur tous les fichiers du cycle.
-  let budgetRetraits = Math.max(MAX_RETRAITS_MIN, Math.floor(locales.collection.cartes.length * 0.1));
+  // Source choisie par le joueur au démarrage (`faireFoi`) : elle fait foi, la garde de 10 % ne s'applique pas (une vieille collection d'ici est remplacée).
+  let budgetRetraits = faireFoi ? Number.POSITIVE_INFINITY : Math.max(MAX_RETRAITS_MIN, Math.floor(locales.collection.cartes.length * 0.1));
   const fusionnes: string[] = [];
   for (const v of valides) {
     const sienne = modifieLeDuFichier(texteDe.get(v.nom) ?? '') ?? v.creeLe;
