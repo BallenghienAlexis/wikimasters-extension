@@ -93,7 +93,7 @@ export interface RapportFusion {
  * (une carte vendue ou défaussée ici ne ressuscite pas) ; thèmes, amis et ventes sont toujours réunis (voir `appliquerImport`).
  * Un fichier illisible, d'un format inconnu ou déjà lu est ignoré sans rien modifier.
  */
-export function fusionnerFichiersPc(locales: Donnees, fichiers: FichierPc[], monNom: string, dejaLus: Record<string, string>, modifieLe: string | null): RapportFusion {
+export function fusionnerFichiersPc(locales: Donnees, fichiers: FichierPc[], monNom: string, dejaLus: Record<string, string>, modifieLe: string | null, faireFoi = false): RapportFusion {
   const ignores: FichierIgnore[] = [];
   const lus = { ...dejaLus };
   const texteDe = new Map(fichiers.map((f) => [f.nom, f.texte]));
@@ -121,7 +121,8 @@ export function fusionnerFichiersPc(locales: Donnees, fichiers: FichierPc[], mon
   const fusionnes: string[] = [];
   for (const v of valides) {
     const sienne = modifieLeDuFichier(texteDe.get(v.nom) ?? '') ?? v.creeLe;
-    const plusRecent = modifieLe === null || sienne > modifieLe;
+    // `faireFoi` : source choisie par le joueur au démarrage, elle l'emporte sur les saisies, les cartes et la dernière lecture du site d'ici.
+    const plusRecent = faireFoi || modifieLe === null || sienne > modifieLe;
     const politique: PolitiqueConflit = plusRecent ? 'remplacer' : 'garder-ici';
     const locales_ = new Set(courantes.collection.cartes.map((c) => c.id));
     // Dernière lecture complète du site de chaque côté : la plus récente fait foi sur les cartes présentes ou absentes.
@@ -131,8 +132,8 @@ export function fusionnerFichiersPc(locales: Donnees, fichiers: FichierPc[], mon
     // Une date future (horloge d'un autre PC, fichier abîmé) ne rend pas un fichier plus frais que maintenant.
     const lectureFichier = brute === null ? null : Math.min(brute, Date.now());
     const lectureIci = courantes.synchro?.etat?.derniereComplete ?? null;
-    const fichierPlusFrais = lectureFichier !== null && (lectureIci === null || lectureFichier > lectureIci);
-    const iciPlusFrais = lectureIci !== null && (lectureFichier === null || lectureIci > lectureFichier);
+    const fichierPlusFrais = faireFoi || (lectureFichier !== null && (lectureIci === null || lectureFichier > lectureIci));
+    const iciPlusFrais = !faireFoi && lectureIci !== null && (lectureFichier === null || lectureIci > lectureFichier);
     const nouvellesCartes = plusRecent && !iciPlusFrais;
     const sauvegarde = nouvellesCartes ? v.sauvegarde : { ...v.sauvegarde, cartes: v.sauvegarde.cartes.filter((c) => locales_.has(c.id)) };
     const avant = fichierPlusFrais ? retirerAbsentes(courantes, new Set(v.sauvegarde.cartes.map((c) => c.id)), budgetRetraits) : courantes;
@@ -177,4 +178,31 @@ function nbDelies(avant: Donnees, apres: Donnees): number {
 function lireOk(texte: string) {
   const r = lireSauvegarde(texte);
   return r.ok ? r.sauvegarde : null;
+}
+
+export interface SourcePc {
+  nom: string;
+  /** Écriture du fichier (ISO) et dernière saisie annoncée (ISO), `null` si absente. */
+  creeLe: string;
+  modifieLe: string | null;
+  derniereComplete: number | null;
+  cartes: number;
+}
+
+/** PC proposés comme source au démarrage : fichiers lisibles des autres PC, le plus récent d'abord. */
+export function sourcesDisponibles(fichiers: FichierPc[], monNom: string): SourcePc[] {
+  const sources: SourcePc[] = [];
+  for (const f of fichiers) {
+    if (f.nom === monNom || f.texte === FICHIER_TROP_GROS || f.texte.length > TAILLE_MAX_FICHIER_PC) continue;
+    const s = lireOk(f.texte);
+    if (!s) continue;
+    sources.push({ nom: f.nom, creeLe: s.creeLe, modifieLe: modifieLeDuFichier(f.texte), derniereComplete: s.synchro?.etat?.derniereComplete ?? null, cartes: s.cartes.length });
+  }
+  return sources.sort((a, b) => (a.creeLe < b.creeLe ? 1 : a.creeLe > b.creeLe ? -1 : a.nom.localeCompare(b.nom, 'fr')));
+}
+
+/** PC proposé par défaut : le prioritaire s'il est présent (une seule fois), sinon le plus récent. */
+export function sourceParDefaut(sources: SourcePc[], prioritaire: string | null): string | null {
+  if (prioritaire !== null && sources.some((s) => s.nom === prioritaire)) return prioritaire;
+  return sources[0]?.nom ?? null;
 }

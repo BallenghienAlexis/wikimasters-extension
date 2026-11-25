@@ -22,6 +22,7 @@ import { useDonneesPage } from './useDonneesPage';
 import { useHistoriqueQuotidien } from './useHistoriqueQuotidien';
 import { useOngletActif } from './useOngletActif';
 import { useSynchroPc } from './useSynchroPc';
+import PopupDemarrage from './PopupDemarrage';
 
 /**
  * Coquille de la page de gestion : en-tête, blocage et messages de stockage (au-dessus des onglets, sur les cinq),
@@ -64,7 +65,7 @@ const App: React.FC = () => {
         panneau = <OngletSynchro donnees={donnees} />;
         break;
       case 'lots':
-        panneau = <OngletLots donnees={donnees} attenteSynchroPc={synchroPc.etat === 'actif' && synchroPc.derniereLecture === null} />;
+        panneau = <OngletLots donnees={donnees} attenteSynchroPc={synchroPc.etat === 'actif' && (synchroPc.derniereLecture === null || (synchroPc.demarrage.etape !== 'inactif' && synchroPc.demarrage.etape !== 'termine'))} />;
         break;
       case 'mise-en-vente':
         panneau = <OngletMiseEnVente />;
@@ -108,6 +109,7 @@ const App: React.FC = () => {
   return (
     <ContexteAffichage.Provider value={{ animations: affichage.animations }}>
       <main className="mx-auto max-w-[1280px] px-6 pt-5 pb-6">
+        <PopupDemarrage synchroPc={synchroPc} />
         <EnTete />
 
         {blocage && (

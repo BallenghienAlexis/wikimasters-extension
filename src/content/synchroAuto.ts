@@ -30,6 +30,7 @@ import {
   ajouterDureesMesurees,
   noterAffluenceSite,
   synchroPcAJour,
+  demarragePermet,
   FUSION_PC_RECENTE_MS,
   chargerReleveMarche,
   enregistrerReleveMarche,
@@ -57,8 +58,10 @@ export interface DependancesSynchroAuto {
    * attend (3 min au plus) une fusion, pour reprendre les prix déjà relevés ailleurs au lieu de les redemander (Alexis, 2026-11-25).
    */
   fusionPcAJour?: () => Promise<boolean>;
+  /** Démarrage obligatoire (Alexis, 2026-11-25) : faux tant que la fenêtre de démarrage n'a pas repris le Drive ; seule sa demande explicite (forçage) lit alors le site. */
+  demarrageAutorise?: () => Promise<boolean>;
   /** Demande l'ouverture (en arrière-plan) de la page de gestion, seule à lire et écrire le dossier partagé. */
-  demanderPagePc?: () => void;
+  demanderPagePc?: (premierPlan?: boolean) => void;
   /** Mémorise la liste des étiquettes du compte lue dans `stats` (optionnel). */
   noterEtiquettesSite?: (liste: Array<{ id: string; nom: string; nbCartes: number }>) => Promise<void>;
   horloge: Horloge;
@@ -262,6 +265,10 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
     arretDemande = false;
     try {
       if (!(await deps.actif())) return null;
+      if (!forcer && deps.demarrageAutorise && !(await deps.demarrageAutorise().catch(() => false))) {
+        deps.demanderPagePc?.(true);
+        return null;
+      }
       const maintenant = deps.horloge.now();
       if (!forcer && dernierEssai !== null && maintenant - dernierEssai < DELAI_SYNCHRO_MS) return null;
       const derniere = await deps.derniereSynchro();
@@ -509,6 +516,7 @@ const synchroDuNavigateur = (surReponseMarche?: (json: unknown) => Promise<void>
     noterDerniereSynchro: enregistrerDerniereSynchro,
     fusionPcAJour: () => synchroPcAJour(Date.now(), FUSION_PC_RECENTE_MS),
     demanderPagePc: demanderPageSynchroPc,
+    demarrageAutorise: () => demarragePermet('site'),
     chargerCollection,
     enregistrerCollection,
     chargerEtat: chargerEtatSynchro,

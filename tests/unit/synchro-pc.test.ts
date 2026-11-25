@@ -6,7 +6,7 @@ import { cacheIAVide } from '../../src/lib/classificationIA';
 import { etatApprisVide } from '../../src/lib/themesAppris';
 import { etatInitial } from '../../src/lib/ordonnanceur';
 import type { DonneesSynchro } from '../../src/lib/sauvegardeSynchro';
-import { aDesSaisies, empreinte, empreinteEdition, fusionnerFichiersPc, genererNomPc, instantane, nomFichierPc, nomPcDeFichier, nomPcValide } from '../../src/lib/synchroPc';
+import { sourceParDefaut, sourcesDisponibles, aDesSaisies, empreinte, empreinteEdition, fusionnerFichiersPc, genererNomPc, instantane, nomFichierPc, nomPcDeFichier, nomPcValide } from '../../src/lib/synchroPc';
 
 const carte = (id: string, plus: Partial<Carte> = {}): Carte => ({
   id, titre: `Carte ${id}`, rarete: null, description: '', quantite: 1, url: null, favori: false,
@@ -212,5 +212,27 @@ describe('prix repris d’un autre PC (2026-11-25)', () => {
     const la: Donnees = { ...donnees([carte('a', { valeurMarchande: 7 })]), synchro: synchroAvec({ a: { valeur: 7, releveLe: Date.now() - 1000 } }, Date.now() - 1000) };
     const r = fusionnerFichiersPc(ici, [{ nom: 'pc-autre', texte: instantane(la, T3) }], 'pc-moi', {}, null);
     expect(r.donnees.synchro?.etat?.prix.a?.valeur).toBe(7);
+  });
+});
+
+describe('choix de la source au démarrage (2026-11-25)', () => {
+  const fichier = (nom: string, note: string, date: Date, modifieLe?: string) => ({ nom, texte: instantane(donnees([carte('a', { note })]), date, modifieLe ?? null) });
+  it('liste les autres PC, le plus récent d’abord, et propose le prioritaire s’il est présent', () => {
+    const sources = sourcesDisponibles([fichier('pc-5e2o', 'x', T1), fichier('pc-pxj8', 'y', T3), fichier('pc-moi', 'z', T2)], 'pc-moi');
+    expect(sources.map((s) => s.nom)).toEqual(['pc-pxj8', 'pc-5e2o']);
+    expect(sourceParDefaut(sources, 'pc-5e2o')).toBe('pc-5e2o');
+    expect(sourceParDefaut(sources, null)).toBe('pc-pxj8');
+    expect(sourceParDefaut(sources, 'pc-absent')).toBe('pc-pxj8');
+    expect(sourceParDefaut([], 'pc-5e2o')).toBeNull();
+  });
+  it('la source qui fait foi l’emporte même si les saisies d’ici sont plus récentes', () => {
+    const locales = donnees([carte('a', { note: 'ici' })]);
+    const r = fusionnerFichiersPc(locales, [fichier('pc-5e2o', 'référence', T1)], 'pc-moi', {}, T3.toISOString(), true);
+    expect(r.donnees.collection.cartes[0]!.note).toBe('référence');
+  });
+  it('sans faire foi, les saisies plus récentes d’ici restent', () => {
+    const locales = donnees([carte('a', { note: 'ici' })]);
+    const r = fusionnerFichiersPc(locales, [fichier('pc-5e2o', 'référence', T1)], 'pc-moi', {}, T3.toISOString());
+    expect(r.donnees.collection.cartes[0]!.note).toBe('ici');
   });
 });

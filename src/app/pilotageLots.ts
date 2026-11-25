@@ -38,6 +38,7 @@ import {
   enregistrerIgnorees,
   enregistrerJournal,
   enregistrerRegistre,
+  demarragePermet,
   enregistrerRelanceSynchro,
   FUSION_PC_RECENTE_MS,
   synchroPcAJour,
@@ -296,6 +297,9 @@ async function lancerAvec(preparer: () => Promise<Lancement>): Promise<void> {
 export async function lancerLot(actions: readonly Action[], idLot: string): Promise<void> {
   // Les PC d'abord (Alexis, 2026-11-25) : un lot lancé sur des données que l'autre PC a déjà changées (cartes vendues ou défaussées)
   // retombe sur des refus par carte. Synchro configurée mais autres PC non lus depuis 3 min : le lot ne part pas.
+  if (!(await demarragePermet('pret').catch(() => true))) {
+    throw new Error('Démarrage obligatoire non terminé : valide d’abord la fenêtre de synchro entre PC (Drive, puis site, puis sauvegarde).');
+  }
   if (!(await synchroPcAJour(Date.now(), FUSION_PC_RECENTE_MS).catch(() => true))) {
     throw new Error('Synchro entre PC en retard : les autres PC n’ont pas été lus depuis plus de 3 min. Autorise le dossier dans Réglages › Synchro entre PC (un clic), attends la fusion, puis relance le lot.');
   }
