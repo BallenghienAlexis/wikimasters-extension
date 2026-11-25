@@ -115,7 +115,8 @@ const PopupDemarrage: React.FC<{ synchroPc: SynchroPc }> = ({ synchroPc }) => {
 
         {demarrage.etape === 'site' && (
           <div className="mt-4">
-            <p>Lecture de la collection sur WikiMasters… Garde un onglet WikiMasters ouvert (les prix se complètent ensuite en arrière-plan).</p>
+            <p>Lecture de la collection sur WikiMasters… Garde un onglet WikiMasters ouvert (les prix se complètent ensuite en arrière-plan). Compte environ une à deux minutes pour 5 000 cartes.</p>
+            {synchroPc.progressionSite && <p className="mt-1 text-sm" role="status">{synchroPc.progressionSite}</p>}
             <div className="mt-2 flex flex-col gap-2 md:flex-row">
               <button type="button" className={`${BOUTON} border-paper bg-ink text-paper hover:bg-line`} onClick={() => void synchroPc.relancerSite()}>
                 Relancer la lecture du site
