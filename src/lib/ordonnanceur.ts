@@ -475,7 +475,7 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
         if (derniere) break;
       }
       complet = lecture.ok && complet && (stats === null || propre);
-      if (propre && lecture.vus !== null && echecsTotal === 0 && resultat.ignorees === 0) retirerDisparues(lecture.vus);
+      if (propre && lecture.vus !== null && echecsTotal === 0 && resultat.ignorees === 0) retirerDisparues(lecture.vus, stats?.totalUnique ?? null);
       if (complet && stats !== null) {
         etat.total = stats.total;
         etat.totalUnique = stats.totalUnique;
@@ -529,10 +529,14 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
    * Cartes locales absentes d’une lecture complète et cohérente avec `total` : vendues, défaussées ou échangées
    * depuis la dernière synchro. On les retire pour ne plus leur poser d’étiquettes (le site répond 403).
    */
-  function retirerDisparues(vus: ReadonlySet<string>): void {
+  function retirerDisparues(vus: ReadonlySet<string>, totalUnique: number | null): void {
     const absentes = [...parId.values()].filter((c) => !vus.has(c.id));
-    // Garde-fou : un écart énorme vient plutôt d’un changement de forme des données que de ventes.
-    if (absentes.length > Math.max(MAX_RETRAITS_MIN, Math.floor(parId.size * 0.1))) {
+    // Garde-fou : un écart énorme vient plutôt d’un changement de forme des données que de ventes. Sauf si la lecture
+    // prouve l’état du site : autant de cartes distinctes lues que le site en annonce (`totalUnique`), en plus du total
+    // d’exemplaires déjà vérifié. Alors les cartes absentes ne sont plus sur le site (défausses massives, vieille
+    // sauvegarde reprise d’un autre PC) et le retrait n’est pas limité à 10 %.
+    const etatProuve = totalUnique !== null && vus.size === totalUnique;
+    if (!etatProuve && absentes.length > Math.max(MAX_RETRAITS_MIN, Math.floor(parId.size * 0.1))) {
       journal(`${absentes.length} carte(s) absente(s) du site : trop pour un retrait automatique, collection locale inchangée.`);
       return;
     }

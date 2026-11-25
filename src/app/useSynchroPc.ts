@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   chargerEtatSynchro,
+  chargerStatutSynchro,
   chargerPhaseDemarrage,
   chargerSynchroPc,
   ecouterSynchroAuto,
@@ -38,6 +39,8 @@ export interface SynchroPc {
   reessayerDemarrage: () => Promise<void>;
   /** Vrai tant que le démarrage obligatoire n'est pas terminé (la fenêtre de démarrage peut alors demander l'autorisation du dossier). */
   demarrageEnCours: boolean;
+  /** Avancement lisible de la lecture du site pendant l'étape 2 (null tant que rien n'est lu). */
+  progressionSite: string | null;
   etat: EtatSynchroPc;
   dossier: string | null;
   nomPc: string;
@@ -106,6 +109,7 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
   const [demarrage, setDemarrage] = useState<Demarrage>({ etape: 'inactif', sources: [], choisie: null, message: null });
   const demarrageLance = useRef(false);
   const [demarrageEnCours, setDemarrageEnCours] = useState(false);
+  const [progressionSite, setProgressionSite] = useState<string | null>(null);
   const etapeRef = useRef<EtapeDemarrage>('inactif');
   const changerEtape = (e: Partial<Demarrage> & Pick<Demarrage, 'etape'>): void => {
     etapeRef.current = e.etape;
@@ -137,6 +141,7 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
     changerEtape({ etape: 'site' });
     await enregistrerRelanceSynchro(Date.now());
     debutSite.current = Date.now();
+    setProgressionSite(null);
   };
   const debutSite = useRef(0);
 
@@ -193,6 +198,12 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
 
   const verifierSite = useCallback(async (): Promise<void> => {
     if (etapeRef.current !== 'site') return;
+    const statut = await chargerStatutSynchro().catch(() => null);
+    if (statut && etapeRef.current === 'site') {
+      if (statut.etat === 'arret') setProgressionSite('La synchro du site s’est arrêtée (pause du site ou vérification anti-bot) : relance la lecture ou passe cette étape.');
+      else if (statut.etat === 'en-cours' && statut.page !== null && statut.pages !== null) setProgressionSite(`Lecture en cours : page ${statut.page} sur ${statut.pages}.`);
+      else if (statut.etat === 'en-cours') setProgressionSite('Lecture en cours…');
+    }
     const etat = await chargerEtatSynchro().catch(() => null);
     if (etat?.derniereComplete != null && etat.derniereComplete >= debutSite.current) await sauvegarderEtTerminer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -372,5 +383,5 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
     await cycle();
   };
 
-  return { demarrage, choisirSource, continuerDemarrage, passerSite, relancerSite, reessayerDemarrage, demarrageEnCours, etat: vue.etat, dossier: vue.nomDossier, nomPc, dernierEnvoi, derniereLecture: vue.derniereLecture, pcVus: vue.pcVus, ignores: vue.ignores, erreur: vue.erreur, choisir, autoriser, renommer, desactiver, maintenant };
+  return { demarrage, choisirSource, continuerDemarrage, passerSite, relancerSite, reessayerDemarrage, demarrageEnCours, progressionSite, etat: vue.etat, dossier: vue.nomDossier, nomPc, dernierEnvoi, derniereLecture: vue.derniereLecture, pcVus: vue.pcVus, ignores: vue.ignores, erreur: vue.erreur, choisir, autoriser, renommer, desactiver, maintenant };
 }

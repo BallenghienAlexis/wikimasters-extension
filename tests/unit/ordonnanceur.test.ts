@@ -338,10 +338,19 @@ describe('ordonnanceur — cartes disparues du site (vendues, défaussées)', ()
 
   it('ne retire rien au-delà de 10 cartes et de 10 % de la collection (changement de forme probable)', async () => {
     const locales = Array.from({ length: 40 }, (_, i) => sansEdition(i + 1));
-    const b = banc(siteFictif(5), collectionDe(locales), etatInitial());
+    // Le site annonce plus de cartes distinctes qu'il n'en a été lu : l'état n'est pas prouvé, la garde s'applique.
+    const base = siteFictif(5);
+    const b = banc((chemin) => (chemin.startsWith('/api/my-collection/stats') ? { statut: 200, json: statsJson(5, 9) } : base(chemin)), collectionDe(locales), etatInitial());
     const r = await synchroniser({ ...b.deps, maxPrix: 0 });
     expect(r.collection.cartes).toHaveLength(40);
     expect(b.journal.join('\n')).toMatch(/trop pour un retrait automatique/);
+  });
+
+  it('retire plus de 10 % des cartes quand la lecture prouve l\u2019état du site (total et cartes distinctes égaux)', async () => {
+    const locales = Array.from({ length: 40 }, (_, i) => sansEdition(i + 1));
+    const b = banc(siteFictif(5), collectionDe(locales), etatInitial());
+    const r = await synchroniser({ ...b.deps, maxPrix: 0 });
+    expect(r.collection.cartes).toHaveLength(5);
   });
 
   it('un décalage de pagination (ligne répétée) ne fait rien retirer ni conclure trop tôt', async () => {

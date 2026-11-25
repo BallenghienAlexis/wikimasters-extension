@@ -230,6 +230,12 @@ describe('choix de la source au démarrage (2026-11-25)', () => {
     const r = fusionnerFichiersPc(locales, [fichier('pc-5e2o', 'référence', T1)], 'pc-moi', {}, T3.toISOString(), true);
     expect(r.donnees.collection.cartes[0]!.note).toBe('référence');
   });
+  it('la source qui fait foi remplace une vieille collection d’ici, sans la garde de 10 %', () => {
+    const locales = donnees(Array.from({ length: 40 }, (_, i) => carte(`vieille${i}`)));
+    const f = { nom: 'pc-5e2o', texte: instantane(donnees([carte('a'), carte('b')]), T1, null) };
+    const r = fusionnerFichiersPc(locales, [f], 'pc-moi', {}, null, true);
+    expect(r.donnees.collection.cartes.map((c) => c.id).sort()).toEqual(['a', 'b']);
+  });
   it('sans faire foi, les saisies plus récentes d’ici restent', () => {
     const locales = donnees([carte('a', { note: 'ici' })]);
     const r = fusionnerFichiersPc(locales, [fichier('pc-5e2o', 'référence', T1)], 'pc-moi', {}, T3.toISOString());
