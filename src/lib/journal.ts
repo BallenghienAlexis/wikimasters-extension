@@ -166,10 +166,14 @@ export function ouvrirEntreePassee(journal: Journal, champs: ChampsEntree, infor
 }
 
 /** Inscrit une entrée « en cours » en « passée » (action non envoyée) ; sans effet sinon. */
-export function passerEntree(journal: Journal, id: string): Journal {
+export function passerEntree(journal: Journal, id: string, information?: string): Journal {
   return journal.map((e) => {
     const c = copier(e)
-    if (e.id === id && e.resultat === 'en-cours') c.resultat = 'passee'
+    if (e.id === id && e.resultat === 'en-cours') {
+      c.resultat = 'passee'
+      // Motif de l'abandon : texte fixe de l'extension (jamais une réponse du site).
+      if (information) c.diagnostic = tronquer(information, MAX_DIAGNOSTIC)
+    }
     return c
   })
 }

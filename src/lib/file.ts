@@ -58,6 +58,24 @@ export interface Horloge {
 
 export type Verification = 'ok' | 'passee'
 
+/** Motif affiché pour une action écartée par la revérification avant l'envoi (texte fixe de l'extension). */
+function motifRevision(type: string): string {
+  switch (type) {
+    case 'enchere':
+      return 'écartée avant l’envoi : la carte est devenue favori, « à classer » ou non reliée au site, son prix du marché a changé (prix de départ au-dessus de la valeur) ou son prix cible a changé'
+    case 'defausse':
+      return 'écartée avant l’envoi : la carte est favori, « à classer », non reliée au site, ou sa valeur dépasse le plafond de défausse'
+    case 'pose-etiquette':
+      return 'écartée avant l’envoi : l’étiquette n’est plus attendue pour cette carte (thèmes, mode des étiquettes ou exemplaire plus relié)'
+    case 'retrait-etiquette':
+      return 'écartée avant l’envoi : le retrait n’a plus lieu d’être (étiquette de nouveau attendue ou absente du registre)'
+    case 'favori':
+      return 'écartée avant l’envoi : le choix de favori ou l’état de la carte a changé'
+    default:
+      return 'écartée avant l’envoi : l’état de la carte a changé depuis l’aperçu'
+  }
+}
+
 type Ou<T> = T | Promise<T>
 
 /** Rang de l’action dans son lot (à partir de 1), taille et famille du lot : complète l’entrée de journal (T-313). */
@@ -72,7 +90,7 @@ export interface JournalFile {
   ouvrir: (action: Action, contexte?: ContexteJournal) => Ou<string>
   completer: (id: string, resultat: ResultatAction) => Ou<void>
   /** Inscrit l’entrée en « passée » (action non envoyée). */
-  passer: (id: string) => Ou<void>
+  passer: (id: string, information?: string) => Ou<void>
 }
 
 /** Nombre maximal d’écritures d’étiquettes simultanément en vol (décision d’Alexis, 2026-11-12). */
@@ -215,7 +233,7 @@ export function creerFile(deps: DependancesFile): File {
   const journal: JournalFile = {
     ouvrir: (a, c) => serie(() => journalBrut.ouvrir(a, c)),
     completer: (id, r) => serie(() => journalBrut.completer(id, r)),
-    passer: (id) => serie(() => journalBrut.passer(id)),
+    passer: (id, information) => serie(() => journalBrut.passer(id, information)),
   }
   const appliquer = (a: Action, r: ResultatAction): Promise<void> => serie(() => appliquerBrut(a, r))
   /** Vrai dès qu’un ordre a arrêté la file : les ordres du lot pas encore partis ne partent pas. */
@@ -337,7 +355,7 @@ export function creerFile(deps: DependancesFile): File {
 
   async function inscrirePassee(entree: Entree): Promise<void> {
     const id = await journal.ouvrir(entree.action, contexteJournal(entree))
-    await journal.passer(id)
+    await journal.passer(id, motifRevision(entree.action.type))
   }
 
   /** Date de début autorisée : cadence unique (0,2 s plus supplément), réponse précédente. */
@@ -427,7 +445,7 @@ export function creerFile(deps: DependancesFile): File {
     }
     // Enchère passée sans envoi (prix du marché introuvable à la relecture de la tendance) : ni échec ni arrêt, le lot continue.
     if (!exception && resultat.classe === 'passee') {
-      await journal.passer(id)
+      await journal.passer(id, resultat.cause)
       return
     }
     // Raison d’arrêt connue dès la réponse : le drapeau passe avant toute attente de journal, pour qu’aucun

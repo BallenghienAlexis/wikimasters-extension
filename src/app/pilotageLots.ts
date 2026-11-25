@@ -204,9 +204,9 @@ export function contexteExecution(): ContexteExecution {
         pont.bilan.dernierInconnu = resultat.classe === 'inconnu';
         await enregistrerJournal(completerEntree(await chargerJournal(), id, resultat));
       },
-      passer: async (id) => {
+      passer: async (id, information) => {
         pont.bilan.passees++;
-        await enregistrerJournal(passerEntree(await chargerJournal(), id));
+        await enregistrerJournal(passerEntree(await chargerJournal(), id, information));
       },
     },
   });
