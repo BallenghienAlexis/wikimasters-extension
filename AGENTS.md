@@ -147,6 +147,17 @@ La règle qui interdisait de masquer une automatisation a été retirée par Ale
 
 Tout code qui clique, envoie un formulaire ou appelle l'API interne du site à la place du joueur exige une décision explicite d'Alexis, écrite dans la spec de la feature, avec le risque de bannissement rappelé. Si WikiMasters ouvre une API ou donne un accord écrit, ce cadre est à mettre à jour ici.
 
+## Versionnage (Alexis, 2026-11-25)
+
+Version courante : **1.0.0**, au format `MAJEUR.MINEUR.CORRECTIF` (semver ; chaque nombre n'est pas plafonné à 9, `1.10.10` est valide). Source de vérité : `package.json` ; `public/manifest.json` (le numéro que Chrome affiche) et `package-lock.json` doivent porter la même valeur (test `tests/unit/version.test.ts`, qui fait échouer la CI sinon). La version est affichée en bas de Réglages.
+
+- **`fix`** : +0.0.1 (`1.10.15` → `1.10.16`).
+- **`feat`** : +0.1.0 et le dernier nombre revient à 0 (`1.10.15` → `1.11.0`).
+- **Majeur** : le premier nombre ne monte que pour un changement majeur, décidé par Alexis (`2.0.0`).
+- `docs`, `test`, `chore` et `refactor` sans effet visible ne changent pas la version.
+- **Chaque PR `fix` ou `feat` bumpe la version dans la PR elle-même** : `node scripts/version.mjs fix` (ou `feat`, `major`, ou un numéro explicite) met à jour les trois fichiers ; `node scripts/version.mjs check` vérifie la cohérence. Deux PR ouvertes en parallèle qui bumpent la même version : la seconde à fusionner relance le script après avoir rebasé.
+- Aucune requête, route, permission ni en-tête de plus.
+
 ## Stack
 
 - Extension **Chrome Manifest V3** · **Vite 8** · **React 19** · **TypeScript strict**.
@@ -215,6 +226,7 @@ Tokens sous forme de rôles (`ink` = fond, `paper` = texte, `muted`, `line`) et 
 - Couleurs : uniquement via les tokens de `src/styles/tokens.css`. Toute nouvelle couleur passe d'abord par `design.md` de la feature.
 - Tests : `tests/unit/<module>.test.ts` pour `src/lib/*`, `tests/e2e/<sujet>.spec.ts` pour les parcours et captures. Le contexte navigateur vient de `tests/e2e/extension.ts`.
 - Commits : Conventional Commits en français, `type(extension): message à l'infinitif présent` (`feat`, `fix`, `chore`, `docs`, `test`, `refactor`). Dans le workflow SDD : `type(T-xxx): …`.
+- Version : chaque PR `fix` ou `feat` bumpe la version (`node scripts/version.mjs fix|feat`), voir § Versionnage.
 
 ## Workflow SDD (résumé)
 
