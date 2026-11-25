@@ -465,6 +465,9 @@ export async function chargerSynchroPc(): Promise<Record<string, unknown> | null
 /** Au-delà, la fusion entre PC est jugée trop ancienne pour que la relance automatique envoie quoi que ce soit. */
 export const FUSION_PC_PERIMEE_MS = 10 * 60_000;
 
+/** Fusion « récente » : la page de gestion lit les autres PC toutes les 15 s à 1 min (onglet masqué ralenti par Chrome). */
+export const FUSION_PC_RECENTE_MS = 3 * 60_000;
+
 /** Vrai si la synchro entre PC n'est pas configurée, ou si les autres PC ont été lus il y a moins de `maxMs` : la relance automatique n'agit que sur des données fusionnées. */
 export async function synchroPcAJour(maintenant: number, maxMs: number = FUSION_PC_PERIMEE_MS): Promise<boolean> {
   const m = await chargerSynchroPc();

@@ -29,10 +29,13 @@ import {
   enregistrerEtiquettesSite,
   ajouterDureesMesurees,
   noterAffluenceSite,
+  synchroPcAJour,
+  FUSION_PC_RECENTE_MS,
   chargerReleveMarche,
   enregistrerReleveMarche,
   type StatutSynchro,
 } from '../lib/stockage';
+import { demanderPageSynchroPc } from './pagePc';
 import { gigueAleatoire } from '../lib/gigue';
 import { creerCollecteur } from '../lib/durees';
 import { analyserStats } from '../lib/lectureApi';
@@ -42,10 +45,20 @@ import { CONFIG_AFFLUENCE } from '../config/affluence';
 
 /** Délai minimal entre deux synchronisations, et période du minuteur tant que l'onglet est visible. */
 export const DELAI_SYNCHRO_MS = 30 * 60_000;
+/** Attente maximale d'une fusion entre PC avant de lire le site, et pas de revérification. */
+export const ATTENTE_FUSION_PC_MS = 3 * 60_000;
+export const PAS_ATTENTE_FUSION_PC_MS = 5_000;
 /** Délai minimal entre deux relances demandées par le joueur. */
 export const DELAI_RELANCE_MS = 60_000;
 
 export interface DependancesSynchroAuto {
+  /**
+   * Synchro entre PC : vrai si elle n'est pas configurée ou si les autres PC ont été lus tout récemment. Sinon la synchro du site
+   * attend (3 min au plus) une fusion, pour reprendre les prix déjà relevés ailleurs au lieu de les redemander (Alexis, 2026-11-25).
+   */
+  fusionPcAJour?: () => Promise<boolean>;
+  /** Demande l'ouverture (en arrière-plan) de la page de gestion, seule à lire et écrire le dossier partagé. */
+  demanderPagePc?: () => void;
   /** Mémorise la liste des étiquettes du compte lue dans `stats` (optionnel). */
   noterEtiquettesSite?: (liste: Array<{ id: string; nom: string; nbCartes: number }>) => Promise<void>;
   horloge: Horloge;
@@ -253,6 +266,18 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
       if (!forcer && dernierEssai !== null && maintenant - dernierEssai < DELAI_SYNCHRO_MS) return null;
       const derniere = await deps.derniereSynchro();
       if (!forcer && derniere !== null && maintenant - derniere < DELAI_SYNCHRO_MS) return null;
+
+      // Les PC d'abord, le site ensuite : sans fusion récente, on laisse à la page de gestion le temps de lire les autres PC (3 min au plus).
+      if (!forcer && deps.fusionPcAJour) {
+        const limite = maintenant + ATTENTE_FUSION_PC_MS;
+        let aJour = await deps.fusionPcAJour().catch(() => true);
+        if (!aJour) deps.demanderPagePc?.();
+        while (!aJour && !arretDemande && deps.horloge.now() < limite) {
+          await deps.horloge.attendreJusqua(deps.horloge.now() + PAS_ATTENTE_FUSION_PC_MS);
+          aJour = await deps.fusionPcAJour().catch(() => true);
+        }
+        if (arretDemande) return null;
+      }
 
       const etat = (await deps.chargerEtat()) ?? etatInitial();
       const collection = await deps.chargerCollection();
@@ -482,6 +507,8 @@ const synchroDuNavigateur = (surReponseMarche?: (json: unknown) => Promise<void>
     actif: chargerSyncAuto,
     derniereSynchro: chargerDerniereSynchro,
     noterDerniereSynchro: enregistrerDerniereSynchro,
+    fusionPcAJour: () => synchroPcAJour(Date.now(), FUSION_PC_RECENTE_MS),
+    demanderPagePc: demanderPageSynchroPc,
     chargerCollection,
     enregistrerCollection,
     chargerEtat: chargerEtatSynchro,

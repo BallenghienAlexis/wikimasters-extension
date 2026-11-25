@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WM Collection",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Préparer le tri, l'échange et la vente d'une collection WikiMasters. Extension personnelle non affiliée au jeu.",
   "permissions": ["storage"],
   "host_permissions": ["https://fr.wikipedia.org/*", "https://www.wikidata.org/*", "https://api.anthropic.com/*"],
