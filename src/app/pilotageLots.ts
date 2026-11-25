@@ -38,6 +38,9 @@ import {
   enregistrerIgnorees,
   enregistrerJournal,
   enregistrerRegistre,
+  enregistrerRelanceSynchro,
+  FUSION_PC_RECENTE_MS,
+  synchroPcAJour,
 } from '../lib/stockage';
 import { adopterEtiquettesImportees, realignerRegistreSurSite } from './adoptionEtiquettes';
 import { avecIdEtiquette, enregistrerEtiquette, reconcilierAvecSite, refuserCouple } from '../lib/registre';
@@ -224,6 +227,10 @@ export function contexteExecution(): ContexteExecution {
           pauseJusqua: arretee && e.raison !== null ? calculerPauseJusqua({ raison: e.raison, codeHttp: e.erreur?.codeHttp ?? null, seuilRefus: e.erreur?.seuilRefus === true }, maintenant) : null,
           erreur: arretee && e.erreur !== null ? await construireErreur(e.erreur, maintenant) : null,
         });
+        // Trop de refus par carte (exemplaires vendus, défaussés ou mis en vente depuis la dernière lecture, par exemple sur l'autre PC) :
+        // la synchro du site est relancée tout de suite (« Forcer la synchro », une par minute au plus, onglet WikiMasters ouvert),
+        // pour que le lot suivant parte d'une collection à jour au lieu de retomber sur les mêmes refus.
+        if (arretee && e.erreur?.seuilRefus === true) await enregistrerRelanceSynchro(Date.now()).catch(() => undefined);
       })
       .catch(() => {
         for (const rappel of ecouteursEchecEcriture) rappel(MESSAGE_ECRITURE_EXECUTION);
@@ -287,6 +294,11 @@ async function lancerAvec(preparer: () => Promise<Lancement>): Promise<void> {
  * 30 minutes (message « Reprise possible à HH:MM »). Résout à la fin de l'exécution (terminée, arrêtée ou en erreur).
  */
 export async function lancerLot(actions: readonly Action[], idLot: string): Promise<void> {
+  // Les PC d'abord (Alexis, 2026-11-25) : un lot lancé sur des données que l'autre PC a déjà changées (cartes vendues ou défaussées)
+  // retombe sur des refus par carte. Synchro configurée mais autres PC non lus depuis 3 min : le lot ne part pas.
+  if (!(await synchroPcAJour(Date.now(), FUSION_PC_RECENTE_MS).catch(() => true))) {
+    throw new Error('Synchro entre PC en retard : les autres PC n’ont pas été lus depuis plus de 3 min. Autorise le dossier dans Réglages › Synchro entre PC (un clic), attends la fusion, puis relance le lot.');
+  }
   return lancerAvec(async () => ({ actions: await avecDureeEnchere(await limiterAuxPlacesLibres(await alignerSurLesEtiquettesDuSite(actions), idLot)), idLot }));
 }
 

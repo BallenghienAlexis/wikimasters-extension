@@ -444,8 +444,8 @@ describe('libelleCause : conflit 409', () => {
   it('403 : cause lisible (exemplaire périmé, carte en vente ou session refusée)', () => {
     const texte = libelleCause('code-http', 403)
     expect(texte).toContain('réponse 403')
-    expect(texte).toContain('exemplaire périmé')
-    expect(texte).toContain('relancer la synchronisation')
+    expect(texte).toContain('exemplaires périmés')
+    expect(texte).toContain('synchro du site est relancée')
   })
 })
 
