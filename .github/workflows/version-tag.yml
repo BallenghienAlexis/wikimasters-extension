@@ -1,0 +1,64 @@
+name: Étiquette de version
+
+# Crée l'étiquette Git vX.Y.Z (et une release) quand un commit fusionné sur `main` change la version
+# de package.json. Aucun push sur `main` : seule l'étiquette est poussée. Voir AGENTS.md § Versionnage.
+# `workflow_dispatch` rattrape un commit précis (ex. v1.0.0) : `sha` vide = tête de `main`, étiquette posée même
+# si la version n'a pas changé à ce commit.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Commit à étiqueter (vide : tête de main)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: version-tag
+  cancel-in-progress: false
+
+jobs:
+  etiquette:
+    name: etiquette
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+          fetch-depth: 2
+      - name: Lire la version
+        id: version
+        env:
+          MANUEL: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          set -euo pipefail
+          v=$(node -p "require('./package.json').version")
+          m=$(node -p "require('./public/manifest.json').version")
+          [[ "$v" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo "Version invalide : $v"; exit 1; }
+          [ "$v" = "$m" ] || { echo "package.json ($v) et manifeste ($m) divergent"; exit 1; }
+          changee=true
+          if [ "$MANUEL" != "true" ]; then
+            prec=$(git show HEAD^:package.json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version" || echo "")
+            [ "$prec" = "$v" ] && changee=false
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "changee=$changee" >> "$GITHUB_OUTPUT"
+      - name: Créer l'étiquette et la release
+        if: steps.version.outputs.changee == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: v${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --tags origin "refs/tags/$V" >/dev/null 2>&1; then
+            echo "L'étiquette $V existe déjà : rien à faire."
+            exit 0
+          fi
+          git tag "$V" HEAD
+          git push origin "refs/tags/$V"
+          gh release create "$V" --verify-tag --title "$V" --generate-notes
