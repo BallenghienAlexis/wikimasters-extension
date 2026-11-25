@@ -8,7 +8,7 @@ const CARTES = [{ id: 'a', titre: 'Agrume fictif', rarete: 'C', description: 'ag
 
 const section = (page: Page) => page.getByRole('button', { name: /^Synchro entre PC/ });
 
-async function preparer(page: Page): Promise<void> {
+async function preparer(page: Page, demarrageFait = true): Promise<void> {
   await page.addInitScript(() => {
     (window as unknown as { showDirectoryPicker: () => Promise<unknown> }).showDirectoryPicker = async () => {
       const racine = await navigator.storage.getDirectory();
@@ -16,6 +16,8 @@ async function preparer(page: Page): Promise<void> {
     };
   });
   await chargerCartes(page, CARTES);
+  // Le démarrage obligatoire (fenêtre de démarrage) a son propre test ; les autres le considèrent terminé.
+  if (demarrageFait) await page.evaluate(() => chrome.storage.local.set({ demarragePc: 'pret' }));
   await allerA(page, 'reglages');
   await section(page).click();
 }
@@ -31,6 +33,8 @@ test('choisir un dossier écrit le fichier de ce PC, sans secret', async ({ page
   await preparer(page);
   await page.getByRole('button', { name: 'Choisir le dossier' }).click();
   await expect(page.getByTestId('etat-synchro-pc')).toContainText('Dossier : wm-sync-test');
+  // Le premier envoi suit le choix du dossier de quelques instants : on laisse le cycle l’écrire.
+  await expect(page.getByTestId('etat-synchro-pc')).not.toContainText('Dernier envoi : jamais');
   const contenu = await page.evaluate(async () => {
     const racine = await navigator.storage.getDirectory();
     const dossier = await racine.getDirectoryHandle('wm-sync-test');
@@ -43,6 +47,16 @@ test('choisir un dossier écrit le fichier de ce PC, sans secret', async ({ page
   expect(contenu).toHaveLength(1);
   expect(contenu[0]).toContain('ma note');
   expect(contenu[0]).not.toMatch(/token|cookie|jwt|apikey|authorization/i);
+});
+
+test('démarrage obligatoire : la fenêtre bloque, puis écrit le fichier de ce PC une fois les étapes passées', async ({ pageCollection: page }) => {
+  await preparer(page, false);
+  await page.getByRole('button', { name: 'Choisir le dossier' }).click();
+  const popup = page.getByTestId('popup-demarrage');
+  await expect(popup).toBeVisible();
+  await popup.getByRole('button', { name: /^Passer/ }).click();
+  await expect(popup).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => chrome.storage.local.get('demarragePc').then((v) => v.demarragePc))).toBe('pret');
 });
 
 test('SC-006 : autorisation retirée, « Autoriser à nouveau » rétablit la synchro', async ({ pageCollection: page }) => {

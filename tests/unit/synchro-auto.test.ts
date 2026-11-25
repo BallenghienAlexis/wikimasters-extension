@@ -929,3 +929,21 @@ describe('Synchro entre PC avant le site (2026-11-25)', () => {
     expect(b.horloge.t - t0).toBeLessThan(MIN);
   });
 });
+
+describe('Démarrage obligatoire (2026-11-25)', () => {
+  it('ne lit pas le site tant que la fenêtre de démarrage n’est pas passée, et la demande au premier plan', async () => {
+    const b = banc();
+    const demandes: Array<boolean | undefined> = [];
+    b.deps.demarrageAutorise = async () => false;
+    b.deps.demanderPagePc = (p) => void demandes.push(p);
+    expect(await creerSynchroAuto(b.deps).declencher()).toBeNull();
+    expect(b.chemins).toEqual([]);
+    expect(demandes).toEqual([true]);
+  });
+  it('lit le site une fois autorisé, et le forçage de la fenêtre passe', async () => {
+    const b = banc();
+    b.deps.demarrageAutorise = async () => false;
+    await creerSynchroAuto(b.deps).relancer();
+    expect(b.chemins.length).toBeGreaterThan(0);
+  });
+});

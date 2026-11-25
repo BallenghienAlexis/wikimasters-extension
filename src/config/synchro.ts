@@ -21,3 +21,6 @@ export const COULEUR_ETIQUETTE = '#e879f9'
 
 /** Délai maximal d'une requête, en millisecondes. */
 export const DELAI_REQUETE_MS = 15_000
+
+/** PC dont la sauvegarde fait foi au premier démarrage de la fenêtre de synchro (Alexis, 2026-11-25) : proposé par défaut une seule fois s'il est présent dans le dossier. */
+export const PC_PRIORITAIRE_INITIAL = 'pc-5e2o';

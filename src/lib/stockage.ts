@@ -475,6 +475,31 @@ export async function synchroPcAJour(maintenant: number, maxMs: number = FUSION_
   return typeof m.derniereLectureLe === 'number' && maintenant - m.derniereLectureLe <= maxMs;
 }
 
+// ---- Démarrage obligatoire (Alexis, 2026-11-25) : les PC d'abord, puis le site, puis la sauvegarde dans le Drive ----
+const CLE_DEMARRAGE = 'demarragePc';
+/** `bloque` : rien ne part ; `site` : la lecture du site demandée par la fenêtre de démarrage est permise ; `pret` : tout est permis. */
+export type PhaseDemarrage = 'bloque' | 'site' | 'pret';
+
+export async function chargerPhaseDemarrage(): Promise<PhaseDemarrage | null> {
+  const v = (await chrome.storage.local.get(CLE_DEMARRAGE))[CLE_DEMARRAGE] as unknown;
+  return v === 'bloque' || v === 'site' || v === 'pret' ? v : null;
+}
+
+export async function enregistrerPhaseDemarrage(phase: PhaseDemarrage): Promise<void> {
+  await chrome.storage.local.set({ [CLE_DEMARRAGE]: phase });
+}
+
+/**
+ * Vrai si le démarrage permet l'étape demandée. Sans dossier partagé configuré (`actif` faux), le démarrage ne bloque rien.
+ * Phase absente (première ouverture après la mise à jour) : bloqué, la fenêtre de démarrage la passera.
+ */
+export async function demarragePermet(etape: 'site' | 'pret'): Promise<boolean> {
+  const m = await chargerSynchroPc();
+  if (m === null || m.actif !== true) return true;
+  const phase = await chargerPhaseDemarrage();
+  return etape === 'pret' ? phase === 'pret' : phase === 'site' || phase === 'pret';
+}
+
 export async function enregistrerSynchroPc(memoire: Record<string, unknown>): Promise<void> {
   await chrome.storage.local.set({ [CLE_SYNCHRO_PC]: memoire });
 }

@@ -1,12 +1,43 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { chargerSynchroPc, ecrireDonneesSauvegarde, enregistrerSynchroPc, ErreurImportSynchroEnCours, lireDonneesSauvegarde } from '../lib/stockage';
+import {
+  chargerEtatSynchro,
+  chargerPhaseDemarrage,
+  chargerSynchroPc,
+  ecouterSynchroAuto,
+  ecrireDonneesSauvegarde,
+  enregistrerPhaseDemarrage,
+  enregistrerRelanceSynchro,
+  enregistrerSynchroPc,
+  ErreurImportSynchroEnCours,
+  lireDonneesSauvegarde,
+} from '../lib/stockage';
+import { PC_PRIORITAIRE_INITIAL } from '../config/synchro';
 import type { Donnees } from '../lib/sauvegarde';
-import { aDesSaisies, empreinte, empreinteEdition, fusionnerFichiersPc, genererNomPc, instantane, INTERVALLE_ECRITURE_MS, INTERVALLE_LECTURE_MS, nomPcValide, type FichierIgnore } from '../lib/synchroPc';
+import { aDesSaisies, empreinte, empreinteEdition, fusionnerFichiersPc, genererNomPc, instantane, INTERVALLE_ECRITURE_MS, INTERVALLE_LECTURE_MS, nomPcValide, sourceParDefaut, sourcesDisponibles, type FichierIgnore, type SourcePc } from '../lib/synchroPc';
 import { autorisation, chargerDossier, choisirDossier, ecrireFichierPc, listerFichiersPc, oublierDossier, supprimerFichierPc, synchroPcDisponible, type Dossier } from './dossierPc';
 
 export type EtatSynchroPc = 'indisponible' | 'sans-dossier' | 'autorisation' | 'actif' | 'erreur';
 
+/** Étapes de la fenêtre de démarrage : PC d'abord, puis le site, puis la sauvegarde dans le Drive. */
+export type EtapeDemarrage = 'inactif' | 'lecture' | 'choix' | 'fusion' | 'site' | 'sauvegarde' | 'termine' | 'erreur';
+
+export interface Demarrage {
+  etape: EtapeDemarrage;
+  sources: SourcePc[];
+  /** PC choisi comme source (`null` : ne rien reprendre, garder l'état de ce PC). */
+  choisie: string | null;
+  message: string | null;
+}
+
 export interface SynchroPc {
+  demarrage: Demarrage;
+  choisirSource: (nom: string | null) => void;
+  continuerDemarrage: () => Promise<void>;
+  passerSite: () => Promise<void>;
+  relancerSite: () => Promise<void>;
+  reessayerDemarrage: () => Promise<void>;
+  /** Vrai tant que le démarrage obligatoire n'est pas terminé (la fenêtre de démarrage peut alors demander l'autorisation du dossier). */
+  demarrageEnCours: boolean;
   etat: EtatSynchroPc;
   dossier: string | null;
   nomPc: string;
@@ -35,9 +66,11 @@ interface Memoire {
   actif: boolean;
   /** Dernière lecture des autres PC (ms) ; lue par le content script. */
   derniereLectureLe: number | null;
+  /** Le PC prioritaire (`PC_PRIORITAIRE_INITIAL`) a déjà été proposé par défaut : plus de priorité ensuite, le plus récent est proposé. */
+  prioriteInitialeFaite: boolean;
 }
 
-const memoireParDefaut = (): Memoire => ({ nomPc: genererNomPc(), dernierEnvoi: null, empreinte: null, edition: null, modifieLe: null, lus: {}, actif: false, derniereLectureLe: null });
+const memoireParDefaut = (): Memoire => ({ nomPc: genererNomPc(), dernierEnvoi: null, empreinte: null, edition: null, modifieLe: null, lus: {}, actif: false, derniereLectureLe: null, prioriteInitialeFaite: false });
 
 function lireMemoire(brut: Record<string, unknown> | null): Memoire {
   if (!brut) return memoireParDefaut();
@@ -54,6 +87,7 @@ function lireMemoire(brut: Record<string, unknown> | null): Memoire {
     lus,
     actif: brut.actif === true,
     derniereLectureLe: typeof brut.derniereLectureLe === 'number' ? brut.derniereLectureLe : null,
+    prioriteInitialeFaite: brut.prioriteInitialeFaite === true,
   };
 }
 const ecrireMemoire = (m: Memoire): void => void enregistrerSynchroPc({ ...m }).catch(() => undefined);
@@ -69,6 +103,110 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
   const [vue, setVue] = useState({ etat: (synchroPcDisponible() ? 'sans-dossier' : 'indisponible') as EtatSynchroPc, nomDossier: null as string | null, derniereLecture: null as string | null, pcVus: [] as string[], ignores: [] as FichierIgnore[], erreur: null as string | null });
   const [nomPc, setNomPc] = useState(memoire.current.nomPc);
   const [dernierEnvoi, setDernierEnvoi] = useState<string | null>(null);
+  const [demarrage, setDemarrage] = useState<Demarrage>({ etape: 'inactif', sources: [], choisie: null, message: null });
+  const demarrageLance = useRef(false);
+  const [demarrageEnCours, setDemarrageEnCours] = useState(false);
+  const etapeRef = useRef<EtapeDemarrage>('inactif');
+  const changerEtape = (e: Partial<Demarrage> & Pick<Demarrage, 'etape'>): void => {
+    etapeRef.current = e.etape;
+    setDemarrage((v) => ({ ...v, message: null, ...e }));
+  };
+
+
+  /** Lecture du dossier : propose les PC sources, le prioritaire (une fois) ou le plus récent par défaut. */
+  const preparerDemarrage = async (d: Dossier): Promise<void> => {
+    changerEtape({ etape: 'lecture' });
+    try {
+      if ((await chargerPhaseDemarrage()) === null) await enregistrerPhaseDemarrage('bloque');
+      const sources = sourcesDisponibles(await listerFichiersPc(d), memoire.current.nomPc);
+      if (sources.length === 0) {
+        // Aucun autre PC n'a encore écrit : rien à reprendre, on passe au site.
+        await lancerEtapeSite();
+        return;
+      }
+      changerEtape({ etape: 'choix', sources, choisie: sourceParDefaut(sources, memoire.current.prioriteInitialeFaite ? null : PC_PRIORITAIRE_INITIAL) });
+    } catch (e) {
+      demarrageLance.current = false;
+      changerEtape({ etape: 'erreur', message: e instanceof Error ? e.message : 'Lecture du dossier impossible.' });
+    }
+  };
+
+  /** Étape 2 : lecture du site (forçage, onglet WikiMasters ouvert) ; la fin de la lecture de la collection ouvre l'étape 3. */
+  const lancerEtapeSite = async (): Promise<void> => {
+    await enregistrerPhaseDemarrage('site');
+    changerEtape({ etape: 'site' });
+    await enregistrerRelanceSynchro(Date.now());
+    debutSite.current = Date.now();
+  };
+  const debutSite = useRef(0);
+
+  /** Étape 3 : sauvegarde de l'état actuel dans le Drive, puis fin du démarrage. */
+  const sauvegarderEtTerminer = async (): Promise<void> => {
+    const d = dossier.current;
+    if (!d) return;
+    changerEtape({ etape: 'sauvegarde' });
+    try {
+      const m = memoire.current;
+      const donnees = await lireDonneesSauvegarde();
+      m.edition = empreinteEdition(donnees);
+      const maintenant = new Date();
+      const texte = instantane(donnees, maintenant, m.modifieLe);
+      await ecrireFichierPc(d, m.nomPc, texte);
+      m.dernierEnvoi = maintenant.toISOString();
+      m.empreinte = empreinte(texte);
+      ecrireMemoire(m);
+      setDernierEnvoi(m.dernierEnvoi);
+      await enregistrerPhaseDemarrage('pret');
+      derniereLectureMs.current = 0;
+      changerEtape({ etape: 'termine' });
+    } catch (e) {
+      changerEtape({ etape: 'erreur', message: e instanceof Error ? `Sauvegarde dans le Drive impossible : ${e.message}` : 'Sauvegarde dans le Drive impossible.' });
+    }
+  };
+
+  const continuerDemarrage = async (): Promise<void> => {
+    const d = dossier.current;
+    if (!d || etapeRef.current !== 'choix') return;
+    const source = demarrage.choisie;
+    changerEtape({ etape: 'fusion' });
+    try {
+      const m = memoire.current;
+      if (source !== null) {
+        const fichiers = (await listerFichiersPc(d)).filter((f) => f.nom === source);
+        const rapport = fusionnerFichiersPc(await lireDonneesSauvegarde(), fichiers, m.nomPc, {}, null, true);
+        if (rapport.fusionnes.length === 0) throw new Error(`Le fichier de ${source} est illisible ou introuvable : ${rapport.ignores.map((i) => i.raison).join(' ; ') || 'absent'}.`);
+        await ecrireDonneesSauvegarde(rapport.donnees);
+        m.edition = empreinteEdition(rapport.donnees);
+        m.lus = { ...m.lus, ...rapport.lus };
+        onFusionnee(rapport.donnees);
+      }
+      m.prioriteInitialeFaite = true;
+      m.actif = true;
+      m.derniereLectureLe = Date.now();
+      ecrireMemoire(m);
+      await lancerEtapeSite();
+    } catch (e) {
+      const bail = e instanceof ErreurImportSynchroEnCours;
+      changerEtape({ etape: 'erreur', message: bail ? 'Une synchro du site est en cours : attends sa fin, puis réessaie.' : e instanceof Error ? e.message : 'Reprise du dossier impossible.' });
+    }
+  };
+
+  const verifierSite = useCallback(async (): Promise<void> => {
+    if (etapeRef.current !== 'site') return;
+    const etat = await chargerEtatSynchro().catch(() => null);
+    if (etat?.derniereComplete != null && etat.derniereComplete >= debutSite.current) await sauvegarderEtTerminer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (demarrage.etape !== 'site') return undefined;
+    void verifierSite();
+    const retirer = ecouterSynchroAuto(() => void verifierSite());
+    const minuteur = setInterval(() => void verifierSite(), 5_000);
+    return () => {
+      retirer();
+      clearInterval(minuteur);
+    };
+  }, [demarrage.etape, verifierSite]);
 
   const cycle = useCallback(async (): Promise<void> => {
     const d = dossier.current;
@@ -76,10 +214,20 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
     occupe.current = true;
     try {
       if ((await autorisation(d, false)) !== 'granted') {
+        setDemarrageEnCours((await chargerPhaseDemarrage()) !== 'pret');
         setVue((v) => ({ ...v, etat: 'autorisation' }));
         return;
       }
       const m = memoire.current;
+      // Démarrage obligatoire (Alexis, 2026-11-25) : tant que la fenêtre de démarrage n'est pas passée, ni fusion ni envoi automatiques.
+      if ((await chargerPhaseDemarrage()) !== 'pret') {
+        if (!demarrageLance.current) {
+          demarrageLance.current = true;
+          await preparerDemarrage(d);
+        }
+        setVue((v) => ({ ...v, etat: 'actif', erreur: avertissement.current }));
+        return;
+      }
       const maintenant = new Date();
       // 1. Envoi de ce PC (au plus toutes les 15 s, et seulement si le contenu a changé).
       let donnees = await lireDonneesSauvegarde();
@@ -129,6 +277,7 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
     } finally {
       occupe.current = false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onFusionnee]);
 
   useEffect(() => {
@@ -209,5 +358,19 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
     await cycle();
   };
 
-  return { etat: vue.etat, dossier: vue.nomDossier, nomPc, dernierEnvoi, derniereLecture: vue.derniereLecture, pcVus: vue.pcVus, ignores: vue.ignores, erreur: vue.erreur, choisir, autoriser, renommer, desactiver, maintenant };
+  const choisirSource = (nom: string | null): void => setDemarrage((v) => ({ ...v, choisie: nom }));
+  const passerSite = async (): Promise<void> => {
+    if (etapeRef.current === 'site') await sauvegarderEtTerminer();
+  };
+  const relancerSite = async (): Promise<void> => {
+    debutSite.current = Date.now();
+    await enregistrerRelanceSynchro(debutSite.current);
+  };
+  const reessayerDemarrage = async (): Promise<void> => {
+    demarrageLance.current = false;
+    changerEtape({ etape: 'lecture' });
+    await cycle();
+  };
+
+  return { demarrage, choisirSource, continuerDemarrage, passerSite, relancerSite, reessayerDemarrage, demarrageEnCours, etat: vue.etat, dossier: vue.nomDossier, nomPc, dernierEnvoi, derniereLecture: vue.derniereLecture, pcVus: vue.pcVus, ignores: vue.ignores, erreur: vue.erreur, choisir, autoriser, renommer, desactiver, maintenant };
 }

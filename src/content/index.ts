@@ -32,6 +32,7 @@ import {
   enregistrerStatutRelanceVentes,
   enregistrerSuiviVentes,
   synchroPcAJour,
+  demarragePermet,
 } from '../lib/stockage';
 import { chargerSurcouchesThemes } from './surcouchesThemes';
 import { garderPageSynchroPcOuverte } from './pagePc';
@@ -62,7 +63,8 @@ const suivi = creerSuiviVentes({
   transport: transportSite,
   emettre,
   visible: () => document.visibilityState === 'visible',
-  actif: chargerSuiviVentesActif,
+  // Démarrage obligatoire (Alexis, 2026-11-25) : ni lecture du marché ni relance avant la fin de la fenêtre de démarrage.
+  actif: async () => (await chargerSuiviVentesActif()) && (await demarragePermet('pret')),
   verrou,
   chargerEtatSuivi: chargerEtatSuiviVentes,
   enregistrerEtatSuivi: enregistrerEtatSuiviVentes,
