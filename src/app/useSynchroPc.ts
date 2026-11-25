@@ -36,6 +36,8 @@ export interface SynchroPc {
   passerSite: () => Promise<void>;
   relancerSite: () => Promise<void>;
   reessayerDemarrage: () => Promise<void>;
+  /** Vrai tant que le démarrage obligatoire n'est pas terminé (la fenêtre de démarrage peut alors demander l'autorisation du dossier). */
+  demarrageEnCours: boolean;
   etat: EtatSynchroPc;
   dossier: string | null;
   nomPc: string;
@@ -103,6 +105,7 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
   const [dernierEnvoi, setDernierEnvoi] = useState<string | null>(null);
   const [demarrage, setDemarrage] = useState<Demarrage>({ etape: 'inactif', sources: [], choisie: null, message: null });
   const demarrageLance = useRef(false);
+  const [demarrageEnCours, setDemarrageEnCours] = useState(false);
   const etapeRef = useRef<EtapeDemarrage>('inactif');
   const changerEtape = (e: Partial<Demarrage> & Pick<Demarrage, 'etape'>): void => {
     etapeRef.current = e.etape;
@@ -211,6 +214,7 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
     occupe.current = true;
     try {
       if ((await autorisation(d, false)) !== 'granted') {
+        setDemarrageEnCours((await chargerPhaseDemarrage()) !== 'pret');
         setVue((v) => ({ ...v, etat: 'autorisation' }));
         return;
       }
@@ -368,5 +372,5 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
     await cycle();
   };
 
-  return { demarrage, choisirSource, continuerDemarrage, passerSite, relancerSite, reessayerDemarrage, etat: vue.etat, dossier: vue.nomDossier, nomPc, dernierEnvoi, derniereLecture: vue.derniereLecture, pcVus: vue.pcVus, ignores: vue.ignores, erreur: vue.erreur, choisir, autoriser, renommer, desactiver, maintenant };
+  return { demarrage, choisirSource, continuerDemarrage, passerSite, relancerSite, reessayerDemarrage, demarrageEnCours, etat: vue.etat, dossier: vue.nomDossier, nomPc, dernierEnvoi, derniereLecture: vue.derniereLecture, pcVus: vue.pcVus, ignores: vue.ignores, erreur: vue.erreur, choisir, autoriser, renommer, desactiver, maintenant };
 }

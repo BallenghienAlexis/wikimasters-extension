@@ -34,7 +34,7 @@ const PopupDemarrage: React.FC<{ synchroPc: SynchroPc }> = ({ synchroPc }) => {
     if (choix && !touche && reste <= 0) void synchroPc.continuerDemarrage();
   }, [choix, touche, reste, synchroPc]);
 
-  const autorisation = etat === 'autorisation' && demarrage.etape === 'inactif';
+  const autorisation = etat === 'autorisation' && demarrage.etape === 'inactif' && synchroPc.demarrageEnCours;
   if (!autorisation && (demarrage.etape === 'inactif' || demarrage.etape === 'termine')) return null;
   const actuel = rang(demarrage.etape);
 
