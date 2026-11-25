@@ -156,6 +156,7 @@ Version courante : **1.0.0**, au format `MAJEUR.MINEUR.CORRECTIF` (semver ; chaq
 - **Majeur** : le premier nombre ne monte que pour un changement majeur, décidé par Alexis (`2.0.0`).
 - `docs`, `test`, `chore` et `refactor` sans effet visible ne changent pas la version.
 - **Chaque PR `fix` ou `feat` bumpe la version dans la PR elle-même** : `node scripts/version.mjs fix` (ou `feat`, `major`, ou un numéro explicite) met à jour les trois fichiers ; `node scripts/version.mjs check` vérifie la cohérence. Deux PR ouvertes en parallèle qui bumpent la même version : la seconde à fusionner relance le script après avoir rebasé.
+- **Étiquettes Git (Alexis, 2026-11-25)** : chaque version a son étiquette `vMAJEUR.MINEUR.CORRECTIF` (ex. `v1.0.0`) sur le commit fusionné qui l'a posée, avec une release GitHub aux notes générées. Elle est créée **automatiquement** par `.github/workflows/version-tag.yml` quand un commit fusionné sur `main` change la version de `package.json` (jamais de push sur `main` ; une étiquette existante n'est pas touchée). Les fils ne la créent pas à la main. Rattrapage d'un commit : lancer le workflow à la main avec son `sha`.
 - Aucune requête, route, permission ni en-tête de plus.
 
 ## Stack
