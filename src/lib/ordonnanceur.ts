@@ -27,6 +27,8 @@ export const REPORT_CARTE_PASSEE_MS = 86_400_000;
 /** Un prix du marché relevé (valeur ou absence de vente constatée) est périmé après 7 jours et re-relevé (Alexis, 2026-11-24). */
 export const ancienneteMaxPrixMs = 7 * 86_400_000;
 /** Une carte sans route de prix (404) ou sans relevé exploitable n’est pas redemandée avant 30 jours. */
+/** Prix relevés au plus par passage de l'étape Prix quand l'appelant n'impose rien (Alexis, 2026-11-26) ; le reste attend la synchro suivante. */
+export const MAX_PRIX_PAR_PASSAGE = 100;
 export const memoireSansRoutePrixMs = 30 * 86_400_000;
 /** Durée de validité d’un relevé : 7 jours s’il porte une valeur ou une absence de vente constatée, 30 jours sinon (404, carte passée). */
 export function peremptionPrixMs(r: Pick<PrixReleve, 'valeur' | 'sansVente' | 'sansRoute'> | undefined): number {
@@ -706,8 +708,8 @@ export async function synchroniser(deps: DependancesSynchro): Promise<ResultatSy
   }
 
   async function relevePrix(): Promise<void> {
-    // Toutes les cartes sans prix (ou périmé) sont interrogées : plus de plafond par exécution (Alexis, 2026-11-15).
-    const plafond = deps.maxPrix ?? Number.POSITIVE_INFINITY;
+    // Cartes sans prix (ou périmé) : 100 au plus par passage (Alexis, 2026-11-26, avant : sans plafond depuis le 2026-11-15).
+    const plafond = deps.maxPrix ?? MAX_PRIX_PAR_PASSAGE;
     const retenues = candidatsPrix().slice(0, Math.max(0, plafond));
     deps.annoncerPrix?.(retenues.length);
     for (const carte of retenues) {

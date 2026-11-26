@@ -104,3 +104,21 @@ describe('sansVente et sauvegarde (2026-11-23)', () => {
     expect(lu.synchro?.etat?.prix.a).toEqual({ valeur: null, releveLe: 3000 });
   });
 });
+
+describe('cartes sans prix et reprise du Drive (2026-11-26)', () => {
+  it('garde la marque v et sansRoute : une carte sans prix n’est pas redemandée après un import', () => {
+    const synchro: DonneesSynchro = { ...synchroVide(), etat: { ...etatInitial(), prix: { a: { valeur: null, releveLe: 3000, v: 2, sansVente: true }, b: { valeur: null, releveLe: 3000, v: 2, sansRoute: true } } } };
+    const lu = lire(donnees([carte('a'), carte('b')], synchro));
+    expect(lu.synchro?.etat?.prix.a).toEqual({ valeur: null, releveLe: 3000, v: 2 });
+    expect(lu.synchro?.etat?.prix.b).toEqual({ valeur: null, releveLe: 3000, v: 2, sansRoute: true });
+  });
+
+  it('la fusion garde la preuve locale d’absence de vente quand le fichier est plus récent', () => {
+    const ici: DonneesSynchro = { ...synchroVide(), etat: { ...etatInitial(), prix: { a: { valeur: null, releveLe: 1000, v: 2, sansVente: true, ancienMax: 3 } } } };
+    const fichier: DonneesSynchro = { ...synchroVide(), etat: { ...etatInitial(), prix: { a: { valeur: null, releveLe: 2000, v: 2 } } } };
+    const lu = lire(donnees([carte('a')], fichier));
+    const res = appliquerImport(donnees([carte('a')], ici), lu, 'garder-ici');
+    if (!res.ok) throw new Error(res.erreur);
+    expect(res.donnees.synchro?.etat?.prix.a).toEqual({ valeur: null, releveLe: 2000, v: 2, sansVente: true, ancienMax: 3 });
+  });
+});
