@@ -72,7 +72,14 @@ export function lireSynchro(brut: unknown): SynchroSauvegardee | undefined | str
     // `sansVente` ne vient jamais d'un fichier : une sauvegarde modifiée ne peut pas faire défausser une carte.
     const prix = Object.create(null) as EtatSauvegarde['prix'];
     for (const [id, r] of Object.entries(valide.prix)) {
-      prix[id] = r.tendance ? { valeur: r.valeur, releveLe: r.releveLe, tendance: r.tendance } : { valeur: r.valeur, releveLe: r.releveLe };
+      // `v` et `sansRoute` sont gardés (2026-11-26) : sans eux, une carte sans prix était redemandée à chaque reprise du Drive ou import.
+      prix[id] = {
+        valeur: r.valeur,
+        releveLe: r.releveLe,
+        ...(r.tendance ? { tendance: r.tendance } : {}),
+        ...(r.v === 2 ? { v: 2 as const } : {}),
+        ...(r.sansRoute === true ? { sansRoute: true } : {}),
+      };
     }
     etat = { total: valide.total, totalUnique: valide.totalUnique, signatureEtiquettes: valide.signatureEtiquettes, derniereComplete: valide.derniereComplete, prix };
   }
@@ -110,7 +117,11 @@ export function fusionnerSynchro(locale: DonneesSynchro, s: SynchroSauvegardee, 
     for (const [id, r] of Object.entries(prixRepris(s, parId))) {
       const ici = base.prix[id];
       const releveLe = borne(r.releveLe);
-      if (ici === undefined || ici.releveLe < releveLe) base.prix[id] = { ...r, releveLe };
+      if (ici === undefined || ici.releveLe < releveLe) {
+        // Même absence de valeur ici et dans le fichier : la preuve d'absence de vente locale est gardée (le fichier n'en porte jamais).
+        const garde = ici !== undefined && ici.valeur === null && r.valeur === null && ici.sansVente === true;
+        base.prix[id] = { ...r, releveLe, ...(garde ? { sansVente: true, ...(ici.ancienMax !== undefined ? { ancienMax: ici.ancienMax } : {}) } : {}) };
+      }
     }
     if (s.etat.derniereComplete !== null && (base.derniereComplete === null || base.derniereComplete < borne(s.etat.derniereComplete))) {
       base.total = s.etat.total;

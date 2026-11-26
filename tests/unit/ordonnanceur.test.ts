@@ -880,12 +880,12 @@ describe('ordonnanceur — critère 4 : cadence et arrêts', () => {
     expect(termines).toBe(3);
   })
 
-  it('prix : plus de lots ni de plafond, toutes les cartes sans prix sont interrogées sans pause', async () => {
+  it('prix : 100 lectures au plus par passage, le reste à la synchro suivante, sans pause', async () => {
     const b = banc(siteFictif(150));
     const r = await synchroniser(b.deps);
     expect(r.issue).toBe('termine');
     const ventes = b.departs.filter((d) => d.chemin.includes("/price-history"));
-    expect(ventes).toHaveLength(150);
+    expect(ventes).toHaveLength(100);
     const ecarts = ventes.slice(1).map((d, i) => d.t - (ventes[i]?.t ?? 0));
     expect(Math.max(...ecarts)).toBeLessThan(2_000);
     expect(b.journal.some((m) => m.startsWith('Pause de'))).toBe(false);
