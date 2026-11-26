@@ -285,6 +285,32 @@ describe('relance explicite du joueur', () => {
     expect((await synchro.relancer())?.issue).toBe('termine');
   });
 
+  it('une demande de forçage reçue pendant une synchro est rejouée à sa fin (2026-11-26)', async () => {
+    const b = banc({});
+    const site = siteFictif(2);
+    let libere: () => void = () => undefined;
+    const porte = new Promise<void>((r) => {
+      libere = r;
+    });
+    let premiere = true;
+    b.deps.transport = async (c) => {
+      b.chemins.push(c);
+      if (premiere) {
+        premiere = false;
+        await porte;
+      }
+      return site(c);
+    };
+    const synchro = creerSynchroAuto(b.deps);
+    const enCours = synchro.declencher();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(await synchro.relancer()).toBeNull();
+    libere();
+    await enCours;
+    await new Promise((r) => setTimeout(r, 50));
+    expect(b.evenements.map((e) => e.titre)).toContain('Synchronisation automatique : relance demandée');
+  });
+
   it('option désactivée : aucune requête, même relancée', async () => {
     const b = banc({ actif: false });
     expect(await creerSynchroAuto(b.deps).relancer()).toBeNull();
