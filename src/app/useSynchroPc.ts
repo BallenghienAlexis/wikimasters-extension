@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  chargerDerniereSynchro,
   chargerEtatSynchro,
   chargerStatutSynchro,
   chargerPhaseDemarrage,
@@ -20,6 +21,9 @@ import { autorisation, chargerDossier, choisirDossier, ecrireFichierPc, listerFi
 export type EtatSynchroPc = 'indisponible' | 'sans-dossier' | 'autorisation' | 'actif' | 'erreur';
 
 /** Étapes de la fenêtre de démarrage : PC d'abord, puis le site, puis la sauvegarde dans le Drive. */
+/** Délai avant de renvoyer la demande de lecture du site pendant le démarrage (le content script en accepte une par minute). */
+const RENVOI_SIGNAL_SITE_MS = 70_000;
+
 export type EtapeDemarrage = 'inactif' | 'lecture' | 'choix' | 'fusion' | 'site' | 'sauvegarde' | 'termine' | 'erreur';
 
 export interface Demarrage {
@@ -139,11 +143,15 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
   const lancerEtapeSite = async (): Promise<void> => {
     await enregistrerPhaseDemarrage('site');
     changerEtape({ etape: 'site' });
-    await enregistrerRelanceSynchro(Date.now());
-    debutSite.current = Date.now();
+    const maintenant = Date.now();
+    await enregistrerRelanceSynchro(maintenant);
+    debutSite.current = maintenant;
+    dernierSignalSite.current = maintenant;
     setProgressionSite(null);
   };
   const debutSite = useRef(0);
+  /** Dernier signal « Forcer la synchro » envoyé pendant le démarrage (2026-11-26) : renvoyé si rien ne tourne, car le content script ignore un signal reçu pendant une synchro ou moins d'une minute après le précédent. */
+  const dernierSignalSite = useRef(0);
 
   /** Étape 3 : sauvegarde de l'état actuel dans le Drive, puis fin du démarrage. */
   const sauvegarderEtTerminer = async (): Promise<void> => {
@@ -205,7 +213,19 @@ export function useSynchroPc(prete: boolean, onFusionnee: (donnees: Donnees) => 
       else if (statut.etat === 'en-cours') setProgressionSite('Lecture en cours…');
     }
     const etat = await chargerEtatSynchro().catch(() => null);
-    if (etat?.derniereComplete != null && etat.derniereComplete >= debutSite.current) await sauvegarderEtTerminer();
+    // Fin de lecture : lecture complète, ou synchro terminée après la demande même si la lecture n'était pas « propre »
+    // (`derniereComplete` reste alors nul ; la fenêtre restait bloquée, 2026-11-26).
+    const derniere = await chargerDerniereSynchro().catch(() => null);
+    if ((etat?.derniereComplete != null && etat.derniereComplete >= debutSite.current) || (derniere !== null && derniere >= debutSite.current)) {
+      await sauvegarderEtTerminer();
+      return;
+    }
+    // Rien ne tourne et la lecture demandée n'a pas eu lieu (signal perdu : synchro déjà en cours à ce moment, ou délai d'une minute) : on le renvoie.
+    const maintenant = Date.now();
+    if (etapeRef.current === 'site' && statut?.etat !== 'en-cours' && maintenant - dernierSignalSite.current >= RENVOI_SIGNAL_SITE_MS) {
+      dernierSignalSite.current = maintenant;
+      await enregistrerRelanceSynchro(maintenant).catch(() => undefined);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {

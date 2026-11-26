@@ -414,26 +414,38 @@ export function creerSynchroAuto(deps: DependancesSynchroAuto): SynchroAuto {
     } finally {
       enCours = false;
       await collecteur.vider();
+      if (relanceEnAttente) {
+        relanceEnAttente = false;
+        void relancer().catch(() => undefined);
+      }
     }
+  }
+
+  /** Une demande de forçage reçue pendant une synchro (2026-11-26) : rejouée à la fin de celle-ci au lieu d'être perdue. */
+  let relanceEnAttente = false;
+  async function relancer(): Promise<ResultatSynchro | null> {
+    if (enCours) {
+      relanceEnAttente = true;
+      return null;
+    }
+    try {
+      const maintenant = deps.horloge.now();
+      const commune = (await deps.derniereRelance?.lire()) ?? null;
+      const derniere = Math.max(derniereRelance ?? 0, commune ?? 0);
+      if (derniere > 0 && maintenant - derniere < DELAI_RELANCE_MS) return null;
+      // Forçage explicite (Alexis, 2026-11-17) : passe outre le délai de 30 min et la pause après 401, 403 ou 429, quel que soit
+      // le statut précédent. Ni la vérification anti-bot ni le bail ne sont contournés (une synchro à la fois).
+      derniereRelance = maintenant;
+      await deps.derniereRelance?.ecrire(maintenant);
+    } catch {
+      return null;
+    }
+    return declencher(true);
   }
 
   return {
     declencher: () => declencher(),
-    relancer: async () => {
-      try {
-        const maintenant = deps.horloge.now();
-        const commune = (await deps.derniereRelance?.lire()) ?? null;
-        const derniere = Math.max(derniereRelance ?? 0, commune ?? 0);
-        if (derniere > 0 && maintenant - derniere < DELAI_RELANCE_MS) return null;
-        // Forçage explicite (Alexis, 2026-11-17) : passe outre le délai de 30 min et la pause après 401, 403 ou 429, quel que soit
-        // le statut précédent. Ni la vérification anti-bot ni le bail ne sont contournés (une synchro à la fois).
-        derniereRelance = maintenant;
-        await deps.derniereRelance?.ecrire(maintenant);
-      } catch {
-        return null;
-      }
-      return declencher(true);
-    },
+    relancer,
     arreter: () => {
       arretDemande = true;
     },
